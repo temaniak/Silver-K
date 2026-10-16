@@ -26,6 +26,7 @@ void same(ks::Board& a,ks::Board& b){
     check(a.overlay==b.overlay && a.mainEntered==b.mainEntered && a.ready==b.ready,"Reset lifecycle mismatch");
     check(b.h8InterpretedSteps()==0,"Native reset called original interpreter");
     check(b.liveMidiController()->noteActions.keySearchCalls.partialEntries==0,"Native reset used the test-only partial-key adapter");
+    check(b.liveMidiController()->bootSetupCalls.partialEntries==0,"Native reset used partial bootstrap setup recovery");
     check(b.liveMidiController()->bootStreamCalls.partialEntries==0,"Native reset used partial bootstrap-stream recovery");
     check(b.liveMidiController()->faultCalls.partialEntries==0,"Native reset used partial fault recovery");
     check(b.liveMidiController()->voiceActions.addressCalls.partialEntries==0,"Native reset used partial DSP-address recovery");
@@ -56,6 +57,7 @@ int main(int argc,char** argv){try{
         if(!(slice%100000))std::cout<<"slices="<<slice<<" pc="<<std::hex<<a->cpu().getPC()<<std::dec<<" cycle="<<a->controllerCycles()<<std::endl;
     }
     check(a->boot() && b->boot(),"Warm initialization failed");same(*a,*b);
+    check(b->liveMidiController()->bootSetupCalls.started==2 && b->liveMidiController()->bootSetupCalls.completed==2,"Cold startup did not complete both native DSP setup jobs");
     check(b->liveMidiController()->bootStreamCalls.started==2 && b->liveMidiController()->bootStreamCalls.completed==2,"Cold startup did not complete both native DSP firmware streams");
     check(std::equal(std::begin(a->cpu().memory),std::end(a->cpu().memory),std::begin(b->cpu().memory)),"Complete boot memory mismatch");
     if(variant=="multi")check(a->state().performance && b->state().performance,"Performance startup not exercised");

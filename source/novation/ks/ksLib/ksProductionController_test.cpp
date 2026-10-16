@@ -7,6 +7,7 @@
 #include "ksDspAddressCalls.h"
 #include "ksDspFaultCalls.h"
 #include "ksDspBootStreamCalls.h"
+#include "ksDspBootSetupCalls.h"
 #include "ksDspTransport.h"
 #include <iostream>
 #include <memory>
@@ -56,6 +57,9 @@ int main(){try{
     state->regs[4].er=0x87ffff;
     if(streams.step(*state) || streams.partialEntries || state->cycles!=123 || state->pc!=0x23ce)
         throw std::runtime_error("Native firmware source admitted a crossing data span");
+    ks::DspBootSetupCalls setups;state->pc=0x2386;
+    if(setups.step(*state) || setups.partialEntries || state->cycles!=123 || state->pc!=0x2386)
+        throw std::runtime_error("Production exposed partial bootstrap setup recovery");
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

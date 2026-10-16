@@ -3514,3 +3514,57 @@ then outer bootstrap/reset and the remaining controller/caller lifecycles.
 The parent still has a compatibility frame: native byte loading alone is not
 the full requested port. Delete every bridge and shared register/flag/stack/PC
 model before final equality/product checks, CPU comparison and push.
+
+
+## 2026-10-16 — Mac: native DSP header, startup wait and tuning tables
+
+Test ID `ks-native-dsp-boot-setup-20261016`; source parent
+`511515cd6f123d7121972e5aed52ff7fa9bc98d6` plus the setup change.
+Mac M1 Pro arm64 Release AppleClang21/C++17, pinned dependencies unchanged.
+Frozen manifests and private evidence: `/private/tmp/ks-native-dsp-boot-setup-20261016`.
+No CPU comparison or push. Windows is not validated by these Mac results.
+
+`DspBootSetupTask` owns header size, stream request, calibrated settling counters,
+live boot-ready polling/timeout, address request, both 512-word generated tuning
+tables and typed child acknowledgements. Native control flow uses no registers,
+CPU flags, stack or PC. The old 54 setup bodies are comparison-only; the bridge
+still projects old caller/IRQ state and must disappear in the final migration.
+Mutable inputs stay live and children run with their original clocks.
+
+Validation:
+
+- All 65,536 header values and 112 complete table/readiness/deadline/fault cases
+  pass. The original setup has 279,056 own clocks excluding children/return.
+  Actual firmware A: 1,871 stream words / 546,913 total clocks; B: 2,840 words /
+  639,937 clocks. Independent original reference admission confirms these.
+- 721 complete actual setup calls / 106,048,286 original outer steps, all 256
+  initial flag values, source/count edges through 65,536, both DSPs, mapped/
+  clock-only fetch and odd/even SRAM, all 1,024 table words, each access/time
+  and final memory match. 206 selected IRQ save/RTE points (103 first-visited
+  locations in each fetch mode, not every dynamic boundary), 735 metric resets,
+  48 native fault entries and 14 nested setup calls / 1,177,278 child steps,
+  with eight live tasks, pass. No synchronized reference/recovery factory.
+- Four full cold/reset/warm/playback timelines, nine full DSP tapes (8,085,451
+  events), 14 raw-audio timelines (6,075,618 frames x24 / 583,259,328 bytes per
+  side) and two default Single/Multi cases (362,724 frames / 34,821,504 bytes)
+  match. All 58 main stages and two defaults pass frozen-source identity.
+  Each preparation asserts two complete native setups/streams, no interpreter
+  or partial recovery. State/Flash/MIDI/controller/DSP/serial fields match.
+  The first long Clock capture failed solely because storage was exhausted;
+  prior captures were losslessly compressed and that capture plus remaining
+  cases reran successfully. The empty failed output is retained separately.
+- Allocation and ASan/UBSan probes pass 385 sampled outer calls / 77,399,438
+  original outer steps plus 14 children, 206 IRQ points and 48 fault entries:
+  zero new/new[] in native steps. Only the new bridge/task is instrumented;
+  original H8 and other libraries are not. Component CTest: eight pass, seven
+  skip without private ROM, zero fail (15 selected); private actual fixtures
+  run above. No H8 core/decoder symbols in ksLib; product commands exclude
+  the comparison object.
+
+Fresh products/callbacks remain pending until the full port; last such validation
+was the word-write checkpoint. Synthetic Flash/zero Wave and mapped markers do
+not prove real banks or physical hardware. DSP/JIT, B/A order, clocks, buffers,
+resampling, waits, priorities and placement are unchanged. No raw evidence or
+private data is committed. The global register/flags/stack/PC model remains;
+next is native reset/select/outer startup, then the other controller domains.
+Delete the shared projection model before final comparisons and publication.

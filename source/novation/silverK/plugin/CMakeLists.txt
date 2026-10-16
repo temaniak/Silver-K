@@ -259,3 +259,16 @@ target_include_directories(ksDspBootStreamCalls_test PRIVATE "${ROOT}/source/cpu
 target_link_libraries(ksDspBootStreamCalls_test PRIVATE ksLib)
 add_test(NAME ks_dsp_boot_stream_calls COMMAND ksDspBootStreamCalls_test)
 set_tests_properties(ks_dsp_boot_stream_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Semantic bootstrap header, delays, readiness and generated tuning tables.
+add_executable(ksDspBootSetupTask_test "${ROOT}/source/novation/ks/ksLib/ksDspBootSetupTask_test.cpp")
+target_link_libraries(ksDspBootSetupTask_test PRIVATE ksLib)
+add_test(NAME ks_dsp_boot_setup_properties COMMAND ksDspBootSetupTask_test)
+set_tests_properties(ks_dsp_boot_setup_properties PROPERTIES TIMEOUT 90)
+
+# Whole native bootstrap setup against original H8, no recovery factory.
+add_executable(ksDspBootSetupCalls_test "${ROOT}/source/novation/ks/ksLib/ksDspBootSetupCalls_test.cpp")
+target_include_directories(ksDspBootSetupCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksDspBootSetupCalls_test PRIVATE ksLib)
+add_test(NAME ks_dsp_boot_setup_calls COMMAND ksDspBootSetupCalls_test)
+set_tests_properties(ks_dsp_boot_setup_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)

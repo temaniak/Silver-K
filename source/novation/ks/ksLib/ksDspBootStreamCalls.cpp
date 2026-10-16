@@ -29,7 +29,8 @@ Point point(const DspBootStreamTask& task){
     }
     throw std::runtime_error("Invalid native KS boot-stream stage");
 }
-bool ordinarySource(uint32_t source,uint16_t words){
+}
+bool DspBootStreamCalls::sourceSpanValid(uint32_t source,uint16_t words){
     const uint32_t begin=source&0xffffff;
     const uint64_t size=3ull*(words?uint32_t(words):65536u);
     // Board-mapped ROM/Flash/SRAM spans whose data accesses cost three clocks.
@@ -39,7 +40,6 @@ bool ordinarySource(uint32_t source,uint16_t words){
         if(begin>=range.first && begin<range.second)return size<=range.second-begin;
     return false;
 }
-}
 void setDspBootStreamPartialForTests(DspBootStreamPartialTest fn){partialTest=fn;}
 bool DspBootStreamCalls::step(ControllerCpu& h){
     using namespace controllerDetail;using S=DspBootStreamTask::Stage;
@@ -47,7 +47,7 @@ bool DspBootStreamCalls::step(ControllerCpu& h){
     for(auto& c:calls)if(c && c->callerToken==h.getSP()){selected=&c;break;}
     // The entry is also the next-word continuation: never restart a live job.
     if(pc==0x23ce && !selected && (h.regs[5].er==0x400000 || h.regs[5].er==0x600000)
-        && ordinarySource(uint32_t(h.regs[4].er),uint16_t(h.regs[3].e))){
+        && sourceSpanValid(uint32_t(h.regs[4].er),uint16_t(h.regs[3].e))){
         for(auto& c:calls)if(!c){selected=&c;break;}
         if(!selected)throw std::runtime_error("Native KS boot-stream capacity exceeded");
         selected->emplace(uint16_t(h.regs[3].e),unsigned(h.regs[5].er),uint32_t(h.regs[4].er),h.getSP());++started;

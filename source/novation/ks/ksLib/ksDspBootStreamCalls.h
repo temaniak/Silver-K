@@ -8,6 +8,7 @@ class ControllerCpu;
 class DspBootStreamCalls final {
 public:
     static bool candidate(unsigned p){return p>=0x23ce && p<=0x2414;}
+    static bool sourceSpanValid(uint32_t source,uint16_t words);
     bool step(ControllerCpu&);
     void resetMetrics(){started=completed=partialEntries=0;}
     void discardCalls(){for(auto& c:calls)c.reset();}

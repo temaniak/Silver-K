@@ -8,6 +8,7 @@
 #include "ksParameterScaleCalls.h"
 #include "ksDspFaultCalls.h"
 #include "ksDspBootStreamCalls.h"
+#include "ksDspBootSetupCalls.h"
 #include <vector>
 #include <algorithm>
 #include <stdexcept>
@@ -33,13 +34,14 @@ public:
     ParameterScaleCalls parameterScaleCalls;
     DspFaultCalls faultCalls;
     DspBootStreamCalls bootStreamCalls;
+    DspBootSetupCalls bootSetupCalls;
     // Count actual original-core calls, including interrupt arbitration. These
     // are not instruction counts or CPU time, and never imply full migration.
     void delegated(unsigned pc){++originalStepCalls;if(!originalPages.empty())++originalPages[(pc&0xffffff)>>8];}
     void enableDelegationProfile(){originalPages.assign(65536,0);originalStepCalls=0;}
     void resetMetrics(){
         nativeSteps=bytes=messages=noteOn=noteOff=controls=originalStepCalls=0;
-        noteActions.resetMetrics();parameterScaleCalls.resetMetrics();faultCalls.resetMetrics();bootStreamCalls.resetMetrics();voiceActions.resetMetrics();
+        noteActions.resetMetrics();parameterScaleCalls.resetMetrics();faultCalls.resetMetrics();bootStreamCalls.resetMetrics();bootSetupCalls.resetMetrics();voiceActions.resetMetrics();
         if(!originalPages.empty())std::fill(originalPages.begin(),originalPages.end(),0);
     }
     uint64_t originalStepCalls=0;

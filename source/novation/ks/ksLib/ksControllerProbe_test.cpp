@@ -68,6 +68,8 @@ int main(int argc,char** argv){try{
     const uint64_t bootH8Steps=board->h8InterpretedSteps();
     const auto* bootLive=board->liveMidiController();
     const uint64_t bootStreamStarts=bootLive?bootLive->bootStreamCalls.started:0,bootStreamReturns=bootLive?bootLive->bootStreamCalls.completed:0,bootStreamPartial=bootLive?bootLive->bootStreamCalls.partialEntries:0;
+    const uint64_t bootSetupStarts=bootLive?bootLive->bootSetupCalls.started:0,bootSetupReturns=bootLive?bootLive->bootSetupCalls.completed:0,bootSetupPartial=bootLive?bootLive->bootSetupCalls.partialEntries:0;
+    if(nativeMode)check(bootSetupStarts==2 && bootSetupReturns==2 && !bootSetupPartial,"Native startup did not complete both DSP setup jobs without recovery");
     if(nativeMode)check(bootStreamStarts==2 && bootStreamReturns==2 && !bootStreamPartial,"Native startup did not complete both DSP firmware streams without recovery");
     if(nativeMode)board->enableNativeController();
     auto send=[&](const std::vector<uint8_t>& m){check(board->enqueueMidi(m.data(),m.size()),"MIDI rejected");};
@@ -253,6 +255,7 @@ int main(int argc,char** argv){try{
     auto snapshotDigest=[&](const auto& data){return mode=="replay"?std::string("null"):"\""+std::to_string(digest(data))+"\"";};
     std::vector<uint8_t> midiOut;uint8_t transmitted=0;while(board->popMidiOut(transmitted))midiOut.push_back(transmitted);
     if(nativeMode && !toggling)check(board->liveMidiController()->noteActions.keySearchCalls.partialEntries==0,"Native playback used the test-only partial-key adapter");
+    if(nativeMode && !toggling)check(board->liveMidiController()->bootSetupCalls.partialEntries==0,"Native playback used partial bootstrap setup recovery");
     if(nativeMode && !toggling)check(board->liveMidiController()->bootStreamCalls.partialEntries==0,"Native playback used partial bootstrap-stream recovery");
     if(nativeMode && !toggling)check(board->liveMidiController()->faultCalls.partialEntries==0,"Native playback used partial fault recovery");
     if(nativeMode && !toggling)check(board->liveMidiController()->voiceActions.addressCalls.partialEntries==0,"Native playback used partial DSP-address recovery");
@@ -272,6 +275,10 @@ int main(int argc,char** argv){try{
         <<",\"state_digest\":"<<snapshotDigest(stateBytes)<<",\"flash_digest\":"<<snapshotDigest(flashBytes)
         <<",\"flash_revision\":"<<board->flashRevision<<",\"midi_tx_digest\":"<<snapshotDigest(midiOut)<<",\"midi_tx_bytes\":"<<midiOut.size()
         <<",\"midi_received\":"<<board->midiReceived
+        <<",\"native_boot_setup_calls_before_metrics\":"<<bootSetupStarts
+        <<",\"native_boot_setup_returns_before_metrics\":"<<bootSetupReturns
+        <<",\"native_boot_setup_test_partial_before_metrics\":"<<bootSetupPartial
+        <<",\"native_boot_setup_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->bootSetupCalls.partialEntries:0)
         <<",\"native_boot_stream_calls_before_metrics\":"<<bootStreamStarts
         <<",\"native_boot_stream_returns_before_metrics\":"<<bootStreamReturns
         <<",\"native_boot_stream_test_partial_before_metrics\":"<<bootStreamPartial

@@ -167,7 +167,7 @@ musical timelines match, with zero test recovery or retired-batch work. Single
 and Multi also match full tape and raw audio without either legacy experimental
 flag. Task/bridge allocation and sanitizer checks pass. This stage rebuilds
 engine tests; products/callbacks were last verified at the preceding word-write
-checkpoint and require fresh final validation. The remaining bootstrap setup and caller/cache/reset/parser/voice/parameter/
+checkpoint and require fresh final validation. The outer bootstrap and caller/cache/reset/parser/voice/parameter/
 clock/state paths still need semantic
 conversion; no CPU comparison or push has been performed.
 
@@ -186,7 +186,7 @@ tasks. Forced word/address timeouts execute all 96 complete native fault jobs.
 Healthy musical scenarios observe no faults, so they do not stand in for that
 explicit error-path proof. Full tapes, 14 raw musical timelines and two default
 Single/Multi cases match. Allocation/sanitizer scope and product-validation
-limits remain in the journal. The parent bootstrap initialization and broader controller/caller model
+limits remain in the journal. Outer bootstrap initialization and the broader controller/caller model
 still need conversion.
 
 
@@ -204,8 +204,10 @@ and musical start proves two complete native firmware streams (1,871 and
 2,840 words), zero recovery and zero native interpreter work. All full tape/
 audio/default-path checks pass. Private raw evidence is retained in
 `/private/tmp/ks-native-dsp-boot-stream-20261016`; product/callback validation
-still requires a fresh final pass. The parent header, delay, boot-ready and
-frequency-table setup remains register-bound and is the next conversion.
+still requires a fresh final pass. The parent header, delay, boot-ready and frequency-table setup now runs in
+`DspBootSetupTask`, independent of CPU fields. Its temporary caller/IRQ
+projection remains. The outer bootstrap/reset and broader model still require
+conversion.
 
 
 ## Remaining removal gates
@@ -314,3 +316,13 @@ also pass. Details, the modest Multi CPU saving and mixed Single results are
 recorded in the journal. The implementation remains portable C++17, but Mac results do not
 establish Windows ROM/audio correctness or CPU gains. Full typed lifecycle,
 foreground/IRQ continuation and register/stack elimination remain outstanding.
+
+
+Native setup admission `ks-native-dsp-boot-setup-20261016`: all 65,536 headers,
+112 complete native table/deadline cases, 721 actual full original-H8 calls
+(106,048,286 steps), 206 selected IRQ points, 735 metric resets and 14 nested
+calls pass. Both 512-word table recurrences, live ready/fault handling and
+all original accesses/clocks match. Every cold start proves two complete native
+setups and streams with zero test recovery. Four cold timelines, nine full
+tapes, 14 raw-audio timelines and two default cases pass. The compatibility
+register/flag/stack/PC model still exists globally; this is not the full port.
