@@ -49,3 +49,5 @@ target_sources(ksLib PRIVATE ksVoiceSelectionCalls.cpp)
 target_sources(ksLib PRIVATE ksVoicePopulationCalls.cpp)
 
 target_sources(ksLib PRIVATE ksKeyResetCalls.cpp)
+
+target_sources(ksLib PRIVATE ksVoiceReleaseCalls.cpp)

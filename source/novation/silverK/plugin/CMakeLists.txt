@@ -348,3 +348,15 @@ target_include_directories(ksKeyResetCalls_test PRIVATE "${ROOT}/source/cpu")
 target_link_libraries(ksKeyResetCalls_test PRIVATE ksLib)
 add_test(NAME ks_key_reset_calls COMMAND ksKeyResetCalls_test)
 set_tests_properties(ks_key_reset_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Native voice-release walker; original H8 exists only in the independent fixture.
+add_executable(ksVoiceReleaseCalls_test "${ROOT}/source/novation/ks/ksLib/ksVoiceReleaseCalls_test.cpp")
+target_include_directories(ksVoiceReleaseCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksVoiceReleaseCalls_test PRIVATE ksLib)
+add_test(NAME ks_voice_release_calls COMMAND ksVoiceReleaseCalls_test)
+set_tests_properties(ks_voice_release_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+add_executable(ksVoiceReleaseTask_test "${ROOT}/source/novation/ks/ksLib/ksVoiceReleaseTask_test.cpp")
+target_link_libraries(ksVoiceReleaseTask_test PRIVATE ksLib)
+add_test(NAME ks_voice_release_properties COMMAND ksVoiceReleaseTask_test)
+set_tests_properties(ks_voice_release_properties PROPERTIES TIMEOUT 90)

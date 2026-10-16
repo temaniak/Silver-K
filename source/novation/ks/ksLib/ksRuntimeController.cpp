@@ -50,7 +50,8 @@ void RuntimeController::arbitrate(ControllerCpu& h){
 }
 bool RuntimeController::stepCode(ControllerCpu& h){
     const unsigned pc=h.getPC();bool handled=false;
-    if(pc<0x2de8)handled=io(h);
+    if(VoiceReleaseCalls::candidate(pc))handled=shared.noteActions.step(h);
+    else if(pc<0x2de8)handled=io(h);
     else if(pc<0x4000)handled=midi(h);
     else if(pc<0x77dc)handled=state(h);
     else if(pc<0x9374)handled=parameters(h);

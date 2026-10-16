@@ -18,7 +18,7 @@ class LiveVoiceController final {
 public:
     static constexpr bool candidate(unsigned pc){
         return (pc>=0x2416 && pc<0x25fe)||(pc>=0x77dc && pc<0x7872)||
-            (pc>=0x8fc0 && pc<0x9374)||(pc>=0xa338 && pc<0xa656)||
+            (pc>=0x8fc0 && pc<0x92c0)||(pc>=0xa338 && pc<0xa656)||
             (pc>=0xa67e && pc<0xa69e);
     }
     static void verify(const ControllerCpu&);

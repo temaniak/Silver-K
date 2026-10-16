@@ -60,7 +60,7 @@ int main(int argc,char** argv){try{
   shared.noteActions.discardTransientCalls();shared.voiceActions.discardTransientCalls();shared.resetMetrics();for(unsigned i=0;i<8;++i)a->regs[i].er=b->regs[i].er=int32_t(rng());
   const unsigned stack=odd?0xfff001u:0xa18000u,entry=held?0x3074:0x30b8;
   a->setSP(stack);b->setSP(stack);for(auto* m:{a->memory,b->memory}){
-   m[0x17526]=uint8_t(part);for(unsigned p=0;p<256;++p)for(unsigned at=0;at<334;++at)m[0x160d2 + p*334+at]=uint8_t(p*37+at*7+flags);
+   for(unsigned p=0;p<256;++p)for(unsigned at=0;at<334;++at)m[0x160d2 + p*334+at]=uint8_t(p*37+at*7+flags);m[0x17526]=uint8_t(part);
    m[stack]=m[stack+1]=0;m[stack+2]=0x43;m[stack+3]=0x38;
   }
   a->pc=a->makepc(entry);b->pc=b->makepc(entry);a->ccr=b->ccr=uint8_t(flags);a->exr=b->exr=0;a->cycles=b->cycles=1000;
@@ -72,7 +72,7 @@ int main(int argc,char** argv){try{
   do{
    if(count==interruptAt){a->pending_irqs=b->pending_irqs=1ull<<28;injected=true;}
    if(count%7==5){shared.resetMetrics();++resets;}
-   if(mutate)for(auto* m:{a->memory,b->memory}){m[0x17526]=uint8_t(count*17);for(unsigned p=0;p<256;++p)for(unsigned at=0;at<334;++at)m[0x160d2 + p*334+at]=uint8_t(count*23+at*31+p);}
+   if(mutate)for(auto* m:{a->memory,b->memory}){for(unsigned p=0;p<256;++p)for(unsigned at=0;at<334;++at)m[0x160d2 + p*334+at]=uint8_t(count*23+at*31+p);m[0x17526]=uint8_t(count*17);}
    step();check(++count<256,"Native key reset stalled");
    if(nested&&count==5){
     std::array<int32_t,8> av{},bv{};for(unsigned i=0;i<8;++i){av[i]=a->regs[i].er;bv[i]=b->regs[i].er;}

@@ -3931,3 +3931,73 @@ parameter/MIDI/parser/clock/state/reset/caller lifecycles. The broad production
 register/flag/stack/PC compatibility model is still present. Complete its removal
 before final musical/product checks, whole-process direct-H8/native CPU comparison
 and push to Optimized. Private firmware/reports/tapes/audio/binaries stay outside Git.
+
+
+## 2026-10-16 — Mac: native note, part, fast-cut and pedal voice release
+
+Test ID `ks-native-voice-release-20261016-checked`; source parent `21c300a`
+plus release change. M1 Pro arm64 Release AppleClang21/C++17, unchanged pinned
+dependencies. Frozen source manifests/binaries/private evidence live under the
+test ID in `/private/tmp`. No CPU comparison or push. Windows and fresh plugin
+products/callback validation remain pending.
+
+`VoiceReleaseTask` owns the active/part/note/extra-state admission decisions,
+pedal bypass and raw held-value publication, pedal-up pending-state clearing,
+packed release ages, B selection/gate-off order, optional fast-cut packet,
+live voice-selector advancement and final physical-key reset. Voice count zero
+retains the original 256 iterations. The current-part tag is captured once;
+parameter lookup and slot fields remain live observations at their admitted
+boundaries. Provided part-release policy values, including full nonzero words,
+are supported. The core has no CPU registers, flags, stack, PC or processor
+pointers. Temporary caller/IRQ/trace projections remain in the call bridge.
+The 114 old bodies now exist only in the comparison object; one task owner
+handles the release family across the former note/voice dispatch boundary.
+
+Validation: 65,536 independent native policy/state scenarios compare ordered
+age/pending/selector/select/cut/gate/reset actions and deadlines. 13,938 actual
+jobs / 28,055,040 direct original steps cover Note/Part/FastPart/ProvidedPart/
+Pedal, inactive/wrong-owner/wrong-note/extra/held/bypass/mixed states, voice
+counts 1/14/256, all initial flag bytes and note bytes across parts, tagged and
+low patch bindings, both fetch modes, odd/even SRAM and live mutations. 1,448
+selected IRQ points, 295,606 metric resets and ten nested jobs match every data
+access/value/order/clock/projected state and final full memory. Original H8 is
+independent in the fixture, with no synchronized recovery factory; candidate
+interpreter and partial recovery are zero. Allocation/ASan/UBSan samples:
+2,718 calls / 6,380,436 original steps, 1,448 IRQ points, 66,946 resets, ten nested
+jobs; zero new/new[] in native runtime steps. New bridge/core instrumented,
+original H8 excluded, other libraries uninstrumented.
+
+Four full cold/reset/warm variants, whole-runtime fuzzing and focused
+Multi/FX/steal/pedal complete tapes/raw PCM/state/Flash/MIDI/controller/DSP/serial
+checks pass frozen identity (nine stages). Actual release-job starts/returns
+are respectively 305/305, 20/20, 64/64, 88/88; zero restarts, abandoned contexts
+or partial recovery. Public component checks: two passes/two private-ROM skips,
+zero failure; both private fixtures pass separately. ksLib has no original H8
+symbols; normal product commands exclude the reference object. Synthetic Flash,
+zero Wave and mapped-marker evidence does not establish real-bank/hardware
+coverage. DSP/JIT, clocks/IRQ timing, B/A order, rates/buffers, workers/waits/
+priorities/placement unchanged.
+
+An initial focused attempt stopped on a diagnostic assertion: the new release
+job count reused the pre-existing gate-count JSON name, so a JSON reader replaced
+one value. Commands/PCM had already matched. Distinct names and duplicate-key
+rejection in the private harness resolve it; only the checked test ID admits
+all nine stages. Keyboard-reset fixture preparation also needed correction:
+filling the broad synthetic part region could overwrite the selected-part byte.
+The selector is now written after that fill, including live mutations. Repeated
+10,322 actual reset calls / 687,282 original steps, 62 IRQ points, 92,944 metric
+resets and 12 nested jobs pass the corrected explicit part bindings. Historical
+raw results remain retained, with this limitation/correction recorded rather
+than silently discarded.
+
+REA was considered at the user's request. Local Ghidra was available through
+MCP REA; after explicit authorization for this private OS, open_binary rejected
+KSOS2102.SYX as an unsupported binary format. No decompilation or H8 analysis
+claim follows from that attempt. Continue with admitted local source/disassembly
+and differential fixtures; no REA setup changes or firmware publication.
+
+Next: native unison/single-voice startup, then remaining parameter, MIDI/parser,
+clock/state/reset/caller paths. The broad production register/flags/stack/PC model
+is still present. Complete its removal before final musical/product validation,
+whole-process direct-H8/native CPU comparison and push to Optimized. Firmware,
+raw reports/tapes/PCM/binaries remain private and outside Git.
