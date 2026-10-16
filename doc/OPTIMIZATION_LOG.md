@@ -4108,3 +4108,64 @@ state/reset/caller lifecycles. The broad register/flag/stack/PC compatibility
 frame remains. Complete its global removal before final musical/product checks,
 whole-process direct-H8/native CPU comparison and push to Optimized. Private
 firmware, reports/tapes/audio/binaries are not committed.
+
+
+## 2026-10-16 — Mac: one native velocity-modulation algorithm for eight bindings
+
+Test ID `ks-native-velocity-modulation-20261016`; source parent `482a476`
+plus common modulation change. M1 Pro arm64 Release AppleClang21/C++17, same
+pinned dependencies. Frozen identities/binaries/private evidence under this
+ID in `/private/tmp`. No CPU comparison or push. Windows/fresh products pending.
+
+`VelocityModulationTask` replaces three startup and five full-parameter-upload
+copies with one native computation. It observes a native voice handle, velocity
+and depth at their original admitted times, biases/inverts/negates signed byte
+values, multiplies and wraps the shifted product to 16 bits, handles the zero
+shortcut, biases the high byte and supplies the exact 24-bit DSP word. Sequential
+and explicit relative-offset transports retain their original call clocks and
+order. All 139 old bodies are confined to the comparison object. The pure core
+has no register/flag/stack/PC/raw-pointer model; signed-byte conversion is explicit
+portable integer arithmetic. Caller/IRQ/trace projections remain temporary.
+
+These are inline computations. After the DSP child returns, context completion
+is observed at the next actual caller admission with zero extra fetches/clocks.
+An adjacent modulation block may begin on that same original boundary. A test's
+initial stop rule incorrectly assumed the next boundary necessarily belonged to
+the caller; selected IRQ injection instead entered/returned through the ISR.
+State and clock comparison still matched. The fixture now waits through that
+real ISR boundary and the caller admission before requiring task completion;
+no engine timing was changed to satisfy the check.
+
+262,144 complete native velocity/depth/transport cases verify signed inversion,
+-128 negation, multiplication/16-bit wrap, zero shortcut, packed words and exact
+deadlines/own clocks. 1,077,664 actual inline jobs plus caller admissions /
+42,187,704 independent original steps cover every velocity/depth pair in all
+eight source bindings, every initial flag and slot 0/13/255, low/tagged patches,
+both fetch modes/SRAM alignments and live fields. 3,936 selected IRQ points,
+1,077,728 metric resets and 64 nested jobs retain exact data accesses/values/
+clocks/projected state and final full memory. No synchronized original factory
+is linked in the actual-call fixture; candidate interpreter/recovery are zero.
+Allocation/ASan/UBSan run 1,054,624 calls / 41,263,224 original steps: full byte
+pairs, sampled initial flags, the same 3,936 IRQ points, 1,054,688 resets and
+64 nested jobs; zero new/new[] in native steps. New bridge/core instrumented,
+original H8 excluded, other libraries uninstrumented. Raw sample captions are
+conservative about pair coverage; a private scope note records inspected bounds.
+Public component checks: one pass/one private-ROM skip/zero fail; private full
+fixture passes separately.
+
+Four complete cold/reset/warm variants, whole-runtime fuzzing and focused Multi/
+FX/steal/pedal full tapes/raw PCM/state/Flash/MIDI/controller/DSP/serial checks pass
+frozen identity (nine stages, duplicate report keys rejected). Modulation starts/
+returns: 1,600/1,600, 290/290, 1,200/1,200, 332/332, zero initial/remaining contexts
+or recovery. Lifetime accounting preserves suspended jobs through metric resets.
+ksLib has no original H8 symbols and normal product commands exclude the
+reference object. Verified capture duplicates retain private canonical copies/
+hash manifests. Same synthetic Flash/zero Wave/mapped-marker limitations; no
+new real-bank/hardware coverage. DSP/JIT, guest timing/IRQ boundaries, B/A order,
+rates/buffers, workers/waits/priorities/placement unchanged.
+
+Next: shared native glide/portamento, gate packets and remaining single-voice
+startup, then remaining parameter/MIDI/parser/clock/state/reset/caller paths.
+The broad register/flag/stack/PC compatibility frame remains. Complete global
+removal before final musical/product checks, whole-process direct-H8/native CPU
+comparison and push to Optimized. Firmware/reports/tapes/audio/binaries stay private.

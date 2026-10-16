@@ -287,6 +287,11 @@ int main(int argc,char** argv){try{
         <<",\"native_startup_returns_before_metrics\":"<<startupReturns
         <<",\"native_dsp_reset_returns_before_metrics\":"<<resetReturns
         <<",\"native_startup_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->startupCalls.partialEntries:0)
+        <<",\"native_velocity_modulation_jobs\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.modulationCalls.started:0)
+        <<",\"native_velocity_modulation_returns\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.modulationCalls.completed:0)
+        <<",\"native_velocity_modulation_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.modulationCalls.initialActive:0)
+        <<",\"native_velocity_modulation_active\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.modulationCalls.activeCalls():0)
+        <<",\"native_velocity_modulation_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.modulationCalls.partialEntries:0)
         <<",\"native_tracking_jobs\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.trackingCalls.started:0)
         <<",\"native_tracking_returns\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.trackingCalls.completed:0)
         <<",\"native_tracking_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.trackingCalls.initialActive:0)

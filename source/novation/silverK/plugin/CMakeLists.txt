@@ -380,3 +380,13 @@ target_include_directories(ksVoiceTrackingCalls_test PRIVATE "${ROOT}/source/cpu
 target_link_libraries(ksVoiceTrackingCalls_test PRIVATE ksLib)
 add_test(NAME ks_voice_tracking_calls COMMAND ksVoiceTrackingCalls_test)
 set_tests_properties(ks_voice_tracking_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Shared native velocity modulation, independently checked against original H8.
+add_executable(ksVelocityModulationTask_test "${ROOT}/source/novation/ks/ksLib/ksVelocityModulationTask_test.cpp")
+target_link_libraries(ksVelocityModulationTask_test PRIVATE ksLib)
+add_test(NAME ks_velocity_modulation_properties COMMAND ksVelocityModulationTask_test)
+add_executable(ksVelocityModulationCalls_test "${ROOT}/source/novation/ks/ksLib/ksVelocityModulationCalls_test.cpp")
+target_include_directories(ksVelocityModulationCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksVelocityModulationCalls_test PRIVATE ksLib)
+add_test(NAME ks_velocity_modulation_calls COMMAND ksVelocityModulationCalls_test)
+set_tests_properties(ks_velocity_modulation_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
