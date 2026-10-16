@@ -7,6 +7,7 @@
 #include "ksControllerJobs.h"
 #include "ksDspWordCalls.h"
 #include "ksDspAddressCalls.h"
+#include "ksDspFaultCalls.h"
 #include "ksDspTransport.h"
 #include "ksControllerBoundary.h"
 #include <algorithm>
@@ -258,6 +259,32 @@ bool partialAddress(ControllerCpu& h){
  }
 #undef N
 }
+bool partialFault(ControllerCpu& h){
+ using namespace controllerDetail;auto& r=h.regs;
+#define N(P,L,...) case P:{Boundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
+ switch(unsigned(h.getPC())){
+    N(0x660,2,f.push(r[6].r))
+    N(0x662,6,f.move(r[6].rl,h.read8(0xffec22)))
+    N(0x668,2,r[6].rl^=0x7;value(h,r[6].rl))
+    N(0x66a,6,f.store8(0xffec22,r[6].rl))
+    N(0x670,2,f.store8(0xffff61,r[6].rl))
+    N(0x672,2,f.move(r[6].rl,0x36))
+    N(0x674,2,f.store8(0xffff62,r[6].rl))
+    N(0x676,4,h.write8(uint8_t(h.read8(0xffff62))&~(1u<<0x5),0xffff62))
+    N(0x67a,2,f.push(r[0].r))
+    N(0x67c,4,f.move(r[0].r,0x3))
+    N(0x680,2,f.inc(r[0].r,-1))
+    N(0x682,2,f.branch(!(h.ccr&4),0x680))
+    N(0x684,2,f.pop(r[0].r))
+    N(0x686,4,h.write8(uint8_t(h.read8(0xffff62))|(1u<<0x5),0xffff62))
+    N(0x68a,2,f.pop(r[6].r))
+    N(0x68c,2,f.ret())
+    N(0x2304,4,f.call(0x660))
+    N(0x2308,2,f.ret())
+ default:return false;
+ }
+#undef N
+}
 ControllerJobs::Result partialShift(ControllerCpu& h,uint64_t deadline){
  using namespace controllerDetail;ControllerJobs::Result result;const unsigned entry=unsigned(h.getPC());
         auto& r=h.regs;const bool left=entry==0xa6be;
@@ -394,6 +421,6 @@ unsigned service(ControllerCpu& h,uint64_t deadline) {
 }
 
 }
-struct Install {Install(){setControllerReferenceFactoryForTests(&create);setKeySearchPartialForTests(&partialKeys);setParameterScalePartialForTests(&partialScale);setControlShiftPartialForTests(&partialShift);setDspWordPartialForTests(&partialWord);setDspTransportPartialBatchForTests(&historicalTransport::service);setDspAddressPartialForTests(&partialAddress);}} install;
+struct Install {Install(){setControllerReferenceFactoryForTests(&create);setKeySearchPartialForTests(&partialKeys);setParameterScalePartialForTests(&partialScale);setControlShiftPartialForTests(&partialShift);setDspWordPartialForTests(&partialWord);setDspTransportPartialBatchForTests(&historicalTransport::service);setDspAddressPartialForTests(&partialAddress);setDspFaultPartialForTests(&partialFault);}} install;
 }
 }

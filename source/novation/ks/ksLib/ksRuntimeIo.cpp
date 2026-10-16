@@ -7,6 +7,7 @@ using namespace controllerDetail;
 // Fixed native control flow for the verified KS revision. Private ROM data
 // remains external; instruction fetch reads account for original bus clocks.
 bool RuntimeController::io(ControllerCpu& h){
+    if(DspFaultCalls::candidate(unsigned(h.getPC())))return shared.faultCalls.step(h);
     auto& r=h.regs;
 #define N(P,L,...) case P:{RuntimeBoundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
     switch(unsigned(h.getPC())){
@@ -173,22 +174,6 @@ bool RuntimeController::io(ControllerCpu& h){
     N(0x656,6,f.store8(0xffec23,r[6].rl))
     N(0x65c,2,f.pop(r[6].r))
     N(0x65e,2,f.ret())
-    N(0x660,2,f.push(r[6].r))
-    N(0x662,6,f.move(r[6].rl,h.read8(0xffec22)))
-    N(0x668,2,r[6].rl^=0x7;value(h,r[6].rl))
-    N(0x66a,6,f.store8(0xffec22,r[6].rl))
-    N(0x670,2,f.store8(0xffff61,r[6].rl))
-    N(0x672,2,f.move(r[6].rl,0x36))
-    N(0x674,2,f.store8(0xffff62,r[6].rl))
-    N(0x676,4,h.write8(uint8_t(h.read8(0xffff62))&~(1u<<0x5),0xffff62))
-    N(0x67a,2,f.push(r[0].r))
-    N(0x67c,4,f.move(r[0].r,0x3))
-    N(0x680,2,f.inc(r[0].r,-1))
-    N(0x682,2,f.branch(!(h.ccr&4),0x680))
-    N(0x684,2,f.pop(r[0].r))
-    N(0x686,4,h.write8(uint8_t(h.read8(0xffff62))|(1u<<0x5),0xffff62))
-    N(0x68a,2,f.pop(r[6].r))
-    N(0x68c,2,f.ret())
     N(0x68e,2,f.move(r[0].rl,0x14))
     N(0x690,2,r[6].r=h.sub16(r[6].r,r[6].r))
     N(0x692,4,f.call(0x78c))
@@ -2737,8 +2722,6 @@ bool RuntimeController::io(ControllerCpu& h){
     N(0x22f8,6,f.move(r[6].er,0x81fc00))
     N(0x22fe,4,f.call(0x11ae))
     N(0x2302,2,f.ret())
-    N(0x2304,4,f.call(0x660))
-    N(0x2308,2,f.ret())
     N(0x230a,2,f.branch(true,0x230a))
     N(0x230c,4,f.call(0x136e))
     N(0x2310,6,f.move(r[5].er,0x400000))

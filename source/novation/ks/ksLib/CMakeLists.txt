@@ -29,3 +29,5 @@ target_sources(ksLib PRIVATE ksRuntimeStartup.cpp ksRuntimeController.cpp ksRunt
 target_sources(ksLib PRIVATE ksDspWordCalls.cpp ksDspWordCalls.h ksDspWordTask.h)
 
 target_sources(ksLib PRIVATE ksDspAddressCalls.cpp ksDspAddressCalls.h ksDspAddressTask.h)
+
+target_sources(ksLib PRIVATE ksDspFaultCalls.cpp ksDspFaultCalls.h ksDspFaultTask.h)

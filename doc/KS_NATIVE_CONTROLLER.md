@@ -167,9 +167,27 @@ musical timelines match, with zero test recovery or retired-batch work. Single
 and Multi also match full tape and raw audio without either legacy experimental
 flag. Task/bridge allocation and sanitizer checks pass. This stage rebuilds
 engine tests; products/callbacks were last verified at the preceding word-write
-checkpoint and require fresh final validation. The bootstrap firmware stream (the separate `0x23ce` path), fault notification
-and caller/cache/reset/parser/voice/parameter/clock/state paths still need semantic
+checkpoint and require fresh final validation. The bootstrap firmware stream (the separate `0x23ce` path) and
+caller/cache/reset/parser/voice/parameter/clock/state paths still need semantic
 conversion; no CPU comparison or push has been performed.
+
+
+`DspFaultTask` now owns the actual timeout latch/display pulse, both live
+control observations and its three-tick delay. Semantic IO callbacks and fixed
+admission/release intervals contain no CPU state or device addresses. Its 159
+body clocks plus the temporary caller's 17-clock return match the original
+176-clock service. `DspFaultCalls` alone retains the old caller/IRQ/trace/stack
+projection. The 18 old wrapper/pulse boundaries are comparison-only.
+
+Admission `ks-native-dsp-fault-calls-20261016`: 525,056 complete outer calls
+plus 224 children against direct original H8, every latch/initial-flag
+combination and every control-byte pair, 704 IRQ/RTE points and eight live
+tasks. Forced word/address timeouts execute all 96 complete native fault jobs.
+Healthy musical scenarios observe no faults, so they do not stand in for that
+explicit error-path proof. Full tapes, 14 raw musical timelines and two default
+Single/Multi cases match. Allocation/sanitizer scope and product-validation
+limits remain in the journal. The separate bootstrap byte stream, its parent
+initialization and the broader controller/caller model still need conversion.
 
 
 ## Remaining removal gates

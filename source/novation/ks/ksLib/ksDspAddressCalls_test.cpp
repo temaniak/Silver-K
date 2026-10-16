@@ -128,6 +128,9 @@ int main(int argc,char** argv){try{
             if(interleave && count==5)nested(nested,1);
         }while(a->getPC()!=returned);
         check(x.script.reads==std::array<unsigned,2>{busyFirst+1,busySecond+1} && y.script.reads==x.script.reads && x.script.writes==5 && y.script.writes==5,"Actual readiness/request counts differ");
+        check(!shared.faultCalls.partialEntries,"Native fault used partial-test recovery");
+        const uint64_t expectedFaults=(busyFirst?uint64_t(busyFirst-1)/65536:0)+(busySecond?uint64_t(busySecond-1)/65536:0);
+        check(shared.faultCalls.started==expectedFaults && shared.faultCalls.completed==expectedFaults,"Address timeout did not execute complete native fault jobs");
         check(!b->interpretedSteps && !shared.voiceActions.addressCalls.partialEntries,"Native address task used interpreter/test recovery");
         if(script.receive)check(x.script.dataReads==3 && y.script.dataReads==3 && uint16_t(a->regs[4].r)==uint16_t(word>>8) && uint8_t(a->regs[0].rl)==uint8_t(word),"Actual read result differs from native word");
         else check(uint16_t(a->regs[4].r)==uint16_t(address),"Address-only request changed address");

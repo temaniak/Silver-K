@@ -3363,3 +3363,83 @@ cache/selection, reset, parser, note/voice/parameter, clock/arp and state/Flash
 lifecycles. Delete every temporary projection and all shared registers, flags,
 stack and PC. Only after that full removal, run final equality/product checks,
 compare whole-process CPU with direct H8, and push the completed migration.
+
+
+## 2026-10-16 — Mac: native DSP timeout notification; old fault bodies test-only
+
+Test ID: `ks-native-dsp-fault-calls-20261016`. Isolated source parent
+`48fdf29016707a1d56a496b86d02f3ba55b54e7b` plus the fault task/caller changes;
+source/binary manifests and raw private validation remain in ignored output.
+Same M1 Pro arm64 Release / AppleClang21 / C++17 and pinned dependencies.
+The full controller port remains active; no CPU comparison or push is done.
+
+`DspFaultTask` implements the actual timeout latch/display pulse using semantic
+read/write callbacks, native latch/tick values and calibrated admission/release
+intervals. No CPU registers, flags, emulated stack, PC, instruction addresses
+or device addresses occur in this task. Both read/modify/write observations
+remain live; the pulse is not fitted to a constant cached port response.
+Independent original execution admits the 122-clock pulse body, the initial
+20-clock call, inner 17-clock release and outer 17-clock return: 176 clocks
+for the complete service. The task owns 159; the outer caller-return projection
+accounts for the final 17 until the old calling convention is removed.
+
+`DspFaultCalls` owns fixed task contexts and temporarily supplies the old
+caller/IRQ/stack/trace view, including changing stack depths across the service.
+The 18 old wrapper/pulse boundaries move to the comparison-only object.
+In-flight tasks survive metric resets. Fresh native jobs reject unowned
+partial states; only comparison tests may use the historical partial adapter.
+The separate bootstrap transfer and all remaining generic caller state still
+need semantic conversion; this checkpoint is not complete model removal.
+
+Actual validation:
+
+- 525,056 complete outer runtime calls / 11,551,936 independent original-H8
+  outer steps, plus 224 child calls / 4,928 child steps. Every latch byte x
+  every initial flag byte, and every pair of live control bytes, are exercised
+  with mapped/clock-only fetch and odd/even SRAM frames. Each intermediate
+  register/flag/PC projection, clock, complete data/stack/return access, final
+  memory and exact eight GPIO observations/writes match. Normal uninterrupted
+  services all consume 176 clocks. No synchronized H8/recovery factory is
+  linked, and candidate H8/recovery counters remain zero.
+- 704 IRQ save/RTE/resume points, 525,280 in-flight metric resets and eight
+  simultaneously live tasks pass. Explicit child context interleaving is
+  separately scoped from IRQ-prologue timing.
+- 133,120 public task cases pass for native latch/control values, all control
+  pairs, deadlines, live reads, output order and 159 own clocks. An interval
+  that does not fit performs no access or state advancement.
+- Existing actual word/address fixtures now assert completed native fault-job
+  counts against the independently derived 16-bit timeout count. All 24 word
+  and 72 address-phase fault services run natively, with no partial recovery;
+  all original GPIO accesses and state remain exact. Normal musical windows
+  contain zero faults; their equality does not replace this forced-error proof.
+- Four complete cold/reset/warm/playback cases, nine complete frozen original
+  DSP tapes (8,085,451 events) and 14 complete raw-audio timelines pass. Audio
+  covers 6,075,618 frames x 24 streams per side / 583,259,328 bytes per side,
+  including 30-second Multi/pedal/clock and pedal/FX H8 round trips. State,
+  Flash, MIDI, controller/DSP clocks/instructions and serial state match. All
+  54 stages pass the frozen source identity, with zero test recovery/batches.
+- Single and Multi also match complete tapes and all raw audio bytes without
+  the old experiment flags: another 362,724 frames / 34,821,504 bytes per side
+  across 24 streams. No retired HDI batch executes on either path.
+- Private allocation/sanitizer probes pass 2,816 sampled outer calls plus 224
+  children, including all declared IRQ/nested cases: zero `new/new[]` inside
+  native runtime steps. ASan/UBSan cover the new fault bridge/task; original
+  H8 is excluded and unchanged libraries remain uninstrumented.
+- Fresh component CTest: six pass, five skip without private ROM, zero fail
+  (11 selected); the private actual-call/runtime cases execute above. `ksLib`
+  has no H8 core/decoder symbols and normal product commands exclude the KS
+  comparison object. Product/callback evidence is still the earlier word-write
+  checkpoint, not a fresh validation of this fault source. Rebuild/revalidate
+  final products and callbacks after complete semantic removal.
+
+Limits: same synthetic Flash, zero Wave ROM and mapped boot markers; no new
+real sampled-bank or physical-hardware admission. DSP/JIT, Device, B/A order,
+clocks, resampling, buffers, waits, priorities and placement remain unchanged.
+Probe CPU fields are ignored; no performance comparison is performed. Windows
+build/private fidelity/CPU checks remain separate pending work.
+
+Next: native bootstrap byte streaming (`0x23ce`), then its header/boot-ready/
+table initialization and remaining reset, caller/cache, parser, note/voice/
+parameter, clock/arp and state/Flash lifecycles. Remove every temporary bridge
+and shared register/flag/stack/PC model. Only then run final equality/product
+checks, compare whole-process CPU with direct H8 and push the full transfer.

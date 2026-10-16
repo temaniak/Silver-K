@@ -127,6 +127,8 @@ int main(int argc,char** argv){try{
         check(x.reads==busy+1 && y.reads==x.reads && x.writes==3 && y.writes==3,"Actual readiness/write counts differ");
         const std::array<uint8_t,3> expected{uint8_t(word>>16),uint8_t(word>>8),uint8_t(word)};
         check(x.payload==expected && y.payload==expected,"Actual payload differs from native word");
+        check(!shared.faultCalls.partialEntries,"Native fault used partial-test recovery");
+        check(shared.faultCalls.started==(busy?uint64_t(busy-1)/65536:0) && shared.faultCalls.completed==shared.faultCalls.started,"Word timeout did not execute complete native fault jobs");
         check(!b->interpretedSteps && !shared.voiceActions.wordCalls.partialEntries,"Actual native task used interpreter/test recovery");
         if(entry==0x24d8)check(uint16_t(a->regs[4].r)==uint16_t(address+1),"Actual address advance differs");
         ++cases;if(injected)++irqCases;return count;

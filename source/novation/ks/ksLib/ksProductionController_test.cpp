@@ -5,6 +5,7 @@
 #include "ksControllerJobs.h"
 #include "ksDspWordCalls.h"
 #include "ksDspAddressCalls.h"
+#include "ksDspFaultCalls.h"
 #include "ksDspTransport.h"
 #include <iostream>
 #include <memory>
@@ -42,6 +43,9 @@ int main(){try{
         if(ks::DspTransport::candidate(entry) || ks::DspTransport::service(*state,1000) || state->cycles!=123 || state->pc!=entry)
             throw std::runtime_error("Production exposed retired address/read batch");
     }
+    ks::DspFaultCalls faults;state->pc=0x662;
+    if(faults.step(*state) || faults.partialEntries || state->cycles!=123 || state->pc!=0x662)
+        throw std::runtime_error("Production exposed partial fault recovery");
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");
