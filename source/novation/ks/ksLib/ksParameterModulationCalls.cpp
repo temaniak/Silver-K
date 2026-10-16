@@ -10,6 +10,7 @@ constexpr std::array<Binding,4> bindings{{{0x7f92,0x8018,{{{0x7f92,8},{0x7f9a,2}
 Point point(const ParameterModulationTask& task,unsigned b){if(task.awaitingWord())return {bindings[b].end,0};return bindings[b].points[unsigned(task.stage())];}
 }
 void setParameterModulationPartialForTests(ParameterModulationPartialTest fn){partialTest=fn;}
+void ParameterModulationCalls::retireReturns(ControllerCpu& h){const unsigned pc=unsigned(h.getPC());for(auto& c:calls)if(c&&c->token==h.getSP()&&c->task.awaitingWord()&&point(c->task,c->binding).location==pc){c->task.resumeWord();c.reset();++completed;}}
 bool ParameterModulationCalls::step(ControllerCpu& h){using namespace controllerDetail;
  const unsigned pc=unsigned(h.getPC());std::optional<Call>* selected=nullptr;
  for(auto& c:calls)if(c&&c->token==h.getSP()){selected=&c;break;}

@@ -7,6 +7,7 @@ class ControllerCpu;
 class ParameterPitchCalls final {
 public:
  static bool candidate(unsigned p){return (p>=0x7e8c&&p<=0x7f66)||(p>=0x8100&&p<=0x81da)||(p>=0x8374&&p<=0x844e);}
+ void retireReturns(ControllerCpu&);
  bool step(ControllerCpu&);
  unsigned activeCalls()const{unsigned n=0;for(const auto& c:calls)if(c)++n;return n;}
  void resetMetrics(){initialActive=activeCalls();started=completed=partialEntries=0;}

@@ -153,3 +153,39 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksGlobalSetupCall
 
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNoteOffStateCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksParameterScalarCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksGlobalScalarCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksGlobalTimeCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksServiceCycleCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksParameterTimeCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksParameterCurveCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksParameterVoiceScaleCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksGlobalShapeCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksGlobalRangeCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPartNoteCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPedalCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNoteProgramCalls.cpp")

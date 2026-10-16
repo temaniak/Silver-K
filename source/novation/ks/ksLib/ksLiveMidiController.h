@@ -11,6 +11,7 @@
 #include "ksDspBootSetupCalls.h"
 #include "ksDspStartupCalls.h"
 #include "ksScheduledTimerCalls.h"
+#include "ksServiceCycleCalls.h"
 #include <vector>
 #include <algorithm>
 #include <stdexcept>
@@ -39,13 +40,14 @@ public:
     DspBootSetupCalls bootSetupCalls;
     DspStartupCalls startupCalls;
     ScheduledTimerCalls scheduledTimerCalls;
+    ServiceCycleCalls serviceCycleCalls;
     // Count actual original-core calls, including interrupt arbitration. These
     // are not instruction counts or CPU time, and never imply full migration.
     void delegated(unsigned pc){++originalStepCalls;if(!originalPages.empty())++originalPages[(pc&0xffffff)>>8];}
     void enableDelegationProfile(){originalPages.assign(65536,0);originalStepCalls=0;}
     void resetMetrics(){
         nativeSteps=bytes=messages=noteOn=noteOff=controls=originalStepCalls=0;
-        noteActions.resetMetrics();parameterScaleCalls.resetMetrics();faultCalls.resetMetrics();bootStreamCalls.resetMetrics();bootSetupCalls.resetMetrics();startupCalls.resetMetrics();scheduledTimerCalls.resetMetrics();voiceActions.resetMetrics();
+        noteActions.resetMetrics();parameterScaleCalls.resetMetrics();faultCalls.resetMetrics();bootStreamCalls.resetMetrics();bootSetupCalls.resetMetrics();startupCalls.resetMetrics();scheduledTimerCalls.resetMetrics();serviceCycleCalls.resetMetrics();voiceActions.resetMetrics();
         if(!originalPages.empty())std::fill(originalPages.begin(),originalPages.end(),0);
     }
     uint64_t originalStepCalls=0;

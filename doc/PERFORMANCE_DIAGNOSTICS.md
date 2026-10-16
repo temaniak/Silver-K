@@ -992,3 +992,22 @@ transient scheduled jobs before each unrelated synthetic frame. The old caller/
 IRQ projection remains until downstream lifecycle conversion. CPU comparison
 continues to wait for complete KS model removal. Mac evidence does not validate
 Windows; no fresh AU/VST3/Standalone validation in this checkpoint.
+
+
+### Shared inline packet/job-lifetime admission (2026-10-16)
+
+`ks-native-control-packets-fixed-20261016` records corrected integrated evidence.
+`retireReturns` preflight is logical completion with no guest effects; call it
+for all inline owners before selecting a new family whose root may share the
+old caller point. Multi-word intermediate awaits must not be retired as terminal.
+Probe prefixes `native_parameter_scalar/time/curve/voice_scale`,
+`native_global_scalar/time/shape/range`, `native_part_note`, `native_note_program`
+and `native_pedal` expose calls/returns/partials; the newer families also expose
+`initial_active` and `active`. Pedal adds `native_pedal_handoffs`. Check
+calls+initial_active = returns+handoffs+active. Functional pedal/Note On/Off handler
+entry counters remain tied to their original entries separately from job counts.
+Checked sustain entering its direct3530 continuation must retain the existing
+job; fixture verifies balance after each native step. The previous failed Multi
+report is retained as failure evidence, not a final pass. Public/private test
+scope and corrected IRQ coverage are detailed in the dated log. CPU comparisons
+remain deferred until the broad KS CPU compatibility model is removed.

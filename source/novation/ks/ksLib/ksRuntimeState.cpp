@@ -7,6 +7,7 @@ using namespace controllerDetail;
 // Fixed native control flow for the verified KS revision. Private ROM data
 // remains external; instruction fetch reads account for original bus clocks.
 bool RuntimeController::state(ControllerCpu& h){
+    if(ServiceCycleCalls::candidate(unsigned(h.getPC()))&&shared.serviceCycleCalls.step(h))return true;
     if(ScheduledTimerCalls::candidate(unsigned(h.getPC()))&&shared.scheduledTimerCalls.step(h))return true;
     auto& r=h.regs;
 #define N(P,L,...) case P:{RuntimeBoundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
@@ -84,24 +85,6 @@ bool RuntimeController::state(ControllerCpu& h){
     N(0x432a,4,f.call(0x12fa))
     N(0x432e,6,f.store16(0x16780,r[6].r))
     N(0x4334,4,f.call(0x4486))
-    N(0x4338,4,f.call(0x403a))
-    N(0x433c,4,f.call(0x4096))
-    N(0x4340,4,f.call(0x40f2))
-    N(0x4344,4,f.call(0x414e))
-    N(0x4348,4,f.call(0x41aa))
-    N(0x434c,4,f.call(0x4494))
-    N(0x4350,4,f.call(0x44cc))
-    N(0x4354,2,f.call(0x43a8))
-    N(0x4356,2,f.call(0x43c2))
-    N(0x4358,4,f.call(0x4dc0))
-    N(0x435c,4,f.call(0x4406))
-    N(0x4360,4,f.call(0x2a2a))
-    N(0x4364,4,f.call(0x9f5a))
-    N(0x4368,4,f.call(0x370e))
-    N(0x436c,4,f.call(0x6e0c))
-    N(0x4370,4,f.call(0x562))
-    N(0x4374,4,f.call(0xa12c))
-    N(0x4378,2,f.branch(true,0x4338))
     N(0x437a,2,r[1].er=h.sub32(r[1].er,r[1].er))
     N(0x437c,6,f.move(r[1].rh,h.read8(0x167d3)))
     N(0x4382,4,f.move(r[4].r,0x8056))

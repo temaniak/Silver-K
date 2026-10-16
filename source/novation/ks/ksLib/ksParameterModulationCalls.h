@@ -7,6 +7,7 @@ class ControllerCpu;
 class ParameterModulationCalls final {
 public:
  static bool candidate(unsigned p){return (p>=0x7f92&&p<=0x8018)||(p>=0x8206&&p<=0x828c)||(p>=0x847a&&p<=0x8500)||(p>=0x87c4&&p<=0x884a);}
+ void retireReturns(ControllerCpu&);
  bool step(ControllerCpu&);
  unsigned activeCalls()const{unsigned n=0;for(const auto& c:calls)if(c)++n;return n;}
  void resetMetrics(){initialActive=activeCalls();started=completed=partialEntries=0;}

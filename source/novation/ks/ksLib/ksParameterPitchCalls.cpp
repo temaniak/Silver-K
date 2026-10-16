@@ -9,6 +9,7 @@ constexpr std::array<Binding,3> bindings{{{0x7e8c,0x7f66,{{{0x7e8c,6},{0x7e92,8}
 Point point(const ParameterPitchTask& task,unsigned b){if(task.awaitingWord())return {bindings[b].end,0};return bindings[b].points[task.awaitingVoice()?29:unsigned(task.stage())];}
 }
 void setParameterPitchPartialForTests(ParameterPitchPartialTest fn){partialTest=fn;}
+void ParameterPitchCalls::retireReturns(ControllerCpu& h){const unsigned pc=unsigned(h.getPC());for(auto& c:calls)if(c&&c->token==h.getSP()&&c->task.awaitingWord()&&point(c->task,c->binding).location==pc){c->task.resumeWord();c.reset();++completed;}}
 bool ParameterPitchCalls::step(ControllerCpu& h){using namespace controllerDetail;const unsigned pc=unsigned(h.getPC());std::optional<Call>* selected=nullptr;
  for(auto& c:calls)if(c&&c->token==h.getSP()){selected=&c;break;}
  if(selected&&(*selected)->task.awaitingWord()&&point((*selected)->task,(*selected)->binding).location==pc){(*selected)->task.resumeWord();selected->reset();selected=nullptr;++completed;}

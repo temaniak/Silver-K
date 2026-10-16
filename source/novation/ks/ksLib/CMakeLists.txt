@@ -100,3 +100,39 @@ target_sources(ksLib PRIVATE ksGlobalSetupCalls.cpp)
 
 
 target_sources(ksLib PRIVATE ksNoteOffStateCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksParameterScalarCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksGlobalScalarCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksGlobalTimeCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksServiceCycleCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksParameterTimeCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksParameterCurveCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksParameterVoiceScaleCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksGlobalShapeCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksGlobalRangeCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksPartNoteCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksPedalCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksNoteProgramCalls.cpp)

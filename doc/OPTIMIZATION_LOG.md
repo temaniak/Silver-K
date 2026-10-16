@@ -4416,3 +4416,108 @@ service, part/pedal/MIDI/arp decisions, IO/state/reset and caller lifecycles.
 Finish broad register/flags/stack/PC removal, then final product/musical checks,
 whole-process direct-H8/native CPU comparison and push to Optimized. Private
 firmware/banks/audio/traces/binaries/personal reports remain out of Git.
+
+
+## 2026-10-16 — Mac: shared control packets, per-part MIDI and service cycle
+
+Test ID `ks-native-control-packets-fixed-20261016`; parent `6b72ec2` plus this
+change. M1 Pro arm64 Release AppleClang21/C++17, pinned dependencies unchanged.
+Frozen identities/executables/private reports are retained under the test ID.
+Original attempt `ks-native-control-packets-20261016` retains the diagnostic
+failure described below; it is not reported as a passing suite. No CPU
+comparison or push; Windows and fresh AU/VST3/Standalone validation pending.
+
+Native `ParameterScalarTask` shares 40 bindings/eight fixed-width conversions,
+including explicit semantic pending-word paths that skip conversion reads.
+`ParameterTimeTask` shares nine coefficient-time variants with existing native
+coefficient children; `ParameterCurveTask` shares four signed table curves;
+`ParameterVoiceScaleTask` shares three late voice/patch gain paths.
+`GlobalScalarTask`, `GlobalTimeTask`, `GlobalShapeTask` and `GlobalRangeTask`
+own live B/A control packet groups, table/quadratic times, adjusted coefficient,
+mode-dependent ordered lower/upper clamps and late mode/base observations.
+`PartNoteTask`, `PedalTask` and `NoteProgramTask` own key range/zero velocity/
+preview/mono/arp admission, sustain and temporary/generated patch references.
+`ServiceCycleTask` owns the original order of 17 background children and exact
+short/long calls plus the cycle boundary. Pure native state contains no CPU
+registers/flags/stack/PC/raw processor pointer. Bridges still project legacy
+caller/IRQ state; remaining parser/arp/state/IO/reset/lifecycles are not complete.
+871 original bodies are comparison-only in this change.
+
+Inline owner roots may be other owners' return points. New explicit preflight
+retirement removes only returned logical task metadata before any new owner is
+chosen at that boundary. It adds no fetch/read/write/flags/clocks/event. Internal
+multi-packet waits remain active until their own terminal completion. Job
+diagnostics retain initial active count across resets and expose active count;
+check starts+initial = returns+handoffs+active, rather than assuming every
+capture starts/ends between jobs.
+
+The first integrated Multi tape/audio was byte-exact, but lifetime diagnostics
+found checked sustain352c continued through direct-entry3530 and re-admitted the
+same task. The admission guard now retains a matching continuation; a direct
+3530 entry still starts its own job. Integrated Pedal fixture checks balance
+after every native boundary, including IRQ/reset/nesting. It passes14,184calls /
+598,722 original steps,332IRQ sites/82,926resets/4nested. This fixes logical
+ownership and metrics; final cold/runtime/musical checks below pass afterward.
+
+Public CTest:12 pass/12 private-ROM skips/zero fail. Independent full-call H8
+fixtures use actual production routes, assert no synchronized reference factory,
+and reject interpreter/partial recovery. Every-step projected state, data/stack
+addresses/values/order/clocks/in-flight context and final memory agree. Exact
+integrated scopes:
+
+| Family | Calls | Original steps | IRQs | Resets | Nested |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Scalar/pending | 208,116 | 3,248,494 | 2,898 | 208,134 | 18 |
+| Coefficient time | 1,185,896 | 78,018,346 | 1,520 | 1,712,780 | 12 |
+| Signed curve | 18,950 | 398,488 | 472 | 18,956 | 6 |
+| Voice scale | 395,220 | 9,881,796 | 396 | 395,256 | 36 |
+| Global scalar | 262,908 | 78,483,504 | 728 | 2,103,264 | 12 |
+| Global time (corrected bitmap) | 524,798 | 43,296,932 | 426 | 1,574,394 | 28 |
+| Global shape | 263,850 | 33,633,558 | 1,526 | 1,055,400 | 60 |
+| Global range | 394,788 | 53,797,388 | 970 | 1,579,152 | 30 |
+| Part notes | 10,106 | 6,228,818 | 828 | 70,700 | 4 |
+| Sustain | 14,184 | 598,722 | 332 | 82,926 | 4 |
+| Note program | 14,662 | 44,223,778 | 230 | 467,722 | 4 |
+| Three service cycles | 1,100 | 115,572 | 72 | 16,500 | 0 |
+
+Global-time fixture IRQ bitmap was enlarged0x9800→0xa200 to cover second alias
+and late stages; prior524,508calls/136IRQs were a subset, not complete selected-
+site coverage. Zero-divisor H8 diagnostic text is private test output; wrapped
+quotient/remainder packet semantics agree. Service-cycle call fixture deliberately
+uses opaque children/return-state mutation to isolate order,333-clock own cycle
+costs and bookkeeping; full actual children are exercised in cold/musical tests.
+Part-note and note-program scopes include positive-velocity starts and valid
+mono replacement, not only suppressed downstream synthesis.
+
+ROM-free properties pass: scalar198,656; coefficient-time50,331,648; curve
+16,777,216; voice-scale65,536; shared global setup/scalars67,328; global-time
+524,288; shape16,777,728; range656,128; part-note1,900,544; pedal590,080;
+program1,114,112; service1,024cycles/17,408 children. These cover finite full-byte/
+word domains, exact own deadlines/clocks, relevant sign/wrap/alias/table/clamp/
+mode/part/tag/count bounds, both fetch modes and SRAM alignments, late mutations,
+resets and nesting; they do not prove arbitrary real-bank/hardware behavior.
+
+Independent agent native new/new[]/ASan/UBSan samples pass for all delivered
+families. Parent integrated samples additionally pass: Service140calls/14,772
+original steps/72IRQs/2,100resets; Scalar188,916/2,937,436/2,898/188,934/18nested;
+corrected GlobalTime17,918/1,494,692/426/53,754/28nested. Parent samples cover
+reduced flag/note/part/mode/value matrices and selected divisor stride257, with
+remaining explicit edge loops retained. Own cores/bridges/fixtures instrumented;
+original H8 excluded and other libraries uninstrumented. Successful native steps
+allocate zero; this is not whole-synth sanitizer coverage. Sustain post-fix
+integrated allocation/sanitizer evidence is retained alongside the parent logs.
+
+Final corrected nine-stage frozen suite passes four cold/reset/warm variants,
+runtime arbitrary-state comparison and focused Multi/FX/steal/pedal complete
+DSP tapes/raw PCM/functional keys. All new logical job balance and zero-partial
+checks pass. Old native ownership remains balanced. Verified duplicate captures
+were removed only after byte equality and private canonical/hash retention.
+Synthetic Flash/zero Wave/mapped-marker limitations remain; no new real-bank or
+physical hardware evidence. DSP sound/JIT, guest clocks/IRQ boundaries, B/A
+ordering, rates/buffers, workers/waits/priorities/placement unchanged.
+
+Next: complete remaining full-parameter/voice service, MIDI/parser/arp, state/
+IO/reset and caller lifecycles, then remove the broad production CPU model.
+Only after global removal: final product/musical validation, whole-process H8/
+native CPU comparison and push to Optimized. Private firmware/banks/audio/
+traces/binaries/personal reports remain out of Git.

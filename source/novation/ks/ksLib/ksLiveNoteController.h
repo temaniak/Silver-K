@@ -8,6 +8,9 @@
 #include "ksVoiceReleaseCalls.h"
 #include "ksKeyPriorityCalls.h"
 #include "ksNoteOffStateCalls.h"
+#include "ksPartNoteCalls.h"
+#include "ksPedalCalls.h"
+#include "ksNoteProgramCalls.h"
 #include <cstdint>
 
 namespace ks {
@@ -25,8 +28,8 @@ public:
     }
     static void verify(const ControllerCpu&);
     bool step(ControllerCpu&);
-    void resetMetrics(){noteOffStateCalls.resetMetrics();keyPriorityCalls.resetMetrics();steps=noteOnCalls=noteOffCalls=pedalCalls=pedalReleaseCalls=0;keySearchCalls.resetMetrics();keyResetCalls.resetMetrics();keyActivityCalls.resetMetrics();noteOnStateCalls.resetMetrics();releaseCalls.resetMetrics();partControlCalls.resetMetrics();}
-    void discardTransientCalls(){noteOffStateCalls.discardCalls();keyPriorityCalls.discardCalls();keySearchCalls.discardCalls();keyResetCalls.discardCalls();keyActivityCalls.discardCalls();noteOnStateCalls.discardCalls();releaseCalls.discardCalls();partControlCalls.discardCalls();}
+    void resetMetrics(){noteProgramCalls.resetMetrics();pedalNativeCalls.resetMetrics();partNoteCalls.resetMetrics();noteOffStateCalls.resetMetrics();keyPriorityCalls.resetMetrics();steps=noteOnCalls=noteOffCalls=pedalCalls=pedalReleaseCalls=0;keySearchCalls.resetMetrics();keyResetCalls.resetMetrics();keyActivityCalls.resetMetrics();noteOnStateCalls.resetMetrics();releaseCalls.resetMetrics();partControlCalls.resetMetrics();}
+    void discardTransientCalls(){noteProgramCalls.discardCalls();pedalNativeCalls.discardCalls();partNoteCalls.discardCalls();noteOffStateCalls.discardCalls();keyPriorityCalls.discardCalls();keySearchCalls.discardCalls();keyResetCalls.discardCalls();keyActivityCalls.discardCalls();noteOnStateCalls.discardCalls();releaseCalls.discardCalls();partControlCalls.discardCalls();}
     KeySearchCalls keySearchCalls;
     KeyResetCalls keyResetCalls;
     KeyActivityCalls keyActivityCalls;
@@ -35,6 +38,9 @@ public:
     PartControlCalls partControlCalls;
     KeyPriorityCalls keyPriorityCalls;
     NoteOffStateCalls noteOffStateCalls;
+    PartNoteCalls partNoteCalls;
+    PedalCalls pedalNativeCalls;
+    NoteProgramCalls noteProgramCalls;
     uint64_t steps=0,noteOnCalls=0,noteOffCalls=0,pedalCalls=0,pedalReleaseCalls=0;
 };
 }

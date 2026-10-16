@@ -65,7 +65,7 @@ int main(int argc,char** argv){try{
     native->interpreterAllowed=false;std::mt19937 random(0x4b534e52);uint64_t boundaries=0;
     for(unsigned pc=0x170;pc<0xb8e8;pc+=2){
         for(unsigned sample=0;sample<32;++sample){
-            shared.noteActions.discardTransientCalls();shared.parameterScaleCalls.discardCalls();shared.voiceActions.discardTransientCalls();shared.faultCalls.discardCalls();shared.bootStreamCalls.discardCalls();shared.bootSetupCalls.discardCalls();shared.startupCalls.discardCalls();shared.scheduledTimerCalls.discardCalls();
+            shared.noteActions.discardTransientCalls();shared.parameterScaleCalls.discardCalls();shared.voiceActions.discardTransientCalls();shared.faultCalls.discardCalls();shared.bootStreamCalls.discardCalls();shared.bootSetupCalls.discardCalls();shared.startupCalls.discardCalls();shared.scheduledTimerCalls.discardCalls();shared.serviceCycleCalls.discardCalls();
             native->nativeFetchClocksOnly=bool(sample&1);
             for(unsigned i=0;i<8;++i)original->regs[i].er=native->regs[i].er=int32_t(random());
             original->pc=original->makepc(pc);native->pc=native->makepc(pc);
