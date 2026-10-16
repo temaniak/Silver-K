@@ -15,6 +15,7 @@ bool LiveVoiceController::step(ControllerCpu& h){
     auto& r=h.regs;const unsigned pc=h.getPC();
     if(pc>=0xa67e && PartControlCalls::candidate(pc)){if(!partControlCalls.step(h))return false;++steps;return true;}
     if(VoiceSelectionCalls::candidate(pc)){if(!selectionCalls.step(h))return false;++steps;if(pc==0xa338)++allocationCalls;if(pc==0x8fc0)++releaseCalls;return true;}
+    if(VoicePopulationCalls::candidate(pc)){if(!populationCalls.step(h))return false;++steps;return true;}
     if(VelocityCurveCalls::candidate(pc)){if(!velocityCurveCalls.step(h))return false;++steps;return true;}
     if(DspRoutingCalls::candidate(pc)){
         if(!routingCalls.step(h))return false;
@@ -312,45 +313,6 @@ bool LiveVoiceController::step(ControllerCpu& h){
     // slot age comparisons, priority and steal/reuse behavior exact.
     // Populate the selected slot, apply transposition and velocity curve,
     // snapshot part controls, then read the DSP pitch for glide distance.
-    N(0xa524,4,f.call(0xa656))
-    N(0xa528,4,f.call(0xa66a))
-    N(0xa52c,10,f.store32(r[3].er+0,r[6].er))
-    N(0xa536,6,f.move(r[1].rl,h.read8(0x17528)))
-    N(0xa53c,8,f.store8(r[3].er+5,r[1].rl))
-    N(0xa544,8,f.move(r[2].rl,h.read8(r[0].er+14)))
-    N(0xa54c,2,r[2].rl=h.add8(r[2].rl,0xffffffc0))
-    N(0xa54e,2,r[1].rl=h.add8(r[1].rl,r[2].rl))
-    N(0xa550,8,f.store8(r[3].er+13,r[1].rl))
-    N(0xa558,2,r[1].rl=h.sub8(r[1].rl,r[1].rl))
-    N(0xa55a,8,f.store8(r[0].er+17,r[1].rl))
-    N(0xa562,8,f.move(r[1].rl,h.read8(r[0].er+18)))
-    N(0xa56a,8,f.store8(r[3].er+12,r[1].rl))
-    N(0xa572,6,f.move(r[1].rh,h.read8(0x17529)))
-    N(0xa578,8,f.move(r[2].rl,h.read8(r[0].er+16)))
-    N(0xa580,6,f.move(r[0].er,0x168fc))
-    N(0xa586,8,f.move(r[2].rh,h.read8(r[0].er+245)))
-    N(0xa58e,2,r[2].rh=h.add8(r[2].rh,0x2))
-    N(0xa590,2,f.call(0xa5fc))
-    N(0xa592,8,f.store8(r[3].er+6,r[1].rh))
-    N(0xa59a,6,f.move(r[0].er,0x8000ffff))
-    N(0xa5a0,10,f.store32(r[3].er+8,r[0].er))
-    N(0xa5aa,6,f.move(r[0].rl,h.read8(0x17526)))
-    N(0xa5b0,8,f.store8(r[3].er+4,r[0].rl))
-    N(0xa5b8,4,f.call(0xa67e))
-    N(0xa5bc,8,f.move(r[0].rl,h.read8(r[6].er+173)))
-    N(0xa5c4,8,f.store8(r[3].er+18,r[0].rl))
-    N(0xa5cc,4,f.call(0x77f4))
-    N(0xa5d0,4,f.move(r[4].r,0x808c))
-    N(0xa5d4,4,f.call(0x784c))
-    N(0xa5d8,2,r[4].rh=h.add8(r[4].rh,0x3c))
-    N(0xa5da,8,f.move(r[4].rl,h.read8(r[3].er+13)))
-    N(0xa5e2,2,r[4].rl=h.sub8(r[4].rl,r[4].rh))
-    N(0xa5e4,2,f.branch(!(h.ccr&1),0xa5e8))
-    N(0xa5e6,2,r[4].rl=h.sub8(0,r[4].rl))
-    N(0xa5e8,8,f.store8(r[3].er+7,r[4].rl))
-    N(0xa5f0,2,f.move(r[0].rl,0x0))
-    N(0xa5f2,8,f.store8(r[3].er+17,r[0].rl))
-    N(0xa5fa,2,f.ret())
     // Velocity curves: repeated squaring, inversion and threshold curves;
     // curve thresholds are read from the user-provided ROM, never embedded.
     // 0xa67e..0xa69e: verified interruptible controller boundaries.

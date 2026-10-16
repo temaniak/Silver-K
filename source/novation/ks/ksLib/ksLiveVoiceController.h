@@ -3,6 +3,7 @@
 #include "ksPartControlCalls.h"
 #include "ksVelocityCurveCalls.h"
 #include "ksVoiceSelectionCalls.h"
+#include "ksVoicePopulationCalls.h"
 #include "ksDspWordCalls.h"
 #include "ksDspAddressCalls.h"
 #include "ksDspStartupCalls.h"
@@ -22,8 +23,8 @@ public:
     }
     static void verify(const ControllerCpu&);
     bool step(ControllerCpu&);
-    void resetMetrics(){steps=allocationCalls=startCalls=releaseCalls=transportSteps=0;wordCalls.resetMetrics();addressCalls.resetMetrics();selectCalls.resetMetrics();routingCalls.resetMetrics();partControlCalls.resetMetrics();velocityCurveCalls.resetMetrics();selectionCalls.resetMetrics();}
-    void discardTransientCalls(){wordCalls.discardCalls();addressCalls.discardCalls();selectCalls.discardCalls();routingCalls.discardCalls();partControlCalls.discardCalls();velocityCurveCalls.discardCalls();selectionCalls.discardCalls();}
+    void resetMetrics(){steps=allocationCalls=startCalls=releaseCalls=transportSteps=0;wordCalls.resetMetrics();addressCalls.resetMetrics();selectCalls.resetMetrics();routingCalls.resetMetrics();partControlCalls.resetMetrics();velocityCurveCalls.resetMetrics();selectionCalls.resetMetrics();populationCalls.resetMetrics();}
+    void discardTransientCalls(){wordCalls.discardCalls();addressCalls.discardCalls();selectCalls.discardCalls();routingCalls.discardCalls();partControlCalls.discardCalls();velocityCurveCalls.discardCalls();selectionCalls.discardCalls();populationCalls.discardCalls();}
     DspWordCalls wordCalls;
     DspAddressCalls addressCalls;
     DspSelectCalls selectCalls;
@@ -31,6 +32,7 @@ public:
     PartControlCalls partControlCalls;
     VelocityCurveCalls velocityCurveCalls;
     VoiceSelectionCalls selectionCalls;
+    VoicePopulationCalls populationCalls;
     uint64_t steps=0,allocationCalls=0,startCalls=0,releaseCalls=0,transportSteps=0;
 };
 }

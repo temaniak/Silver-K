@@ -327,3 +327,14 @@ target_include_directories(ksVoiceSelectionCalls_test PRIVATE "${ROOT}/source/cp
 target_link_libraries(ksVoiceSelectionCalls_test PRIVATE ksLib)
 add_test(NAME ks_voice_selection_calls COMMAND ksVoiceSelectionCalls_test)
 set_tests_properties(ks_voice_selection_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Native selected-slot state/velocity/glide preparation; direct H8 only in fixture.
+add_executable(ksVoicePopulationTask_test "${ROOT}/source/novation/ks/ksLib/ksVoicePopulationTask_test.cpp")
+target_link_libraries(ksVoicePopulationTask_test PRIVATE ksLib)
+add_test(NAME ks_voice_population_properties COMMAND ksVoicePopulationTask_test)
+set_tests_properties(ks_voice_population_properties PROPERTIES TIMEOUT 90)
+add_executable(ksVoicePopulationCalls_test "${ROOT}/source/novation/ks/ksLib/ksVoicePopulationCalls_test.cpp")
+target_include_directories(ksVoicePopulationCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksVoicePopulationCalls_test PRIVATE ksLib)
+add_test(NAME ks_voice_population_calls COMMAND ksVoicePopulationCalls_test)
+set_tests_properties(ks_voice_population_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)

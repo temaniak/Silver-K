@@ -3830,3 +3830,57 @@ remaining voice startup, parameter, MIDI/parser/clock/state/reset/caller paths.
 The broad compatibility register/flags/stack/PC model is still present. Complete
 its removal before final validation and push to Optimized. Private firmware,
 raw reports/tapes/audio/binaries are not committed.
+
+
+## 2026-10-16 — Mac: native selected-slot population, velocity and glide setup
+
+Test ID `ks-native-voice-population-20261016`; source parent
+`a2881ca3c86c8f20ac818ef85b483481179567b8` plus population change. M1 Pro
+arm64 Release AppleClang21/C++17, same pinned dependencies. Frozen manifests,
+binaries and private evidence: `/private/tmp/ks-native-voice-population-20261016`.
+No CPU comparison/push. Windows and fresh products/callbacks remain pending.
+
+`VoicePopulationTask` owns patch-reference publication, note/transposition and
+held/unison initialization, live velocity/curve/power observations, native
+velocity child, packed initial age, current part and mirror copy, extra patch
+state, native B selection and DSP pitch read, late transposed-note reread,
+unsigned absolute glide distance and pending-state reset. Child pitch is the
+first/high response byte, not its middle byte. Patch linkage is an opaque
+binding operation; the core has no processor pointers/registers/flags/stack/PC.
+Every byte/word wrap and paired-store bus interval remains explicit. The 39 old
+bodies are test-only. Child result/caller/IRQ/trace projections remain temporary.
+
+Validation: 840 independent original scenarios cover parts 0/3, slots 0/13/255,
+byte transpose/velocity/curve edges and exact final fields/own clocks. Normal
+body plus return costs 483 clocks, or 486 with the original extra negation;
+child durations are separate. Another 65,536 full-byte transposition/glide,
+late-reread and power-bias cases pass. 294,058 complete actual jobs /
+76,413,262 direct original steps cover all note/transpose and note/pitch pairs,
+velocity/curve/power edges, every initial flag, all parts/slot bounds, low and
+full-tagged patch bindings, both fetch modes and odd/even SRAM. Live fields and
+individual reply bytes change between observations. All accesses, values,
+clocks, projected state and final full memory match. 1,610 selected first-visited
+IRQ points, 294,070 metric resets and 12 nested jobs pass. No synchronized H8
+or partial-recovery factory in actual fixture; candidate H8/recovery are zero.
+
+Allocation/ASan/UBSan samples: 4,618 calls / 1,786,140 original steps, 1,610 IRQ
+points, 4,630 metric resets and 12 nested jobs; zero new/new[] in native steps.
+New bridge/core instrumented; original H8 excluded, other libraries uninstrumented.
+Component checks: one pass, one private-ROM skip, zero fail; private fixture
+passes separately. Production rejects unowned partial population without
+mutation. ksLib has no original H8 symbols and product commands exclude the
+reference object. Four complete cold/reset/warm variants, whole-runtime fuzzing
+and default Multi/FX/steal/pedal full tapes/raw audio/state/Flash/MIDI/controller/
+DSP/serial checks pass exact frozen identity (nine focused stages); real musical
+work uses native population with zero recovery. Verified generated capture
+duplicates are retained once; about 10 GB of older byte-identical copies were
+released only after comparison, with a private retained-copy/hash manifest.
+
+Synthetic Flash/zero Wave/mapped-marker limitations remain: no new real-bank or
+physical-hardware proof. DSP/JIT, original clocks/IRQ boundaries, B/A order,
+rates, buffers, threads, waits, priorities and placement unchanged. The selection/
+population/velocity/part helper region is native, but remaining voice startup,
+parameter/MIDI/parser/clock/state/reset/caller lifecycles and the broad register/
+flag/stack/PC model are not fully converted. Finish those removals, then run final
+musical/product checks, direct-H8/native whole-process CPU comparison and push.
+Private firmware, reports/tapes/audio/binaries stay outside Git.

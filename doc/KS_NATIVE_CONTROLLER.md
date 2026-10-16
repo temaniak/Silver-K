@@ -35,7 +35,7 @@ zero H8 interpreter calls. This reset path still uses the same compatibility
 register/PC ABI; it is not a semantic typed initializer. Removing the H8 link
 or renaming that frame would not finish the migration.
 
-Implemented opt-in live jobs:
+Native jobs and legacy diagnostic flags:
 
 - The former `SILVER_KS_DSP_TRANSPORT=events` flag remains accepted for
   diagnostic compatibility. Address/word/read exchange now always uses typed
@@ -376,10 +376,27 @@ removal, final product tests and CPU comparison/push remain pending.
 unsigned age comparisons, ties, active-age bits, 14/256-slot scans, live index
 observations and release requests. `VoiceGateOffTask` emits the original zero
 command. The 129 former selection/gate bodies are comparison-only. Native
-selection ends at the slot-population handoff; population and remaining voice
-startup/parameter work still need conversion. Admission
+selection ends at the slot-population handoff; the population handoff is now native too, while remaining voice
+startup/parameter work still needs conversion. Admission
 `ks-native-voice-selection-20261016`: 8,192 independent random policies and
 72 original result/own-clock admissions; 95,226 actual calls / 71,766,674 direct
 original steps, 4,398 selected IRQ points and ten nested calls pass. Four cold
 variants and focused Multi/FX/steal/pedal tapes/raw audio match. No CPU comparison
 or push; the global register/flag/stack/PC model remains.
+
+
+`VoicePopulationTask` now owns selected-slot initialization, original/transpose
+notes, held/unison/velocity fields, packed age, current part/control snapshot,
+extra patch state and live DSP pitch/glide-distance setup. It composes the
+native voice/part lookup, velocity, mirror copy, B selection and pitch-read
+jobs. Its 39 old bodies are comparison-only. Child pitch uses the first/high
+reply byte, and the slot's transposed note is reread at the original late point.
+Admission `ks-native-voice-population-20261016`: 840 original result/own-clock
+scenarios and 65,536 full-byte arithmetic/live-read cases; 294,058 actual calls /
+76,413,262 direct original steps, all note/transpose and note/pitch pairs, powers,
+flags, parts/slot bounds/tagged patch bindings, 1,610 IRQ points and 12 nested
+calls pass. Four cold variants and focused Multi/FX/steal/pedal tapes/audio match.
+The complete selection/population/velocity helper region now uses native tasks,
+but remaining voice startup, parameter/MIDI/clock/state/reset/caller work and
+the global compatibility frame still require conversion before CPU comparison
+and publication.

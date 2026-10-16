@@ -98,3 +98,5 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPartControlCall
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVelocityCurveCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVoiceSelectionCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVoicePopulationCalls.cpp")

@@ -45,3 +45,5 @@ target_sources(ksLib PRIVATE ksPartControlCalls.cpp)
 target_sources(ksLib PRIVATE ksVelocityCurveCalls.cpp)
 
 target_sources(ksLib PRIVATE ksVoiceSelectionCalls.cpp)
+
+target_sources(ksLib PRIVATE ksVoicePopulationCalls.cpp)

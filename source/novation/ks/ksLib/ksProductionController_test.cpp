@@ -78,6 +78,8 @@ int main(){try{
     if(selection.step(*state)||selection.partialEntries||state->cycles!=123||state->pc!=0xa412)throw std::runtime_error("Production exposed partial voice selection recovery");
     state->pc=0x8fc6;
     if(selection.step(*state)||selection.partialEntries||state->cycles!=123||state->pc!=0x8fc6)throw std::runtime_error("Production exposed partial gate recovery");
+    ks::VoicePopulationCalls population;state->pc=0xa5e2;
+    if(population.step(*state)||population.partialEntries||state->cycles!=123||state->pc!=0xa5e2)throw std::runtime_error("Production exposed partial population recovery");
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");
