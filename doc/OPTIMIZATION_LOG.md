@@ -3656,3 +3656,62 @@ Next: typed part/voice lookup and control-mirror copy, retire their historical
 register-driven batch, then remaining parser/voice/parameters/clock/state and
 reset/caller lifecycles. Broad register/flags/stack/PC state remains; this is
 not the complete requested port. Raw private evidence is not committed.
+
+
+## 2026-10-16 — Mac: native part/voice lookup and live control-mirror copy
+
+Test ID `ks-native-part-control-20261016`; source parent
+`971fe7e0a76e3dc0e07329644920604bbb461081` plus the part-control change.
+M1 Pro arm64 Release AppleClang21/C++17, same pinned dependencies. Frozen
+manifests/binaries and private evidence: `/private/tmp/ks-native-part-control-20261016`.
+No CPU comparison or push. Windows and fresh product/callback validation pending.
+
+`PartLookupTask` computes native offsets for parameter (334-byte), part-control
+(20-byte) and voice-slot (20-byte) layouts, with either a live or provided index.
+`PartMirrorTask` performs the 20-byte live copy with original latching/access
+order, preserving overlap. Bus publication latency is an explicit input: paired
+adjacent byte stores share a transfer, while an intervening writer can break
+the pair. Neither task has registers, flags, a stack or PC. Old 29 bodies and
+all historical register-driven control batching move to comparison-only code.
+Normal batch candidate is false; its ABI is a closed-by-default test hook.
+Both legacy experiment flags remain recognized without bypassing native tasks.
+Caller/IRQ/trace projections still have to disappear with their remaining callers.
+
+Validation: 1,536 public property/deadline cases cover all selectors/layouts,
+provided indices, live byte latching and uninterrupted/intervening-writer timing.
+Bodies are 53/42/30 clocks for the lookup forms; contiguous copy is 480,
+with every store unpaired 510. Full returns add 17. An initial duration check
+caught the omitted 30-clock saving for ten paired stores; a selected IRQ case
+then caught an omitted adapter timing argument. Both are fixed, with actual
+bus clocks checked at each native lookup/copy boundary.
+
+655,518 complete actual calls / 16,913,534 direct original-H8 steps match every
+index x256 initial flags, both fetch modes, odd/even SRAM, live source/index
+mutation, self-overlap, every data access/cycle/projected value and final full
+memory. 68 selected first-visited IRQ save/RTE points, 655,528 metric resets
+and ten nested calls pass. Actual fixture links no synchronized reference or
+partial recovery. Production rejects unowned partial copy and every retired
+part-batch entry without mutation. Allocation/ASan/UBSan samples: 2,718 calls /
+71,294 original steps, 68 IRQ points, 2,728 metric resets, ten nested calls;
+zero new/new[] in native runtime steps. New bridge/tasks instrumented;
+original H8 excluded, unchanged libraries uninstrumented.
+
+Four complete cold/reset/warm variants, whole-runtime fuzzing (including the
+historical batch in its test-only object) and default Multi/FX full tapes/raw
+audio/state/Flash/MIDI/controller/DSP/serial data match H8. Seven focused stages
+pass frozen-source identity; each musical case exercises real native lookup
+and mirror calls without recovery. Fresh component checks: one public pass,
+one private-ROM skip, zero fail; the private actual fixture passes separately.
+ksLib has no H8 core/decoder symbols and normal product commands exclude the
+reference object. The first focused launch ran out of disk while saving the
+cold tape; it is retained as an incomplete storage case. Verified duplicates
+of earlier generated captures were removed only after exact comparison to
+retained copies; the complete current focused suite reran successfully.
+
+No DSP/JIT, timing, B/A order, rates, buffers, threads, waits, priorities or
+placement changes. Same synthetic Flash/zero Wave limitations; no new real-bank
+or physical-hardware proof. Broad register/flag/stack/PC state remains and
+final musical/product/CPU validation and publication remain deferred until
+its removal. Next: native velocity/voice parameter calculations and remaining
+voice allocation, MIDI/parser/clock/state/reset/caller lifecycles. No private
+firmware, tapes, audio or personal reports enter Git.

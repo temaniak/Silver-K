@@ -15,6 +15,7 @@ bool LiveNoteController::step(ControllerCpu& h){
     auto& r=h.regs;
     const unsigned pc=h.getPC();
     if(KeySearchCalls::candidate(pc)){if(!keySearchCalls.step(h))return false;++steps;return true;}
+    if(pc<0xa67e && PartControlCalls::candidate(pc)){if(!partControlCalls.step(h))return false;++steps;return true;}
     // Counts are actual handler execution, independently of decoded MIDI counts.
     if(pc==0x3426)++noteOnCalls;
     if(pc==0x33b8)++noteOffCalls;
@@ -358,12 +359,6 @@ bool LiveNoteController::step(ControllerCpu& h){
     N(0x36c8,4,f.call(0x8fcc))
     N(0x36cc,4,f.call(0xa00e))
     N(0x36d0,2,f.ret())
-    N(0x4000,6,f.move(r[0].rl,h.read8(0x17526)))
-    N(0x4006,2,r[0].r&=0xff;value(h,r[0].r))
-    N(0x4008,4,f.move(r[0].e,0x14e))
-    N(0x400c,2,r[0].er=uint16_t(r[0].er)*uint32_t(uint16_t(r[0].e));h.clockI(20))
-    N(0x400e,6,r[0].er=h.add32(r[0].er,0x160d2))
-    N(0x4014,2,f.ret())
     // Part release/all-notes-off walks the existing voice slots. The low-level
     // DSP release upload remains original, with the same call clock/ordering.
     N(0x9374,2,r[2].r=h.sub16(r[2].r,r[2].r))
@@ -437,18 +432,6 @@ bool LiveNoteController::step(ControllerCpu& h){
     N(0x947e,2,f.inc(r[0].rl,-1))
     N(0x9480,2,f.branch(!(h.ccr&4),0x9414))
     N(0x9482,2,f.ret())
-    N(0xa656,6,f.move(r[3].rl,h.read8(0x174a7)))
-    N(0xa65c,2,f.move(r[3].rh,0x14))
-    N(0xa65e,2,r[3].r=uint8_t(r[3].r)*uint32_t(uint8_t(r[3].rh));h.clockI(12))
-    N(0xa660,2,r[3].er&=0xffff;value(h,r[3].er))
-    N(0xa662,6,r[3].er=h.add32(r[3].er,0x17560))
-    N(0xa668,2,f.ret())
-    N(0xa66a,6,f.move(r[0].rl,h.read8(0x17526)))
-    N(0xa670,2,f.move(r[0].rh,0x14))
-    N(0xa672,2,r[0].r=uint8_t(r[0].r)*uint32_t(uint8_t(r[0].rh));h.clockI(12))
-    N(0xa674,2,r[0].er&=0xffff;value(h,r[0].er))
-    N(0xa676,6,r[0].er=h.add32(r[0].er,0x174ae))
-    N(0xa67c,2,f.ret())
     default:return false;
     }
 #undef N

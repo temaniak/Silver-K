@@ -13,6 +13,7 @@ void LiveVoiceController::verify(const ControllerCpu& h){
 }
 bool LiveVoiceController::step(ControllerCpu& h){
     auto& r=h.regs;const unsigned pc=h.getPC();
+    if(pc>=0xa67e && PartControlCalls::candidate(pc)){if(!partControlCalls.step(h))return false;++steps;return true;}
     if(DspRoutingCalls::candidate(pc)){
         if(!routingCalls.step(h))return false;
         ++steps;if(pc<0x25fe)++transportSteps;return true;
@@ -524,17 +525,6 @@ bool LiveVoiceController::step(ControllerCpu& h){
     N(0xa654,2,f.ret())
     // 0xa67e..0xa69e: verified interruptible controller boundaries.
     // Copy the selected part control mirror for this voice lifecycle.
-    N(0xa67e,2,r[0].r&=0xff;value(h,r[0].r))
-    N(0xa680,4,f.move(r[2].e,0x14))
-    N(0xa684,2,r[0].er=uint16_t(r[0].er)*uint32_t(uint16_t(r[2].e));h.clockI(20))
-    N(0xa686,6,r[0].er=h.add32(r[0].er,0x174ae))
-    N(0xa68c,6,f.move(r[1].er,0x17512))
-    N(0xa692,2,f.move(r[2].rl,h.read8(r[0].er));r[0].er+=1;h.clockI(2))
-    N(0xa694,2,f.store8(r[1].er,r[2].rl))
-    N(0xa696,2,f.inc(r[1].er,1))
-    N(0xa698,2,f.inc(r[2].e,-1))
-    N(0xa69a,2,f.branch(!(h.ccr&4),0xa692))
-    N(0xa69c,2,f.ret())
     default:return false;
     }
 #undef N

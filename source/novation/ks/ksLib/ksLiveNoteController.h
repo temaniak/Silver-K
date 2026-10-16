@@ -1,5 +1,6 @@
 #pragma once
 #include "ksControllerState.h"
+#include "ksPartControlCalls.h"
 #include "ksKeySearchCalls.h"
 #include <cstdint>
 
@@ -18,9 +19,10 @@ public:
     }
     static void verify(const ControllerCpu&);
     bool step(ControllerCpu&);
-    void resetMetrics(){steps=noteOnCalls=noteOffCalls=pedalCalls=pedalReleaseCalls=0;keySearchCalls.resetMetrics();}
-    void discardTransientCalls(){keySearchCalls.discardCalls();}
+    void resetMetrics(){steps=noteOnCalls=noteOffCalls=pedalCalls=pedalReleaseCalls=0;keySearchCalls.resetMetrics();partControlCalls.resetMetrics();}
+    void discardTransientCalls(){keySearchCalls.discardCalls();partControlCalls.discardCalls();}
     KeySearchCalls keySearchCalls;
+    PartControlCalls partControlCalls;
     uint64_t steps=0,noteOnCalls=0,noteOffCalls=0,pedalCalls=0,pedalReleaseCalls=0;
 };
 }

@@ -41,18 +41,15 @@ Implemented opt-in live jobs:
   diagnostic compatibility. Address/word/read exchange now always uses typed
   native tasks. All old HDI batch implementations are comparison-only; the
   production batch candidate is always false.
-- `SILVER_KS_CONTROL_JOBS=1`: part-state selection, part-parameter-table
-  selection. The signed coefficient calculation now uses its own native task,
-  independently of this flag. A complete remaining part
-  lookup is computed with a direct formula when its selector/stack observations
-  fit before the deadline; partial-entry frames are preserved too. Short
-  intervals retain the old part-lookup phase path. The earlier register-shift
-  batch is now comparison-only, so it cannot bypass a native coefficient task.
-  The part-lookup jobs retain the compatibility frame at yields. They use actual SRAM/return-stack data, exact reference
-  flags, memory clocks and wrap behavior. They cannot change interrupt masks.
+- `SILVER_KS_CONTROL_JOBS=1` remains a diagnostic compatibility flag. Part
+  parameter/control/voice selection and the live 20-byte control-mirror copy
+  now always run through CPU-independent tasks, including explicitly supplied
+  part indices. The former part-lookup batch and partial phases are test-only;
+  the production batch candidate is always false. Signed coefficient scaling
+  also uses its own native task. Temporary caller/IRQ projections remain.
 
-The control-job flag applies independently to production C++ playback and
-defaults off. The retained diagnostic backend names are
+The legacy control-job flag defaults off and no longer selects an alternative
+part-lookup algorithm. The retained diagnostic backend names are
 `native-cpp-control-jobs` and, with HDI jobs, `native-cpp-events-control`.
 No installed bundle is replaced by this research build.
 
@@ -348,3 +345,15 @@ cases and 529,238 complete actual calls / 13,293,680 original steps pass, includ
 all 16-bit relative/read addresses and every A voice/base pair. Focused cold,
 Multi/FX tape/raw-audio and allocation/sanitizer checks pass. Global controller
 model removal remains pending; no CPU comparison or push.
+
+
+`PartLookupTask` owns part parameter/control and voice-slot indexing; its
+result is a native byte offset. `PartMirrorTask` copies 20 live control bytes,
+latching each at its scheduled observation and asking the bus for publication
+latency when a neighboring byte store can share a transfer. An intervening
+writer breaks that pair. The 29 old bodies and former control batch are
+comparison-only. Admission `ks-native-part-control-20261016`: 1,536 public
+properties and 655,518 actual calls / 16,913,534 original steps, all index/flag
+combinations, live mutations/self-overlap, 68 IRQ points and ten nested calls
+match. Focused cold/Multi/FX and allocation/sanitizer checks pass. No CPU
+comparison or push; global controller model elimination remains pending.
