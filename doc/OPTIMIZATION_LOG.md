@@ -4052,3 +4052,59 @@ remaining parameter/MIDI/parser/clock/state/reset/caller lifecycles. The broad
 register/flags/stack/PC compatibility frame is still present. Remove it globally
 before final musical/product checks, direct-H8/native whole-process CPU comparison
 and push to Optimized. Private firmware/reports/tapes/audio/binaries stay out of Git.
+
+
+## 2026-10-16 — Mac: native panel voice tracking and paired effect envelopes
+
+Test ID `ks-native-voice-tracking-20261016`; source parent `66c0ba6` plus
+tracking change. M1 Pro arm64 Release AppleClang21/C++17, same pinned dependencies.
+Frozen identities, binaries and private evidence under this test ID in
+`/private/tmp`. No CPU comparison or push. Windows/fresh products remain pending.
+
+`VoiceTrackingTask` owns editable/generated patch-domain admission, current/
+active-part and tracked-voice decisions, invalidate/publish behavior, auxiliary
+B command and both related periodic effect-envelope updates. The native core
+retains logical part/voice/parameter values, source table bindings, packed rate
+and scaling arithmetic, explicit DSP requests and admitted observation order;
+no CPU register/flag/stack/PC or raw processor pointer. Table-envelope indices
+wrap in one byte after decrement/two shifts. Time envelopes retain original
+integer rate code, native signed-coefficient child, time limit 32, split product
+combination/doubling and first/second DSP word order. Source tables remain in
+the authenticated private OS. Temporary caller/IRQ/trace projections remain.
+All 120 old bodies are test-only. The verified voice-code fingerprint and
+hybrid page routing include the newly connected ranges.
+
+131,072 independent native tracking/aux/paired-envelope scenarios verify
+eligibility, active/tracked voices, sample index wrapping, integer coefficient
+codes/scaling, ordered publications/packets and deadlines. 38,350 complete
+actual jobs / 5,655,816 direct original steps cover domain thresholds and full
+tagged values, current/tracked boundaries, all flag/sample/time bytes, selected
+sample-edge pairs across all time bytes, both fetch modes/SRAM alignments, live
+fields and table mutation. 408 selected IRQ points, 65,434 metric resets and
+18 nested jobs match exact data accesses/values/order/clocks/projected state
+and final full memory. Actual fixture has no synchronized original factory;
+candidate interpreter/recovery are zero. Active native contexts are included
+in metric-reset lifetime accounting without discarding suspended jobs.
+Allocation/ASan/UBSan samples: 27,310 calls / 5,422,436 original steps, 408 IRQ
+points, 60,154 metric resets, 18 nested jobs; zero new/new[] in native steps.
+New bridge/core instrumented, original H8 excluded, other libraries uninstrumented.
+Public checks: one pass/one private ROM skip/zero fail; private actual-call test
+passes separately. The initial build found an adjacent hex-literal/plus token;
+spacing was fixed before validation. No behavior was admitted from that failed build.
+
+Four full cold/reset/warm variants, runtime fuzzing and focused Multi/FX/steal/
+pedal complete tapes/raw PCM/state/Flash/MIDI/controller/DSP/serial checks pass
+frozen identity (nine stages; duplicate diagnostic keys rejected). Tracking
+starts/returns are 315/315, 33/33, 246/246, 104/104, with zero initial/remaining
+contexts or recovery. ksLib has no original H8 symbols; normal products exclude
+the reference object. Same synthetic Flash/zero Wave/mapped-marker limitations:
+no new real-bank/hardware validation. Verified capture duplicates retain private
+canonical copies/hash manifests. DSP/JIT, timing/IRQ boundaries, B/A ordering,
+rates/buffers, workers/waits/priorities/placement unchanged.
+
+Next: shared native velocity-modulation packet calculations in single-voice
+startup and full parameter upload, remaining startup/parameter/MIDI/parser/clock/
+state/reset/caller lifecycles. The broad register/flag/stack/PC compatibility
+frame remains. Complete its global removal before final musical/product checks,
+whole-process direct-H8/native CPU comparison and push to Optimized. Private
+firmware, reports/tapes/audio/binaries are not committed.

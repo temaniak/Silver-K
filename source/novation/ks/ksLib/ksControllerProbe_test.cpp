@@ -287,6 +287,11 @@ int main(int argc,char** argv){try{
         <<",\"native_startup_returns_before_metrics\":"<<startupReturns
         <<",\"native_dsp_reset_returns_before_metrics\":"<<resetReturns
         <<",\"native_startup_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->startupCalls.partialEntries:0)
+        <<",\"native_tracking_jobs\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.trackingCalls.started:0)
+        <<",\"native_tracking_returns\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.trackingCalls.completed:0)
+        <<",\"native_tracking_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.trackingCalls.initialActive:0)
+        <<",\"native_tracking_active\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.trackingCalls.activeCalls():0)
+        <<",\"native_tracking_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.trackingCalls.partialEntries:0)
         <<",\"native_unison_jobs\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.unisonCalls.started:0)
         <<",\"native_unison_handoffs\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.unisonCalls.completed:0)
         <<",\"native_unison_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.unisonCalls.partialEntries:0)

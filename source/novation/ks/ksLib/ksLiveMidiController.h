@@ -27,7 +27,7 @@ public:
     bool step(ControllerCpu&);
     static bool candidate(unsigned pc){
         // Cheap page filter in the hot Board loop; step() validates exact PCs.
-        constexpr uint64_t pages[]{0x007be03000000000ull,0x0180000000000001ull,0x00000078001f8000ull,0x0000000000000000ull};
+        constexpr uint64_t pages[]{0x007be03000000000ull,0x0180000000000001ull,0x0000007e001f8000ull,0x0000000000000000ull};
         return pc<0x10000 && ((pages[pc>>14]>>((pc>>8)&63))&1);
     }
     LiveNoteController noteActions;

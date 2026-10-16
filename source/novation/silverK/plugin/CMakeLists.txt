@@ -370,3 +370,13 @@ target_include_directories(ksUnisonCalls_test PRIVATE "${ROOT}/source/cpu")
 target_link_libraries(ksUnisonCalls_test PRIVATE ksLib)
 add_test(NAME ks_unison_calls COMMAND ksUnisonCalls_test)
 set_tests_properties(ks_unison_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Native tracked-voice binding and paired effect-envelope updates.
+add_executable(ksVoiceTrackingTask_test "${ROOT}/source/novation/ks/ksLib/ksVoiceTrackingTask_test.cpp")
+target_link_libraries(ksVoiceTrackingTask_test PRIVATE ksLib)
+add_test(NAME ks_voice_tracking_properties COMMAND ksVoiceTrackingTask_test)
+add_executable(ksVoiceTrackingCalls_test "${ROOT}/source/novation/ks/ksLib/ksVoiceTrackingCalls_test.cpp")
+target_include_directories(ksVoiceTrackingCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksVoiceTrackingCalls_test PRIVATE ksLib)
+add_test(NAME ks_voice_tracking_calls COMMAND ksVoiceTrackingCalls_test)
+set_tests_properties(ks_voice_tracking_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
