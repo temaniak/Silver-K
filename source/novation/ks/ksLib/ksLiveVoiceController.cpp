@@ -14,6 +14,7 @@ void LiveVoiceController::verify(const ControllerCpu& h){
 bool LiveVoiceController::step(ControllerCpu& h){
     auto& r=h.regs;const unsigned pc=h.getPC();
     if(pc>=0xa67e && PartControlCalls::candidate(pc)){if(!partControlCalls.step(h))return false;++steps;return true;}
+    if(VelocityCurveCalls::candidate(pc)){if(!velocityCurveCalls.step(h))return false;++steps;return true;}
     if(DspRoutingCalls::candidate(pc)){
         if(!routingCalls.step(h))return false;
         ++steps;if(pc<0x25fe)++transportSteps;return true;
@@ -480,49 +481,6 @@ bool LiveVoiceController::step(ControllerCpu& h){
     N(0xa5fa,2,f.ret())
     // Velocity curves: repeated squaring, inversion and threshold curves;
     // curve thresholds are read from the user-provided ROM, never embedded.
-    N(0xa5fc,2,f.move(r[0].rl,r[1].rh))
-    N(0xa5fe,2,f.inc(r[2].rh,-1))
-    N(0xa600,2,f.branch(bool(h.ccr&4),0xa60a))
-    N(0xa602,2,f.move(r[1].rl,r[1].rh))
-    N(0xa604,2,r[1].r=uint8_t(r[1].r)*uint32_t(uint8_t(r[0].rl));h.clockI(12))
-    N(0xa606,2,f.shift(r[1].r,1,true))
-    N(0xa608,2,f.branch(true,0xa5fe))
-    N(0xa60a,2,f.move(r[1].rl,r[1].rh))
-    N(0xa60c,2,r[1].rl^=0x7f;value(h,r[1].rl))
-    N(0xa60e,2,f.move(r[2].rl,r[2].rl))
-    N(0xa610,2,f.branch(!(h.ccr&4),0xa614))
-    N(0xa612,2,f.ret())
-    N(0xa614,2,f.inc(r[2].rl,-1))
-    N(0xa616,2,f.branch(!(h.ccr&4),0xa61c))
-    N(0xa618,2,f.move(r[1].rh,r[1].rl))
-    N(0xa61a,2,f.ret())
-    N(0xa61c,2,f.inc(r[2].rl,-1))
-    N(0xa61e,2,f.branch(!(h.ccr&4),0xa628))
-    N(0xa620,2,f.move(r[1].rl,r[1].rh))
-    N(0xa622,2,r[1].r=uint8_t(r[1].r)*uint32_t(uint8_t(r[1].rh));h.clockI(12))
-    N(0xa624,2,f.shift(r[1].r,1,true))
-    N(0xa626,2,f.ret())
-    N(0xa628,2,f.inc(r[2].rl,-1))
-    N(0xa62a,2,f.branch(!(h.ccr&4),0xa632))
-    N(0xa62c,2,r[1].r=uint8_t(r[1].r)*uint32_t(uint8_t(r[1].rh));h.clockI(12))
-    N(0xa62e,2,f.shift(r[1].r,1,true))
-    N(0xa630,2,f.ret())
-    N(0xa632,2,f.inc(r[2].rl,-1))
-    N(0xa634,2,r[2].r&=0xff;value(h,r[2].r))
-    N(0xa636,2,r[2].er&=0xffff;value(h,r[2].er))
-    N(0xa638,6,r[2].er=h.add32(r[2].er,0x1534e))
-    N(0xa63e,2,f.move(r[2].rl,h.read8(r[2].er)))
-    N(0xa640,2,flag(h,4,(uint8_t(r[2].rl)&(1u<<0x0))==0))
-    N(0xa642,2,f.branch(!(h.ccr&4),0xa64a))
-    N(0xa644,2,h.sub8(r[0].rl,r[2].rl))
-    N(0xa646,2,f.branch(!(h.ccr&5),0xa650))
-    N(0xa648,2,f.ret())
-    N(0xa64a,2,h.sub8(r[0].rl,r[2].rl))
-    N(0xa64c,2,f.branch(bool(h.ccr&1),0xa650))
-    N(0xa64e,2,f.ret())
-    N(0xa650,2,f.move(r[1].rh,0xffffff80))
-    N(0xa652,2,f.ret())
-    N(0xa654,2,f.ret())
     // 0xa67e..0xa69e: verified interruptible controller boundaries.
     // Copy the selected part control mirror for this voice lifecycle.
     default:return false;

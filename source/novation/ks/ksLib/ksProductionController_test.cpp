@@ -72,6 +72,8 @@ int main(){try{
     if(parts.step(*state)||parts.partialEntries||state->cycles!=123||state->pc!=0xa694)throw std::runtime_error("Production exposed partial part mirror recovery");
     for(unsigned entry:{0x4000u,0x4006u,0xa66au,0xa670u}){state->pc=entry;
         if(ks::ControllerJobs::candidate(entry)||ks::ControllerJobs::service(*state,1000).steps||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed historical part batch");}
+    ks::VelocityCurveCalls velocity;state->pc=0xa63e;
+    if(velocity.step(*state)||velocity.partialEntries||state->cycles!=123||state->pc!=0xa63e)throw std::runtime_error("Production exposed partial velocity recovery");
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

@@ -94,3 +94,5 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksDspStartupCalls
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksDspRoutingCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPartControlCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVelocityCurveCalls.cpp")

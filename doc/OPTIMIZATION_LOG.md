@@ -3715,3 +3715,56 @@ final musical/product/CPU validation and publication remain deferred until
 its removal. Next: native velocity/voice parameter calculations and remaining
 voice allocation, MIDI/parser/clock/state/reset/caller lifecycles. No private
 firmware, tapes, audio or personal reports enter Git.
+
+
+## 2026-10-16 — Mac: native integer velocity curves and threshold decisions
+
+Test ID `ks-native-velocity-curve-20261016`; source parent `0a0afd2` plus
+velocity change. M1 Pro arm64 Release AppleClang21/C++17, pinned dependencies
+unchanged. Frozen source/binaries and private evidence:
+`/private/tmp/ks-native-velocity-curve-20261016`. No CPU comparison or push;
+Windows and fresh products/callbacks remain unvalidated at this stage.
+
+`VelocityCurveTask` owns repeated integer quantized products (including zero
+power encoding 256 rounds), inversion, squared/mixed curves, unsigned threshold
+comparisons and suppression. Original byte/word overflow is retained, without
+floating approximations or input normalization. Mutable threshold cells are
+read exactly when needed, never prefetched. Native state has no CPU fields or
+addresses; the temporary bridge still projects callers/IRQs/flags/stack/trace.
+Its 43 old bodies, including the empty return, are comparison-only. Both new
+and former selector counters survive metric resets without losing live jobs.
+
+Validation: 393,216 native formula/deadline cases cover all velocity/curve byte
+pairs at powers 0/1/2/3/5/255, including full counter wrap and threshold reads.
+525,722 actual complete calls / 114,953,148 independent original-H8 steps
+match every access/cycle/projected value and final full memory. Coverage includes
+all velocity/curve pairs at powers 1/2/3; all velocity/power pairs with selected
+curves; all initial flags, mapped/clock-only fetch, odd/even SRAM, mutable
+thresholds and the empty entry. 298 selected first-visited IRQ save/RTE points,
+525,224 metric resets and 14 nested calls pass. The actual fixture has no
+synchronized H8 or partial-recovery factory; candidate H8/recovery are zero.
+
+Allocation/ASan/UBSan samples: 2,522 calls / 568,934 original steps, 298 IRQ
+points, 2,504 metric resets and 14 nested calls; zero new/new[] inside native
+runtime steps. New task/bridge instrumented; original H8 excluded and other
+libraries uninstrumented. Public component check: one pass, one private-ROM
+skip, zero fail; the actual private fixture runs separately above. Production
+rejects unowned partial velocity work without mutation. ksLib has no original
+H8 symbols and product command lines exclude the reference object.
+
+Four cold/reset/warm variants, whole-runtime fuzzing and default Multi/FX
+full tapes/raw audio/state/Flash/MIDI/controller/DSP/serial comparisons pass
+exact frozen identity. Each musical case exercises native velocity work with
+zero recovery. Extra Multi with both legacy experiment flags enabled matches
+the full default tape/audio/state exactly; both historical batch counters are
+zero. The final large musical/product matrix is deferred until global removal.
+Same synthetic Flash/zero Wave/mapped-marker limits: no new real-bank or
+physical-hardware proof. DSP/JIT, original clock/IRQ boundaries, B/A order,
+rates, buffers, threads, waits, priorities and placement remain unchanged.
+
+Next: native voice allocation/reuse/stealing and population, then remaining
+parameter/MIDI/parser/clock/state/reset/caller lifecycles. Broad compatibility
+register/flag/stack/PC storage remains, so this is not the completed requested
+migration. Complete those removals before final equality/product checks,
+whole-process H8/native CPU comparison and publication to Optimized. Private
+firmware, tapes/audio/binaries and personal reports stay outside Git.

@@ -41,3 +41,5 @@ target_sources(ksLib PRIVATE ksDspStartupCalls.cpp)
 target_sources(ksLib PRIVATE ksDspRoutingCalls.cpp)
 
 target_sources(ksLib PRIVATE ksPartControlCalls.cpp)
+
+target_sources(ksLib PRIVATE ksVelocityCurveCalls.cpp)

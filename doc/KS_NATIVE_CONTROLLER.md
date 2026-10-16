@@ -357,3 +357,16 @@ properties and 655,518 actual calls / 16,913,534 original steps, all index/flag
 combinations, live mutations/self-overlap, 68 IRQ points and ten nested calls
 match. Focused cold/Multi/FX and allocation/sanitizer checks pass. No CPU
 comparison or push; global controller model elimination remains pending.
+
+
+`VelocityCurveTask` now owns repeated quantized velocity products, inversion,
+square/mixed curves and live threshold selection, including full byte wraps.
+Its 43 former boundaries are comparison-only; the caller/IRQ projection still
+exists. Admission `ks-native-velocity-curve-20261016`: 393,216 independent
+formula/deadline cases and 525,722 complete calls / 114,953,148 direct original
+steps pass, with all velocity/curve pairs at powers 1/2/3, all velocity/power
+pairs at selected curves, all flags, mutable thresholds, 298 IRQ points and
+14 nested calls. Four cold variants and focused Multi/FX full tapes/audio,
+plus Multi with both legacy flags enabled, match. No retired control/HDI
+batch executes. Allocation/sanitizer checks pass. Global register/flag/stack/PC
+removal, final product tests and CPU comparison/push remain pending.

@@ -1,6 +1,7 @@
 #pragma once
 #include "ksControllerState.h"
 #include "ksPartControlCalls.h"
+#include "ksVelocityCurveCalls.h"
 #include "ksDspWordCalls.h"
 #include "ksDspAddressCalls.h"
 #include "ksDspStartupCalls.h"
@@ -20,13 +21,14 @@ public:
     }
     static void verify(const ControllerCpu&);
     bool step(ControllerCpu&);
-    void resetMetrics(){steps=allocationCalls=startCalls=releaseCalls=transportSteps=0;wordCalls.resetMetrics();addressCalls.resetMetrics();selectCalls.resetMetrics();routingCalls.resetMetrics();partControlCalls.resetMetrics();}
-    void discardTransientCalls(){wordCalls.discardCalls();addressCalls.discardCalls();selectCalls.discardCalls();routingCalls.discardCalls();partControlCalls.discardCalls();}
+    void resetMetrics(){steps=allocationCalls=startCalls=releaseCalls=transportSteps=0;wordCalls.resetMetrics();addressCalls.resetMetrics();selectCalls.resetMetrics();routingCalls.resetMetrics();partControlCalls.resetMetrics();velocityCurveCalls.resetMetrics();}
+    void discardTransientCalls(){wordCalls.discardCalls();addressCalls.discardCalls();selectCalls.discardCalls();routingCalls.discardCalls();partControlCalls.discardCalls();velocityCurveCalls.discardCalls();}
     DspWordCalls wordCalls;
     DspAddressCalls addressCalls;
     DspSelectCalls selectCalls;
     DspRoutingCalls routingCalls;
     PartControlCalls partControlCalls;
+    VelocityCurveCalls velocityCurveCalls;
     uint64_t steps=0,allocationCalls=0,startCalls=0,releaseCalls=0,transportSteps=0;
 };
 }
