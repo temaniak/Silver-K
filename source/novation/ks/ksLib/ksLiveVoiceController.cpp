@@ -15,6 +15,7 @@ bool LiveVoiceController::step(ControllerCpu& h){
     auto& r=h.regs;const unsigned pc=h.getPC();
     if(pc>=0xa67e && PartControlCalls::candidate(pc)){if(!partControlCalls.step(h))return false;++steps;return true;}
     if(VoiceSelectionCalls::candidate(pc)){if(!selectionCalls.step(h))return false;++steps;if(pc==0xa338)++allocationCalls;if(pc==0x8fc0)++releaseCalls;return true;}
+    if(UnisonCalls::candidate(pc)){if(!unisonCalls.step(h))return false;++steps;if(pc==0x8fcc)++startCalls;return true;}
     if(VoicePopulationCalls::candidate(pc)){if(!populationCalls.step(h))return false;++steps;return true;}
     if(VelocityCurveCalls::candidate(pc)){if(!velocityCurveCalls.step(h))return false;++steps;return true;}
     if(DspRoutingCalls::candidate(pc)){
@@ -48,26 +49,6 @@ bool LiveVoiceController::step(ControllerCpu& h){
     // Release the selected DSP voice by writing zero to its gate command.
     // Note start: retain note/velocity, repeat the unison allocation count,
     // then configure each selected voice. Parameter-fill callees stay H8.
-    N(0x8fcc,6,f.store8(0x17528,r[5].rl))
-    N(0x8fd2,6,f.store8(0x17529,r[5].rh))
-    N(0x8fd8,4,f.call(0xa66a))
-    N(0x8fdc,10,f.move(r[6].er,h.read32(r[0].er+0)))
-    N(0x8fe6,8,f.move(r[1].rl,h.read8(r[6].er+0)))
-    N(0x8fee,2,r[1].rl&=0x7;value(h,r[1].rl))
-    N(0x8ff0,2,f.branch(bool(h.ccr&4),0x902a))
-    N(0x8ff2,4,f.call(0xa66a))
-    N(0x8ff6,8,f.move(r[1].rh,h.read8(r[0].er+18)))
-    N(0x8ffe,2,r[1].rh&=0xfffffff8;value(h,r[1].rh))
-    N(0x9000,2,r[1].rh|=r[1].rl;value(h,r[1].rh))
-    N(0x9002,8,f.store8(r[0].er+18,r[1].rh))
-    N(0x900a,4,f.push(r[0].er))
-    N(0x900e,2,f.call(0x902a))
-    N(0x9010,4,f.pop(r[0].er))
-    N(0x9014,8,f.move(r[1].rl,h.read8(r[0].er+18)))
-    N(0x901c,2,f.inc(r[1].rl,-1))
-    N(0x901e,8,f.store8(r[0].er+18,r[1].rl))
-    N(0x9026,2,r[1].rl&=0x7;value(h,r[1].rl))
-    N(0x9028,2,f.branch(!(h.ccr&4),0x900a))
     // Start one allocated voice, including velocity modulation, portamento
     // and retrigger flags; preserve the original parameter-engine call order.
     N(0x902a,4,f.call(0xa338))

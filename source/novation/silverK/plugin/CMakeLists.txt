@@ -360,3 +360,13 @@ add_executable(ksVoiceReleaseTask_test "${ROOT}/source/novation/ks/ksLib/ksVoice
 target_link_libraries(ksVoiceReleaseTask_test PRIVATE ksLib)
 add_test(NAME ks_voice_release_properties COMMAND ksVoiceReleaseTask_test)
 set_tests_properties(ks_voice_release_properties PROPERTIES TIMEOUT 90)
+
+# Native unison dispatch, with original independent children for comparison.
+add_executable(ksUnisonTask_test "${ROOT}/source/novation/ks/ksLib/ksUnisonTask_test.cpp")
+target_link_libraries(ksUnisonTask_test PRIVATE ksLib)
+add_test(NAME ks_unison_properties COMMAND ksUnisonTask_test)
+add_executable(ksUnisonCalls_test "${ROOT}/source/novation/ks/ksLib/ksUnisonCalls_test.cpp")
+target_include_directories(ksUnisonCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksUnisonCalls_test PRIVATE ksLib)
+add_test(NAME ks_unison_calls COMMAND ksUnisonCalls_test)
+set_tests_properties(ks_unison_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)

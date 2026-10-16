@@ -4001,3 +4001,54 @@ clock/state/reset/caller paths. The broad production register/flags/stack/PC mod
 is still present. Complete its removal before final musical/product validation,
 whole-process direct-H8/native CPU comparison and push to Optimized. Firmware,
 raw reports/tapes/PCM/binaries remain private and outside Git.
+
+
+## 2026-10-16 — Mac: native unison dispatch and final single-voice handoff
+
+Test ID `ks-native-unison-20261016`; source parent `27cb33f` plus unison
+change. M1 Pro arm64 Release AppleClang21/C++17, same pinned dependencies.
+Frozen identity, candidate binaries and private evidence under this test ID in
+`/private/tmp`. No CPU comparison or push. Windows/fresh plugin validation pending.
+
+`UnisonTask` publishes note/velocity in order, binds the current patch through
+native part lookup, extracts the extra-voice count, performs a second live part
+lookup and preserves the upper unison bits. Each extra voice retains its part
+context, dispatches the existing single-voice child and rereads/decrements the
+entire live unison byte. The low three resulting bits decide repetition. A final
+single-voice tail always follows, including encoded count zero: encoded 0..7
+therefore normally means 1..8 voices. Late byte changes and borrow out of the
+low bits preserve original behavior. The pure core has no processor registers,
+flags/stack/PC or raw pointers. Its temporary bridge supplies remaining caller,
+IRQ and trace projections. The 20 old dispatcher bodies are test-only. The
+single-voice startup child remains compatibility code and is not claimed native.
+
+131,328 pure mode/upper-byte/store-latency/live-change cases verify exact fields,
+ordered publications, extra-voice count and deadlines. Original own clocks with
+ordinary stores are 86 + (count ? 56 : 0) + 94*count; native children are separate.
+4,358 complete dispatcher calls / 45,367,626 direct original steps include actual
+single-voice children, every mode/flag byte, all parts, note/velocity and upper
+count edges, low/tagged patch bindings, both fetch modes, SRAM alignments and
+live input/part/mode observations. 228 selected IRQ points, 469,082 metric resets
+and six nested jobs retain exact accesses/values/clocks/projected state and final
+full memory. No synchronized original factory in actual-call fixture; candidate
+interpreter/partial recovery zero. Allocation/ASan/UBSan samples: 2,438 calls /
+30,814,074 original steps, 228 IRQ points, 318,220 metric resets, six nested jobs;
+zero new/new[] in native runtime steps. New bridge/core instrumented, original
+H8 excluded, other libraries uninstrumented. Public checks: one pass, one private
+ROM skip, zero fail; private actual-call fixture passes separately.
+
+Four full cold/reset/warm variants, whole-runtime fuzzing and focused Multi/FX/
+steal/pedal complete tapes/raw PCM/state/Flash/MIDI/controller/DSP/serial checks
+pass exact frozen identity (nine stages, duplicate JSON keys rejected). Actual
+unison starts/final handoffs: 312/312, 16/16, 80/80, 80/80; zero recovery. ksLib
+has no original H8 symbols and normal product commands exclude the reference
+object. Verified captures retain canonical private copies/hash manifests. Same
+synthetic Flash/zero Wave/mapped-marker limitations; no new real-bank/hardware
+coverage. DSP/JIT, clocks/IRQ boundaries, B/A order, rates/buffers, worker/wait/
+priority/placement behavior unchanged.
+
+Next: native single-voice startup and its parameter/tracking children, then the
+remaining parameter/MIDI/parser/clock/state/reset/caller lifecycles. The broad
+register/flags/stack/PC compatibility frame is still present. Remove it globally
+before final musical/product checks, direct-H8/native whole-process CPU comparison
+and push to Optimized. Private firmware/reports/tapes/audio/binaries stay out of Git.

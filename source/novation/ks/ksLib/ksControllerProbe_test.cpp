@@ -287,6 +287,9 @@ int main(int argc,char** argv){try{
         <<",\"native_startup_returns_before_metrics\":"<<startupReturns
         <<",\"native_dsp_reset_returns_before_metrics\":"<<resetReturns
         <<",\"native_startup_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->startupCalls.partialEntries:0)
+        <<",\"native_unison_jobs\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.unisonCalls.started:0)
+        <<",\"native_unison_handoffs\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.unisonCalls.completed:0)
+        <<",\"native_unison_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.unisonCalls.partialEntries:0)
         <<",\"native_release_jobs\":"<<(board->liveMidiController()?board->liveMidiController()->noteActions.releaseCalls.started:0)
         <<",\"native_release_job_returns\":"<<(board->liveMidiController()?board->liveMidiController()->noteActions.releaseCalls.completed:0)
         <<",\"native_release_restarts\":"<<(board->liveMidiController()?board->liveMidiController()->noteActions.releaseCalls.restarted:0)

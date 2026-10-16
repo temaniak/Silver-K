@@ -104,3 +104,5 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVoicePopulation
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksKeyResetCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVoiceReleaseCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksUnisonCalls.cpp")
