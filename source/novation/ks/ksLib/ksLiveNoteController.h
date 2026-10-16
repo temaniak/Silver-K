@@ -2,6 +2,7 @@
 #include "ksControllerState.h"
 #include "ksPartControlCalls.h"
 #include "ksKeySearchCalls.h"
+#include "ksKeyResetCalls.h"
 #include <cstdint>
 
 namespace ks {
@@ -19,9 +20,10 @@ public:
     }
     static void verify(const ControllerCpu&);
     bool step(ControllerCpu&);
-    void resetMetrics(){steps=noteOnCalls=noteOffCalls=pedalCalls=pedalReleaseCalls=0;keySearchCalls.resetMetrics();partControlCalls.resetMetrics();}
-    void discardTransientCalls(){keySearchCalls.discardCalls();partControlCalls.discardCalls();}
+    void resetMetrics(){steps=noteOnCalls=noteOffCalls=pedalCalls=pedalReleaseCalls=0;keySearchCalls.resetMetrics();keyResetCalls.resetMetrics();partControlCalls.resetMetrics();}
+    void discardTransientCalls(){keySearchCalls.discardCalls();keyResetCalls.discardCalls();partControlCalls.discardCalls();}
     KeySearchCalls keySearchCalls;
+    KeyResetCalls keyResetCalls;
     PartControlCalls partControlCalls;
     uint64_t steps=0,noteOnCalls=0,noteOffCalls=0,pedalCalls=0,pedalReleaseCalls=0;
 };

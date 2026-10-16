@@ -338,3 +338,13 @@ target_include_directories(ksVoicePopulationCalls_test PRIVATE "${ROOT}/source/c
 target_link_libraries(ksVoicePopulationCalls_test PRIVATE ksLib)
 add_test(NAME ks_voice_population_calls COMMAND ksVoicePopulationCalls_test)
 set_tests_properties(ks_voice_population_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Native keyboard reset with independently executed original H8 in the fixture.
+add_executable(ksKeyResetTask_test "${ROOT}/source/novation/ks/ksLib/ksKeyResetTask_test.cpp")
+target_link_libraries(ksKeyResetTask_test PRIVATE ksLib)
+add_test(NAME ks_key_reset_properties COMMAND ksKeyResetTask_test)
+add_executable(ksKeyResetCalls_test "${ROOT}/source/novation/ks/ksLib/ksKeyResetCalls_test.cpp")
+target_include_directories(ksKeyResetCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksKeyResetCalls_test PRIVATE ksLib)
+add_test(NAME ks_key_reset_calls COMMAND ksKeyResetCalls_test)
+set_tests_properties(ks_key_reset_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)

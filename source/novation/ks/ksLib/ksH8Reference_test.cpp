@@ -16,6 +16,7 @@
 #include "ksVelocityCurveCalls.h"
 #include "ksVoiceSelectionCalls.h"
 #include "ksVoicePopulationCalls.h"
+#include "ksKeyResetCalls.h"
 #include "ksControllerScheduling.h"
 #include "ksDspTransport.h"
 #include "ksControllerBoundary.h"
@@ -1031,6 +1032,45 @@ bool partialVoicePopulation(ControllerCpu& h){
  }
 #undef N
 }
-struct Install {Install(){setControllerReferenceFactoryForTests(&create);setKeySearchPartialForTests(&partialKeys);setParameterScalePartialForTests(&partialScale);setControlJobsPartialForTests(&historicalControl::service);setDspWordPartialForTests(&partialWord);setDspTransportPartialBatchForTests(&historicalTransport::service);setDspAddressPartialForTests(&partialAddress);setDspFaultPartialForTests(&partialFault);setDspBootStreamPartialForTests(&partialBootStream);setDspBootSetupPartialForTests(&partialBootSetup);setDspStartupPartialForTests(&partialStartup);setDspRoutingPartialForTests(&partialRouting);setPartControlPartialForTests(&partialPartControl);setVelocityCurvePartialForTests(&partialVelocityCurve);setVoiceSelectionPartialForTests(&partialVoiceSelection);setVoicePopulationPartialForTests(&partialVoicePopulation);}} install;
+bool partialKeyReset(ControllerCpu& h){
+ using namespace controllerDetail;auto& r=h.regs;
+#define N(P,L,...) case P:{Boundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
+ switch(unsigned(h.getPC())){
+    N(0x3074,4,f.push(r[0].er))
+    N(0x3078,4,f.push(r[1].er))
+    N(0x307c,2,f.push(r[2].r))
+    N(0x307e,4,f.call(0x4000))
+    N(0x3082,2,f.move(r[1].er,r[0].er))
+    N(0x3084,6,r[1].er=h.add32(r[1].er,0xe0))
+    N(0x308a,4,f.move(r[2].r,0x10))
+    N(0x308e,2,r[1].er-=1;f.store8(r[1].er,r[2].rh);h.clockI(2))
+    N(0x3090,2,f.inc(r[2].rl,-1))
+    N(0x3092,2,f.branch(!(h.ccr&4),0x308e))
+    N(0x3094,8,f.store8(r[0].er+307,r[2].rh))
+    N(0x309c,8,f.store8(r[0].er+306,r[2].rh))
+    N(0x30a4,8,f.store8(r[0].er+308,r[2].rh))
+    N(0x30ac,2,f.pop(r[2].r))
+    N(0x30ae,4,f.pop(r[1].er))
+    N(0x30b2,4,f.pop(r[0].er))
+    N(0x30b6,2,f.ret())
+    N(0x30b8,4,f.push(r[0].er))
+    N(0x30bc,4,f.push(r[1].er))
+    N(0x30c0,2,f.push(r[2].r))
+    N(0x30c2,4,f.call(0x4000))
+    N(0x30c6,2,f.move(r[1].er,r[0].er))
+    N(0x30c8,6,r[1].er=h.add32(r[1].er,0xd0))
+    N(0x30ce,4,f.move(r[2].r,0x10))
+    N(0x30d2,2,r[1].er-=1;f.store8(r[1].er,r[2].rh);h.clockI(2))
+    N(0x30d4,2,f.inc(r[2].rl,-1))
+    N(0x30d6,2,f.branch(!(h.ccr&4),0x30d2))
+    N(0x30d8,2,f.pop(r[2].r))
+    N(0x30da,4,f.pop(r[1].er))
+    N(0x30de,4,f.pop(r[0].er))
+    N(0x30e2,2,f.ret())
+ default:return false;
+ }
+#undef N
+}
+struct Install {Install(){setControllerReferenceFactoryForTests(&create);setKeySearchPartialForTests(&partialKeys);setParameterScalePartialForTests(&partialScale);setControlJobsPartialForTests(&historicalControl::service);setDspWordPartialForTests(&partialWord);setDspTransportPartialBatchForTests(&historicalTransport::service);setDspAddressPartialForTests(&partialAddress);setDspFaultPartialForTests(&partialFault);setDspBootStreamPartialForTests(&partialBootStream);setDspBootSetupPartialForTests(&partialBootSetup);setDspStartupPartialForTests(&partialStartup);setDspRoutingPartialForTests(&partialRouting);setPartControlPartialForTests(&partialPartControl);setVelocityCurvePartialForTests(&partialVelocityCurve);setVoiceSelectionPartialForTests(&partialVoiceSelection);setVoicePopulationPartialForTests(&partialVoicePopulation);setKeyResetPartialForTests(&partialKeyReset);}} install;
 }
 }

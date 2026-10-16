@@ -3884,3 +3884,50 @@ parameter/MIDI/parser/clock/state/reset/caller lifecycles and the broad register
 flag/stack/PC model are not fully converted. Finish those removals, then run final
 musical/product checks, direct-H8/native whole-process CPU comparison and push.
 Private firmware, reports/tapes/audio/binaries stay outside Git.
+
+
+## 2026-10-16 — Mac: native physical/held keyboard-map reset
+
+Test ID `ks-native-key-reset-20261016`; source parent
+`74ab7d1efcf883898fb82d7ce39c467bf5fe9538` plus keyboard reset change. M1 Pro
+arm64 Release AppleClang21/C++17, unchanged pinned dependencies. Frozen source
+manifest, binaries and private results: `/private/tmp/ks-native-key-reset-20261016`.
+No CPU comparison or push; Windows and fresh product builds remain pending.
+
+`KeyResetTask` owns two distinct keyboard reset operations. The physical-down
+map alone is cleared in descending order. The held map reset also clears the
+ordered-key counts and cursor in their original order; neither operation clears
+per-key velocities or unrelated fields. All byte publications have explicit
+admission deadlines, including paired-store bus cost. The pure core contains no
+CPU register, flag, stack, PC or raw processor pointer. Its temporary call bridge
+projects caller preservation and interrupt/trace context for unconverted callers.
+The 31 old instruction bodies are confined to the test comparison object.
+
+Validation: 1,024 pure mode/part/store-latency cases verify exact ordered fields,
+untouched state and deadlines. Own body clocks are 364 for physical-down and
+409 for held reset with ordinary stores, excluding child duration and return.
+10,322 actual complete jobs / 687,282 direct original steps cover both maps,
+every initial flag, parts 0/1/2/3/255, both fetch modes and odd/even SRAM. Live
+part/map mutations, 62 selected IRQ points, 92,944 metric resets and 12 nested
+jobs retain exact accesses/values/clocks/projected state/final memory. No
+synchronized H8 factory is linked in the actual-call fixture; interpreter and
+partial recovery are zero. Allocation/ASan/UBSan samples: 722 calls / 48,882
+original steps, 62 IRQ points, 6,544 metric resets, 12 nested jobs; zero new/new[]
+in native runtime steps. New bridge/core instrumented, original H8 excluded,
+other libraries uninstrumented. Public component checks: one pass, one private
+ROM skip, zero failure; the private actual-call fixture passes separately.
+
+Four complete cold/reset/warm variants, whole-runtime fuzzing and focused
+Multi/FX/voice-steal/pedal complete DSP tapes/raw audio/state/Flash/MIDI/controller/
+DSP/serial checks pass exact frozen source identity (nine stages). Musical
+reports verify zero native reset recovery and balanced completed reset calls.
+Verified duplicate captures retain canonical private copies with hash manifests.
+No DSP/JIT, guest timing, B/A order, resampling, buffers, workers/waits/priorities
+or placement changes. Synthetic Flash/zero Wave/mapped markers retain prior
+limitations; this adds no real-bank or physical-hardware proof.
+
+Next: native note/part/pedal voice-release scans, remaining voice startup,
+parameter/MIDI/parser/clock/state/reset/caller lifecycles. The broad production
+register/flag/stack/PC compatibility model is still present. Complete its removal
+before final musical/product checks, whole-process direct-H8/native CPU comparison
+and push to Optimized. Private firmware/reports/tapes/audio/binaries stay outside Git.
