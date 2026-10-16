@@ -810,12 +810,14 @@ coordinator, not a verified placement of both DSP helpers.
 
 ### KS control jobs: 2026-10-15 isolated Mac investigation
 
-Select C++ and set `SILVER_KS_CONTROL_JOBS=1` before host startup to enable
-part-state/parameter-table and scale jobs. For the combined experiment also
-set `SILVER_KS_DSP_TRANSPORT=events`. Omit the control flag for the previous
-C++ path. These are portable C++17 jobs; Windows execution remains pending.
-They do not complete bootstrap or remove the compatibility CPU frame.
-See [migration status](KS_NATIVE_CONTROLLER.md).
+The original investigation enabled part-state/parameter-table and scaling
+jobs with `SILVER_KS_CONTROL_JOBS=1`. In the current staged runtime, that flag
+selects only the remaining part-lookup jobs; key search and complete signed
+coefficient tasks run independently of it. The older register-shift batch is
+comparison-only. `SILVER_KS_DSP_TRANSPORT=events` still selects the transport
+experiment. Omitting flags keeps current native tasks, not the historical
+C++ binary. The code is C++17; Windows execution remains separate. Global
+compatibility-frame removal is incomplete. See [migration status](KS_NATIVE_CONTROLLER.md).
 
 The live comparison runner accepts `--controller native --dsp-transport events
 --control-jobs on`. It clears inherited profile/audio-capture flags. Frequency
@@ -935,3 +937,26 @@ caller projection still exposes that old ABI to not-yet-converted callers;
 this does not complete global CPU-model removal. CPU comparison is explicitly
 deferred until the complete semantic KS controller is ready. Test ID
 `ks-native-keycalls-20261016` records actual audio/tape/IRQ and allocation scope.
+
+
+### Native coefficient-call correctness admission (2026-10-16)
+
+Build `ksParameterScaleCalls_test`; CTest `ks_parameter_scale_calls` skips with
+77 without a private KS OS argument. It calls the real runtime independently
+of directly executed original H8 and deliberately links no synchronized adapter
+or partial-state recovery factory. `ks_parameter_scale_properties` remains the
+ROM-free arithmetic/time-budget admission.
+
+Probe counters `native_parameter_scale_calls`, `native_parameter_scale_returns`
+and `native_parameter_scale_test_partial` count actual complete native tasks
+and comparison-only recoveries. Fresh native/non-toggle captures require zero
+partial entries. Diagnostic reset leaves active tasks intact; a task can return
+after the counters were reset. These counts are not CPU measurements.
+
+The old register-driven scaling batch is comparison-only and is no longer a
+`ControllerJobs::candidate`. Production guards reject its direct service and
+arbitrary partial coefficient recovery. `ParameterScaleCalls` still projects
+the native task onto old callers/IRQ saves; it is transitional, not completion
+of the register/flag/stack/PC removal. The dated journal entry and private test
+ID `ks-native-parameter-calls-20261016` state actual test scopes and limitations.
+CPU comparison stays deferred until the complete semantic controller is ready.

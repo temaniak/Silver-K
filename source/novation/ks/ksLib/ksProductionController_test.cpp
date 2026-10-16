@@ -1,6 +1,8 @@
 #include "ksControllerState.h"
 #include "ksDevice.h"
 #include "ksKeySearchCalls.h"
+#include "ksParameterScaleCalls.h"
+#include "ksControllerJobs.h"
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -17,6 +19,12 @@ int main(){try{
     ks::KeySearchCalls calls;state->pc=0x3190;
     if(calls.step(*state) || calls.partialEntries || state->cycles!=123 || state->pc!=0x3190)
         throw std::runtime_error("Production exposed the test-only partial-key adapter");
+    ks::ParameterScaleCalls coefficients;state->pc=0xa6be;
+    if(coefficients.step(*state) || coefficients.partialEntries || state->cycles!=123 || state->pc!=0xa6be)
+        throw std::runtime_error("Production exposed partial coefficient recovery");
+    const uint8_t sentinel=0;state->nativeFetchClocksOnly=true;state->nativeLowBase=&sentinel;state->nativeLowWritable=true;state->interruptMode2=true;
+    if(ks::ControllerJobs::candidate(0xa6be) || ks::ControllerJobs::service(*state,1000).steps || state->cycles!=123 || state->pc!=0xa6be)
+        throw std::runtime_error("Production exposed the retired register shift job");
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

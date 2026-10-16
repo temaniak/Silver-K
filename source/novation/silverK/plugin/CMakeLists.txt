@@ -206,3 +206,10 @@ target_include_directories(ksKeySearchCalls_test PRIVATE "${ROOT}/source/cpu")
 target_link_libraries(ksKeySearchCalls_test PRIVATE ksLib)
 add_test(NAME ks_key_search_calls COMMAND ksKeySearchCalls_test)
 set_tests_properties(ks_key_search_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Real native coefficient calls, without the comparison-object recovery hooks.
+add_executable(ksParameterScaleCalls_test "${ROOT}/source/novation/ks/ksLib/ksParameterScaleCalls_test.cpp")
+target_include_directories(ksParameterScaleCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksParameterScaleCalls_test PRIVATE ksLib)
+add_test(NAME ks_parameter_scale_calls COMMAND ksParameterScaleCalls_test)
+set_tests_properties(ks_parameter_scale_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)

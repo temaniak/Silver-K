@@ -40,12 +40,13 @@ Implemented opt-in live jobs:
 - `SILVER_KS_DSP_TRANSPORT=events`: actual HDI requests, readiness/timeout,
   words and replies, within the next event/slice deadline.
 - `SILVER_KS_CONTROL_JOBS=1`: part-state selection, part-parameter-table
-  selection and fixed-width scaling arithmetic. A complete remaining part
+  selection. The signed coefficient calculation now uses its own native task,
+  independently of this flag. A complete remaining part
   lookup is computed with a direct formula when its selector/stack observations
   fit before the deadline; partial-entry frames are preserved too. Short
-  intervals retain the old phase path. Bounded shifts are computed directly,
-  including byte-counter wrap and final carry/INC flags. These jobs retain the
-  compatibility frame at yields. They use actual SRAM/return-stack data, exact reference
+  intervals retain the old part-lookup phase path. The earlier register-shift
+  batch is now comparison-only, so it cannot bypass a native coefficient task.
+  The part-lookup jobs retain the compatibility frame at yields. They use actual SRAM/return-stack data, exact reference
   flags, memory clocks and wrap behavior. They cannot change interrupt masks.
 
 Both flags apply to production C++ playback. They are independent
@@ -108,7 +109,8 @@ Direct original-H8 tests admit their values, per-boundary durations and, for
 keyboard search, live read order/cycles under mid-search state changes. See
 `ks-native-control-core-20261016` in the optimization journal for counts and
 limitations. The key-search task is now connected to actual playback through
-`KeySearchCalls`; the coefficient task is not connected yet. The native key
+`KeySearchCalls`; the coefficient task is now connected through
+`ParameterScaleCalls` too. The native key
 algorithm owns its live observations and completion time. The temporary bridge
 still supplies the old callers/IRQ saves with their flags, register projection,
 return stack and trace PC. Old key-search instruction bodies are test-only;
@@ -118,6 +120,13 @@ The complete tape/audio matrix and limitations are recorded under
 `ks-native-keycalls-20261016`. The shared compatibility model remains, so the
 full removal gates below still apply. CPU comparison is deferred until all
 those removal gates are satisfied.
+The coefficient task is admitted by `ks-native-parameter-calls-20261016`:
+1,049,756 actual runtime calls, every 16-bit input/eight masks and exact
+per-boundary projections; all complete DSP tapes/audio and callbacks pass.
+Its 26 old body boundaries and retired register-shift batch are test-only.
+Both bridges still expose the old caller/IRQ/return convention, so neither
+connection alone completes the requested global model removal.
+
 
 ## Remaining removal gates
 

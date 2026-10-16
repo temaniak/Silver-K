@@ -1,5 +1,6 @@
 #include "ksRuntimeController.h"
 #include "ksRuntimeBoundary.h"
+#include "ksLiveMidiController.h"
 
 namespace ks {
 using namespace controllerDetail;
@@ -7,35 +8,10 @@ using namespace controllerDetail;
 // Fixed native control flow for the verified KS revision. Private ROM data
 // remains external; instruction fetch reads account for original bus clocks.
 bool RuntimeController::extended(ControllerCpu& h){
+    if(ParameterScaleCalls::candidate(unsigned(h.getPC())))return shared.parameterScaleCalls.step(h);
     auto& r=h.regs;
 #define N(P,L,...) case P:{RuntimeBoundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
     switch(unsigned(h.getPC())){
-    N(0xa69e,2,f.move(r[1].e,r[0].r))
-    N(0xa6a0,2,f.branch(!(h.ccr&8),0xa6ac))
-    N(0xa6a2,2,r[0].r=h.sub16(0,r[0].r))
-    N(0xa6a4,4,h.sub16(r[0].r,0xffff8000))
-    N(0xa6a8,2,f.branch(!(h.ccr&4),0xa6ac))
-    N(0xa6aa,2,f.inc(r[0].r,-1))
-    N(0xa6ac,2,f.move(r[1].rl,r[0].rh))
-    N(0xa6ae,2,f.shift(r[1].rl,1,false))
-    N(0xa6b0,2,f.shift(r[1].rl,1,false))
-    N(0xa6b2,2,r[0].rh&=0x3;value(h,r[0].rh))
-    N(0xa6b4,2,r[0].rh|=0x4;value(h,r[0].rh))
-    N(0xa6b6,2,r[0].e=h.sub16(r[0].e,r[0].e))
-    N(0xa6b8,2,r[1].rl=h.add8(r[1].rl,0xfffffff5))
-    N(0xa6ba,2,f.branch(bool(h.ccr&4),0xa6cc))
-    N(0xa6bc,2,f.branch(bool(h.ccr&8),0xa6c6))
-    N(0xa6be,2,f.shift(r[0].er,1,true))
-    N(0xa6c0,2,f.inc(r[1].rl,-1))
-    N(0xa6c2,2,f.branch(!(h.ccr&4),0xa6be))
-    N(0xa6c4,2,f.branch(true,0xa6cc))
-    N(0xa6c6,2,f.shift(r[0].er,1,false))
-    N(0xa6c8,2,f.inc(r[1].rl,1))
-    N(0xa6ca,2,f.branch(!(h.ccr&4),0xa6c6))
-    N(0xa6cc,2,f.move(r[1].e,r[1].e))
-    N(0xa6ce,2,f.branch(!(h.ccr&8),0xa6d2))
-    N(0xa6d0,2,r[0].er=h.sub32(0,r[0].er))
-    N(0xa6d2,2,f.ret())
     N(0xa6d4,2,r[4].er=h.sub32(r[4].er,r[4].er))
     N(0xa6d6,2,f.move(r[5].rl,0xe))
     N(0xa6d8,6,f.move(r[3].er,0x17560))

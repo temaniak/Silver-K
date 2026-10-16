@@ -5,6 +5,7 @@
 
 namespace ks {
 namespace {
+ControlShiftPartialTest partialShiftTest=nullptr;
 using namespace controllerDetail;
 // Low code addresses are aligned 16-bit fetches. Data reads/return-stack
 // accesses remain actual, including their in-flight PC and paired bus clocks.
@@ -56,6 +57,7 @@ unsigned partPhase(ControllerCpu& h,uint64_t deadline){
     }
 }
 }
+void setControlShiftPartialForTests(ControlShiftPartialTest fn){partialShiftTest=fn;}
 ControllerJobs::Result ControllerJobs::service(ControllerCpu& h,uint64_t deadline){
     Result result;
     if(!h.nativeFetchClocksOnly||!h.nativeLowBase||!h.nativeLowWritable
@@ -113,27 +115,7 @@ ControllerJobs::Result ControllerJobs::service(ControllerCpu& h,uint64_t deadlin
             result.steps=result.noteSteps=steps;return result;
         }
     }
-    if(entry==0xa6be||entry==0xa6c6){
-        // Lift the scale arithmetic itself: execute the allowed shifts as
-        // one bounded native calculation. Preserve the original byte-counter
-        // wrap (zero means 256 iterations), final carry and INC flag quirks.
-        auto& r=h.regs;const bool left=entry==0xa6be;
-        const uint8_t initial=uint8_t(r[1].rl);
-        unsigned remaining=left?initial:uint8_t(0-initial);if(!remaining)remaining=256;
-        const unsigned count=unsigned(std::min<uint64_t>(remaining,(deadline-h.cycles)/9));
-        if(!count)return result;
-        const uint32_t original=uint32_t(r[0].er);
-        const uint32_t shifted=count>=32?0:left?original<<count:original>>count;
-        const bool carry=count>32?false:bool(original&(1u<<(left?32-count:count-1)));
-        r[0].er=int32_t(shifted);flag(h,1,carry);
-        const int delta=left?-1:1;
-        const int old=int8_t(uint8_t(initial+delta*int(count-1))),last=old+delta;
-        r[1].rl=int8_t(last);value(h,last);
-        flag(h,2,(left?(uint32_t(old)&~uint32_t(last)):(~uint32_t(old)&uint32_t(last)))&0x80);
-        h.cycles+=uint64_t(count)*9;h.lastread=int(entry+5);
-        h.pc=h.makepc((h.ccr&4)?entry+6:entry);result.steps=count*3;
-        return result;
-    }
+    if(entry==0xa6be||entry==0xa6c6)return partialShiftTest?partialShiftTest(h,deadline):Result{};
     while(h.cycles<deadline){
         const unsigned pc=h.getPC();
         if(!((pc>=0x4000 && pc<=0x4014)||(pc>=0xa66a && pc<=0xa67c)))break;

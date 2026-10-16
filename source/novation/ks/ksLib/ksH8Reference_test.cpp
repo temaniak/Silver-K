@@ -3,6 +3,8 @@
 #include "ksControllerState.h"
 #include "h8s/h8s.hpp"
 #include "ksKeySearchCalls.h"
+#include "ksParameterScaleCalls.h"
+#include "ksControllerJobs.h"
 #include "ksControllerBoundary.h"
 #include <algorithm>
 #include <memory>
@@ -101,6 +103,59 @@ bool partialKeys(ControllerCpu& h){
  }
 #undef N
 }
-struct Install {Install(){setControllerReferenceFactoryForTests(&create);setKeySearchPartialForTests(&partialKeys);}} install;
+bool partialScale(ControllerCpu& h){
+ using namespace controllerDetail;auto& r=h.regs;
+#define N(P,L,...) case P:{Boundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
+ switch(unsigned(h.getPC())){
+    N(0xa69e,2,f.move(r[1].e,r[0].r))
+    N(0xa6a0,2,f.branch(!(h.ccr&8),0xa6ac))
+    N(0xa6a2,2,r[0].r=h.sub16(0,r[0].r))
+    N(0xa6a4,4,h.sub16(r[0].r,0xffff8000))
+    N(0xa6a8,2,f.branch(!(h.ccr&4),0xa6ac))
+    N(0xa6aa,2,f.inc(r[0].r,-1))
+    N(0xa6ac,2,f.move(r[1].rl,r[0].rh))
+    N(0xa6ae,2,f.shift(r[1].rl,1,false))
+    N(0xa6b0,2,f.shift(r[1].rl,1,false))
+    N(0xa6b2,2,r[0].rh&=0x3;value(h,r[0].rh))
+    N(0xa6b4,2,r[0].rh|=0x4;value(h,r[0].rh))
+    N(0xa6b6,2,r[0].e=h.sub16(r[0].e,r[0].e))
+    N(0xa6b8,2,r[1].rl=h.add8(r[1].rl,0xfffffff5))
+    N(0xa6ba,2,f.branch(bool(h.ccr&4),0xa6cc))
+    N(0xa6bc,2,f.branch(bool(h.ccr&8),0xa6c6))
+    N(0xa6be,2,f.shift(r[0].er,1,true))
+    N(0xa6c0,2,f.inc(r[1].rl,-1))
+    N(0xa6c2,2,f.branch(!(h.ccr&4),0xa6be))
+    N(0xa6c4,2,f.branch(true,0xa6cc))
+    N(0xa6c6,2,f.shift(r[0].er,1,false))
+    N(0xa6c8,2,f.inc(r[1].rl,1))
+    N(0xa6ca,2,f.branch(!(h.ccr&4),0xa6c6))
+    N(0xa6cc,2,f.move(r[1].e,r[1].e))
+    N(0xa6ce,2,f.branch(!(h.ccr&8),0xa6d2))
+    N(0xa6d0,2,r[0].er=h.sub32(0,r[0].er))
+    N(0xa6d2,2,f.ret())
+ default:return false;
+ }
+#undef N
+}
+ControllerJobs::Result partialShift(ControllerCpu& h,uint64_t deadline){
+ using namespace controllerDetail;ControllerJobs::Result result;const unsigned entry=unsigned(h.getPC());
+        auto& r=h.regs;const bool left=entry==0xa6be;
+        const uint8_t initial=uint8_t(r[1].rl);
+        unsigned remaining=left?initial:uint8_t(0-initial);if(!remaining)remaining=256;
+        const unsigned count=unsigned(std::min<uint64_t>(remaining,(deadline-h.cycles)/9));
+        if(!count)return result;
+        const uint32_t original=uint32_t(r[0].er);
+        const uint32_t shifted=count>=32?0:left?original<<count:original>>count;
+        const bool carry=count>32?false:bool(original&(1u<<(left?32-count:count-1)));
+        r[0].er=int32_t(shifted);flag(h,1,carry);
+        const int delta=left?-1:1;
+        const int old=int8_t(uint8_t(initial+delta*int(count-1))),last=old+delta;
+        r[1].rl=int8_t(last);value(h,last);
+        flag(h,2,(left?(uint32_t(old)&~uint32_t(last)):(~uint32_t(old)&uint32_t(last)))&0x80);
+        h.cycles+=uint64_t(count)*9;h.lastread=int(entry+5);
+        h.pc=h.makepc((h.ccr&4)?entry+6:entry);result.steps=count*3;
+        return result;
+}
+struct Install {Install(){setControllerReferenceFactoryForTests(&create);setKeySearchPartialForTests(&partialKeys);setParameterScalePartialForTests(&partialScale);setControlShiftPartialForTests(&partialShift);}} install;
 }
 }

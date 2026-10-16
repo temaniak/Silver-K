@@ -6,6 +6,14 @@ Raw local reports are not committed. A hypothesis is not a measured result.
 
 ## Current state — 2026-10-16
 
+- `ks-native-parameter-calls-20261016` connects the signed coefficient task
+  to normal KS execution from entry through return. Its 26 old instruction
+  bodies and retired register-shift batch live only in the comparison object.
+  All 48 correctness stages pass; 13,933 actual coefficient calls execute in
+  the nine musical captures with zero test recovery. A temporary caller/IRQ
+  projection remains. The global register/flags/stack/PC removal is incomplete;
+  CPU comparison and push of the completed transfer remain deferred.
+
 - `ks-native-keycalls-20261016` now connects both adjacent-key searches to
   actual KS playback. The native task owns all key-selection and wait progress;
   old instruction bodies are confined to the comparison object. A temporary
@@ -17,7 +25,8 @@ Raw local reports are not committed. A hypothesis is not a measured result.
 
 - Earlier core admission `ks-native-control-core-20261016` recovered
   processor-independent coefficient and live-key-search tasks. The key-search
-  connection is described above; the coefficient task remains unconnected.
+  connection is described above; the coefficient connection is now also
+  admitted by the latest checkpoint.
   The production compatibility register/flag/stack/PC model remains. CPU
   comparison is deferred until the full port; neither checkpoint is a completed
   native controller or a performance result.
@@ -3095,3 +3104,88 @@ shared register/flag/stack/PC model once those callers are semantic. The full
 controller remains incomplete. Only after that removal, run final command/
 audio/state checks, a fair direct-H8 versus completed-C++ total-CPU comparison,
 and the requested push.
+
+## 2026-10-16 — Native signed-coefficient calls in normal KS playback
+
+Source: `271e572` plus local coefficient-call changes, isolated branch
+`codex/ks-native-controller`. Test ID `ks-native-parameter-calls-20261016`
+retains frozen tests, source/executable SHA-256 identities and raw evidence
+privately. Platform: this M1 Pro Mac, arm64 Release, AppleClang 21, C++17,
+controller profiling OFF. Pinned dependencies and authenticated KS OS 2.1.02
+are unchanged. The shared checkout, installed plugins and preset-manager
+sources were not edited. Windows private execution is pending.
+
+The complete signed-coefficient calculation now uses `ParameterScaleTask` in
+normal playback, independently of the experimental flags. The task computes
+its coefficient from the encoded input and owns its completion clock without
+registers, flags, PC or guest-stack data. `ParameterScaleCalls` is a temporary
+output projection for the unconverted callers and IRQ saves; it still uses
+that old caller/return ABI and must be deleted with those callers. This is not
+the completed controller conversion.
+
+All 26 old body boundaries move from the production extended dispatcher into
+the comparison-only object. The former register-driven shift batch also moves
+there. `ControllerJobs::candidate` no longer selects it, so a batch cannot
+advance the old registers behind a native task's continuation. The remaining
+opt-in part-lookup jobs stay intact. Fresh native instances reject both partial
+coefficient recovery and the retired shift batch; comparison executables may
+recover fabricated partial states or an existing H8 test handoff.
+
+Actual checks:
+
+- 1,049,756 calls through the real runtime, 44,600,604 directly executed
+  original-H8 steps. All 65,536 inputs x eight retained masks x mapped/clock-only
+  fetch, odd/even SRAM return locations, and every intermediate caller value,
+  flag, cycle, PC projection, data/return access and final memory match. This
+  target deliberately links no synchronized H8 adapter or recovery factory.
+  Its native interpreted-step and partial-recovery counters remain zero.
+- 1,132 IRQ save/RTE/resume points and 66,280 in-flight metric resets pass.
+  168 explicitly interleaved child calls / 7,114 original child steps preserve
+  eight simultaneously live tasks. That caller-context test does not claim
+  real ISR-prologue timing; the separate RTE test and full Board timelines
+  establish their declared interrupt scopes. Negative-minimum saturation and
+  the original INC flag quirk remain exact.
+- Four full cold-reset timelines pass: normal/irregular coordinator budgets,
+  Performance and mapped markers, full RAM/IO/IRQ/state/Flash, exact DSP tape
+  and 24-stream audible output; candidate H8 steps and test recovery are zero.
+- Nine complete frozen original-H8 tapes match all 8,085,451 events. Actual
+  native coefficient calls: Single 4,241; Multi 4,162; MIDI 275; pedal 598;
+  controls 424; state 197; clock/arp 156; stealing 3,120; FX 760. All 13,933
+  return normally with zero partial recovery. These are work counts, not a
+  CPU saving. The previously connected key tasks also remain exercised.
+- Fourteen complete raw-audio comparisons pass, including 30-second Multi,
+  pedal and clock/arp and pedal/FX H8 round trips: 6,075,618 frames x 24 streams
+  per side, 583,259,328 bytes per side. Audio, state, Flash, MIDI, controller/
+  DSP clocks/instruction totals and serial state match. New native passages
+  all report zero coefficient/key test recovery.
+- All 48 correctness stages pass against the frozen source identity. Existing
+  arithmetic/core, decoder/note/voice and historical partial-frame checks pass;
+  the latter use comparison-only recovery and do not replace the actual-call
+  proof above. A private allocation probe passes 9,452 representative/edge/
+  preemption/nested calls with zero `new/new[]` allocations inside native
+  runtime steps. The new coefficient bridge/task pass the same cases under
+  ASan/UBSan; original H8 is excluded and unchanged libraries are uninstrumented.
+- Fresh public CTest: 20 pass, seven skip without private ROM, zero fail
+  (27 selected). Actual private call/runtime checks run in the matrix above.
+  UI controller checks pass. Processor callbacks at 128/256 remain finite,
+  audible and free of lost frames while saving/re-preparing; their process CPU
+  collector is disabled and their C++ controller choice is asserted.
+- AU/VST3/Standalone build and strict ad-hoc signatures pass. Product target
+  commands exclude the KS H8 comparison object; `ksLib` has no H8 core/decoder
+  symbols. K-Station's separate core is unchanged. These builds are not installed
+  or separately hosted AU/VST3 audio recordings. Product/library hashes remain
+  in the private frontend audit.
+
+Limits: synthetic Flash, zero Wave ROM and explicit mapped boot markers are
+admitted; real sampled banks and physical hardware are not established by
+this matrix. DSP/JIT, Device, B/A order, clocks, resampling, buffers, waits,
+priorities and placement are unchanged. Existing probe CPU fields are ignored;
+no new CPU comparison runs before the complete port. Windows build/private
+fidelity/CPU evidence remains separate from these Mac checks.
+
+Next: continue the native DSP-exchange path with typed word/address/readiness/
+timeout state, and convert the remaining callers, reset, parser, note/voice,
+parameter, timer/clock/arp, state/Flash paths. Remove all transitional caller
+projections and the shared register/flag/stack/PC model. Only after that full
+removal, run final command/audio/state tests, compare total CPU with a direct
+H8 production baseline and push the completed transfer.

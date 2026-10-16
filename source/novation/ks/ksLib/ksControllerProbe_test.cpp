@@ -250,6 +250,7 @@ int main(int argc,char** argv){try{
     auto snapshotDigest=[&](const auto& data){return mode=="replay"?std::string("null"):"\""+std::to_string(digest(data))+"\"";};
     std::vector<uint8_t> midiOut;uint8_t transmitted=0;while(board->popMidiOut(transmitted))midiOut.push_back(transmitted);
     if(nativeMode && !toggling)check(board->liveMidiController()->noteActions.keySearchCalls.partialEntries==0,"Native playback used the test-only partial-key adapter");
+    if(nativeMode && !toggling)check(board->liveMidiController()->parameterScaleCalls.partialEntries==0,"Native playback used partial coefficient recovery");
     if(scenario=="state")check(board->flashRevision>0,"State scenario did not complete a Flash page write");
     const auto depth=board->serialDepth();std::ostringstream report;report<<std::setprecision(12)
         <<"{\"schema\":\"silver-k.controller-probe.v1\",\"mode\":\""<<mode<<"\",\"scenario\":\""<<scenario<<"\",\"controller_backend\":\""<<board->controllerBackend()
@@ -264,6 +265,9 @@ int main(int argc,char** argv){try{
         <<",\"state_digest\":"<<snapshotDigest(stateBytes)<<",\"flash_digest\":"<<snapshotDigest(flashBytes)
         <<",\"flash_revision\":"<<board->flashRevision<<",\"midi_tx_digest\":"<<snapshotDigest(midiOut)<<",\"midi_tx_bytes\":"<<midiOut.size()
         <<",\"midi_received\":"<<board->midiReceived
+        <<",\"native_parameter_scale_calls\":"<<(board->liveMidiController()?board->liveMidiController()->parameterScaleCalls.started:0)
+        <<",\"native_parameter_scale_returns\":"<<(board->liveMidiController()?board->liveMidiController()->parameterScaleCalls.completed:0)
+        <<",\"native_parameter_scale_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->parameterScaleCalls.partialEntries:0)
         <<",\"native_key_search_calls\":"<<(board->liveMidiController()?board->liveMidiController()->noteActions.keySearchCalls.started:0)
         <<",\"native_key_search_returns\":"<<(board->liveMidiController()?board->liveMidiController()->noteActions.keySearchCalls.completed:0)
         <<",\"native_key_search_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->noteActions.keySearchCalls.partialEntries:0)

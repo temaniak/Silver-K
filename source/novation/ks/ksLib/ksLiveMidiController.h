@@ -5,6 +5,7 @@
 #include <utility>
 #include "ksLiveNoteController.h"
 #include "ksLiveVoiceController.h"
+#include "ksParameterScaleCalls.h"
 #include <vector>
 #include <algorithm>
 #include <stdexcept>
@@ -27,13 +28,14 @@ public:
     }
     LiveNoteController noteActions;
     LiveVoiceController voiceActions;
+    ParameterScaleCalls parameterScaleCalls;
     // Count actual original-core calls, including interrupt arbitration. These
     // are not instruction counts or CPU time, and never imply full migration.
     void delegated(unsigned pc){++originalStepCalls;if(!originalPages.empty())++originalPages[(pc&0xffffff)>>8];}
     void enableDelegationProfile(){originalPages.assign(65536,0);originalStepCalls=0;}
     void resetMetrics(){
         nativeSteps=bytes=messages=noteOn=noteOff=controls=originalStepCalls=0;
-        noteActions.resetMetrics();voiceActions=LiveVoiceController{};
+        noteActions.resetMetrics();parameterScaleCalls.resetMetrics();voiceActions=LiveVoiceController{};
         if(!originalPages.empty())std::fill(originalPages.begin(),originalPages.end(),0);
     }
     uint64_t originalStepCalls=0;
