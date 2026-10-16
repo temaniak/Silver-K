@@ -5130,3 +5130,86 @@ and finite scenario limits persist, no real-bank/hardware/Windows claim. Private
 ROM/data/captures/binaries/reports remain outsideGit; no intermediate push.
 Next: remaining state/UI/IO/extended, direct typed native adapters/coordinator,
 full product/musical/whole-process H8-vs-native CPU validation and push Optimized.
+
+
+## 2026-10-16 — Multi, panel, SysEx and direct parameter graphs (macOS arm64)
+
+Source585af71 plus this change, isolated codex/ks-native-controller worktree.
+Release AppleClang21/C++17, pinned dependencies/KS2.1.02 ROM unchanged. Global
+register/flags/stack/PC removal remains unfinished; no CPU comparison or push.
+Main checkout/preset-manager work untouched. 634 old fixed instruction bodies
+move into comparison-only code: MultiSave43,NameCodec41,DeferredParts33,
+PanelRefresh52,Audition20,PanelPublish21,PanelMasks80,PanelInitialize24,
+PanelDetect27,FirmwareLayoutCheck9,SysExDump221,MidiFileTime63. Task cores own
+semantic values; Calls bridges still project into the compatibility caller/IRQ
+ABI. MultiSave66d2 and Audition2b60/2b6a terminal metadata retire after arbitration
+before any owner, zero clocks. SysExDump composes real UART/header/send/bank and
+50-slot performance children. VLQ preserves unmasked fourth byte, unsigned
+wrap and original low16/zero tempo divisor.
+
+Proof ks-native-panel-multi-dump-components-20261016: all24Task/Calls and legacy
+live entry pass. Independent original-H8 whole calls /boundaries /IRQ /nested:
+
+- MultiSave134682 /25052722 /498 /12: current/provided/protection/all bank-program words/four late209+47pages.
+- NameCodec395148 /3295740 /336 /18: late cursor/name/index/case, all bytes.
+- DeferredParts132064 /13451880 /454 /6: pending/delay, ordered parts, restored selection.
+- PanelRefresh9452 /21169036 /170 /6: ordered22 children and fresh inputs.
+- Audition8898 /544506 /164 /6: actual poll, mode8057, On60/127 and Off60/64.
+- PanelPublish131776 /16736736 /168 /8: fresh seven-byte shadow and original strobes/delay.
+- PanelInitialize6326 /2600056 /166 /4: no-op/wake/reset with native children.
+- PanelDetect2768 /14843464 /184 /8: controls/status and calibrated intervals.
+- FirmwareLayoutCheck522 /2096 /8 /0: original constant454 check; failure path unreachable from normal root.
+- SysExDump1464 /83766044 /380 /18: complete UART/send descendants, no musical commit seam in this group.
+- MidiFileTime264968 /4103342 /234 /8: typed VLQ cursor/value, period and due outputs match original.
+
+The first evolving Multi test had exact DSP tape/PCM but correctly failed
+partial-entry0: PanelMasks canonical562-only admission omitted genuine direct
+MIDI Mask588 callers. Rejected evidence retained under
+ks-native-panel-multi-dump-focused-20261016. Fixed typed Service/Mask588/Invert5f0
+roots, observing activation at actual first use58e/5fa. Corrected integrated
+PanelMasks723678 calls /40866134 original boundaries /2470 IRQ /1305904 metric
+resets /104 nested pass, including all activation bytes and independent
+activation256×decay-pattern16×four decay values. ASan/UBSan and new0 samples9438
+/537014 /same IRQ+nested pass. Explicit Task131072 independent properties pass
+alongside original49152. Earlier frozen component manifest predates this fix;
+corrected evidence supersedes its canonical-root-only scope.
+
+ks-native-panel-multi-dump-fixed-focused-20261016 passes four cold/reset/warm
+variants, normal441248-boundary runtime/reset/IRQ/HDI/deadline comparisons and
+four-second Multi/FX/steal/pedal canonical full KST/rawPCM/functional state keys.
+All lifecycle/descriptor balances and partial-entry0 pass; frozen source hashes
+unchanged. Public CTest25:12properties pass/13private-ROM tests skip; additional
+ExplicitMask property passes and both private graph tests skip77 without ROM.
+No validation failure remains. Some frozen component Flash/UI/voice children
+remain compatibility implementations and final coordinator mappings are still
+pending; evolving proof covers its admitted finite scenarios only.
+
+NativeParameterJob composes40Scalar+9Time+4Curve+2SignedSquare+3Header blocks,
+direct DSP/fault/coefficient children, typed fields/curve/time-base/current/base
+part reads and exact inline completion. Header's first word resumes its second
+word, without extra return interval. NativeCoefficientJob retains callable17.
+Proof ks-native-typed-parameter-graph-20261016:360048 jobs /51823768 independent
+H8 boundaries /3360 parked IRQ, all bytes/both ports/full signed16 coefficient
+domain/full part-base byte pairs/timeout children; exact live reads, DSP values,
+order/times/continuations. Sample allocation+ASan/UBSan
+ks-native-direct-parameter-header-jobs-20261016:6784jobs /36984271boundaries,new0;
+this sample does not cover the whole domain.
+
+NativeParameterSupportJob composes Rate/Clock/Sync/Exit with direct coefficient,
+word/fault and A-then-B selection children; preserves two Sync writes, cached
+address invalidation and callable Exit completion. Integrated265352jobs /
+18896166 independent H8 boundaries /340 IRQ pass, full clock/sync input×flag
+byte pairs/both ports/timeout children and final port/cache checks. Sample
+allocation+ASan/UBSan ks-native-direct-parameter-support-jobs-20261016:1832jobs /
+2715983boundaries /340IRQ,new0. These native graph headers have no ControllerCpu,
+register/CCR/EXR/SP/PC, opcode fetch or guest caller frames. They are building
+blocks for final wiring; production still has compatibility callers.
+
+ASan/UBSan excludes original H8 headers; other linked libraries uninstrumented.
+SyntheticFlash/zeroWave/mapped-marker and finite scenario limits remain; no real
+bank/hardware/Windows/global-fidelity/CPU claim. Firmware/banks/traces/audio/
+binaries/personal reports remain outside Git. Sound/JIT, guest boundaries/IRQ,
+B-to-A ordering, worker waits/priorities/placement, buffers/rates and Windows
+policy unchanged. Next: remaining state/UI/IO/extended, typed whole-controller
+data/events/graph, final product/musical verification, then whole-process H8 vs
+native CPU comparison and push Optimized.

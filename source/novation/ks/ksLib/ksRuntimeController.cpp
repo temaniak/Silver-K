@@ -53,6 +53,8 @@ bool RuntimeController::stepCode(ControllerCpu& h){
     shared.stateFactoryServicesCalls.retireReturns(h);
     shared.statePresetFormatCalls.retireReturns(h);
     shared.stateStoreServicesCalls.retireReturns(h);
+    shared.stateMultiSaveCalls.retireReturns(h);
+    shared.stateAuditionCalls.retireReturns(h);
     shared.stateManualEditCalls.retireReturns(h);
     const unsigned pc=h.getPC();bool handled=false;
     if(VoiceReleaseCalls::candidate(pc))handled=shared.noteActions.step(h);

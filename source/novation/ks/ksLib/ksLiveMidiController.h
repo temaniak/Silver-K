@@ -61,6 +61,18 @@
 #include "ksPatchExpandCalls.h"
 #include "ksSysExActionCalls.h"
 #include "ksLegacySysExCalls.h"
+#include "ksStateMultiSaveCalls.h"
+#include "ksStateNameCodecCalls.h"
+#include "ksStateDeferredPartsCalls.h"
+#include "ksStatePanelRefreshCalls.h"
+#include "ksStateAuditionCalls.h"
+#include "ksPanelPublishCalls.h"
+#include "ksPanelMasksCalls.h"
+#include "ksPanelInitializeCalls.h"
+#include "ksPanelDetectCalls.h"
+#include "ksFirmwareLayoutCheckCalls.h"
+#include "ksSysExDumpCalls.h"
+#include "ksMidiFileTimeCalls.h"
 #include <cstdint>
 #include <cstddef>
 #include <utility>
@@ -155,6 +167,18 @@ public:
     PatchExpandCalls patchExpandCalls;
     SysExActionCalls sysExActionCalls;
     LegacySysExCalls legacySysExCalls;
+    StateMultiSaveCalls stateMultiSaveCalls;
+    StateNameCodecCalls stateNameCodecCalls;
+    StateDeferredPartsCalls stateDeferredPartsCalls;
+    StatePanelRefreshCalls statePanelRefreshCalls;
+    StateAuditionCalls stateAuditionCalls;
+    PanelPublishCalls panelPublishCalls;
+    PanelMasksCalls panelMasksCalls;
+    PanelInitializeCalls panelInitializeCalls;
+    PanelDetectCalls panelDetectCalls;
+    FirmwareLayoutCheckCalls firmwareLayoutCheckCalls;
+    SysExDumpCalls sysExDumpCalls;
+    MidiFileTimeCalls midiFileTimeCalls;
     LiveNoteController noteActions;
     LiveVoiceController voiceActions;
     ParameterScaleCalls parameterScaleCalls;
@@ -231,6 +255,18 @@ public:
         patchExpandCalls.resetMetrics();
         sysExActionCalls.resetMetrics();
         legacySysExCalls.resetMetrics();
+        stateMultiSaveCalls.resetMetrics();
+        stateNameCodecCalls.resetMetrics();
+        stateDeferredPartsCalls.resetMetrics();
+        statePanelRefreshCalls.resetMetrics();
+        stateAuditionCalls.resetMetrics();
+        panelPublishCalls.resetMetrics();
+        panelMasksCalls.resetMetrics();
+        panelInitializeCalls.resetMetrics();
+        panelDetectCalls.resetMetrics();
+        firmwareLayoutCheckCalls.resetMetrics();
+        sysExDumpCalls.resetMetrics();
+        midiFileTimeCalls.resetMetrics();
         nativeSteps=bytes=messages=noteOn=noteOff=controls=originalStepCalls=0;
         noteActions.resetMetrics();parameterScaleCalls.resetMetrics();faultCalls.resetMetrics();bootStreamCalls.resetMetrics();bootSetupCalls.resetMetrics();startupCalls.resetMetrics();scheduledTimerCalls.resetMetrics();serviceCycleCalls.resetMetrics();stateInitCalls.resetMetrics();voiceActions.resetMetrics();
         if(!originalPages.empty())std::fill(originalPages.begin(),originalPages.end(),0);

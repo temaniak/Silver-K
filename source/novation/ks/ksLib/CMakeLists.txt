@@ -313,3 +313,27 @@ target_sources(ksLib PRIVATE ksPatchExpandCalls.cpp)
 target_sources(ksLib PRIVATE ksSysExActionCalls.cpp)
 
 target_sources(ksLib PRIVATE ksLegacySysExCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateMultiSaveCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateNameCodecCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateDeferredPartsCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStatePanelRefreshCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateAuditionCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelPublishCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelMasksCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelInitializeCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelDetectCalls.cpp)
+
+target_sources(ksLib PRIVATE ksFirmwareLayoutCheckCalls.cpp)
+
+target_sources(ksLib PRIVATE ksSysExDumpCalls.cpp)
+
+target_sources(ksLib PRIVATE ksMidiFileTimeCalls.cpp)
