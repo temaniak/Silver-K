@@ -272,3 +272,14 @@ target_include_directories(ksDspBootSetupCalls_test PRIVATE "${ROOT}/source/cpu"
 target_link_libraries(ksDspBootSetupCalls_test PRIVATE ksLib)
 add_test(NAME ks_dsp_boot_setup_calls COMMAND ksDspBootSetupCalls_test)
 set_tests_properties(ks_dsp_boot_setup_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Semantic two-DSP startup; direct original H8 is confined to this fixture.
+add_executable(ksDspStartupTasks_test "${ROOT}/source/novation/ks/ksLib/ksDspStartupTasks_test.cpp")
+target_link_libraries(ksDspStartupTasks_test PRIVATE ksLib)
+add_test(NAME ks_dsp_startup_properties COMMAND ksDspStartupTasks_test)
+set_tests_properties(ks_dsp_startup_properties PROPERTIES TIMEOUT 90)
+add_executable(ksDspStartupCalls_test "${ROOT}/source/novation/ks/ksLib/ksDspStartupCalls_test.cpp")
+target_include_directories(ksDspStartupCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksDspStartupCalls_test PRIVATE ksLib)
+add_test(NAME ks_dsp_startup_calls COMMAND ksDspStartupCalls_test)
+set_tests_properties(ks_dsp_startup_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)

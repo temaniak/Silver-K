@@ -13,6 +13,10 @@ void LiveVoiceController::verify(const ControllerCpu& h){
 }
 bool LiveVoiceController::step(ControllerCpu& h){
     auto& r=h.regs;const unsigned pc=h.getPC();
+    if(DspSelectCalls::candidate(pc)){
+        if(!selectCalls.step(h))return false;
+        ++steps;++transportSteps;return true;
+    }
     if(DspAddressCalls::candidate(pc)){
         if(!addressCalls.step(h))return false;
         ++steps;++transportSteps;return true;
@@ -27,14 +31,6 @@ bool LiveVoiceController::step(ControllerCpu& h){
 #define N(P,L,...) case P:{Boundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);++steps;if(P<0x25fe)++transportSteps;return true;}
     switch(pc){
     // Select DSP B/A and invalidate the sequential address cache.
-    N(0x248e,6,f.move(r[5].er,0x600000))
-    N(0x2494,4,f.move(r[0].r,0xffff))
-    N(0x2498,6,f.store16(0x159f2,r[0].r))
-    N(0x249e,2,f.ret())
-    N(0x24a0,6,f.move(r[5].er,0x400000))
-    N(0x24a6,4,f.move(r[0].r,0xffff))
-    N(0x24aa,6,f.store16(0x159f2,r[0].r))
-    N(0x24b0,2,f.ret())
     // Host write: select address, wait for transmit space, then write the
     // high/middle/low bytes of ER1 >> 8 and advance the address mirror.
     N(0x24b2,6,f.store16(0x159f2,r[4].r))

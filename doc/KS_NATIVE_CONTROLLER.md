@@ -326,3 +326,13 @@ all original accesses/clocks match. Every cold start proves two complete native
 setups and streams with zero test recovery. Four cold timelines, nine full
 tapes, 14 raw-audio timelines and two default cases pass. The compatibility
 register/flag/stack/PC model still exists globally; this is not the full port.
+
+
+The DSP reset/control pulse, calibrated two settling intervals, both explicit
+port selectors and the two-image startup orchestration now have CPU-independent
+state in `ksDspStartupTasks.h`. Forty-five old bodies are test-only; temporary
+caller/IRQ projections still exist. Admission `ks-native-dsp-startup-20261016`:
+1,642 actual calls / 70,356,926 direct original steps, all control bytes/flags,
+90 selected IRQ points, 602 metric resets and four nested jobs pass. Four cold
+variants and focused Multi/FX full tape/raw audio cases match; no H8/recovery.
+Global register/flag/stack/PC elimination and final validation remain pending.

@@ -3568,3 +3568,49 @@ resampling, waits, priorities and placement are unchanged. No raw evidence or
 private data is committed. The global register/flags/stack/PC model remains;
 next is native reset/select/outer startup, then the other controller domains.
 Delete the shared projection model before final comparisons and publication.
+
+
+## 2026-10-16 — Mac: native reset, port selection and two-image DSP startup
+
+Test ID `ks-native-dsp-startup-20261016`; source parent `3bb71ba` plus the
+startup change. Mac M1 Pro arm64 Release AppleClang21/C++17, same pinned
+libraries. Frozen source/binaries and private evidence:
+`/private/tmp/ks-native-dsp-startup-20261016`. No CPU comparison or push;
+Windows is not validated. Full products/callbacks remain pending.
+
+`DspResetTask` owns its single live control observation, retained byte and both
+settling intervals. It preserves every unrelated bit and does not add a reset
+effect to the current DSP/Board implementation. `DspSelectTask` publishes A/B
+and invalidates the sequential mirror. `DspStartupTask` requests reset, image A,
+image B and default A in order, waiting for actual child completion. All are
+CPU-state-independent; old caller/IRQ projections remain transitional. Forty-five
+old reset/selector/outer bodies are comparison-only. Metrics reset preserves jobs.
+
+Validation: independent original timing admission confirms reset 320,353 clocks,
+either selector 44, and whole two-DSP startup 1,507,370 including children/returns.
+All 256 control bytes pass native deadline/bit-latching checks; both selector
+ports and every startup child transition pass. 1,642 actual calls / 70,356,926
+direct original-H8 steps, all initial flags/control bytes, both ports, odd/even
+SRAM and mapped/clock-only fetch match every access, cycle, projected state and
+final memory. Ninety selected first-visited IRQ points (not all loop iterations),
+602 metric resets and four nested calls pass. No synchronized reference or
+partial recovery is linked to the actual fixture. Production rejects unowned
+partial work without mutation. Allocation/ASan/UBSan samples: 202 calls /
+19,168,766 original steps, 90 IRQ points, 122 metric resets and four nested
+calls; zero new/new[] in native runtime steps. New bridge/tasks instrumented,
+original H8 excluded, other libraries uninstrumented.
+
+Four full cold/reset/warm/playback variants (Single, irregular, Multi, mapped)
+and existing whole-runtime fuzzing pass. Focused default-path Multi/FX full
+DSP tapes/raw audio/state/Flash/MIDI/clocks/serial data match the admitted H8
+reference. Every startup proves one complete native reset/outer job plus two
+native image/setup children, zero H8 or recovery. All seven focused stages pass
+frozen-source identity. The large final musical matrix is deferred until global
+model removal, instead of repeating it for each small conversion. Synthetic
+Flash/zero Wave and mapped markers retain the previous evidence limitations.
+No DSP/JIT, B/A execution order, timing, buffers, resampling, threads, waits,
+priorities or placement changes. Raw private evidence stays outside Git.
+
+Next: native DSP address/voice-window preparation, then parser/voice/parameters/
+clock/state and the remaining bootstrap/caller lifecycle. The broad register/
+flag/stack/PC model still exists; this is not the complete requested migration.
