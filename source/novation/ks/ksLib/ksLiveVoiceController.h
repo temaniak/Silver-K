@@ -16,6 +16,11 @@
 #include "ksOscillatorModulationCalls.h"
 #include "ksGlobalModulationCalls.h"
 #include "ksVoiceSweepCalls.h"
+#include "ksOscillatorPitchCalls.h"
+#include "ksParameterPitchCalls.h"
+#include "ksParameterModulationCalls.h"
+#include "ksVoiceRefreshCalls.h"
+#include "ksGlobalSetupCalls.h"
 #include <cstdint>
 
 namespace ks {
@@ -31,8 +36,8 @@ public:
     }
     static void verify(const ControllerCpu&);
     bool step(ControllerCpu&);
-    void resetMetrics(){sweepCalls.resetMetrics();globalModulationCalls.resetMetrics();oscillatorModulationCalls.resetMetrics();steps=allocationCalls=startCalls=releaseCalls=transportSteps=0;wordCalls.resetMetrics();addressCalls.resetMetrics();selectCalls.resetMetrics();routingCalls.resetMetrics();partControlCalls.resetMetrics();velocityCurveCalls.resetMetrics();selectionCalls.resetMetrics();populationCalls.resetMetrics();unisonCalls.resetMetrics();trackingCalls.resetMetrics();modulationCalls.resetMetrics();glideCalls.resetMetrics();startCallsNative.resetMetrics();}
-    void discardTransientCalls(){sweepCalls.discardCalls();globalModulationCalls.discardCalls();oscillatorModulationCalls.discardCalls();wordCalls.discardCalls();addressCalls.discardCalls();selectCalls.discardCalls();routingCalls.discardCalls();partControlCalls.discardCalls();velocityCurveCalls.discardCalls();selectionCalls.discardCalls();populationCalls.discardCalls();unisonCalls.discardCalls();trackingCalls.discardCalls();modulationCalls.discardCalls();glideCalls.discardCalls();startCallsNative.discardCalls();}
+    void resetMetrics(){globalSetupCalls.resetMetrics();refreshCalls.resetMetrics();parameterModulationCalls.resetMetrics();parameterPitchCalls.resetMetrics();oscillatorPitchCalls.resetMetrics();sweepCalls.resetMetrics();globalModulationCalls.resetMetrics();oscillatorModulationCalls.resetMetrics();steps=allocationCalls=startCalls=releaseCalls=transportSteps=0;wordCalls.resetMetrics();addressCalls.resetMetrics();selectCalls.resetMetrics();routingCalls.resetMetrics();partControlCalls.resetMetrics();velocityCurveCalls.resetMetrics();selectionCalls.resetMetrics();populationCalls.resetMetrics();unisonCalls.resetMetrics();trackingCalls.resetMetrics();modulationCalls.resetMetrics();glideCalls.resetMetrics();startCallsNative.resetMetrics();}
+    void discardTransientCalls(){globalSetupCalls.discardCalls();refreshCalls.discardCalls();parameterModulationCalls.discardCalls();parameterPitchCalls.discardCalls();oscillatorPitchCalls.discardCalls();sweepCalls.discardCalls();globalModulationCalls.discardCalls();oscillatorModulationCalls.discardCalls();wordCalls.discardCalls();addressCalls.discardCalls();selectCalls.discardCalls();routingCalls.discardCalls();partControlCalls.discardCalls();velocityCurveCalls.discardCalls();selectionCalls.discardCalls();populationCalls.discardCalls();unisonCalls.discardCalls();trackingCalls.discardCalls();modulationCalls.discardCalls();glideCalls.discardCalls();startCallsNative.discardCalls();}
     DspWordCalls wordCalls;
     DspAddressCalls addressCalls;
     DspSelectCalls selectCalls;
@@ -49,6 +54,11 @@ public:
     OscillatorModulationCalls oscillatorModulationCalls;
     GlobalModulationCalls globalModulationCalls;
     VoiceSweepCalls sweepCalls;
+    OscillatorPitchCalls oscillatorPitchCalls;
+    ParameterPitchCalls parameterPitchCalls;
+    ParameterModulationCalls parameterModulationCalls;
+    VoiceRefreshCalls refreshCalls;
+    GlobalSetupCalls globalSetupCalls;
     uint64_t steps=0,allocationCalls=0,startCalls=0,releaseCalls=0,transportSteps=0;
 };
 }

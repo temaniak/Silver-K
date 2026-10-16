@@ -4340,3 +4340,79 @@ handlers, timers, global voice service/state/IO/startup and caller lifecycle.
 Remove the broad production register/flag/stack/PC model before final product/
 musical validation, whole-process H8/native CPU comparison and push to Optimized.
 Private firmware/banks/audio/traces/binaries/reports stay out of Git.
+
+
+## 2026-10-16 — Mac: native pitch channels, key release, refresh and delayed actions
+
+Test ID `ks-native-pitch-timers-20261016`; parent `e91966d` plus this change.
+M1 Pro arm64 Release AppleClang21/C++17, pinned dependencies unchanged. Source
+identities, frozen executables, exact private tapes/audio and nine-stage report
+are retained under the private test ID. No CPU comparison or push. No Windows
+or fresh product validation; those remain separate final obligations.
+
+`OscillatorPitchTask` shares three output channels, octave/coarse/fine wrap,
+carry, wheel/static offsets and unison count/spread division. `ParameterPitchTask`
+and `ParameterModulationTask` replace three/four inline copies with native
+channel jobs; their completion retirement admits the following caller without
+an extra guest boundary. `NoteOffStateTask` owns pedal/mono/held admission,
+clear order, selected-part rebinding after children, retained original bitmap
+index and late note-bit reads. `VoiceRefreshTask` shares oscillator/filter/full
+refresh, live age/owner/index/mode decisions and final tracking/global order.
+`GlobalSetupTask` owns the ordered eight-byte mirror and late pedal/routing
+prefix, with zero-clock retirement into the following native/legacy group.
+`ScheduledTimerTask` shares cancel/arm/service for five delayed actions, modular
+16-bit elapsed admission, clear-before-callback and captured action identity.
+Pure tasks have no CPU registers/flags/stack/PC or processor pointer. Temporary
+bridges still expose old callers and IRQ saves; callback bindings and downstream
+full parameters/state/IO remain transitional. 778 old bodies are test-only in
+this change; the broad model is not removed yet.
+
+Public CTest for these families: six pass, seven private-ROM skips, zero fail.
+Private complete-call fixtures are run separately against direct original H8,
+without the synchronized factory or candidate interpreter/partial recovery.
+Every-step state/data/stack/address/value/order/clock/in-flight context and final
+memory agree. Both fetch modes/alignments, relevant all-byte arithmetic/notes/
+flags, pointer tags, count/sign/carry/division edges, mutation/reset/nesting are
+covered. Exact evidence after production-route integration:
+
+| Family | Calls | Original steps | Selected IRQs | Metric resets | Nested |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Three-output pitch | 133,852 | 40,313,524 | 2,244 | 655,102 | 12 |
+| Inline pitch | 397,056 | 29,391,720 | 2,232 | 744,702 | 36 |
+| Inline modulation | 528,136 | 23,008,798 | 1,704 | 528,184 | 48 |
+| Voice refresh | 2,780 | 28,386,268 | 326 | 767,512 | 18 |
+| Global setup prefix | 131,252 | 10,435,422 | 150 | 328,196 | 10 |
+| Note Off state | 7,136 | 6,908,912 | 456 | 980,746 | 6 |
+| Five delayed actions | 23,250 | 263,210 | 240 | 29,080 | 20 |
+
+ROM-free properties: pitch 1,441,792; inline pitch 4,325,376; inline modulation
+3,145,728; Note Off 1,310,720; shared sweep/refresh 327,680; timer 404,880.
+Timer properties sample time words at stride17 with interval/wrap boundaries;
+actual calls cover selected zero/sign/wrap clocks and all flags. Note Off family
+fixtures leave voices inactive; existing release fixtures and integrated musical
+checks supply active-voice evidence. Do not extrapolate those finite cases to
+all banks/hardware.
+
+Allocation/ASan/UBSan samples passed for pitch (2,588 calls), inline pitch
+(3,264), inline modulation (3,080), refresh (1,340), setup (692), Note Off (896),
+all tracked native new/new[] zero. Newly instrumented parent core/bridge samples
+also pass: activity 5,816 calls/168,240 original steps/36 IRQs/22,732 resets/12
+nested; Note On 1,970/184,560/136/25,762/12; timer 8,850/90,410/240/9,880/20.
+Parent flags and Note On key matrix are sampled at stride17, with other edge
+loops retained. Each own bridge/core/fixture is instrumented, original H8
+excluded, other libraries uninstrumented; no whole-synth sanitizer claim.
+
+Four cold/reset/warm variants, runtime arbitrary-state comparison and focused
+Multi/FX/steal/pedal complete DSP tapes/raw PCM/functional report keys pass exact
+frozen source identity (nine stages). New and earlier native job metrics balance;
+comparison partials zero. ksLib excludes original H8 symbols; product targets
+still exclude the reference object. Verified duplicate captures were removed
+only after byte equality and canonical/hash retention. Same synthetic Flash/
+zero Wave/mapped-marker limitations. DSP sound/JIT, guest clocks/IRQ boundaries,
+B/A ordering, rates/buffers, workers/waits/priorities/placement unchanged.
+
+Next: complete remaining full-parameter scalar/envelope groups, global voice
+service, part/pedal/MIDI/arp decisions, IO/state/reset and caller lifecycles.
+Finish broad register/flags/stack/PC removal, then final product/musical checks,
+whole-process direct-H8/native CPU comparison and push to Optimized. Private
+firmware/banks/audio/traces/binaries/personal reports remain out of Git.

@@ -15,6 +15,7 @@ bool LiveNoteController::step(ControllerCpu& h){
     auto& r=h.regs;
     const unsigned pc=h.getPC();
     if(KeyPriorityCalls::candidate(pc)){if(!keyPriorityCalls.step(h))return false;++steps;return true;}
+    if(NoteOffStateCalls::candidate(pc)){if(!noteOffStateCalls.step(h))return false;++steps;return true;}
     if(VoiceReleaseCalls::candidate(pc)){if(!releaseCalls.step(h))return false;++steps;if(pc==0x9400)++pedalReleaseCalls;return true;}
     if(NoteOnStateCalls::candidate(pc)){if(!noteOnStateCalls.step(h))return false;++steps;return true;}
     if(KeyActivityCalls::candidate(pc)){if(!keyActivityCalls.step(h))return false;++steps;return true;}
@@ -32,48 +33,6 @@ bool LiveNoteController::step(ControllerCpu& h){
     // physical-down and sustain-held bitmaps for the selected part.
     // Note Off: clear physical-down immediately; defer held-key removal while
     // the pedal is down, otherwise remove the key and update mono priority.
-    N(0x2f92,4,f.push(r[0].er))
-    N(0x2f96,4,f.push(r[1].er))
-    N(0x2f9a,2,f.push(r[2].r))
-    N(0x2f9c,2,r[1].er=h.sub32(r[1].er,r[1].er))
-    N(0x2f9e,2,f.move(r[1].rl,r[5].rl))
-    N(0x2fa0,2,f.shift(r[1].rl,2,false))
-    N(0x2fa2,2,f.shift(r[1].rl,1,false))
-    N(0x2fa4,4,f.push(r[1].er))
-    N(0x2fa8,4,f.call(0x4000))
-    N(0x2fac,8,f.move(r[2].rl,h.read8(r[0].er+327)))
-    N(0x2fb4,2,flag(h,4,(uint8_t(r[2].rl)&(1u<<0x4))==0))
-    N(0x2fb6,2,f.branch(!(h.ccr&4),0x3004))
-    N(0x2fb8,2,r[1].er=h.add32(r[1].er,r[0].er))
-    N(0x2fba,6,r[1].er=h.add32(r[1].er,0xd0))
-    N(0x2fc0,4,h.write8(uint8_t(h.read8(r[1].er))&~(1u<<(uint8_t(r[5].rl)&7)),r[1].er))
-    N(0x2fc4,2,f.call(0x3024))
-    N(0x2fc6,8,f.move(r[1].rl,h.read8(r[0].er+324)))
-    N(0x2fce,2,flag(h,4,(uint8_t(r[1].rl)&(1u<<0x6))==0))
-    N(0x2fd0,2,f.branch(bool(h.ccr&4),0x3004))
-    N(0x2fd2,4,f.call(0x30fe))
-    N(0x2fd6,2,f.branch(!(h.ccr&4),0x3004))
-    N(0x2fd8,2,f.push(r[2].e))
-    N(0x2fda,4,f.push(r[3].er))
-    N(0x2fde,4,f.push(r[4].er))
-    N(0x2fe2,4,f.push(r[5].er))
-    N(0x2fe6,4,f.push(r[6].er))
-    N(0x2fea,4,f.call(0x9374))
-    N(0x2fee,4,f.call(0xa8e6))
-    N(0x2ff2,4,f.pop(r[6].er))
-    N(0x2ff6,4,f.pop(r[5].er))
-    N(0x2ffa,4,f.pop(r[4].er))
-    N(0x2ffe,4,f.pop(r[3].er))
-    N(0x3002,2,f.pop(r[2].e))
-    N(0x3004,4,f.pop(r[1].er))
-    N(0x3008,4,f.call(0x4000))
-    N(0x300c,2,r[1].er=h.add32(r[1].er,r[0].er))
-    N(0x300e,6,r[1].er=h.add32(r[1].er,0xc0))
-    N(0x3014,4,h.write8(uint8_t(h.read8(r[1].er))&~(1u<<(uint8_t(r[5].rl)&7)),r[1].er))
-    N(0x3018,2,f.pop(r[2].r))
-    N(0x301a,4,f.pop(r[1].er))
-    N(0x301e,4,f.pop(r[0].er))
-    N(0x3022,2,f.ret())
     // Compact the ordered key list, preserving the original duplicate policy.
     // All-notes-off / held-key reset; keep velocity memory and program intact.
     // Mono replacement note: search adjacent held keys and restore velocity.

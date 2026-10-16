@@ -132,3 +132,24 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVoiceSweepCalls
 
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksKeyPriorityCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksScheduledTimerCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksOscillatorPitchCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksParameterPitchCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksParameterModulationCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVoiceRefreshCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksGlobalSetupCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNoteOffStateCalls.cpp")

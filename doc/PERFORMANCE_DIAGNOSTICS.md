@@ -976,3 +976,19 @@ runs reject partial recovery and check balanced completed contexts. An in-flight
 task survives diagnostic reset; counts are not elapsed time or CPU measurements.
 Pure native tasks retain no CPU model; projection bridges remain transitional.
 CPU comparisons remain deferred until the entire KS compatibility model is gone.
+
+
+### Pitch/refresh/Note Off/timer admission (2026-10-16)
+
+`ks-native-pitch-timers-20261016` freezes integrated source identity, independent
+original-H8 calls and focused private command/audio evidence. New probe prefixes
+`native_oscillator_pitch`, `native_parameter_pitch`, `native_parameter_modulation`,
+`native_voice_refresh`, `native_global_setup`, `native_note_off_state` count jobs,
+returns and test-partial admissions. They measure ownership, not CPU savings.
+Inline tasks retire at caller admission without an added guest boundary. Timer
+call/property fixtures verify all five actions separately; timer metrics are
+not yet exported by the musical probe. Runtime arbitrary-state tests discard
+transient scheduled jobs before each unrelated synthetic frame. The old caller/
+IRQ projection remains until downstream lifecycle conversion. CPU comparison
+continues to wait for complete KS model removal. Mac evidence does not validate
+Windows; no fresh AU/VST3/Standalone validation in this checkpoint.

@@ -79,3 +79,24 @@ target_sources(ksLib PRIVATE ksVoiceSweepCalls.cpp)
 
 
 target_sources(ksLib PRIVATE ksKeyPriorityCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksScheduledTimerCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksOscillatorPitchCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksParameterPitchCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksParameterModulationCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksVoiceRefreshCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksGlobalSetupCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksNoteOffStateCalls.cpp)
