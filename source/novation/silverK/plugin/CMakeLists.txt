@@ -1370,3 +1370,14 @@ add_executable(ksArpSelectTask_test "${ROOT}/source/novation/ks/ksLib/ksArpSelec
 target_include_directories(ksArpSelectTask_test PRIVATE "${ROOT}/source/cpu")
 target_link_libraries(ksArpSelectTask_test PRIVATE ksLib)
 add_test(NAME ks_arp_select_properties COMMAND ksArpSelectTask_test)
+
+add_executable(ksResetImageTask_test "${ROOT}/source/novation/ks/ksLib/ksResetImageTask_test.cpp")
+target_include_directories(ksResetImageTask_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksResetImageTask_test PRIVATE ksLib)
+add_test(NAME ks_reset_image_properties COMMAND ksResetImageTask_test)
+
+add_executable(ksResetImageCalls_test "${ROOT}/source/novation/ks/ksLib/ksResetImageCalls_test.cpp")
+target_include_directories(ksResetImageCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksResetImageCalls_test PRIVATE ksLib)
+add_test(NAME ks_reset_image_calls COMMAND ksResetImageCalls_test)
+set_tests_properties(ks_reset_image_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)

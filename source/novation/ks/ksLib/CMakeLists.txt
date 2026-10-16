@@ -265,3 +265,5 @@ target_sources(ksLib PRIVATE ksSerialDirectCalls.cpp)
 target_sources(ksLib PRIVATE ksArpEventCalls.cpp)
 
 target_sources(ksLib PRIVATE ksArpSelectCalls.cpp)
+
+target_sources(ksLib PRIVATE ksResetImageCalls.cpp)

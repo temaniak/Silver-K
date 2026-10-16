@@ -4900,3 +4900,49 @@ captures/binaries/reports remain outside Git. No CPU comparison yet per user.
 Next: complete remaining reset/UI/Flash/extended and other IO services, remove
 all architectural bridges in favor of typed native coordinator, run final product,
 audio and total-CPU comparison, then push Optimized without preset-manager edits.
+
+## 2026-10-16 — Native reset/image/checksum/overlay workflow (Mac)
+
+Source parent68e8813, isolated codex/ks-native-controller, arm64 Release
+AppleClang21/C++17, unchanged pinned dependencies and admitted private KSOS2.1.02.
+Retired105remaining RuntimeStartup N bodies; that production file now dispatches
+native ResetImage and HardwareSetup owners. Existing170exception return remains
+normal IO pending its separately delivered semantic owner. Old reset/image source
+is only in the comparative partial-entry reference hook, defaultnull in products.
+
+ResetImageTask owns cold/warm/relocated lifecycle, logical clear/copy/signature/
+image/tail cursors, delay counts, checksum and ordered typed service requests.
+No architectural registers/CCR/EXR/SP/PC in this core. Native workflow preserves
+2048word reset clear,10x2663settling, UART marker55,16KiB boot copy,40signature
+bytes, image halfword count/32bit checksum,128tailwords,14overlay bytes, exact
+control RMW and warm handoff/error/update request order. Original high relocated
+fetches cost3perbyte (not low-code paired words). Child and CPU projections still
+reside in temporary adapter; global architectural removal is not yet complete.
+
+Private proof IDs ks-native-reset-image-20261016 (core/call/probes) and
+ks-native-reset-image-focused-20261016 (frozen combined run). Independent ROM-free
+properties4608scenarios cover all256data seeds, cold/warm/relocated, marker,
+signature mismatch, empty image, bad checksum, accepted copy, each ordered write
+and refusal before deadlines. Actual differential2210lifecycles/65,003,104direct
+originalH8boundaries/600IRQsites/1,757,588mid-flight metric resets, both fetch
+modes, all256warm-entryflags plus seededcoldflags, exact per-boundary state/bus/
+clocks/history/in-flight context and full16MiBmemory, no interpreter/factory/
+partial recovery. This isolated fixture deliberately uses9746explicit empty
+child seams; it does not claim those children independently verified by it.
+Native allocation andASan+UBSan each746lifecycles/49,999,212boundaries/600IRQ/
+1,351,612resets/6290emptyseams pass, native new/new[]0. Own bridge/core/fixture
+instrumented, H8header excluded and other linked libraries uninstrumented.
+
+Real child composition separately passes frozen nine-stage run: four complete
+cold/reset/warm variants with real DSPs, runtime441,248boundary/4,128reset/80IRQ/
+1216HDI/86,016deadline comparisons, Multi/FX/steal/pedal full command tapes/rawPCM/
+functional state equality and all old/new owner balances/zero partials. Source
+identity unchanged during run. Public CTest2:propertypass, privatecallskip.
+
+No sound/JIT/timing/IRQ/B-A serial/buffer/rate/wait/worker/priority/placement change.
+Private syntheticFlash/zeroWave/mappedmarker fixture limits persist; no real-bank,
+physical hardware, arbitrary update execution or Windows validation claim. No
+private firmware/captures/binaries/reports committed. CPU comparison still
+explicitly deferred until full controller-model removal. Next: remaining IO,
+state/Flash/extended services and typed native coordinator replacing every bridge;
+final product/full musical/whole-process CPU validation and push remain pending.

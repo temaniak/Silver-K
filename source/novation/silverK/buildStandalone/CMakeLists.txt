@@ -318,3 +318,5 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksSerialDirectCal
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksArpEventCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksArpSelectCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksResetImageCalls.cpp")

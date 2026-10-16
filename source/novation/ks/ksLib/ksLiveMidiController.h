@@ -37,6 +37,7 @@
 #include "ksSerialDirectCalls.h"
 #include "ksArpEventCalls.h"
 #include "ksArpSelectCalls.h"
+#include "ksResetImageCalls.h"
 #include <cstdint>
 #include <cstddef>
 #include <utility>
@@ -107,6 +108,7 @@ public:
     SerialDirectCalls serialDirectCalls;
     ArpEventCalls arpEventCalls;
     ArpSelectCalls arpSelectCalls;
+    ResetImageCalls resetImageCalls;
     LiveNoteController noteActions;
     LiveVoiceController voiceActions;
     ParameterScaleCalls parameterScaleCalls;
@@ -159,6 +161,7 @@ public:
         serialDirectCalls.resetMetrics();
         arpEventCalls.resetMetrics();
         arpSelectCalls.resetMetrics();
+        resetImageCalls.resetMetrics();
         nativeSteps=bytes=messages=noteOn=noteOff=controls=originalStepCalls=0;
         noteActions.resetMetrics();parameterScaleCalls.resetMetrics();faultCalls.resetMetrics();bootStreamCalls.resetMetrics();bootSetupCalls.resetMetrics();startupCalls.resetMetrics();scheduledTimerCalls.resetMetrics();serviceCycleCalls.resetMetrics();stateInitCalls.resetMetrics();voiceActions.resetMetrics();
         if(!originalPages.empty())std::fill(originalPages.begin(),originalPages.end(),0);
