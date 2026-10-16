@@ -7,7 +7,7 @@ class ControllerCpu;
 class GlideCalls final {
 public:
  static bool candidate(unsigned p){return (p>=0x8e9c&&p<=0x8fb6)||(p>=0x9138&&p<=0x927a);}
- bool step(ControllerCpu&);
+ void retireReturns(ControllerCpu&);bool step(ControllerCpu&);
  unsigned activeCalls()const{unsigned n=0;for(const auto& c:calls)if(c)++n;return n;}
  void resetMetrics(){initialActive=activeCalls();started=completed=partialEntries=0;}
  void discardCalls(){for(auto& c:calls)c.reset();}

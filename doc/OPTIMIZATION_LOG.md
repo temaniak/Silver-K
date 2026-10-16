@@ -4521,3 +4521,105 @@ IO/reset and caller lifecycles, then remove the broad production CPU model.
 Only after global removal: final product/musical validation, whole-process H8/
 native CPU comparison and push to Optimized. Private firmware/banks/audio/
 traces/binaries/personal reports remain out of Git.
+
+
+## 2026-10-16 — Complete parameter-family ownership and global packet lifecycle (Mac)
+
+Source base f54f4eb plus this change, isolated codex/ks-native-controller worktree;
+Apple M1 Pro/macOS arm64 Release AppleClang21/C++17, profiling off. Build and
+private frozen source/binary identity: ks-native-final-parameters-globals-verified-20261016;
+component evidence: ks-native-final-parameters-globals-20261016. Same pinned DSP,
+asmjit/JUCE and verified KS OS 2.1.02 identity as preceding entries. No Windows
+build/result and no CPU comparison. Product AU/VST3/Standalone final rebuild is
+pending the complete migration; these are dedicated controller/bus/audio tests.
+
+Retired 743 more old production N bodies to H8-reference-only partial fixtures:
+362 parameter bodies (header, signed square, filter, volume, gate, support and
+both LFO lanes), 308 global/FX bodies (mix, table, integer square root, matrix,
+clamped time, pair, tail scalars/time/final scalars and final global publications),
+73 engine initialization bodies. All 1,606 original RuntimeParameters bodies
+now have semantic task owners; that file contains no old N bodies. This is
+parameter-engine coverage, **not global removal of the controller CPU model**.
+Temporary Calls adapters and other IO/state/MIDI/reset/extended callers still
+project registers, flags, stack and PC. They must be removed after parent/native
+lifecycle integration. No renamed processor or generic interpreter is claimed
+as the final native controller.
+
+Initialization owns 59 ordered publications/24 typed child calls, late selected-
+mode rereads and original deadlines. Its isolated fixture deliberately uses
+opaque children; actual nested services are covered by full cold boots. Global
+inline adapters retire terminal child metadata before any next owner is chosen;
+intermediate multi-packet waits remain alive. During integrated Multi checks,
+Glide and VelocityModulation terminal endpoints became owned by new Support/LFO
+jobs before their old local cleanup could run. DSP tape, PCM and guest clocks
+were already equal, but logical-job balance failed. Added idempotent terminal-
+only preflight for those two earlier owners. Failed evidence is retained under
+ks-native-final-parameters-globals-boot-20261016. A subsequent private driver
+accidentally expanded its musical scenario list while adding metric families;
+its unsupported extra scenario was a test-driver failure, not a pass. Corrected
+nine-stage frozen suite is the verified identifier above; only that suite is the
+combined passing evidence.
+
+Actual integrated independent original-H8 comparisons pass after every original
+boundary (all PC/register/CCR/EXR projections, IRQ/return/bus history, exact data/
+stack address/value/order/cycle/in-flight context and final full16MiB memory):
+
+| Native owner | Complete jobs/chains | Original steps | Selected IRQ cases |
+| --- | ---: | ---: | ---: |
+| Header | 395,154 | 8,565,420 | 360 |
+| Signed square | 9,490 | 204,392 | 248 |
+| Filter | 131,880 | 4,831,170 | 272 |
+| Volume | 131,782 | 4,217,396 | 180 |
+| Gate | 132,388 | 13,960,544 | 786 |
+| Support | 658,410 | 17,512,070 | 418 |
+| LFO | 526,880 | 84,146,458 | 1,532 |
+| Global mix | 131,600 | 32,245,432 | 492 |
+| Global table | 132,298 | 7,936,158 | 1,038 |
+| Square root | 138,216 | 8,927,020 | 1,446 |
+| Global matrix | 140,064 | 133,120,254 | 1,262 |
+| Global clamped time | 262,406 | 22,313,822 | 220 |
+| Global pair | 262,452 | 22,834,808 | 266 |
+| Global tail scalar | 131,444 | 21,559,120 | 336 |
+| Global time tail | 262,392 | 21,516,668 | 206 |
+| Global finish scalar | 131,326 | 11,359,894 | 218 |
+| Global final | 266,032 | 59,434,538 | 2,180 |
+| State initialization | 6,440 | 1,624,200 | 288 |
+
+Both fetch modes/stack alignments, all caller flags, relevant tagged pointers,
+late mutable fields/tables and metric reset/nested-call cases are included.
+Synchronized factory unavailable, interpreter and partial recovery counts zero.
+Post-fix original owners additionally pass Glide729,572jobs/143,077,416steps/
+2,440IRQs/1,806,306resets/12nested and VelocityModulation1,077,664jobs/
+42,187,704steps/3,936IRQs/1,077,728resets/64nested.
+
+ROM-free exhaustive/edge properties pass: Header16,843,008; SignedSquare256;
+Filter16,842,752; Volume65,536; Gate393,216; Support131,329; LFO1,572,864;
+Mix1,536; Table131,072; SquareRoot65,536; Matrix131,072; ClampedTime16,842,752;
+Pair131,072; TailScalar1,024; FinishScalar512; GlobalFinal196,864;
+Initialization402,944. TimeTail reuses the previously tested GlobalTimeTask.
+They check independent fixed-width arithmetic, wrap/clamp/table/selector domains,
+ordered packets/live observations, child lifetimes and refused admissions.
+Public CTest reports private-ROM call fixtures as skipped, not passed.
+
+Delivered native-core/bridge/fixture ASan+UBSan and zero native new/new[] samples
+pass for every new parameter/global family. Parent initialization additionally
+passes allocation/sanitizer680calls/171,720steps/288IRQ/24,480resets. Original H8
+is excluded from sanitization and unchanged linked libraries are uninstrumented;
+this is not whole-synth sanitizer coverage.
+
+Corrected nine-stage frozen suite passes all four cold/reset/warm variants,
+arbitrary-frame runtime differential test and complete Multi/FX/steal/pedal
+DSP tapes, raw PCM and functional-key checks. All new and earlier logical jobs
+balance, including starts/initial-active/returns/handoffs/active contexts, and
+partial counters are zero. Synthetic Flash/zero Wave/mapped-marker limits remain;
+this does not establish arbitrary real-bank or hardware equivalence. Verified
+cold candidate/reference duplicates are released only after equality and retained
+private canonical gzip/SHA256 manifests. Private captures/ROMs/binaries/reports
+remain untracked. Sound, exact guest timing, DSP JIT, B/A ordering, rates/buffers,
+workers/waits/priorities/placement are unchanged.
+
+Next: complete remaining MIDI/arp, global effect/periodic tail, state, IO/reset
+and extended semantic owners; then replace transitional caller ABI with typed
+native scheduling and remove all production CPU registers/flags/stack/PC. Only
+then run final product/musical tests and H8-versus-entirely-native whole-process
+CPU comparison on this Mac, then push the completed source to Optimized.

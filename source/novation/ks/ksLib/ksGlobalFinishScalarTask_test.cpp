@@ -1,0 +1,5 @@
+#include "ksGlobalFinishScalarTask.h"
+#include <iostream>
+#include <stdexcept>
+static void check(bool b){if(!b)throw std::runtime_error("Finish scalar property failed");}
+int main(){using T=ks::GlobalFinishScalarTask;unsigned cases=0;for(unsigned kind=0;kind<2;++kind)for(unsigned value=0;value<256;++value){T t{T::Kind(kind)};unsigned reads=0,guard=0;auto read=[&](){++reads;return value;};while(!t.awaiting()){check(++guard<24);auto cost=t.nextClocks(),s=unsigned(t.stage());check(t.advanceBefore(cost-1,read)==0&&unsigned(t.stage())==s);check(t.advanceBefore(cost,read)==cost);}uint32_t expected;if(!kind)expected=(uint32_t(uint16_t(value<<9))*0x8102)>>8;else{auto high=uint8_t(value-64);unsigned low=0;if(!(high&128)){low=uint8_t(high<<2);if(low)low|=3;}auto word=uint16_t(((unsigned(high)<<8)|low)<<1);expected=(uint32_t(word)<<8)|uint8_t(word);}check(t.wireWord()==expected&&t.offset()==0x83e + kind&&reads==1);check(t.resumeChild()&&t.stage()==T::Stage::Complete);++cases;}std::cout<<"PASS: "<<cases<<" pure finish-scalar properties; all bytes/gain and signed non-linear shape, wrapped low branch, repeated wire byte, budget refusal\n";}

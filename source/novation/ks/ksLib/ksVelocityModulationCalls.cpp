@@ -20,6 +20,7 @@ Point point(const VelocityModulationTask& task,unsigned binding){return bindings
 }
 void setVelocityModulationPartialForTests(VelocityModulationPartialTest fn){partialTest=fn;}
 bool VelocityModulationCalls::candidate(unsigned p){return (p>=0x8932&&p<=0x896a)||(p>=0x89f4&&p<=0x8a2c)||(p>=0x8b0e&&p<=0x8b46)||(p>=0x8d06&&p<=0x8d3e)||(p>=0x8e64&&p<=0x8e9c)||(p>=0x9084&&p<=0x90c0)||(p>=0x90c0&&p<=0x90fc)||(p>=0x90fc&&p<=0x9138);}
+void VelocityModulationCalls::retireReturns(ControllerCpu& h){for(auto& c:calls)if(c&&c->token==h.getSP()&&point(c->task,c->binding).location==unsigned(h.getPC())&&(c->task.child()==VelocityModulationTask::Child::Word)){c->task.resumeChild();c.reset();++completed;}}
 bool VelocityModulationCalls::step(ControllerCpu& h){using namespace controllerDetail;using C=VelocityModulationTask::Child;
  const unsigned pc=unsigned(h.getPC());std::optional<Call>* selected=nullptr;
  for(auto& c:calls)if(c&&c->token==h.getSP()){selected=&c;break;}

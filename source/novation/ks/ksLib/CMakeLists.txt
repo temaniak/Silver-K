@@ -136,3 +136,40 @@ target_sources(ksLib PRIVATE ksPedalCalls.cpp)
 
 
 target_sources(ksLib PRIVATE ksNoteProgramCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksStateInitCalls.cpp)
+
+target_sources(ksLib PRIVATE ksParameterHeaderCalls.cpp)
+
+target_sources(ksLib PRIVATE ksParameterSignedSquareCalls.cpp)
+
+target_sources(ksLib PRIVATE ksParameterFilterCalls.cpp)
+
+target_sources(ksLib PRIVATE ksParameterVolumeCalls.cpp)
+
+target_sources(ksLib PRIVATE ksParameterGateCalls.cpp)
+
+target_sources(ksLib PRIVATE ksParameterSupportCalls.cpp)
+
+target_sources(ksLib PRIVATE ksParameterLfoCalls.cpp)
+
+target_sources(ksLib PRIVATE ksGlobalMixCalls.cpp)
+
+target_sources(ksLib PRIVATE ksGlobalTableCalls.cpp)
+
+target_sources(ksLib PRIVATE ksSquareRootCalls.cpp)
+
+target_sources(ksLib PRIVATE ksGlobalMatrixCalls.cpp)
+
+target_sources(ksLib PRIVATE ksGlobalClampedTimeCalls.cpp)
+
+target_sources(ksLib PRIVATE ksGlobalPairCalls.cpp)
+
+target_sources(ksLib PRIVATE ksGlobalTailScalarCalls.cpp)
+
+target_sources(ksLib PRIVATE ksGlobalTimeTailCalls.cpp)
+
+target_sources(ksLib PRIVATE ksGlobalFinishScalarCalls.cpp)
+
+target_sources(ksLib PRIVATE ksGlobalFinalCalls.cpp)

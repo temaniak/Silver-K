@@ -9,7 +9,7 @@ public:
  static bool candidate(unsigned);
  // A completed inline child is retired without a guest boundary. False then
  // lets the existing caller consume its next boundary in the same step.
- bool step(ControllerCpu&);
+ void retireReturns(ControllerCpu&);bool step(ControllerCpu&);
  unsigned activeCalls()const{unsigned n=0;for(const auto& c:calls)if(c)++n;return n;}
  void resetMetrics(){initialActive=activeCalls();started=completed=partialEntries=0;}
  void discardCalls(){for(auto& c:calls)c.reset();}

@@ -220,6 +220,7 @@ unsigned outputAddress(const GlideTask& task,W what){return what==W::Previous?0x
 bool voiceChild(GlideTask::Child c){using C=GlideTask::Child;return c==C::PitchVoice||c==C::DetuneVoice||c==C::DistanceVoice;}
 }
 void setGlidePartialForTests(GlidePartialTest fn){partialTest=fn;}
+void GlideCalls::retireReturns(ControllerCpu& h){for(auto& c:calls)if(c&&c->token-c->depth==h.getSP()&&point(c->task).location==unsigned(h.getPC())&&(!c->task.relative()&&c->task.child()==GlideTask::Child::Previous)){c->task.resumeChild();c.reset();++completed;}}
 bool GlideCalls::step(ControllerCpu& h){using namespace controllerDetail;using C=GlideTask::Child;
  const unsigned pc=unsigned(h.getPC());std::optional<Call>* selected=nullptr;
  for(auto& c:calls)if(c&&c->token-c->depth==h.getSP()){selected=&c;break;}
