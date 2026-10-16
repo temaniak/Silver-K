@@ -4739,3 +4739,88 @@ reset/extended owners; eliminate all transitional caller CPU projections and
 replace them with typed native scheduling. Full product/musical validation,
 whole-process H8-vs-entirely-native CPU comparison and push remain deferred until
 the complete global removal requested by the user.
+
+## 2026-10-16 — Native arp refresh, state packing and panel/voice service owners (Mac)
+
+Source parent2b1bc11, isolated codex/ks-native-controller worktree; arm64 Release
+AppleClang21/C++17, unchanged pinned DSP/JUCE/asmjit dependencies. Private KS
+OS2.1.02 revision remains admitted by its existing decoded SHA. Local proof IDs
+ks-native-clock-serialization-panel-route-fixed-components-20261016 and
+ks-native-clock-serialization-panel-verified-20261016; reports/captures private.
+
+Retired815 original N bodies into test-only reference hooks: PanelDecay42,
+StateMode63, StateParameterExpand88, StatePackFields70, StatePackRefresh18,
+StateGlobals47, Periodic61, SyncValue28, PartRefresh31, PanelByte64, PanelPoll9,
+PanelAction55, ArpPrimitive41, ArpSchedule30, ArpMain168. RuntimeParameters and
+RuntimeVoices now contain no old N bodies. This is explicitly still a migration
+checkpoint: shared ControllerCpu/bridge projections and remaining state/IO/
+MIDI/extended/reset services must be eliminated globally before completion.
+
+Semantic cores use logical mode/part/packet/panel/clock/pattern values, typed
+children and deadline admission. Native arp retains wrapped fixed-point clock
+products, policy/pedal/release ordering, rest/event lookahead and returned
+ReleaseHeld policy; panel retains strobe/poll/holdoff ordering and original busy
+wait. State serializers dispatch six explicit field recipes; no generic
+instruction dispatcher introduced. Actual firmware tables remain private input.
+
+Independent original H8 whole calls / original boundaries / selected IRQs:
+
+| Family | Whole calls | Original boundaries | Selected IRQs |
+| --- | ---: | ---: | ---: |
+| Panel decay | 278,696 | 23,730,444 | 164 |
+| State mode | 131,746 | 6,426,148 | 150 |
+| Parameter expansion | 264,224 | 33,050,272 | 1,020 |
+| Packed fields | 789,996 | 9,217,768 | 420 |
+| Packed refresh | 263,360 | 24,980,264 | 168 |
+| Global state | 35,164 | 12,898,940 | 300 |
+| Periodic feedback | 530,550 | 6,818,486 | 2,046 |
+| Sync value | 263,556 | 7,315,802 | 304 |
+| Part refresh | 9,464 | 48,655,424 | 224 |
+| Panel byte | 526,488 | 8,424,096 | 128 |
+| Panel poll | 66,288 | 178,792,008 | 216 |
+| Panel action | 69,496 | 75,359,098 | 2,304 |
+| Arp primitives | 135,436 | 2,287,248 | 232 |
+| Arp schedule | 7,396 | 4,087,515 | 216 |
+| Arp main | 24,724 | 5,853,568 | 998 |
+
+All whole fixtures compare each boundary's clocks/access address/value/order/
+in-flight context, architectural reference projection, flags/IRQ/stack histories
+and final memory; both fetch modes, flags, late inputs, metric resets and nested
+frames where applicable. Interpreter/factory and partial recovery absent in the
+actual new whole calls. Arp mono tails stop at explicit b444 child handoff;
+part-refresh global child was original compatibility in agent fixture and is
+new native in the combined parent tests. Finite synthetic setup is not physical
+hardware/full-bank/general SysEx proof.
+
+ROM-free task properties: PanelDecay319,488; Mode851,968; Expansion917,504;
+PackFields1,245,184; PackRefresh131,072; Globals262,144; Periodic262,144;
+Sync131,072; PartRefresh1,048,576; PanelByte262,144; PanelPoll32,768;
+PanelAction38,400; ArpPrimitive524,288; Schedule1,572,864; Main524,288.
+Native step allocation and ASan+UBSan samples pass; parent PanelDecay2,216calls/
+213,644boundaries/164IRQs/30,132resets each, no new/new[]. Original H8 excluded;
+unchanged linked libraries uninstrumented, not whole-synth sanitizer coverage.
+
+Diagnosed and retained initial failures: PanelDecay task Finish initially fell
+through to AwaitLatch enum, fixed explicit Finish->Complete before integration.
+Integration trimming the last voice N bodies accidentally dropped the existing
+noteActions route, causing a66a unsupported in three whole fixtures and cold
+startup; restored noteActions||voiceActions with no timing change. Runtime
+arbitrary-partial-frame fuzz then hit invalid root part bindings in3a38/3a6e;
+explicit test-only reference hook now handles those malformed partial frames,
+while normal whole calls reject invalid bindings and keep partial count0.
+Runtime admission exceptions now identify PC/sample. Failed private logs retained.
+
+Current30-component suite passes all15properties and15whole-call tests plus
+legacy live/toggle. After the test-only malformed-root hook change, full actual
+ArpPrimitive whole-call matrix passes again. Public CTest30tests passes15ROM-free
+properties and skips15privateROM calls. Frozen verified nine-stage suite passes
+four complete cold/warm/reset variants, runtime differential441,248boundaries/
+4,128reset/80IRQ/1,216HDI/86,016deadline cases and full Multi/FX/steal/pedal KST,
+rawPCM and functional state keys. New/old active/start/return/handoff ownership
+balances and zero partial counts pass, source identity unchanged during run.
+
+No CPU comparison yet, per user. DSP/JIT, guest timing/IRQ, B/A ordering,
+buffers/rates/waits/priorities/placement unchanged. No Windows validation claim.
+Next: integrate native UART, remaining arp selectors/events and state loaders;
+finish other services, replace all architectural bridges with typed scheduling,
+then complete product/audio/whole-process CPU validation and push Optimized.

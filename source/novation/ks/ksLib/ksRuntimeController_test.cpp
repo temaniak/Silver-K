@@ -65,7 +65,7 @@ int main(int argc,char** argv){try{
     native->interpreterAllowed=false;std::mt19937 random(0x4b534e52);uint64_t boundaries=0;
     for(unsigned pc=0x170;pc<0xb8e8;pc+=2){
         for(unsigned sample=0;sample<32;++sample){
-            shared.midiDecodeCalls.discardCalls();shared.midiControlCalls.discardCalls();shared.midiAuxCalls.discardCalls();shared.hardwareSetupCalls.discardCalls();shared.midiPartInitCalls.discardCalls();shared.midiRouteCalls.discardCalls();shared.stateFieldMapCalls.discardCalls();shared.voiceTableInitCalls.discardCalls();shared.stateParameterEditCalls.discardCalls();shared.statePatchNameCalls.discardCalls();shared.stateStorageCalls.discardCalls();shared.noteActions.discardTransientCalls();shared.parameterScaleCalls.discardCalls();shared.voiceActions.discardTransientCalls();shared.faultCalls.discardCalls();shared.bootStreamCalls.discardCalls();shared.bootSetupCalls.discardCalls();shared.startupCalls.discardCalls();shared.scheduledTimerCalls.discardCalls();shared.serviceCycleCalls.discardCalls();shared.stateInitCalls.discardCalls();
+            shared.midiDecodeCalls.discardCalls();shared.midiControlCalls.discardCalls();shared.midiAuxCalls.discardCalls();shared.hardwareSetupCalls.discardCalls();shared.midiPartInitCalls.discardCalls();shared.midiRouteCalls.discardCalls();shared.stateFieldMapCalls.discardCalls();shared.voiceTableInitCalls.discardCalls();shared.stateParameterEditCalls.discardCalls();shared.statePatchNameCalls.discardCalls();shared.stateStorageCalls.discardCalls();shared.panelDecayCalls.discardCalls();shared.stateModeCalls.discardCalls();shared.stateParameterExpandCalls.discardCalls();shared.statePackFieldsCalls.discardCalls();shared.statePackRefreshCalls.discardCalls();shared.stateGlobalsCalls.discardCalls();shared.panelByteCalls.discardCalls();shared.panelPollCalls.discardCalls();shared.panelActionCalls.discardCalls();shared.arpPrimitiveCalls.discardCalls();shared.arpScheduleCalls.discardCalls();shared.arpMainCalls.discardCalls();shared.noteActions.discardTransientCalls();shared.parameterScaleCalls.discardCalls();shared.voiceActions.discardTransientCalls();shared.faultCalls.discardCalls();shared.bootStreamCalls.discardCalls();shared.bootSetupCalls.discardCalls();shared.startupCalls.discardCalls();shared.scheduledTimerCalls.discardCalls();shared.serviceCycleCalls.discardCalls();shared.stateInitCalls.discardCalls();
             shared.hardwareSetupCalls.discardCalls();
         native->nativeFetchClocksOnly=bool(sample&1);
             for(unsigned i=0;i<8;++i)original->regs[i].er=native->regs[i].er=int32_t(random());
@@ -74,7 +74,7 @@ int main(int argc,char** argv){try{
             original->ccr=native->ccr=uint8_t(random());original->exr=native->exr=uint8_t(random()&7);
             original->pending_irqs=native->pending_irqs=0;original->pending_irqs_high=native->pending_irqs_high=0;
             x.accesses.clear();y.accesses.clear();
-            if(!controller.stepCode(*native))break;
+            try{if(!controller.stepCode(*native))break;}catch(const std::exception&){std::cerr<<"Runtime admission PC="<<std::hex<<pc<<std::dec<<" sample="<<sample<<'\n';throw;}
             original->step();++boundaries;
             try{same(*original,*native,x,y);}catch(const std::exception&){std::cerr<<"Runtime PC="<<std::hex<<pc<<std::dec<<" sample="<<sample<<'\n';throw;}
         }

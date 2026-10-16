@@ -207,3 +207,33 @@ target_sources(ksLib PRIVATE ksStateStorageCalls.cpp)
 target_sources(ksLib PRIVATE ksPartEnableCalls.cpp)
 
 target_sources(ksLib PRIVATE ksPartSignalCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelDecayCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateModeCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateParameterExpandCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStatePackFieldsCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStatePackRefreshCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateGlobalsCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPeriodicCalls.cpp)
+
+target_sources(ksLib PRIVATE ksSyncValueCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPartRefreshCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelByteCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelPollCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelActionCalls.cpp)
+
+target_sources(ksLib PRIVATE ksArpPrimitiveCalls.cpp)
+
+target_sources(ksLib PRIVATE ksArpScheduleCalls.cpp)
+
+target_sources(ksLib PRIVATE ksArpMainCalls.cpp)

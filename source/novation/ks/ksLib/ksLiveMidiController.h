@@ -11,6 +11,18 @@
 #include "ksStateParameterEditCalls.h"
 #include "ksStatePatchNameCalls.h"
 #include "ksStateStorageCalls.h"
+#include "ksPanelDecayCalls.h"
+#include "ksStateModeCalls.h"
+#include "ksStateParameterExpandCalls.h"
+#include "ksStatePackFieldsCalls.h"
+#include "ksStatePackRefreshCalls.h"
+#include "ksStateGlobalsCalls.h"
+#include "ksPanelByteCalls.h"
+#include "ksPanelPollCalls.h"
+#include "ksPanelActionCalls.h"
+#include "ksArpPrimitiveCalls.h"
+#include "ksArpScheduleCalls.h"
+#include "ksArpMainCalls.h"
 #include <cstdint>
 #include <cstddef>
 #include <utility>
@@ -55,6 +67,18 @@ public:
     StateParameterEditCalls stateParameterEditCalls;
     StatePatchNameCalls statePatchNameCalls;
     StateStorageCalls stateStorageCalls;
+    PanelDecayCalls panelDecayCalls;
+    StateModeCalls stateModeCalls;
+    StateParameterExpandCalls stateParameterExpandCalls;
+    StatePackFieldsCalls statePackFieldsCalls;
+    StatePackRefreshCalls statePackRefreshCalls;
+    StateGlobalsCalls stateGlobalsCalls;
+    PanelByteCalls panelByteCalls;
+    PanelPollCalls panelPollCalls;
+    PanelActionCalls panelActionCalls;
+    ArpPrimitiveCalls arpPrimitiveCalls;
+    ArpScheduleCalls arpScheduleCalls;
+    ArpMainCalls arpMainCalls;
     LiveNoteController noteActions;
     LiveVoiceController voiceActions;
     ParameterScaleCalls parameterScaleCalls;
@@ -81,6 +105,18 @@ public:
         stateParameterEditCalls.resetMetrics();
         statePatchNameCalls.resetMetrics();
         stateStorageCalls.resetMetrics();
+        panelDecayCalls.resetMetrics();
+        stateModeCalls.resetMetrics();
+        stateParameterExpandCalls.resetMetrics();
+        statePackFieldsCalls.resetMetrics();
+        statePackRefreshCalls.resetMetrics();
+        stateGlobalsCalls.resetMetrics();
+        panelByteCalls.resetMetrics();
+        panelPollCalls.resetMetrics();
+        panelActionCalls.resetMetrics();
+        arpPrimitiveCalls.resetMetrics();
+        arpScheduleCalls.resetMetrics();
+        arpMainCalls.resetMetrics();
         nativeSteps=bytes=messages=noteOn=noteOff=controls=originalStepCalls=0;
         noteActions.resetMetrics();parameterScaleCalls.resetMetrics();faultCalls.resetMetrics();bootStreamCalls.resetMetrics();bootSetupCalls.resetMetrics();startupCalls.resetMetrics();scheduledTimerCalls.resetMetrics();serviceCycleCalls.resetMetrics();stateInitCalls.resetMetrics();voiceActions.resetMetrics();
         if(!originalPages.empty())std::fill(originalPages.begin(),originalPages.end(),0);
