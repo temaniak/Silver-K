@@ -4220,3 +4220,56 @@ remaining parameter/MIDI/parser/clock/state/reset/caller lifecycles. The broad
 register/flag/stack/PC compatibility frame still exists. Finish global removal
 before final musical/product checks, whole-process direct-H8/native CPU comparison
 and push to Optimized. Private firmware/reports/tapes/audio/binaries stay out of Git.
+
+
+## 2026-10-16 — Mac: native single-voice decisions and both gate packets
+
+Test ID `ks-native-voice-start-20261016`; source parent `8c24508` plus start
+change. M1 Pro arm64 Release AppleClang21/C++17, same pinned dependencies.
+Frozen identities/binaries/private evidence under this ID in `/private/tmp`.
+No CPU comparison/push. Windows and fresh product builds remain pending.
+
+`VoiceStartTask` owns allocation-result/velocity admission, suppression, tracking
+child, live allocation decision, prime/full-parameter child order and the resume/
+full gate packet. It retains byte masks/rotation, shifted middle byte, late
+detune flag, native relative gate request and exact own completion clocks. Full
+update hands off to the native modulation/glide/gate sequence. A reuse path
+retains the existing full-parameter child; that child is still compatibility
+code and is explicitly not claimed fully native. Pure state contains logical
+voice/packet fields and child requests, with no CPU register/flags/stack/PC/raw
+processor pointers. Temporary caller/IRQ/trace projections remain in its bridge.
+The 42 remaining old start/gate bodies are test-only. LiveVoiceController itself
+now orchestrates native tasks and has no register/flag/opcode cases; broad model
+removal elsewhere remains unfinished.
+
+720,896 native scenarios cover every velocity/allocation decision, every gate
+flags/middle pair and low/detune pair, exact packed words, child order, own clocks
+and deadlines. 540,918 actual complete jobs / 49,493,014 direct original steps
+include real allocation/tracking/full-parameter children, modes/ages/velocities,
+part/tag/selector/flag bounds, both fetch modes/SRAM alignments and late packet
+fields. 210 selected IRQ points, 775,578 metric resets, 12 nested jobs, 388
+modulation handoffs and 1,216 suppressed starts retain exact data accesses/values/
+clocks/projected state/full final memory. Actual fixture has no synchronized
+original factory; candidate interpreter/recovery zero. Allocation/ASan/UBSan
+samples: 5,238 jobs / 6,215,958 original steps, 210 IRQ points, 66,562 resets,
+12 nested jobs, 388 handoffs and 552 suppressed starts; zero new/new[] in native
+steps. New bridge/core instrumented, original H8 excluded, other libraries
+uninstrumented. Public checks: one pass/one private-ROM skip/zero fail; private
+actual-call fixture passes separately.
+
+Four full cold/reset/warm variants, whole-runtime fuzzing and focused Multi/FX/
+steal/pedal complete tapes/raw PCM/state/Flash/MIDI/controller/DSP/serial checks
+pass frozen identity (nine stages, duplicate report keys rejected). Start jobs/
+finishes: 312/312, 16/16, 240/240, 114/114; modulation handoffs 0/0/0/34. Zero
+initial/remaining contexts or recovery. Earlier native job lifetimes remain
+correct. ksLib has no original H8 symbols and normal products exclude the
+reference object. Verified capture duplicates retain private canonical copies/
+hash manifests. Same synthetic Flash/zero Wave/mapped-marker limitations; no
+new real-bank or physical-hardware coverage. DSP/JIT, guest timing/IRQ boundaries,
+B/A order, rates/buffers, workers/waits/priorities/placement unchanged.
+
+Next: native held/physical-key state and note/pedal/MIDI decisions, remaining
+full parameter, clock/state/reset/caller lifecycles. The production broad
+register/flags/stack/PC compatibility model still exists. Complete its removal
+before final musical/product checks, whole-process direct-H8/native CPU comparison
+and push to Optimized. Firmware/reports/tapes/audio/binaries remain private.

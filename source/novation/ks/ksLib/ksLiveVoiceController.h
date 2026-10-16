@@ -8,6 +8,7 @@
 #include "ksVoiceTrackingCalls.h"
 #include "ksVelocityModulationCalls.h"
 #include "ksGlideCalls.h"
+#include "ksVoiceStartCalls.h"
 #include "ksDspWordCalls.h"
 #include "ksDspAddressCalls.h"
 #include "ksDspStartupCalls.h"
@@ -27,8 +28,8 @@ public:
     }
     static void verify(const ControllerCpu&);
     bool step(ControllerCpu&);
-    void resetMetrics(){steps=allocationCalls=startCalls=releaseCalls=transportSteps=0;wordCalls.resetMetrics();addressCalls.resetMetrics();selectCalls.resetMetrics();routingCalls.resetMetrics();partControlCalls.resetMetrics();velocityCurveCalls.resetMetrics();selectionCalls.resetMetrics();populationCalls.resetMetrics();unisonCalls.resetMetrics();trackingCalls.resetMetrics();modulationCalls.resetMetrics();glideCalls.resetMetrics();}
-    void discardTransientCalls(){wordCalls.discardCalls();addressCalls.discardCalls();selectCalls.discardCalls();routingCalls.discardCalls();partControlCalls.discardCalls();velocityCurveCalls.discardCalls();selectionCalls.discardCalls();populationCalls.discardCalls();unisonCalls.discardCalls();trackingCalls.discardCalls();modulationCalls.discardCalls();glideCalls.discardCalls();}
+    void resetMetrics(){steps=allocationCalls=startCalls=releaseCalls=transportSteps=0;wordCalls.resetMetrics();addressCalls.resetMetrics();selectCalls.resetMetrics();routingCalls.resetMetrics();partControlCalls.resetMetrics();velocityCurveCalls.resetMetrics();selectionCalls.resetMetrics();populationCalls.resetMetrics();unisonCalls.resetMetrics();trackingCalls.resetMetrics();modulationCalls.resetMetrics();glideCalls.resetMetrics();startCallsNative.resetMetrics();}
+    void discardTransientCalls(){wordCalls.discardCalls();addressCalls.discardCalls();selectCalls.discardCalls();routingCalls.discardCalls();partControlCalls.discardCalls();velocityCurveCalls.discardCalls();selectionCalls.discardCalls();populationCalls.discardCalls();unisonCalls.discardCalls();trackingCalls.discardCalls();modulationCalls.discardCalls();glideCalls.discardCalls();startCallsNative.discardCalls();}
     DspWordCalls wordCalls;
     DspAddressCalls addressCalls;
     DspSelectCalls selectCalls;
@@ -41,6 +42,7 @@ public:
     VoiceTrackingCalls trackingCalls;
     VelocityModulationCalls modulationCalls;
     GlideCalls glideCalls;
+    VoiceStartCalls startCallsNative;
     uint64_t steps=0,allocationCalls=0,startCalls=0,releaseCalls=0,transportSteps=0;
 };
 }

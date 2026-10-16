@@ -59,3 +59,5 @@ target_sources(ksLib PRIVATE ksVoiceTrackingCalls.cpp)
 target_sources(ksLib PRIVATE ksVelocityModulationCalls.cpp)
 
 target_sources(ksLib PRIVATE ksGlideCalls.cpp)
+
+target_sources(ksLib PRIVATE ksVoiceStartCalls.cpp)

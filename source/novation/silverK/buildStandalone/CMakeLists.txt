@@ -112,3 +112,5 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVoiceTrackingCa
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVelocityModulationCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksGlideCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVoiceStartCalls.cpp")

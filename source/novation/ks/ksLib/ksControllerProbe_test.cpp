@@ -287,6 +287,12 @@ int main(int argc,char** argv){try{
         <<",\"native_startup_returns_before_metrics\":"<<startupReturns
         <<",\"native_dsp_reset_returns_before_metrics\":"<<resetReturns
         <<",\"native_startup_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->startupCalls.partialEntries:0)
+        <<",\"native_voice_start_jobs\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.startCallsNative.started:0)
+        <<",\"native_voice_start_finishes\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.startCallsNative.completed:0)
+        <<",\"native_voice_start_handoffs\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.startCallsNative.handoffs:0)
+        <<",\"native_voice_start_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.startCallsNative.initialActive:0)
+        <<",\"native_voice_start_active\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.startCallsNative.activeCalls():0)
+        <<",\"native_voice_start_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.startCallsNative.partialEntries:0)
         <<",\"native_glide_jobs\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.glideCalls.started:0)
         <<",\"native_glide_returns\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.glideCalls.completed:0)
         <<",\"native_glide_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.glideCalls.initialActive:0)

@@ -22,6 +22,7 @@
 #include "ksVoiceTrackingCalls.h"
 #include "ksVelocityModulationCalls.h"
 #include "ksGlideCalls.h"
+#include "ksVoiceStartCalls.h"
 #include "ksControllerScheduling.h"
 #include "ksDspTransport.h"
 #include "ksControllerBoundary.h"
@@ -1692,6 +1693,56 @@ bool partialGlide(ControllerCpu& h){
  }
 #undef N
 }
-struct Install {Install(){setControllerReferenceFactoryForTests(&create);setKeySearchPartialForTests(&partialKeys);setParameterScalePartialForTests(&partialScale);setControlJobsPartialForTests(&historicalControl::service);setDspWordPartialForTests(&partialWord);setDspTransportPartialBatchForTests(&historicalTransport::service);setDspAddressPartialForTests(&partialAddress);setDspFaultPartialForTests(&partialFault);setDspBootStreamPartialForTests(&partialBootStream);setDspBootSetupPartialForTests(&partialBootSetup);setDspStartupPartialForTests(&partialStartup);setDspRoutingPartialForTests(&partialRouting);setPartControlPartialForTests(&partialPartControl);setVelocityCurvePartialForTests(&partialVelocityCurve);setVoiceSelectionPartialForTests(&partialVoiceSelection);setVoicePopulationPartialForTests(&partialVoicePopulation);setKeyResetPartialForTests(&partialKeyReset);setVoiceReleasePartialForTests(&partialVoiceRelease);setUnisonPartialForTests(&partialUnison);setVoiceTrackingPartialForTests(&partialVoiceTracking);setVelocityModulationPartialForTests(&partialVelocityModulation);setGlidePartialForTests(&partialGlide);}} install;
+bool partialVoiceStart(ControllerCpu& h){
+ using namespace controllerDetail;auto& r=h.regs;
+#define N(P,L,...) case P:{Boundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
+ switch(unsigned(h.getPC())){
+    N(0x902a,4,f.call(0xa338))
+    N(0x902e,8,f.move(r[0].rl,h.read8(r[3].er+6)))
+    N(0x9036,4,f.branch(bool(h.ccr&8),0x92be))
+    N(0x903a,4,f.call(0xa1b0))
+    N(0x903e,6,f.move(r[0].rl,h.read8(0x1752a)))
+    N(0x9044,2,h.sub8(r[0].rl,0x1))
+    N(0x9046,2,f.branch(!(h.ccr&5),0x9084))
+    N(0x9048,4,f.move(r[4].r,0x2c))
+    N(0x904c,4,f.call(0x77dc))
+    N(0x9050,4,f.call(0x7de4))
+    N(0x9054,8,f.move(r[1].rh,h.read8(r[6].er+79)))
+    N(0x905c,2,r[1].rh|=0xffffffc0;value(h,r[1].rh))
+    N(0x905e,8,f.move(r[1].rl,h.read8(r[6].er+147)))
+    N(0x9066,2,f.shift(r[1].rl,1,true))
+    N(0x9068,2,f.move(r[1].e,r[1].r))
+    N(0x906a,2,f.move(r[1].rh,0xffffffbf))
+    N(0x906c,8,f.move(r[0].rl,h.read8(r[6].er+4)))
+    N(0x9074,2,r[0].rl=h.add8(r[0].rl,0xffffffc0))
+    N(0x9076,2,f.branch(bool(h.ccr&4),0x907a))
+    N(0x9078,2,r[1].rh|=0x40;value(h,r[1].rh))
+    N(0x907a,4,f.move(r[4].r,0x2b))
+    N(0x907e,4,f.call(0x785a))
+    N(0x9082,2,f.ret())
+    N(0x927e,8,f.move(r[1].rh,h.read8(r[6].er+79)))
+    N(0x9286,2,r[1].rh&=0x3f;value(h,r[1].rh))
+    N(0x9288,8,f.move(r[1].rl,h.read8(r[6].er+78)))
+    N(0x9290,2,r[1].rl&=0x3;value(h,r[1].rl))
+    N(0x9292,2,f.rotateRight(r[1].rl,2))
+    N(0x9294,2,r[1].rh|=r[1].rl;value(h,r[1].rh))
+    N(0x9296,2,f.move(r[1].rl,0x0))
+    N(0x9298,2,f.move(r[1].e,r[1].r))
+    N(0x929a,8,f.move(r[1].rh,h.read8(r[6].er+80)))
+    N(0x92a2,2,r[1].rh&=0x7;value(h,r[1].rh))
+    N(0x92a4,2,r[1].rh|=0xffffffb8;value(h,r[1].rh))
+    N(0x92a6,8,f.move(r[0].rl,h.read8(r[6].er+4)))
+    N(0x92ae,2,r[0].rl=h.add8(r[0].rl,0xffffffc0))
+    N(0x92b0,2,f.branch(bool(h.ccr&4),0x92b4))
+    N(0x92b2,2,r[1].rh|=0x40;value(h,r[1].rh))
+    N(0x92b4,4,f.move(r[4].r,0x2b))
+    N(0x92b8,4,f.call(0x785a))
+    N(0x92bc,2,f.ret())
+    N(0x92be,2,f.ret())
+ default:return false;
+ }
+#undef N
+}
+struct Install {Install(){setControllerReferenceFactoryForTests(&create);setKeySearchPartialForTests(&partialKeys);setParameterScalePartialForTests(&partialScale);setControlJobsPartialForTests(&historicalControl::service);setDspWordPartialForTests(&partialWord);setDspTransportPartialBatchForTests(&historicalTransport::service);setDspAddressPartialForTests(&partialAddress);setDspFaultPartialForTests(&partialFault);setDspBootStreamPartialForTests(&partialBootStream);setDspBootSetupPartialForTests(&partialBootSetup);setDspStartupPartialForTests(&partialStartup);setDspRoutingPartialForTests(&partialRouting);setPartControlPartialForTests(&partialPartControl);setVelocityCurvePartialForTests(&partialVelocityCurve);setVoiceSelectionPartialForTests(&partialVoiceSelection);setVoicePopulationPartialForTests(&partialVoicePopulation);setKeyResetPartialForTests(&partialKeyReset);setVoiceReleasePartialForTests(&partialVoiceRelease);setUnisonPartialForTests(&partialUnison);setVoiceTrackingPartialForTests(&partialVoiceTracking);setVelocityModulationPartialForTests(&partialVelocityModulation);setGlidePartialForTests(&partialGlide);setVoiceStartPartialForTests(&partialVoiceStart);}} install;
 }
 }

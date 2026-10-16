@@ -400,3 +400,13 @@ target_include_directories(ksGlideCalls_test PRIVATE "${ROOT}/source/cpu")
 target_link_libraries(ksGlideCalls_test PRIVATE ksLib)
 add_test(NAME ks_glide_calls COMMAND ksGlideCalls_test)
 set_tests_properties(ks_glide_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Native start decisions and packed gate commands with independent H8 fixture.
+add_executable(ksVoiceStartTask_test "${ROOT}/source/novation/ks/ksLib/ksVoiceStartTask_test.cpp")
+target_link_libraries(ksVoiceStartTask_test PRIVATE ksLib)
+add_test(NAME ks_voice_start_properties COMMAND ksVoiceStartTask_test)
+add_executable(ksVoiceStartCalls_test "${ROOT}/source/novation/ks/ksLib/ksVoiceStartCalls_test.cpp")
+target_include_directories(ksVoiceStartCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksVoiceStartCalls_test PRIVATE ksLib)
+add_test(NAME ks_voice_start_calls COMMAND ksVoiceStartCalls_test)
+set_tests_properties(ks_voice_start_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
