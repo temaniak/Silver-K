@@ -4169,3 +4169,54 @@ startup, then remaining parameter/MIDI/parser/clock/state/reset/caller paths.
 The broad register/flag/stack/PC compatibility frame remains. Complete global
 removal before final musical/product checks, whole-process direct-H8/native CPU
 comparison and push to Optimized. Firmware/reports/tapes/audio/binaries stay private.
+
+
+## 2026-10-16 — Mac: shared native pitch/glide and late gate decision
+
+Test ID `ks-native-glide-20261016`; source parent `69fd393` plus glide
+change. M1 Pro arm64 Release AppleClang21/C++17, same pinned dependencies.
+Frozen identities/binaries/private evidence under this ID in `/private/tmp`.
+No CPU comparison/push. Windows and fresh plugin product validation pending.
+
+`GlideTask` owns both full-upload and note-start pitch/glide paths: patch/slot
+pitch selection, byte detune/absolute distance and previous-pitch publication,
+late mode/allocation legato decision, zero-time pair, original time code/native
+signed-coefficient child, late distance-mode/slot read, split scaled product
+and minimum 512, five logical shifts/saved coefficient path, live previous pitch
+and separate late gate-allocation decision. Relative and sequential DSP requests
+retain every admitted observation, publication and command order. The 183 old
+bodies are test-only. Pure state is logical fields/coefficient/packet requests;
+no CPU registers/flags/stack/PC/raw processor pointers. Caller/IRQ/trace projections
+remain temporary. Inline modulation is retired before glide starts at the shared
+caller boundary, preserving job lifetime without an extra instruction or clock.
+
+262,144 independent native glide scenarios compare mutable fields, coefficient
+codes/products, packet order, deadlines and independently changing late gate
+allocation. 729,572 actual jobs/caller admissions / 143,077,416 independent original
+steps cover all time/mode/allocation/distance paths, every detune/note pair and
+all 65,536 static bases, flags/slot/patch bounds, both fetch modes/SRAM alignments
+and live fields. 2,440 selected IRQ points, 1,806,306 metric resets, 12 nested jobs
+match exact data accesses/values/clocks/projected state and full final memory.
+Actual fixture has no synchronized original factory; candidate interpreter and
+partial recovery zero. Allocation/ASan/UBSan samples: 17,252 jobs / 3,390,864 original
+steps, 2,440 IRQ points, 41,674 metric resets, 12 nested jobs; zero new/new[] in
+native steps. New bridge/core instrumented, original H8 excluded, other libraries
+uninstrumented. Public checks: one pass/one private-ROM skip/zero fail; private
+full fixture passes separately.
+
+Four full cold/reset/warm variants, whole-runtime fuzzing and focused Multi/FX/
+steal/pedal full tapes/raw PCM/state/Flash/MIDI/controller/DSP/serial checks pass
+frozen identity (nine stages; duplicate JSON keys rejected). Glide starts/returns:
+320/320, 58/58, 240/240, 80/80; zero initial/remaining contexts or recovery. Earlier
+modulation/other job lifetimes remain correct. ksLib has no original H8 symbols;
+normal products exclude the reference object. Verified duplicate captures retain
+canonical private copies/hash manifests. Same synthetic Flash/zero Wave/mapped-
+marker limitations, with no new real-bank or physical-hardware coverage. DSP/JIT,
+timing/IRQ boundaries, B/A order, rates/buffers, workers/waits/priorities/placement
+unchanged.
+
+Next: remaining single-voice start decisions and resume/full gate packets, then
+remaining parameter/MIDI/parser/clock/state/reset/caller lifecycles. The broad
+register/flag/stack/PC compatibility frame still exists. Finish global removal
+before final musical/product checks, whole-process direct-H8/native CPU comparison
+and push to Optimized. Private firmware/reports/tapes/audio/binaries stay out of Git.

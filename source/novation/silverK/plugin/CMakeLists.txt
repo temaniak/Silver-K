@@ -390,3 +390,13 @@ target_include_directories(ksVelocityModulationCalls_test PRIVATE "${ROOT}/sourc
 target_link_libraries(ksVelocityModulationCalls_test PRIVATE ksLib)
 add_test(NAME ks_velocity_modulation_calls COMMAND ksVelocityModulationCalls_test)
 set_tests_properties(ks_velocity_modulation_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Native shared glide and portamento; independent original H8 in test fixture.
+add_executable(ksGlideTask_test "${ROOT}/source/novation/ks/ksLib/ksGlideTask_test.cpp")
+target_link_libraries(ksGlideTask_test PRIVATE ksLib)
+add_test(NAME ks_glide_properties COMMAND ksGlideTask_test)
+add_executable(ksGlideCalls_test "${ROOT}/source/novation/ks/ksLib/ksGlideCalls_test.cpp")
+target_include_directories(ksGlideCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksGlideCalls_test PRIVATE ksLib)
+add_test(NAME ks_glide_calls COMMAND ksGlideCalls_test)
+set_tests_properties(ks_glide_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
