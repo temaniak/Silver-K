@@ -13,6 +13,10 @@ void LiveVoiceController::verify(const ControllerCpu& h){
 }
 bool LiveVoiceController::step(ControllerCpu& h){
     auto& r=h.regs;const unsigned pc=h.getPC();
+    if(DspWordCalls::candidate(pc)){
+        if(!wordCalls.step(h))return false;
+        ++steps;++transportSteps;return true;
+    }
     if(pc==0xa338)++allocationCalls;
     if(pc==0x8fcc)++startCalls;
     if(pc==0x8fc0)++releaseCalls;
@@ -72,41 +76,6 @@ bool LiveVoiceController::step(ControllerCpu& h){
     N(0x24cc,6,f.move(r[0].r,h.read16(0x159f2)))
     N(0x24d2,2,h.sub16(r[4].r,r[0].r))
     N(0x24d4,4,f.call(0x2416))
-    N(0x24d8,8,f.move(r[0].rl,h.read8(r[5].er+4)))
-    N(0x24e0,2,r[0].rl&=0x2;value(h,r[0].rl))
-    N(0x24e2,2,f.branch(!(h.ccr&4),0x24fc))
-    N(0x24e4,2,r[0].e=h.sub16(r[0].e,r[0].e))
-    N(0x24e6,8,f.move(r[0].rl,h.read8(r[5].er+4)))
-    N(0x24ee,2,r[0].rl&=0x2;value(h,r[0].rl))
-    N(0x24f0,2,f.branch(!(h.ccr&4),0x24fc))
-    N(0x24f2,2,f.inc(r[0].e,-1))
-    N(0x24f4,2,f.branch(!(h.ccr&4),0x24e6))
-    N(0x24f6,4,f.call(0x2304))
-    N(0x24fa,2,f.branch(true,0x24e4))
-    N(0x24fc,2,f.move(r[0].r,r[1].e))
-    N(0x24fe,8,f.store8(r[5].er+10,r[0].rh))
-    N(0x2506,8,f.store8(r[5].er+12,r[0].rl))
-    N(0x250e,8,f.store8(r[5].er+14,r[1].rh))
-    N(0x2516,2,f.inc(r[4].r,1))
-    N(0x2518,6,f.store16(0x159f2,r[4].r))
-    N(0x251e,2,f.ret())
-    // Sequential data write, preserving the firmware polling boundary.
-    N(0x2520,8,f.move(r[0].rl,h.read8(r[5].er+4)))
-    N(0x2528,2,r[0].rl&=0x2;value(h,r[0].rl))
-    N(0x252a,2,f.branch(!(h.ccr&4),0x2544))
-    N(0x252c,2,r[0].e=h.sub16(r[0].e,r[0].e))
-    N(0x252e,8,f.move(r[0].rl,h.read8(r[5].er+4)))
-    N(0x2536,2,r[0].rl&=0x2;value(h,r[0].rl))
-    N(0x2538,2,f.branch(!(h.ccr&4),0x2544))
-    N(0x253a,2,f.inc(r[0].e,-1))
-    N(0x253c,2,f.branch(!(h.ccr&4),0x252e))
-    N(0x253e,4,f.call(0x2304))
-    N(0x2542,2,f.branch(true,0x252c))
-    N(0x2544,2,f.move(r[0].r,r[1].e))
-    N(0x2546,8,f.store8(r[5].er+10,r[0].rh))
-    N(0x254e,8,f.store8(r[5].er+12,r[0].rl))
-    N(0x2556,8,f.store8(r[5].er+14,r[1].rh))
-    N(0x255e,2,f.ret())
     // Host read on B/A: send the read address under HF3, wait for receive
     // data, clear HF3 and read all three bytes through the actual DSP port.
     N(0x2560,6,f.move(r[5].er,0x600000))

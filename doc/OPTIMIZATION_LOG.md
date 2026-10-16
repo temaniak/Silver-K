@@ -3189,3 +3189,89 @@ parameter, timer/clock/arp, state/Flash paths. Remove all transitional caller
 projections and the shared register/flag/stack/PC model. Only after that full
 removal, run final command/audio/state tests, compare total CPU with a direct
 H8 production baseline and push the completed transfer.
+
+
+## 2026-10-16 — Mac: native live DSP-word writes, caller projection retained
+
+Test ID: `ks-native-dsp-word-calls-20261016`. Isolated source parent
+`a48e2c6db6797f810410cb5f2618ee191b01e792` plus the DSP-word task/caller
+changes; exact source/binary manifests and private reports remain in ignored
+output. Same M1 Pro arm64 Release build, AppleClang 21/C++17 and pinned
+JUCE/asmjit/DSP dependencies as the preceding coefficient-call entry.
+No CPU comparison or push has been performed; both wait for the complete port.
+
+`DspWordTask` owns native payload/address values, live readiness, retry/timeout
+state and the original interruptible admission durations. Sequential and
+post-address writes both use this task. The real port is read afresh on every
+retry; neither readiness nor response data is cached or replayed. A timeout
+parks the task while the existing fault service runs, then explicitly resumes
+it. Its own state contains no register bank, processor flags, guest stack or
+PC. `DspWordCalls` temporarily supplies the existing caller/IRQ/trace projection
+and return convention. Those projections and the global compatibility model
+remain incomplete work, not a completed controller replacement.
+
+The 34 old body boundaries move into the comparison-only object. The six old
+register-driven word-batch entries are also comparison-only and no longer
+production candidates, so the optional transport path cannot advance caller
+registers behind the native task. The remaining address/read batches are
+unchanged. `LiveVoiceController` metric reset now preserves its live tasks.
+Fabricated partial-frame fuzzing deliberately uses only the test recovery;
+actual-call tests deliberately link no synchronized H8/recovery factory.
+
+Actual validation:
+
+- 336,480 complete outer runtime calls / 13,648,207 directly executed original
+  H8 outer steps, plus 56 interleaved child calls / 928 child steps. Both DSP
+  ports, sequential/post-address variants, every 16-bit address, all byte
+  positions, random words, retained masks and mapped/clock-only fetch match
+  after every original boundary: values, flags, clocks, PC projection, complete
+  data/return accesses and final full memory. Candidate interpreter work and
+  test recovery remain zero. Eight simultaneously live tasks, 560 IRQ
+  save/RTE/resume points and 336,536 in-flight metric resets pass. Nested
+  context interleaving is separate from the actual IRQ/RTE timing checks.
+- Full 16-bit polling timeouts exercise the real error handler, its call/return
+  and GPIO writes: 24 original fault entries across both ports/variants/fetch
+  modes. No fabricated timeout completion replaces this behavior.
+- 196,608 public native-task payload/deadline/readiness/address cases pass,
+  including no access before a full interval fits, latched admission, wrapped
+  address and a complete timeout/fault park/resume with exact own duration.
+- Four complete cold/reset/warm/playback timelines pass (normal and irregular
+  budgets, Multi and mapped markers). Full RAM/IO/IRQ/Flash/state, exact DSP
+  tape and audible 24-stream output match; interpreter/test recovery is zero.
+- Nine complete frozen original-H8 tapes match all 8,085,451 events. Actual
+  native word calls/returns: Single 33,969; Multi 33,238; MIDI 2,553; pedal
+  5,224; controls 6,432; state 2,543; clock/arp 1,437; stealing 25,185; FX
+  6,697. All 117,278 return with zero partial recovery. These are work counts,
+  not CPU savings.
+- Fourteen complete raw-audio timelines match: 6,075,618 frames x 24 streams
+  per side, 583,259,328 bytes per side, including 30-second Multi/pedal/clock
+  and pedal/FX H8 round trips. State, Flash, MIDI, controller/DSP clocks and
+  instruction totals and serial state match as well. All 50 correctness
+  stages pass against the frozen source identity.
+- Private allocation/sanitizer checks exercise 14,186 sampled outer calls plus
+  nested calls, including actual fault/IRQ paths. Zero `new/new[]` allocations
+  occur inside native runtime steps. ASan/UBSan pass for the new bridge/task;
+  original H8 is excluded and unchanged libraries are uninstrumented.
+- Fresh public CTest: 21 pass, eight skip without private ROM, zero fail (29
+  selected). The private actual-call/runtime checks run above. UI controller
+  checks pass; callbacks at 128/256 remain finite, audible and free of lost
+  frames while saving/re-preparing. The callback process CPU collector is
+  disabled and C++ selection is asserted.
+- Fresh AU/VST3/Standalone build and strict ad-hoc signatures pass. Normal
+  target commands exclude the KS H8 comparison object, and `ksLib` has no H8
+  core/decoder symbols. Products are not installed or separately hosted
+  AU/VST3 audio recordings. K-Station remains unchanged.
+
+Limits: synthetic Flash, zero Wave ROM and explicit mapped boot markers are
+admitted; real sampled banks and physical hardware are not established here.
+DSP/JIT, Device, B/A order, clocks, resampling, buffers, waits, priorities and
+placement are unchanged. Windows build, private fidelity and CPU evidence
+remain pending separately; these are Mac results only. Existing probe CPU
+fields are ignored. No performance comparison is performed before the full
+model removal requested by the user.
+
+Next: lift the remaining address/read/timeout exchange into native jobs, then
+convert reset, foreground, parser, note/voice/parameter, clock/arp and state/
+Flash callers. Remove every temporary projection and shared register/flag/
+stack/PC model. Only after that removal, perform final equality tests, compare
+whole-process CPU with direct H8 and push the completed migration.

@@ -25,3 +25,5 @@ if(BUILD_TESTING)
 endif()
 
 target_sources(ksLib PRIVATE ksRuntimeStartup.cpp ksRuntimeController.cpp ksRuntimeIo.cpp ksRuntimeMidi.cpp ksRuntimeState.cpp ksRuntimeParameters.cpp ksRuntimeVoices.cpp ksRuntimeExtended.cpp ksRuntimeController.h ksRuntimeBoundary.h)
+
+target_sources(ksLib PRIVATE ksDspWordCalls.cpp ksDspWordCalls.h ksDspWordTask.h)

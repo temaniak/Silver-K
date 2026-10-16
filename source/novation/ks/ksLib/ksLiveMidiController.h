@@ -35,7 +35,7 @@ public:
     void enableDelegationProfile(){originalPages.assign(65536,0);originalStepCalls=0;}
     void resetMetrics(){
         nativeSteps=bytes=messages=noteOn=noteOff=controls=originalStepCalls=0;
-        noteActions.resetMetrics();parameterScaleCalls.resetMetrics();voiceActions=LiveVoiceController{};
+        noteActions.resetMetrics();parameterScaleCalls.resetMetrics();voiceActions.resetMetrics();
         if(!originalPages.empty())std::fill(originalPages.begin(),originalPages.end(),0);
     }
     uint64_t originalStepCalls=0;

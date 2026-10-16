@@ -5,6 +5,8 @@
 #include "ksKeySearchCalls.h"
 #include "ksParameterScaleCalls.h"
 #include "ksControllerJobs.h"
+#include "ksDspWordCalls.h"
+#include "ksDspTransport.h"
 #include "ksControllerBoundary.h"
 #include <algorithm>
 #include <memory>
@@ -137,6 +139,48 @@ bool partialScale(ControllerCpu& h){
  }
 #undef N
 }
+bool partialWord(ControllerCpu& h){
+ using namespace controllerDetail;auto& r=h.regs;
+#define N(P,L,...) case P:{Boundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
+ switch(unsigned(h.getPC())){
+    N(0x24d8,8,f.move(r[0].rl,h.read8(r[5].er+4)))
+    N(0x24e0,2,r[0].rl&=0x2;value(h,r[0].rl))
+    N(0x24e2,2,f.branch(!(h.ccr&4),0x24fc))
+    N(0x24e4,2,r[0].e=h.sub16(r[0].e,r[0].e))
+    N(0x24e6,8,f.move(r[0].rl,h.read8(r[5].er+4)))
+    N(0x24ee,2,r[0].rl&=0x2;value(h,r[0].rl))
+    N(0x24f0,2,f.branch(!(h.ccr&4),0x24fc))
+    N(0x24f2,2,f.inc(r[0].e,-1))
+    N(0x24f4,2,f.branch(!(h.ccr&4),0x24e6))
+    N(0x24f6,4,f.call(0x2304))
+    N(0x24fa,2,f.branch(true,0x24e4))
+    N(0x24fc,2,f.move(r[0].r,r[1].e))
+    N(0x24fe,8,f.store8(r[5].er+10,r[0].rh))
+    N(0x2506,8,f.store8(r[5].er+12,r[0].rl))
+    N(0x250e,8,f.store8(r[5].er+14,r[1].rh))
+    N(0x2516,2,f.inc(r[4].r,1))
+    N(0x2518,6,f.store16(0x159f2,r[4].r))
+    N(0x251e,2,f.ret())
+    N(0x2520,8,f.move(r[0].rl,h.read8(r[5].er+4)))
+    N(0x2528,2,r[0].rl&=0x2;value(h,r[0].rl))
+    N(0x252a,2,f.branch(!(h.ccr&4),0x2544))
+    N(0x252c,2,r[0].e=h.sub16(r[0].e,r[0].e))
+    N(0x252e,8,f.move(r[0].rl,h.read8(r[5].er+4)))
+    N(0x2536,2,r[0].rl&=0x2;value(h,r[0].rl))
+    N(0x2538,2,f.branch(!(h.ccr&4),0x2544))
+    N(0x253a,2,f.inc(r[0].e,-1))
+    N(0x253c,2,f.branch(!(h.ccr&4),0x252e))
+    N(0x253e,4,f.call(0x2304))
+    N(0x2542,2,f.branch(true,0x252c))
+    N(0x2544,2,f.move(r[0].r,r[1].e))
+    N(0x2546,8,f.store8(r[5].er+10,r[0].rh))
+    N(0x254e,8,f.store8(r[5].er+12,r[0].rl))
+    N(0x2556,8,f.store8(r[5].er+14,r[1].rh))
+    N(0x255e,2,f.ret())
+ default:return false;
+ }
+#undef N
+}
 ControllerJobs::Result partialShift(ControllerCpu& h,uint64_t deadline){
  using namespace controllerDetail;ControllerJobs::Result result;const unsigned entry=unsigned(h.getPC());
         auto& r=h.regs;const bool left=entry==0xa6be;
@@ -156,6 +200,34 @@ ControllerJobs::Result partialShift(ControllerCpu& h,uint64_t deadline){
         h.pc=h.makepc((h.ccr&4)?entry+6:entry);result.steps=count*3;
         return result;
 }
-struct Install {Install(){setControllerReferenceFactoryForTests(&create);setKeySearchPartialForTests(&partialKeys);setParameterScalePartialForTests(&partialScale);setControlShiftPartialForTests(&partialShift);}} install;
+// Historical batch ABI only, for fabricated partial-frame comparison tests.
+unsigned partialWordBatch(ControllerCpu& h,uint64_t deadline){
+ using namespace controllerDetail;
+ const unsigned pc=unsigned(h.getPC());auto& r=h.regs;
+ auto timing=[&](unsigned location,unsigned bytes){h.cycles+=3*(bytes/2);h.lastread=int(location+bytes-1);h.pc=h.makepc(location+1);};
+ if(pc==0x24fc || pc==0x2544){
+    if(deadline-h.cycles<48)return 0;
+    timing(pc,2);r[0].r=r[1].e;
+    auto put=[&](unsigned location,unsigned offset,int8_t v){timing(location,8);h.write8(v,r[5].er+offset);value(h,v);};
+    put(pc+2,10,r[0].rh);put(pc+10,12,r[0].rl);put(pc+18,14,r[1].rh);
+    h.pc=h.makepc(pc+26);return 4;
+ }
+ if(deadline-h.cycles<21)return 0;
+ const unsigned ready=pc<0x2520?0x24fc:0x2544;
+ timing(pc,8);r[0].rl=h.read8(r[5].er+4);
+ timing(pc+8,2);r[0].rl&=2;value(h,r[0].rl);
+ timing(pc+10,2);h.pc=h.makepc((h.ccr&4)?pc+12:ready);
+ if(!(h.ccr&4))return 3;
+ const bool retry=pc==0x24e6 || pc==0x252e;
+ if(!retry){
+    if(deadline-h.cycles<3)return 3;
+    timing(pc+12,2);r[0].e=h.sub16(r[0].e,r[0].e);h.pc=h.makepc(pc+14);return 4;
+ }
+ if(deadline-h.cycles<6)return 3;
+ timing(pc+12,2);const int old=r[0].e,remaining=old-1;r[0].e=int16_t(remaining);value(h,remaining);
+ flag(h,2,(uint32_t(old)&~uint32_t(remaining))&0x8000);
+ timing(pc+14,2);h.pc=h.makepc((h.ccr&4)?pc+16:pc);return 5;
+}
+struct Install {Install(){setControllerReferenceFactoryForTests(&create);setKeySearchPartialForTests(&partialKeys);setParameterScalePartialForTests(&partialScale);setControlShiftPartialForTests(&partialShift);setDspWordPartialForTests(&partialWord);setDspWordPartialBatchForTests(&partialWordBatch);}} install;
 }
 }

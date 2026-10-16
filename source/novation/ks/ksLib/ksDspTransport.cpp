@@ -3,6 +3,7 @@
 
 namespace ks {
 namespace {
+DspWordPartialBatchTest partialWordBatch=nullptr;
 // Verified low-SRAM code bus: aligned 16-bit fetches cost three clocks each.
 // This accounts for protocol timing without fetching/decoding guest code.
 // Every data/HDI access still goes through ControllerCpu and the actual Board.
@@ -16,27 +17,30 @@ void portWrite(ControllerCpu& h,unsigned pc,unsigned offset,int8_t v) {
     controllerDetail::value(h,v);
 }
 }
+void setDspWordPartialBatchForTests(DspWordPartialBatchTest fn){partialWordBatch=fn;}
 bool DspTransport::candidate(unsigned pc) {
     switch(pc) {
     case 0x2416:case 0x2424:case 0x245e:case 0x246c:
-    case 0x24d8:case 0x24e6:case 0x2520:case 0x252e:
     case 0x256e:case 0x257c:case 0x25b6:case 0x25c4:
     case 0x243a:case 0x2482:case 0x2592:case 0x25da:
-    case 0x24fc:case 0x2544:case 0x25e4:return true;
+    case 0x25e4:return true;
     default:return false;
     }
 }
 namespace {
 unsigned servicePhase(ControllerCpu& h,uint64_t deadline) {
     if(deadline<=h.cycles)return 0;
+    switch(unsigned(h.getPC())){
+    case 0x24d8:case 0x24e6:case 0x24fc:case 0x2520:case 0x252e:case 0x2544:
+        return partialWordBatch?partialWordBatch(h,deadline):0;
+    default:break;
+    }
     auto& r=h.regs;const unsigned pc=h.getPC();
     const uint64_t available=deadline-h.cycles;
     unsigned mask=0,ready=0;
     switch(pc) {
     case 0x2416:case 0x2424:mask=4;ready=0x243a;break;
     case 0x245e:case 0x246c:mask=4;ready=0x2482;break;
-    case 0x24d8:case 0x24e6:mask=2;ready=0x24fc;break;
-    case 0x2520:case 0x252e:mask=2;ready=0x2544;break;
     case 0x256e:case 0x257c:mask=4;ready=0x2592;break;
     case 0x25b6:case 0x25c4:mask=1;ready=0x25da;break;
     default:break;
@@ -49,8 +53,7 @@ unsigned servicePhase(ControllerCpu& h,uint64_t deadline) {
         timing(h,pc+8,2);r[0].rl&=mask;controllerDetail::value(h,r[0].rl);
         timing(h,pc+10,2);h.pc=h.makepc((h.ccr&4)?pc+12:ready);
         if(!(h.ccr&4))return 3;
-        const bool retry=pc==0x2424 || pc==0x246c || pc==0x24e6
-            || pc==0x252e || pc==0x257c || pc==0x25c4;
+        const bool retry=pc==0x2424 || pc==0x246c || pc==0x257c || pc==0x25c4;
         if(!retry) {
             // Start the live timeout only when the reference saw busy.
             if(deadline-h.cycles<3)return 3;
@@ -84,15 +87,6 @@ unsigned servicePhase(ControllerCpu& h,uint64_t deadline) {
         if(available<18)return 0;
         timing(h,pc,2);r[0].rl=0;
         portWrite(h,pc+2,0,0);h.pc=h.makepc(pc+10);return 2;
-    case 0x24fc:case 0x2544:
-        // Transfer one live 24-bit word. Address-cache maintenance and return
-        // remain outside this job, preserving the public compatibility frame.
-        if(available<48)return 0;
-        timing(h,pc,2);r[0].r=r[1].e;
-        portWrite(h,pc+2,10,r[0].rh);
-        portWrite(h,pc+10,12,r[0].rl);
-        portWrite(h,pc+18,14,r[1].rh);
-        h.pc=h.makepc(pc+26);return 4;
     case 0x25e4:
         if(available<45)return 0;
         timing(h,pc,8);r[4].rh=h.read8(r[5].er+10);

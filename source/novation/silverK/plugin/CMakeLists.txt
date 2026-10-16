@@ -213,3 +213,14 @@ target_include_directories(ksParameterScaleCalls_test PRIVATE "${ROOT}/source/cp
 target_link_libraries(ksParameterScaleCalls_test PRIVATE ksLib)
 add_test(NAME ks_parameter_scale_calls COMMAND ksParameterScaleCalls_test)
 set_tests_properties(ks_parameter_scale_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Actual word tasks: no synchronized H8 adapter or partial-recovery factory.
+add_executable(ksDspWordTask_test "${ROOT}/source/novation/ks/ksLib/ksDspWordTask_test.cpp")
+target_link_libraries(ksDspWordTask_test PRIVATE ksLib)
+add_test(NAME ks_dsp_word_properties COMMAND ksDspWordTask_test)
+set_tests_properties(ks_dsp_word_properties PROPERTIES TIMEOUT 90)
+add_executable(ksDspWordCalls_test "${ROOT}/source/novation/ks/ksLib/ksDspWordCalls_test.cpp")
+target_include_directories(ksDspWordCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksDspWordCalls_test PRIVATE ksLib)
+add_test(NAME ks_dsp_word_calls COMMAND ksDspWordCalls_test)
+set_tests_properties(ks_dsp_word_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)

@@ -111,6 +111,7 @@ int main(int argc,char**argv){try{
     ks::LiveVoiceController voices;uint64_t voiceBoundaries=0;
     for(unsigned pc=0;pc<0xa69e;pc+=2)if(ks::LiveVoiceController::candidate(pc)){
         for(unsigned sample=0;sample<32;++sample){
+            voices.discardTransientCalls();
             for(unsigned i=0;i<8;++i)original->regs[i].er=native->regs[i].er=int(random()&0xffffff);
             original->setSP(0xfff000);native->setSP(0xfff000);
             original->pc=original->makepc(pc);native->pc=native->makepc(pc);

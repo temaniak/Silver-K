@@ -6,6 +6,8 @@ class ControllerCpu;
 // First event-controller stage: live HDI protocol jobs, not recorded traffic.
 // The compatibility frame is materialized at job boundaries for IRQs, slices
 // and switching back to H8. No job may cross the caller's next event deadline.
+using DspWordPartialBatchTest=unsigned(*)(ControllerCpu&,uint64_t);
+void setDspWordPartialBatchForTests(DspWordPartialBatchTest);
 class DspTransport final {
 public:
     static bool candidate(unsigned pc);

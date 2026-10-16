@@ -37,8 +37,9 @@ or renaming that frame would not finish the migration.
 
 Implemented opt-in live jobs:
 
-- `SILVER_KS_DSP_TRANSPORT=events`: actual HDI requests, readiness/timeout,
-  words and replies, within the next event/slice deadline.
+- `SILVER_KS_DSP_TRANSPORT=events`: the remaining address/read HDI batches
+  within the next event/slice deadline. DSP-word transmission now uses its
+  native task independently of this flag; the old word batch is test-only.
 - `SILVER_KS_CONTROL_JOBS=1`: part-state selection, part-parameter-table
   selection. The signed coefficient calculation now uses its own native task,
   independently of this flag. A complete remaining part
@@ -126,6 +127,26 @@ per-boundary projections; all complete DSP tapes/audio and callbacks pass.
 Its 26 old body boundaries and retired register-shift batch are test-only.
 Both bridges still expose the old caller/IRQ/return convention, so neither
 connection alone completes the requested global model removal.
+
+
+`DspWordTask` now owns live 24-bit writes and post-write address advancement,
+including independent readiness observations, 16-bit timeout/retry state,
+yielding for the actual fault service, byte order and exact admission clocks.
+It has no CPU registers, flags, stack or PC. `DspWordCalls` is the temporary
+caller projection; it still reads the old caller values/return stack and
+publishes their IRQ/trace view. The 34 old body boundaries and six old word
+batch entry points are comparison-only. Normal playback uses neither partial
+recovery nor the retired batch. In-flight tasks survive metric resets.
+
+Admission `ks-native-dsp-word-calls-20261016`: 336,480 outer calls and 56
+interleaved child calls against direct original H8, all addresses, both DSPs,
+all byte positions, masks, readiness delays, full timeouts/real GPIO fault
+service, 560 IRQ save/RTE/resume points and eight live tasks. The full musical
+matrix observes 117,278 native writes and zero test recovery; all nine complete
+DSP tapes and 14 raw-audio/state timelines match. Allocation and sanitizer
+scope, fresh Mac products/callbacks and remaining limitations are in the
+optimization journal. Address selection/read reply tasks and all remaining
+callers still need conversion before deleting the shared compatibility model.
 
 
 ## Remaining removal gates
