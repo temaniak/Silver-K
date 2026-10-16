@@ -1491,3 +1491,15 @@ target_include_directories(ksExceptionReturnCalls_test PRIVATE "${ROOT}/source/c
 target_link_libraries(ksExceptionReturnCalls_test PRIVATE ksLib)
 add_test(NAME ks_exception_return_calls COMMAND ksExceptionReturnCalls_test)
 set_tests_properties(ks_exception_return_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+add_executable(ksNativeDspJob_test "${ROOT}/source/novation/ks/ksLib/ksNativeDspJob_test.cpp")
+target_include_directories(ksNativeDspJob_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksNativeDspJob_test PRIVATE ksLib)
+add_test(NAME ks_native_dsp_job_calls COMMAND ksNativeDspJob_test)
+set_tests_properties(ks_native_dsp_job_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+add_executable(ksNativeDspRoutingJob_test "${ROOT}/source/novation/ks/ksLib/ksNativeDspRoutingJob_test.cpp")
+target_include_directories(ksNativeDspRoutingJob_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksNativeDspRoutingJob_test PRIVATE ksLib)
+add_test(NAME ks_native_dsp_routing_job_calls COMMAND ksNativeDspRoutingJob_test)
+set_tests_properties(ks_native_dsp_routing_job_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)

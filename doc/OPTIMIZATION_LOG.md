@@ -5015,3 +5015,51 @@ yet. Private assets/captures/reports/binaries outsideGit. SyntheticFlash/zeroWav
 mappedmarker/finite scenario limits remain, no hardware/realbank/Windows claim.
 Next: remaining Flash/state/UI/IO/extended, typed native coordinator removing all
 architectural bridges, final product/full musical/whole-process CPU and push.
+
+## 2026-10-16 — Direct native DSP job graph without architectural projections (Mac)
+
+Source parent6185fe6, isolated codex/ks-native-controller, arm64 Release
+AppleClang21/C++17 with unchanged pinned dependencies/admitted KSOS2.1.02.
+Added NativeDspJob/NativeDspFaultJob and NativeDspRoutingJob interfaces for the
+final typed coordinator. These new graphs consume domain requests/results,
+selected port/live routing mirrors and typed IO callbacks. No controller CPU,
+architectural registers/flags/SP/PC, instruction fetch or return-frame memory
+exists in this graph. Fixed optional domain children compose relative/absolute
+routing, voice/part windows, select/invalidate, address handshake/reply, word/
+address increment, timeout latch/pulse/delay and resume. The engine still enters
+old caller adapters until the remaining families/coordinator are fully wired;
+this addition alone does not establish complete controller removal.
+
+One full native interval is admitted per step; caller owns external timing/event
+admission. Reads/publications carry exact within-interval times, especially fault
+control RMW read at7/write at8 rather than moving both to interval end. Native
+completion and domain-child completion remain distinct. Logical mirror reads
+are live at their own deadlines. No allocation/locks/sleeps/IO in job machinery.
+
+Proof ID ks-native-direct-dsp-jobs-20261016 retains source/binary SHA manifest,
+frozen integrated binaries and private probe reports. Direct original H8 tests:
+3276leaf jobs/4,033,148boundaries/180independent IRQ pauses/12complete fault
+children;18,450routing/select/address/word/fault graphs/5,276,251boundaries.
+Every HDI and routing-mirror byte/value/order/time,24bit reply, selected port,
+wrapped mirrors and typed return match; all9routing kinds, both initial ports,
+all256initialflags, randomized16/24bit inputs, busy polling, timeout/resume and
+refusal before each deadline. Original IRQ pause includes51clocks (vector read
+included); initial fixture expectation45 omitted that6clock vector access,
+corrected with no production timing change. New native graph stores no suspended
+architectural frame when paused. No physical/audio/Windows/global controller
+completion claim follows from this component proof.
+
+Allocation and ASan+UBSan eachpass reduced396leafcases/3,942,068boundaries/
+180pauses/12faultchildren and306fullgraphs/4,595,390boundaries; all timeout paths
+retained. Tracking surrounds native steps/callbacks with pre-reserved fixture
+capture storage, native new/new[]0. Native headers/fixture instrumented, original
+H8headers excluded and existing linked libraries uninstrumented. Public CTest2
+private-ROM cases skip normally; both integrated binaries explicitly run with
+private ROM and pass. Production engine sources unchanged, no new audio claim
+beyond6185fe6full-nine-stage proof. Private ROM/binaries/reports outsideGit.
+
+Sound/JIT, existing guest/coordinator timing, serial ordering/buffers/rates/
+waits/workers/priorities/placement and Windows policy unchanged. Shared C++17 code
+has no macOS dependencies; Windows build/runtime validation still pending. CPU
+comparison remains deferred until all remaining IO/state/extended and caller
+projections are replaced and actual product is verified, followed by push.
