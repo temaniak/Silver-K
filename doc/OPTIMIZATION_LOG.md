@@ -5213,3 +5213,53 @@ B-to-A ordering, worker waits/priorities/placement, buffers/rates and Windows
 policy unchanged. Next: remaining state/UI/IO/extended, typed whole-controller
 data/events/graph, final product/musical verification, then whole-process H8 vs
 native CPU comparison and push Optimized.
+
+
+## 2026-10-16 — Complete typed global refresh and voice parameter subgraphs (macOS arm64)
+
+Source0447c76 plus this change; same isolated worktree, Release AppleClang21,
+KS2.1.02/dependencies/synthetic-data admission. No CPU comparison or push; global
+controller-model removal is still incomplete. Only native graph headers/tests,
+CMake and design documentation change, no live engine wiring or DSP/JIT change.
+
+NativeGlobalJob/NativeGlobalContext compose all32 global inline regions from
+Setup through Final/optional Effect, with typed PartLookup, Matrix/SquareRoot,
+PartRoute, coefficient and ordered DSP/fault children. Context holds patch
+resource/control/part/mode/DSP mirrors, no CPU registers/CCR/EXR/SP/PC, opcode
+fetch or guest call frames. Full refresh is currently the admitted entry API;
+mid-global parameter-tail entries are a separate pending extension. Dynamic
+paired data publication costs stay in native event/data IO and IRQ parking
+invalidates pairing, without reconstructing guest frames. Contract and named
+resources are in doc/KS_NATIVE_GLOBAL_GRAPH.md. Final engine adapters must bind
+protocol mirrors and this data IO to the same live state.
+
+NativeParameterJob adds four modulation blocks with actual live bias/depth/global
+reads and curve clamping, direct DSP/fault children and exact inline completion.
+NativeParameterVoiceJob adds three Pitch and three Amplitude blocks with real
+PartLookup child, uint8 voice handle, late tagged patch data-resource reference,
+fresh voice/patch reads and direct DSP/fault children. No CPU projection in these
+job graphs; compatibility parameter callers remain until final wiring.
+
+Frozen integrated proof ks-native-composed-control-graphs-20261016 runs all five
+actual built graph tests, source/binary identities retained and unchanged:
+
+- Global:20484 complete refreshes /59968247 independent original-H8 boundaries /2868 IRQ /29328441 live patch mutations, four full65537-poll timeout children; exact data/MMIO byte value/order/time/final data and caller completion. ROM-free2048 full graphs independently check matrix recurrence/source tails, mirror/pedal destinations, routing and completion/budget.
+- Parameter:884856 jobs /85509710 original boundaries /3807 IRQ. All previous58blocks plus four modulation lanes; full bias×first-depth byte pairs with other depth permutations, independently varied global sources, signed coefficient full16bit domain, current/base-part pairs, both ports and full fault children. Other simultaneous modulation inputs are not exhaustive multidimensional coverage.
+- Pitch/Amplitude:787980 jobs /55248564 original boundaries /768 IRQ. Six blocks/full65536 input pairs/both ports/256voice handles, tagged patch resources, gain/amplitude and pitch spread/unison/wheel paths, live source mutation and complete timeout recovery. Exact reads, DSP bytes/times and inline continuation.
+- Rate/Clock/Sync/Exit regression:265352 /18896166 /340IRQ, exact final port/cache and complete children.
+
+Sample native allocation0 plus ASan/UBSan proofs:
+ks-native-direct-parameter-modulation-jobs-20261016:12936jobs /39895574boundaries /
+3805IRQ; ks-native-direct-parameter-voice-jobs-20261016:4620 /4232244 /768IRQ;
+agent Global420completegraphs /2513441boundaries /160IRQ /549911mutations.
+Only native stepping is allocation-tracked; original H8 headers and other
+static libraries are excluded/uninstrumented. Public CTest5:one ROM-free
+property passes/four private-ROM tests skip77/no failures. Sound/DSP/JIT, guest
+boundaries/IRQ, B-A order, worker waits/priorities/placement, buffers/rates and
+Windows policy unchanged. Helpers have no live production route yet, so the
+previous evolving audio/DSP admission stays at its recorded source identity;
+these independent graph proofs are not a new whole-plugin audio/performance or
+Windows claim. Private captures/ROM/binaries/reports remain outside Git.
+Next: remaining services and typed voice/state/MIDI/IRQ/scheduling wiring, remove
+all compatibility CPU state, full product and evolving music proof, then measure
+whole-process H8/native CPU on this Mac and push Optimized.

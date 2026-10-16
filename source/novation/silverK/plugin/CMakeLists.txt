@@ -1794,3 +1794,20 @@ target_include_directories(ksNativeParameterSupportJob_test PRIVATE "${ROOT}/sou
 target_link_libraries(ksNativeParameterSupportJob_test PRIVATE ksLib)
 add_test(NAME ks_native_parameter_support_jobs COMMAND ksNativeParameterSupportJob_test)
 set_tests_properties(ks_native_parameter_support_jobs PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+add_executable(ksNativeGlobalJob_test "${ROOT}/source/novation/ks/ksLib/ksNativeGlobalJob_test.cpp")
+target_include_directories(ksNativeGlobalJob_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksNativeGlobalJob_test PRIVATE ksLib)
+add_test(NAME ks_native_global_graph COMMAND ksNativeGlobalJob_test)
+
+add_executable(ksNativeGlobalJobOriginal_test "${ROOT}/source/novation/ks/ksLib/ksNativeGlobalJobOriginal_test.cpp")
+target_include_directories(ksNativeGlobalJobOriginal_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksNativeGlobalJobOriginal_test PRIVATE ksLib)
+add_test(NAME ks_native_global_original COMMAND ksNativeGlobalJobOriginal_test)
+set_tests_properties(ks_native_global_original PROPERTIES TIMEOUT 300 SKIP_RETURN_CODE 77)
+
+add_executable(ksNativeParameterVoiceJob_test "${ROOT}/source/novation/ks/ksLib/ksNativeParameterVoiceJob_test.cpp")
+target_include_directories(ksNativeParameterVoiceJob_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksNativeParameterVoiceJob_test PRIVATE ksLib)
+add_test(NAME ks_native_parameter_voice_jobs COMMAND ksNativeParameterVoiceJob_test)
+set_tests_properties(ks_native_parameter_voice_jobs PROPERTIES TIMEOUT 300 SKIP_RETURN_CODE 77)
