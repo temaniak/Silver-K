@@ -6,7 +6,24 @@ Raw local reports are not committed. A hypothesis is not a measured result.
 
 ## Current state — 2026-10-16
 
-- KS production is now independent of the H8 core. Original H8 is linked only
+- `ks-native-keycalls-20261016` now connects both adjacent-key searches to
+  actual KS playback. The native task owns all key-selection and wait progress;
+  old instruction bodies are confined to the comparison object. A temporary
+  output projection still supplies the remaining callers/IRQ saves. All 47
+  correctness stages pass (cold boot, complete DSP tapes, raw audio and focused
+  checks), with no normal-path partial-frame fallback. This is actual runtime
+  integration, not completion of global register/flag/stack/PC removal. CPU
+  comparison and push remain deferred until the complete port is verified.
+
+- Earlier core admission `ks-native-control-core-20261016` recovered
+  processor-independent coefficient and live-key-search tasks. The key-search
+  connection is described above; the coefficient task remains unconnected.
+  The production compatibility register/flag/stack/PC model remains. CPU
+  comparison is deferred until the full port; neither checkpoint is a completed
+  native controller or a performance result.
+
+- At the earlier reference-isolation checkpoint, KS production became
+  independent of the H8 core. Original H8 is linked only
   into comparison executables. The generic 128 MiB device-map table is removed;
   the remaining compatibility frame is 16,777,472 bytes. Production starts C++
   from reset and normalizes legacy H8/hybrid preferences to C++. The register,
@@ -2895,3 +2912,186 @@ source changes. Raw earlier logs are retained privately. The private-ROM KS
 runtime/reset/UART and live-plugin checks above run separately with their inputs.
 The new Windows CI run still has to establish its own result after publication;
 Mac passing does not claim Windows ROM/audio/CPU validation.
+
+## 2026-10-16 — Native control-task arithmetic and live keyboard observations
+
+Source: `1724c1b` plus the local semantic-core changes, isolated branch
+`codex/ks-native-controller`. Test ID `ks-native-control-core-20261016` retains
+source/executable SHA-256 identities and raw logs privately. Platform: this
+M1 Pro Mac, arm64 Release, AppleClang 21, C++17; controller profiling OFF.
+Pinned JUCE/asmjit/DSP dependencies and admitted KS OS 2.1.02 identity are
+unchanged. Windows has not run these new tests yet.
+
+Implementation:
+
+- Direct signed coefficient decoding now has a fixed-size `ParameterScaleTask`.
+  Its arithmetic depends only on the encoded parameter. Its completion clock
+  can stop before every admitted boundary and resume without CPU context.
+  There are no processor registers, flag byte, code address, emulated stack,
+  opcode decoder or firmware execution in this task.
+- `nativeControl::nextKey` / `previousKey` recover strict adjacent-key search
+  over the 128-key physical/held bitmap. `KeySearchTask` performs live byte
+  observations at the original controller cycles and latches each observed
+  byte while inspecting it. A later handler's keyboard changes affect future
+  observations, not an already observed byte. Arithmetic and duration use
+  native key/group predicates, without a processor-state ABI.
+- Original H8 is used directly by the test executables as the independent
+  procedure/read-timing oracle. No synchronized adapter predicts its values
+  or cycles. All supplied private firmware remains external.
+
+Actual checks:
+
+- Coefficient: all 65,536 inputs x eight retained masks, 524,288 cases and
+  22,266,088 independently executed original boundaries. Coefficients,
+  preparation/full durations and every task boundary match. An additional
+  8,382,551 clock-budget/pause/resume combinations pass.
+- Keyboard: 2,269,600 private cases, 82,647,146 independently executed original
+  boundaries. Strict next/previous values, body durations, boundary costs and
+  each live byte read's value/order/cycle match. Inputs include every MIDI key,
+  singleton/empty/full maps, every byte value in each position with sparse and
+  dense surrounding maps, and deterministic random maps/retained flags.
+  7,952 cases mutate keyboard storage at legal preemption points, including
+  after a byte was read. These are live-state mutation tests, not proof of the
+  complete interrupt controller or a complete musical timeline.
+- Both new public property tests pass. A separate task-only ASan/UBSan C++17
+  executable passes all 65,536 coefficients and 131,072 key searches. The
+  task states are fixed-size and trivially copyable, with no H8 dependency.
+  This checks these tasks; it does not certify every plugin callback path.
+
+Delivery boundary and remaining work:
+
+The new tasks are **not yet connected to production playback**. Production
+controller `.cpp`/`.h` hashes still match the preceding accepted controller;
+DSP, JIT, transport order, clocks, buffers, priorities and preset-manager code
+are unchanged. Registers, flags, stack and PC are still present in the old
+live dispatcher. This checkpoint does not finish their removal and is not a
+replacement end state. Continue connecting a complete semantic controller,
+including reset, byte/message admission, note ownership/allocation, parameter
+and voice calculations, timer/clock/arp, SysEx/state/Flash and DSP exchange.
+Full boot/command/state/audio proof and H8-versus-C++ whole-process CPU runs
+remain required **after** that removal; no new CPU comparison was performed
+for this checkpoint. Push of the finished transfer remains pending.
+
+### Earlier coefficient adapter trial (rejected, not delivered)
+
+The earlier test ID `perf-ks-native-scale-phases-20261016` tried connecting a
+native preparation/calculation through the retained compatibility frame.
+Its 17 correctness stages passed, including complete admitted bus/audio
+checks, but the three-pair actual-AU CPU trial regressed: Single median
++0.962%, Multi +1.615% relative to its preceding C++ baseline. That trial was
+removed from the working engine. Frozen trial sources/reports remain private.
+It was C++-versus-C++ research, not the final requested H8 comparison. The
+retained formulas/tasks above are correctness work for the complete semantic
+port, not a claim that the rejected runtime optimization is shipping.
+
+The Windows-only persistence-test entry fix also remains in this worktree:
+pinned JUCE's Windows `JUCEApplicationBase::main()` has no argc/argv overload.
+Mac public persistence validation passed before this core-only step. Actual
+Windows compilation/CI, firmware/audio fidelity and CPU remain separate checks.
+
+## 2026-10-16 — Connect native key-search tasks to real KS playback
+
+Source: `1724c1b` plus local native-key-call changes on isolated branch
+`codex/ks-native-controller`. Test ID `ks-native-keycalls-20261016` retains
+frozen executables, source/binary SHA-256 identities and raw evidence privately.
+Platform: this M1 Pro Mac, arm64 Release, AppleClang 21, C++17, controller
+profiling OFF, the same pinned dependencies and authenticated KS OS 2.1.02.
+The shared `Optimized` checkout, installed plugins and preset-manager files
+were not edited. Windows execution remains unvalidated for this checkpoint.
+
+Runtime change:
+
+- Both next/previous held-key searches now execute `KeySearchTask` in normal
+  KS C++ playback, independently of the opt-in transport/control-job flags.
+  The native task owns input, byte observations, candidate selection and timed
+  continuation. It does not read a CPU register bank, flags, PC or guest stack.
+- Internal byte-key sentinels are preserved too: all 256 input bytes are
+  admitted, including the original wrapping observations of adjacent state.
+  Ordinary MIDI keys still use the 128-key bitmap. A native caller supplies
+  live byte observations, so an interrupt cannot retroactively change a byte
+  that was already observed.
+- `KeySearchCalls` is an explicitly temporary caller/IRQ projection. It copies
+  native progress to the old calling convention and source-location trace,
+  without using that projected state to choose the native search result.
+  It still reads the old return stack and exposes old flags/PC to callers.
+  These are remaining removal work, not a completed register-free controller.
+- The 49 old key-search instruction bodies move from production note handling
+  into `ksH8Reference_test.cpp`. Only comparison executables can recover an
+  arbitrary pre-existing partial H8 frame. A fresh native instance rejects
+  that fallback; the new actual-runtime fixture does not link its factory.
+- Diagnostic reset preserves in-flight native calls and resets only counters.
+  The call slots are fixed-capacity and allocated with the owning controller;
+  no task allocation, lock, I/O or waiting was added during execution.
+
+Actual independent checks:
+
+- The real `RuntimeController` / note path executes 926,866 complete calls
+  against directly executed original H8: 37,204,297 original steps. Every
+  register/flag/PC projection, cycle, retained field and ordered data/return
+  access matches at every boundary. Cases cover all input bytes, singleton/
+  empty/full/random 48-byte state regions, SRAM and low aliases, mapped and
+  clock-only fetches. No synchronized H8 adapter or partial-test factory is
+  linked into this fixture; native interpreted-step counts stay zero.
+- 5,170 interrupt-entry/RTE/resume points also change live key memory. Already
+  observed bytes stay latched and future reads see changes. This uses a
+  synthetic vector to the admitted RTE, not a claim that this leaf fixture
+  alone covers complete musical interrupt handlers. There are also 58,873
+  in-flight metric resets, without discarding native continuation.
+- Four complete cold/reset timelines pass with full RAM, IO, IRQ, state,
+  Flash, bus/slice and audible 24-stream equality, including irregular budgets,
+  Performance startup and a mapped-wave marker case. Candidate H8 steps are 0.
+- Nine complete frozen original-H8 DSP tapes match, 8,085,451 events. The
+  connected task actually runs 40 times in the pedal passage, seven in controls
+  and 12 in clock/arp; all 59 return normally with zero partial-test entries.
+- Fourteen full audio comparisons pass, including 30-second Multi/pedal/clock
+  and pedal/FX H8 round trips: 6,075,618 frames x 24 streams per side,
+  583,259,328 raw bytes per side. Audio bytes, controller/DSP clocks and
+  instruction totals, serial state, musical state, Flash and MIDI counters
+  match. Normal native passages all report zero test-partial entries.
+- Existing parser/note/voice boundary checks, general runtime/HDI/control-job
+  and coefficient/keyboard property checks pass. The historical arbitrary-
+  partial-frame fuzz uses the comparison-only key helper; the separate whole-
+  call fixture above is the proof for the actual new production algorithm.
+- A private ordinary-C++ allocation probe executes 39,208 real calls and
+  1,074,944 original comparison steps, including 2,280 IRQ/live-state mutation
+  points, with zero `new/new[]` allocations inside native runtime steps.
+  A separate build of the new bridge and task passes the same cases under
+  ASan/UBSan. Its original H8 header is excluded from sanitization and unchanged
+  libraries are uninstrumented; this is not a sanitizer claim about DSP/JIT or
+  the entire plugin. No installed product is replaced.
+
+Additional product/call-lifecycle checks for the same engine source:
+
+- A private interleaved-caller test keeps eight native tasks live at once:
+  86,464 child calls, 2,205,496 directly executed original child steps and
+  12,352 resets while multiple tasks are suspended. Every parent's projected
+  continuation survives its children. Caller contexts are restored explicitly
+  in this test; it is not an IRQ-prologue timing claim.
+- Freshly linked public CTest selection: 20 pass, six skip without private ROM,
+  zero fail (26 selected). The skipped complete key/runtime checks run with the
+  private ROM in the correctness matrix above. Existing UI controller changes
+  pass; Processor callbacks at 128/256 retain finite audible output and zero
+  startup/steady lost frames while saving state and re-preparing. Their process
+  CPU collector is disabled, not used for a performance result.
+- AU/VST3/Standalone build and strict ad-hoc signature checks pass. Their target
+  commands contain no KS H8 reference object; `ksLib` has no H8 core/decoder
+  symbols. K-Station's separate H8 remains valid. Product hashes and library
+  identity are retained in the private frontend audit. These three bundles
+  were built, not installed or individually hosted for an audio recording.
+
+These checks use synthetic Flash and the zero Wave ROM fixture, plus the
+explicit mapped markers at boot; real sampled banks and physical hardware are
+not admitted by this matrix. DSP code/JIT, B/A order, clocks, resampling,
+buffers, worker waits/priorities/placement are unchanged. Process CPU values
+present in the existing offline probe are ignored; no CPU comparison runs in
+this checkpoint. The callback-only fixture explicitly disables process CPU
+collection. See the private frontend audit for product build/signature and
+callback checks; those checks do not replace an actual AU/VST3 host recording.
+
+Next: connect the independently admitted signed coefficient task and continue
+converting its callers and the remaining reset/parser/voice/parameter/clock/
+arp/state/Flash/transport paths. Remove the temporary projections and the
+shared register/flag/stack/PC model once those callers are semantic. The full
+controller remains incomplete. Only after that removal, run final command/
+audio/state checks, a fair direct-H8 versus completed-C++ total-CPU comparison,
+and the requested push.

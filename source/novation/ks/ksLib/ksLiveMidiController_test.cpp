@@ -93,6 +93,7 @@ int main(int argc,char**argv){try{
     uint64_t noteBoundaries=0;
     for(unsigned pc=0;pc<0xa67e;pc+=2)if(ks::LiveNoteController::candidate(pc)){
         for(unsigned sample=0;sample<32;++sample){
+            actions.discardTransientCalls();
             for(unsigned i=0;i<8;++i)original->regs[i].er=native->regs[i].er=int(random()&0xffffff);
             original->setSP(0xfff000);native->setSP(0xfff000);
             original->pc=original->makepc(pc);native->pc=native->makepc(pc);

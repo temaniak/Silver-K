@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 add_library(ksLib STATIC ksBoard.cpp ksBoard.h ksDSP.cpp ksDSP.h ksDevice.cpp ksDevice.h ksRom.cpp ksRom.h ksPlaceholderMidi.h ksWorkerPlacement.cpp ksWorkerPlacement.h)
+target_sources(ksLib PRIVATE ksKeySearchCalls.cpp ksKeySearchCalls.h)
 target_sources(ksLib PRIVATE ksControllerState.cpp ksControllerState.h ksControlArithmetic.h)
 target_compile_features(ksLib PUBLIC cxx_std_17)
 target_sources(ksLib PRIVATE ksDspWorkers.cpp ksDspWorkers.h)

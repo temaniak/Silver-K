@@ -1,5 +1,6 @@
 #include "ksControllerState.h"
 #include "ksDevice.h"
+#include "ksKeySearchCalls.h"
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -13,6 +14,9 @@ int main(){try{
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("comparison tests")!=std::string::npos;}
     if(!rejected || state->cycles!=123 || state->pc!=0x4334 || state->regs[0].er!=456 || state->interpretedSteps)
         throw std::runtime_error("Production controller exposed a live interpreter or mutated rejected work");
+    ks::KeySearchCalls calls;state->pc=0x3190;
+    if(calls.step(*state) || calls.partialEntries || state->cycles!=123 || state->pc!=0x3190)
+        throw std::runtime_error("Production exposed the test-only partial-key adapter");
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

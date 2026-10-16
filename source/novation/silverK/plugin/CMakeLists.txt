@@ -185,3 +185,24 @@ target_link_libraries(ksResetVector_test PRIVATE ksLib)
 target_include_directories(ksResetVector_test PRIVATE "${ROOT}/source/cpu")
 add_test(NAME ks_reset_vector COMMAND ksResetVector_test)
 set_tests_properties(ks_reset_vector PROPERTIES TIMEOUT 90)
+
+# Independent original execution admits the whole signed parameter procedure.
+add_executable(ksParameterScale_test "${ROOT}/source/novation/ks/ksLib/ksParameterScale_test.cpp")
+target_include_directories(ksParameterScale_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksParameterScale_test PRIVATE ksLib)
+add_test(NAME ks_parameter_scale_properties COMMAND ksParameterScale_test)
+set_tests_properties(ks_parameter_scale_properties PROPERTIES TIMEOUT 90)
+
+# Native keyboard decisions and independently admitted whole-procedure clocks.
+add_executable(ksKeyboard_test "${ROOT}/source/novation/ks/ksLib/ksKeyboard_test.cpp")
+target_include_directories(ksKeyboard_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksKeyboard_test PRIVATE ksLib)
+add_test(NAME ks_keyboard_properties COMMAND ksKeyboard_test)
+set_tests_properties(ks_keyboard_properties PROPERTIES TIMEOUT 90)
+
+# Real native-call execution; deliberately after the reference-object scan.
+add_executable(ksKeySearchCalls_test "${ROOT}/source/novation/ks/ksLib/ksKeySearchCalls_test.cpp")
+target_include_directories(ksKeySearchCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksKeySearchCalls_test PRIVATE ksLib)
+add_test(NAME ks_key_search_calls COMMAND ksKeySearchCalls_test)
+set_tests_properties(ks_key_search_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)

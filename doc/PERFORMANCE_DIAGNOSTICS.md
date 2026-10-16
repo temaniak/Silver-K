@@ -911,3 +911,27 @@ vector bytes and prior state, comparing initialization with independent KS
 storage. It deliberately does not install the synchronized step adapter.
 CTest name: `ks_reset_vector`. This added test does not change production code
 or the measured binaries; see the dated journal entry and delivery audit.
+
+
+### Native key-call correctness admission (2026-10-16)
+
+`ksKeySearchCalls_test` calls the actual runtime/note path and directly executes
+original H8 independently. CTest `ks_key_search_calls` skips with 77 without the
+private KS OS. This target is deliberately created after the comparison-object
+scan: it must have no synchronized H8 adapter or partial-frame factory linked.
+The public `ks_keyboard_properties` test still runs without firmware. Actual
+Windows private-firmware execution remains separate from a successful CI build.
+
+The controller probe adds `native_key_search_calls`, `native_key_search_returns`
+and `native_key_search_test_partial`. Calls/returns count actual native tasks,
+not CPU savings or guest instructions. Resetting diagnostics leaves an active
+task intact, so a task admitted before reset can return after it. Every fresh
+native, non-toggle musical capture rejects a nonzero test-partial counter.
+Comparison-only H8 handoffs may recover an existing arbitrary partial frame;
+normal plugin builds have no implementation of that recovery hook.
+
+The native task is independent of registers/flags/stack/PC. Its temporary
+caller projection still exposes that old ABI to not-yet-converted callers;
+this does not complete global CPU-model removal. CPU comparison is explicitly
+deferred until the complete semantic KS controller is ready. Test ID
+`ks-native-keycalls-20261016` records actual audio/tape/IRQ and allocation scope.

@@ -98,6 +98,27 @@ identity/checksums. VST3/Standalone have not been separately hosted this round.
 The shared Optimized checkout and installed plugins are unchanged. This is
 an isolated verified stage, **not completion of the removal gates below**.
 
+## Processor-independent tasks under admission — 2026-10-16
+
+`ksParameterScale.h` implements signed coefficient calculation and a resumable
+completion-clock task. `ksKeyboard.h` implements strict adjacent-held-key
+selection and a resumable task with original live-byte observation timing.
+These task states contain no CPU registers, flags, emulated stack or PC.
+Direct original-H8 tests admit their values, per-boundary durations and, for
+keyboard search, live read order/cycles under mid-search state changes. See
+`ks-native-control-core-20261016` in the optimization journal for counts and
+limitations. The key-search task is now connected to actual playback through
+`KeySearchCalls`; the coefficient task is not connected yet. The native key
+algorithm owns its live observations and completion time. The temporary bridge
+still supplies the old callers/IRQ saves with their flags, register projection,
+return stack and trace PC. Old key-search instruction bodies are test-only;
+fresh native playback must report no partial-test recovery. The actual-runtime
+fixture admits 926,866 full calls with zero H8 work and no recovery factory.
+The complete tape/audio matrix and limitations are recorded under
+`ks-native-keycalls-20261016`. The shared compatibility model remains, so the
+full removal gates below still apply. CPU comparison is deferred until all
+those removal gates are satisfied.
+
 ## Remaining removal gates
 
 1. The C++ compatibility reset path now passes independent full-boot command,
