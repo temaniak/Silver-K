@@ -23,6 +23,20 @@
 #include "ksArpPrimitiveCalls.h"
 #include "ksArpScheduleCalls.h"
 #include "ksArpMainCalls.h"
+#include "ksStateMultiSerializeCalls.h"
+#include "ksStatePatchLoadCalls.h"
+#include "ksStateProgramCalls.h"
+#include "ksStateMultiLoadCalls.h"
+#include "ksStatePresetAddressCalls.h"
+#include "ksStateSingleLoadCalls.h"
+#include "ksSerialQueueCalls.h"
+#include "ksSerialReceiveCalls.h"
+#include "ksSerialSetupCalls.h"
+#include "ksSerialTransmitCalls.h"
+#include "ksSerialIrqCalls.h"
+#include "ksSerialDirectCalls.h"
+#include "ksArpEventCalls.h"
+#include "ksArpSelectCalls.h"
 #include <cstdint>
 #include <cstddef>
 #include <utility>
@@ -79,6 +93,20 @@ public:
     ArpPrimitiveCalls arpPrimitiveCalls;
     ArpScheduleCalls arpScheduleCalls;
     ArpMainCalls arpMainCalls;
+    StateMultiSerializeCalls stateMultiSerializeCalls;
+    StatePatchLoadCalls statePatchLoadCalls;
+    StateProgramCalls stateProgramCalls;
+    StateMultiLoadCalls stateMultiLoadCalls;
+    StatePresetAddressCalls statePresetAddressCalls;
+    StateSingleLoadCalls stateSingleLoadCalls;
+    SerialQueueCalls serialQueueCalls;
+    SerialReceiveCalls serialReceiveCalls;
+    SerialSetupCalls serialSetupCalls;
+    SerialTransmitCalls serialTransmitCalls;
+    SerialIrqCalls serialIrqCalls;
+    SerialDirectCalls serialDirectCalls;
+    ArpEventCalls arpEventCalls;
+    ArpSelectCalls arpSelectCalls;
     LiveNoteController noteActions;
     LiveVoiceController voiceActions;
     ParameterScaleCalls parameterScaleCalls;
@@ -117,6 +145,20 @@ public:
         arpPrimitiveCalls.resetMetrics();
         arpScheduleCalls.resetMetrics();
         arpMainCalls.resetMetrics();
+        stateMultiSerializeCalls.resetMetrics();
+        statePatchLoadCalls.resetMetrics();
+        stateProgramCalls.resetMetrics();
+        stateMultiLoadCalls.resetMetrics();
+        statePresetAddressCalls.resetMetrics();
+        stateSingleLoadCalls.resetMetrics();
+        serialQueueCalls.resetMetrics();
+        serialReceiveCalls.resetMetrics();
+        serialSetupCalls.resetMetrics();
+        serialTransmitCalls.resetMetrics();
+        serialIrqCalls.resetMetrics();
+        serialDirectCalls.resetMetrics();
+        arpEventCalls.resetMetrics();
+        arpSelectCalls.resetMetrics();
         nativeSteps=bytes=messages=noteOn=noteOff=controls=originalStepCalls=0;
         noteActions.resetMetrics();parameterScaleCalls.resetMetrics();faultCalls.resetMetrics();bootStreamCalls.resetMetrics();bootSetupCalls.resetMetrics();startupCalls.resetMetrics();scheduledTimerCalls.resetMetrics();serviceCycleCalls.resetMetrics();stateInitCalls.resetMetrics();voiceActions.resetMetrics();
         if(!originalPages.empty())std::fill(originalPages.begin(),originalPages.end(),0);

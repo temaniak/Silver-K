@@ -4824,3 +4824,79 @@ buffers/rates/waits/priorities/placement unchanged. No Windows validation claim.
 Next: integrate native UART, remaining arp selectors/events and state loaders;
 finish other services, replace all architectural bridges with typed scheduling,
 then complete product/audio/whole-process CPU validation and push Optimized.
+
+## 2026-10-16 — Native UART, full state loaders and arp event/selection services (Mac)
+
+Source parent cc0c8de, isolated codex/ks-native-controller, arm64 Release
+AppleClang21/C++17 and unchanged pinned dependencies/authenticated KS OS2.1.02.
+Retired752old N bodies into test-only partial-reference adapters: MultiSerialize57,
+PatchLoad27, Program40, MultiLoad61, PresetAddress27, SingleLoad39, Queue43,
+Receive9, Setup17, Transmit21, IRQ61, Direct10, ArpEvent182, ArpSelect158.
+RuntimeMidi, RuntimeParameters and RuntimeVoices now have no old N bodies;
+CPU/register/flags/SP/PC compatibility projections still remain globally, so this
+is not the complete removal or final CPU comparison requested by the user.
+
+Serial native cores preserve queue wrap, status-error filtering, realtime-byte
+filtering, critical-region admission, late byte/status/index reads, RX data write
+before fullness test and TX data write before full wait. RX/TX IRQ fixtures also
+cover actual Mode1 short returns beyond normal KS Mode2. State cores preserve
+bank/program byte aliases, optional overlay49, selected/provided buffers,179/209
+byte loads and41+1 overlay bytes (skip125),255-byte cache invalidation,19field
+expansion, all four Multi parts/masks and exact engine/panel child order. Arp
+cores preserve queue/gate expiry, policy returned by MIDI children, chord deltas,
+ordered/random/up/down/octave/key selection and16bit LCG arithmetic. No generic
+instruction interpreter introduced; old source resides only in comparative hooks.
+
+Local proof IDs ks-native-uart-state-arp-components-20261016 and
+ks-native-uart-state-arp-verified-20261016. All28independent componenttests pass;
+14 ROM-free property suites and14 direct-original-H8 whole-call suites, plus
+legacy live/toggle. Whole-call facts from current integrated production owners:
+
+- StateMultiSerialize: 9058 full multi-serialize calls, 8846806 original steps, 342 IRQ, 144934 resets, 6 nested, global+masks/fourparts/names/programs/packedfields/restoredcontext,exact bus/state/clocks/full memory,zero recovery.
+- StatePatchLoad: 2520 full patch-load calls, 19256860 original steps, 440 IRQ, 315012 resets, 12 nested, 209bytes/cache/expandedfields/orderedenginehooks,exact bus/state/clocks/full memory,zero recovery.
+- StateProgram: 395160 full program calls, 11686454 original steps, 372 IRQ, 296312 resets, 18 nested, all3forms/bank+program/index/slots/latefields,exact bus/state/clocks/full memory,zero recovery.
+- StateMultiLoad: 2502 full multi-load calls, 82585296 original steps, 1190 IRQ, 1348536 resets, 12 nested, fourparts/globalmasks/enginehooks/panel/restoredcontext,exact bus/state/clocks/full memory,zero recovery.
+- StatePresetAddress: 263402 full preset-address calls, 8572146 original steps, 210 IRQ, 263414 resets, 12 nested, current+optionalalias/allbank+program/index/latefields,exact bus/state/clocks/full memory,zero recovery.
+- StateSingleLoad: 1562 full single-load calls, 6935654 original steps, 512 IRQ, 113630 resets, 10 nested, 179/209bytes/optional41+1alias/cache/engine+panel,exact bus/state/clocks/full memory,zero recovery.
+- SerialQueue: 524496 actual native serialQueue calls; 8781296 independent original steps; 156 selected IRQs; 524496 reset boundaries; 12 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- SerialReceive: 132736 actual native serialReceive calls; 7932352 independent original steps; 1056 selected IRQs; 264168 reset boundaries; 32 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- SerialSetup: 262228 actual native serialSetup calls; 30678984 independent original steps; 72 selected IRQs; 917738 reset boundaries; 4 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- SerialTransmit: 262352 actual native serialTransmit calls; 55681902 independent original steps; 168 selected IRQs; 1607318 reset boundaries; 8 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- SerialIrq: 659070 actual native serialIrq calls; 12914370 independent original steps; 530 selected IRQs; 659074 reset boundaries; 36 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- SerialDirect: 197210 actual native serialDirect calls; 51924236 independent original steps; 60 selected IRQs; 1499136 reset boundaries; 6 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- ArpEvent: 17350 actual native arp queue/gate/chord/note/reset calls, 9651396 independent original steps; exact accesses/clocks/state/memory; 704 IRQ points, 744170 metric resets, 12 nested; zero interpreter/recovery.
+- ArpSelect: 23136 actual native arp ordered/random/scan/wrap/bounce/velocity calls, 1963572 independent original steps; exact accesses/clocks/state/memory; 536 IRQ points, 118152 metric resets, 12 nested; zero interpreter/recovery.
+
+Actual whole calls compare every boundary/access/clock/in-flight context and
+reference projection/IRQ/history, final full memory, both fetch modes, all flags,
+late mutation/nested frames where specified, no interpreter/factory or partial
+recovery. Pure task suites use independent domain arithmetic/queue/data/ordering
+oracles and deadlines; agents' sampled new/new[] andASan/UBSan probes pass.
+Original H8 headers excluded and frozen linked libraries uninstrumented; no
+whole-plugin sanitizer claim. Finite seven-bit fixture data/representative
+invalid16bit queue addresses are not exhaustive arbitrary-memory/bank proof.
+Component IRQ F8-clock child and some engine/panel services use previously
+admitted original compatibility code in agents' frozen libraries; parent combined
+suite exercises the current native ownership. ArpSelect tail handoffs explicit;
+full internal MIDI/SysEx and remaining extended paths still pending.
+
+Four cold/reset/warm variants, runtime441,248boundary/4,128reset/80IRQ/1,216HDI/
+86,016deadline comparisons and Multi/FX/steal/pedal full KST/rawPCM/functional
+state equality all pass in frozen source-identity-guarded nine-stage run. New and
+existing owner starts/returns/initial-active/handoffs/active balances and zero
+partials pass. Public CTest28:14properties pass/14private-ROM calls skip, no failures.
+Initial runtime arbitrary-frame fuzz encountered invalid ArpEvent/Select bindings;
+explicit test-only invalid-root reference handling added, normal whole calls
+remain strict/partial0. The synthetic80IRQ test executes only one boundary of a
+fresh frame per trial; discard new SerialIrq metadata between independent frames
+instead of accumulating16unfinished owners. Exact assertions/counts unchanged.
+Initial failed private logs retained. Four cold scenarios had already passed the
+initial run; complete final run also passes after this test cleanup.
+
+DSP/JIT, guest event boundaries/IRQ, B/A ordering, waits/workers/priorities,
+rates/buffers/Windows policy unchanged. SyntheticFlash/zeroWave/mappedmarker
+limitations persist, no real-bank/hardware/Windows claim. All private ROM/data/
+captures/binaries/reports remain outside Git. No CPU comparison yet per user.
+Next: complete remaining reset/UI/Flash/extended and other IO services, remove
+all architectural bridges in favor of typed native coordinator, run final product,
+audio and total-CPU comparison, then push Optimized without preset-manager edits.

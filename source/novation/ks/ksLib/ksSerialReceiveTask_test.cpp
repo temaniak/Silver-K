@@ -1,0 +1,4 @@
+#include "ksSerialReceiveTask.h"
+#include <stdexcept>
+#include <iostream>
+int main(){using T=ks::SerialReceiveTask;using S=T::Stage;unsigned cases=0;for(unsigned status=0;status<256;++status)for(unsigned data=0;data<256;++data)for(unsigned ready:{0u,127u,247u}){T t;unsigned children=0,used=0;while(t.stage()!=S::Complete){if(t.awaiting()){uint8_t s=children?1:uint8_t(status),d=children?uint8_t(ready):uint8_t(data);++children;t.resumeChild(s,d);continue;}auto cost=t.nextClocks();if(t.advanceBefore(cost-1))throw std::runtime_error("early");used+=t.advanceBefore(cost);}bool accept=status==1&&data<248;if(children!=(accept?1u:2u)||t.data()!=(accept?data:ready)||used!=74+(accept?0:status==1?32:26))throw std::runtime_error("exact status/data filtering/clocks");++cases;}std::cout<<"PASS: "<<cases<<" pure serial-receive properties\n";}

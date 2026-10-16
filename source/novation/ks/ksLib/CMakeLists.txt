@@ -237,3 +237,31 @@ target_sources(ksLib PRIVATE ksArpPrimitiveCalls.cpp)
 target_sources(ksLib PRIVATE ksArpScheduleCalls.cpp)
 
 target_sources(ksLib PRIVATE ksArpMainCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateMultiSerializeCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStatePatchLoadCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateProgramCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateMultiLoadCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStatePresetAddressCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateSingleLoadCalls.cpp)
+
+target_sources(ksLib PRIVATE ksSerialQueueCalls.cpp)
+
+target_sources(ksLib PRIVATE ksSerialReceiveCalls.cpp)
+
+target_sources(ksLib PRIVATE ksSerialSetupCalls.cpp)
+
+target_sources(ksLib PRIVATE ksSerialTransmitCalls.cpp)
+
+target_sources(ksLib PRIVATE ksSerialIrqCalls.cpp)
+
+target_sources(ksLib PRIVATE ksSerialDirectCalls.cpp)
+
+target_sources(ksLib PRIVATE ksArpEventCalls.cpp)
+
+target_sources(ksLib PRIVATE ksArpSelectCalls.cpp)
