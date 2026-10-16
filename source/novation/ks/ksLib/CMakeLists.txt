@@ -287,3 +287,29 @@ target_sources(ksLib PRIVATE ksInternalNoteCalls.cpp)
 target_sources(ksLib PRIVATE ksSysExFrameCalls.cpp)
 
 target_sources(ksLib PRIVATE ksExceptionReturnCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateFlashCommitCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateStoreServicesCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStatePresetFormatCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStatePresetSaveCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateGlobalSaveCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateFactoryServicesCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelFormatCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelHexCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelPercentCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelVersionCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPatchExpandCalls.cpp)
+
+target_sources(ksLib PRIVATE ksSysExActionCalls.cpp)
+
+target_sources(ksLib PRIVATE ksLegacySysExCalls.cpp)

@@ -5063,3 +5063,70 @@ waits/workers/priorities/placement and Windows policy unchanged. Shared C++17 co
 has no macOS dependencies; Windows build/runtime validation still pending. CPU
 comparison remains deferred until all remaining IO/state/extended and caller
 projections are replaced and actual product is verified, followed by push.
+
+## 2026-10-16 — Native Flash/store services, page formatting and further SysEx/UI (Mac)
+
+Source parentfe8bc52; isolated codex/ks-native-controller, Mac arm64 Release
+AppleClang21/C++17 with existing pinned dependencies/authenticated KSOS2.1.02.
+Retired616old N bodies: FlashCommit11,StoreServices19,PresetFormat122,PresetSave21,
+GlobalSave30,FactoryServices19,PanelFormat62,PanelHex45,PanelPercent12,
+PanelVersion29,PatchExpand74,SysExAction106,LegacySysEx66. Production still retains
+IO/State/Extended and architectural caller projections. No global completion or
+CPU comparison yet; complete native coordinator wiring remains required.
+
+State native cores preserve pending Flash commits, original compare/program
+service,209+47preset pages/part overlays/index bounds, temporary bank/program49
+aliases, sequential overlapping copies,21+235global pages and256factory bytes,
+late mutable inputs, exact pending/dirty/protection and display/timer child order.
+Global zero-clock terminal metadata preflights run after arbitration before all
+owners: PresetFormat668c,StoreServices6662/55b8,GlobalSave6662,
+FactoryServices69c6/48cc; intermediate waits survive. PresetSave final callback
+55e2 remains an explicit named service mapping for final native coordinator.
+Panel natives retain signed clamps/padding/width, raw hex/byte/word/EXR roundtrip,
+percent division by zero/truncation, labels/version/string and real LCD children.
+PatchExpand retains packed-template byte/bit decoding and paired-store/IRQ effects.
+SysExAction owns report/header/send and explicit apply/commit requests; legacy
+write owns bank/parity/bounds,128byte paired restore/expand and final commit tail.
+
+Proof IDs ks-native-flash-ui-sysex-components-20261016 and
+ks-native-flash-ui-sysex-focused-20261016. All26components +legacy live/toggle pass.
+Current independent direct-original-H8 whole-call facts:
+
+- StateFlashCommit: 1190 full flash-commit calls, 621676 original steps, 142 IRQ, 10620 resets, 10 nested, pagecompare+program/unchanged/protected/invalid/pendingidle,exact bus/state/clocks/full memory,zero recovery.
+- StateStoreServices: 3286 full store-service calls, 5581104 original steps, 154 IRQ, 91828 resets, 14 nested, offset/protectedcommit/check/message+display,exact bus/state/clocks/full memory,zero recovery.
+- StatePresetFormat: 264380 full preset-format calls, 43526574 original steps, 1156 IRQ, 858082 resets, 20 nested, direct/partaware/209+47page/sharedpreservation/alias49/commit,exact bus/state/clocks/full memory,zero recovery.
+- StatePresetSave: 9038 full preset-save calls, 31653546 original steps, 282 IRQ, 523028 resets, 10 nested, packall/current/primary+aliasstore/programrestore/timer250,exact bus/state/clocks/full memory,zero recovery.
+- StateGlobalSave: 1464 full global-save calls, 5348184 original steps, 420 IRQ, 88292 resets, 6 nested, globalmode/latebankprogram/21copy+235zeros/commit,exact bus/state/clocks/full memory,zero recovery.
+- StateFactoryServices: 2354 full factory-service calls, 11514076 original steps, 253 IRQ, 188039 resets, 12 nested, provided/256factorybytes/commit/globalrestore/message/panel,exact bus/state/clocks/full memory,zero recovery.
+- PanelFormat: 527340 actual native panelFormat calls; 119998622 independent original steps; 836 selected IRQs; 3535778 reset boundaries; 56 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- PanelHex: 534254 actual native panelHex calls; 89007212 independent original steps; 1558 selected IRQs; 2679686 reset boundaries; 72 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- PanelPercent: 1049056 actual native panelPercent calls; 358892188 independent original steps; 384 selected IRQs; 9940426 reset boundaries; 32 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- PanelVersion: 918040 actual native panelVersion calls; 1214052680 independent original steps; 384 selected IRQs; 32974936 reset boundaries; 40 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- PatchExpand: 7628 actual native patch expansion calls, 5002478 independent original steps; exact accesses/clocks/state/memory; 450 IRQ points, 297480 metric resets, 2 nested; zero interpreter/recovery.
+- SysExAction: 9556 actual native SysEx apply/metadata/header/send calls, 9834788 independent original steps; exact accesses/clocks/state/memory; 258 IRQ points, 580162 metric resets, 16 nested, 1648 exact commit/notification seams; zero interpreter/recovery.
+- LegacySysEx: 10394 actual native legacy SysEx calls, 2710346 independent original steps; exact accesses/clocks/state/memory; 130 IRQ points, 162710 metric resets, 6 nested, 994 exact commit/notification seams; zero interpreter/recovery.
+
+Per-boundary all state/projection/flags/IRQ/history, byte access/address/value/
+order/time/in-flight context and final memory exact. Both fetch modes, flags,
+late data/nesting/reset matrices per fixture; no interpreter/factory/partial
+recovery in new actual calls. Pure independent domain/golden byte/packet/page/
+format/arithmetic/deadline properties and delivered ASan+UBSan/native allocation
+samples pass. Original H8headers excluded/frozen static libraries uninstrumented,
+not whole-product sanitizer coverage. Flash fixtures write MockBus memory, no
+physical Flash or private firmware files. State11aecompare/program and some timer/
+panel descendants are explicitly frozen old compatibility in agent fixtures;
+parent full composition exercises current owners. SysExAction apply/commit/
+notification seams63fe/6ffc/66dc/64e4/72e0/55b8 and legacy musical commit seams are
+explicit; these component proofs do not admit every evolving SysEx sequence.
+
+Frozen nine-stage run passes all four real-child/DSP cold/reset/warm variants,
+runtime441248boundary/4128reset/80IRQ/1216HDI/86016deadline comparisons and
+Multi/FX/steal/pedal full KST/rawPCM/functional keys. New and existing start/return/
+initial-active/handoff/active and descriptor balances/zero partials pass, source
+identity unchanged. Public CTest26:13properties pass/13private-ROM calls skip,
+no failures. Sound/JIT/timing/IRQ/B-A ordering, workers/waits/priorities/placement,
+buffers/rates and Windows policy unchanged. SyntheticFlash/zeroWave/mappedmarker
+and finite scenario limits persist, no real-bank/hardware/Windows claim. Private
+ROM/data/captures/binaries/reports remain outsideGit; no intermediate push.
+Next: remaining state/UI/IO/extended, direct typed native adapters/coordinator,
+full product/musical/whole-process H8-vs-native CPU validation and push Optimized.

@@ -49,6 +49,10 @@ void RuntimeController::arbitrate(ControllerCpu& h){
     if(h.getPC()&1)--h.pc;
 }
 bool RuntimeController::stepCode(ControllerCpu& h){
+    shared.stateGlobalSaveCalls.retireReturns(h);
+    shared.stateFactoryServicesCalls.retireReturns(h);
+    shared.statePresetFormatCalls.retireReturns(h);
+    shared.stateStoreServicesCalls.retireReturns(h);
     shared.stateManualEditCalls.retireReturns(h);
     const unsigned pc=h.getPC();bool handled=false;
     if(VoiceReleaseCalls::candidate(pc))handled=shared.noteActions.step(h);

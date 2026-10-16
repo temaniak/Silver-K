@@ -48,6 +48,19 @@
 #include "ksInternalNoteCalls.h"
 #include "ksSysExFrameCalls.h"
 #include "ksExceptionReturnCalls.h"
+#include "ksStateFlashCommitCalls.h"
+#include "ksStateStoreServicesCalls.h"
+#include "ksStatePresetFormatCalls.h"
+#include "ksStatePresetSaveCalls.h"
+#include "ksStateGlobalSaveCalls.h"
+#include "ksStateFactoryServicesCalls.h"
+#include "ksPanelFormatCalls.h"
+#include "ksPanelHexCalls.h"
+#include "ksPanelPercentCalls.h"
+#include "ksPanelVersionCalls.h"
+#include "ksPatchExpandCalls.h"
+#include "ksSysExActionCalls.h"
+#include "ksLegacySysExCalls.h"
 #include <cstdint>
 #include <cstddef>
 #include <utility>
@@ -129,6 +142,19 @@ public:
     InternalNoteCalls internalNoteCalls;
     SysExFrameCalls sysExFrameCalls;
     ExceptionReturnCalls exceptionReturnCalls;
+    StateFlashCommitCalls stateFlashCommitCalls;
+    StateStoreServicesCalls stateStoreServicesCalls;
+    StatePresetFormatCalls statePresetFormatCalls;
+    StatePresetSaveCalls statePresetSaveCalls;
+    StateGlobalSaveCalls stateGlobalSaveCalls;
+    StateFactoryServicesCalls stateFactoryServicesCalls;
+    PanelFormatCalls panelFormatCalls;
+    PanelHexCalls panelHexCalls;
+    PanelPercentCalls panelPercentCalls;
+    PanelVersionCalls panelVersionCalls;
+    PatchExpandCalls patchExpandCalls;
+    SysExActionCalls sysExActionCalls;
+    LegacySysExCalls legacySysExCalls;
     LiveNoteController noteActions;
     LiveVoiceController voiceActions;
     ParameterScaleCalls parameterScaleCalls;
@@ -192,6 +218,19 @@ public:
         internalNoteCalls.resetMetrics();
         sysExFrameCalls.resetMetrics();
         exceptionReturnCalls.resetMetrics();
+        stateFlashCommitCalls.resetMetrics();
+        stateStoreServicesCalls.resetMetrics();
+        statePresetFormatCalls.resetMetrics();
+        statePresetSaveCalls.resetMetrics();
+        stateGlobalSaveCalls.resetMetrics();
+        stateFactoryServicesCalls.resetMetrics();
+        panelFormatCalls.resetMetrics();
+        panelHexCalls.resetMetrics();
+        panelPercentCalls.resetMetrics();
+        panelVersionCalls.resetMetrics();
+        patchExpandCalls.resetMetrics();
+        sysExActionCalls.resetMetrics();
+        legacySysExCalls.resetMetrics();
         nativeSteps=bytes=messages=noteOn=noteOff=controls=originalStepCalls=0;
         noteActions.resetMetrics();parameterScaleCalls.resetMetrics();faultCalls.resetMetrics();bootStreamCalls.resetMetrics();bootSetupCalls.resetMetrics();startupCalls.resetMetrics();scheduledTimerCalls.resetMetrics();serviceCycleCalls.resetMetrics();stateInitCalls.resetMetrics();voiceActions.resetMetrics();
         if(!originalPages.empty())std::fill(originalPages.begin(),originalPages.end(),0);
