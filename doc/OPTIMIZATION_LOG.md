@@ -4946,3 +4946,72 @@ private firmware/captures/binaries/reports committed. CPU comparison still
 explicitly deferred until full controller-model removal. Next: remaining IO,
 state/Flash/extended services and typed native coordinator replacing every bridge;
 final product/full musical/whole-process CPU validation and push remain pending.
+
+## 2026-10-16 — Native manual edits, internal MIDI/SysEx framing and panel functions (Mac)
+
+Source parent4ee85e2; isolated codex/ks-native-controller, arm64 Release
+AppleClang21/C++17, existing pinned dependencies/private authenticated KSOS2.1.02.
+Retired544old N bodies: ManualEdit82,PostEdit25,PanelControl62,PanelToggle20,
+PanelDecimal16,PanelText44,InternalMidi70,InternalNote60,SysExFrame164,
+ExceptionReturn1. Startup/Midi/Parameters/Voices production files retain no old
+N bodies; remaining IO/State/Extended and architectural projections still pending.
+
+Manual native core preserves pickup255/254/253 hysteresis/bytewrap/cache/type
+policies, packed-field conversion, CC62+6feedback, dirty/edited publication and
+post-edit routing. Manual prefix metadata retires at6bf0 in the central preflight
+before any other owner, zero guest clocks; PostEdit owns full return. Panel cores
+preserve descriptor late rereads, signed-decrement clamped-shift quirk, exact RMW
+strobes/delays, mirror bits, signed padding/width0->256, underwidth decimal writes,
+parsed/plain text and real byte/poll/action children. Exception completion is a
+single native scheduling event; reference frame projection remains in adapter.
+
+Internal MIDI retains distinct f2da channel descriptors, running-status/count/
+channel/cursor/held-policy gates and separate incoming versus accumulated payload
+sources; shared pure descriptor logic reused. Internal Note owns bitmaps/clear16/
+release128 and routed tail3f48. ArpEvent now admits logical RoutedEmit only when
+there is no matching normal Emit owner, skips arp transpose/override/requeue and
+retains original caller note release timing. Parent invalid-root comparative hook
+preserved; new actual tail is not partial recovery. SysEx core owns framing,
+headers/device/broadcast acceptance,16bit append count/block/request selection;
+remaining apply/dump/conversion handlers remain separate typed requests.
+
+Proof IDs ks-native-panel-extended-manual-components-20261016 and
+ks-native-panel-extended-manual-focused-20261016. Twenty new component tests pass,
+two full routed ArpEvent/Select regressions and legacy live/toggle pass. Current
+independent direct-original-H8 whole-call facts:
+
+- StateManualEdit: 131818 full manual+postedit calls, 18350300 original steps, 222 IRQ, 349662 resets, 6 nested, allbytefields+values/pickup/cache/policy/packing/midi+postedit,exact bus/state/clocks/full memory,zero recovery.
+- StatePostEdit: 131706 full postedit calls, 2509750 original steps, 110 IRQ, 131712 resets, 6 nested, offset217/102/103/84/218+normal/override+current/latefields,exact bus/state/clocks/full memory,zero recovery.
+- PanelControl: 922472 actual native panelControl calls; 118419358 independent original steps; 2258 selected IRQs; 3774582 reset boundaries; 50 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- PanelToggle: 263372 actual native panelToggle calls; 36083240 independent original steps; 156 selected IRQs; 1053488 reset boundaries; 16 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- PanelDecimal: 263474 actual native panelDecimal calls; 75576762 independent original steps; 1120 selected IRQs; 2095152 reset boundaries; 70 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- PanelText: 142658 actual native panelText calls; 15865072 independent original steps; 656 selected IRQs; 432834 reset boundaries; 58 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- ExceptionReturn: 133120 actual native exceptionReturn calls; 134144 independent original steps; 1024 selected IRQs; 0 reset boundaries; 0 nested calls; exact clocks/accesses/state/full memory, zero interpreter/factory.
+- InternalMidi: 76204 actual native internal MIDI byte/descriptor calls, 1179772 independent original steps; exact accesses/clocks/state/memory; 404 IRQ points, 117840 metric resets, 4 nested, 1188 exact guarded-handler seams; zero interpreter/recovery.
+- InternalNote: 279296 actual native internal note/bitmap/release calls, 9084186 independent original steps; exact accesses/clocks/state/memory; 206 IRQ points, 801822 metric resets, 12 nested; routed3f48 full return; zero interpreter/recovery.
+- SysExFrame: 145118 actual native SysEx framing/descriptor/request calls, 1285578 independent original steps; exact accesses/clocks/state/memory; 582 IRQ points, 161360 metric resets, 18 nested, 2188 exact action-entry seams; zero interpreter/recovery.
+
+Exact every boundary/access/value/order/time/in-flight context, reference
+architectural projection/IRQ/histories and final memory checked; both fetch modes,
+flags/late fields/nesting/reset cases per fixture. New actual cores use neither
+interpreter/factory nor partial recovery. MIDI guarded dispatch1188handler-entry
+and SysEx2188action-entry seams explicitly stop before downstream handlers;
+those tests are not full normal SysEx proof. Internal Note release fixture models
+UART consumer at real1124boundary identically to avoid absent synthetic SCI
+worker stalling both sides. PanelToggle6d0child remains prior frozen reference in
+agent test; Text actual byte/poll/action subgraph overlaid native. Agents' pure
+independent arithmetic/ordering/deadline and new/new[]/ASan/UBSan probes pass;
+H8headers and frozen static libraries uninstrumented, no whole-plugin claim.
+
+Parent frozen nine-stage run passes four complete cold/reset/warm real-child/DSP
+variants, runtime441248boundary/4128reset/80IRQ/1216HDI/86016deadline comparisons,
+Multi/FX/steal/pedal full KST/rawPCM/functional keys. New/old owner start/initial/
+return/active/handoff and both MIDI descriptor lifecycle balances pass; partial0,
+sourceidentity unchanged. Public CTest20:10properties pass/10private calls skip,
+no failures. Existing ArpEvent17350call and Select23136call original matrices also
+pass after real routed continuation added. No sound/JIT/timing/IRQ/B-A serial/
+wait/worker/priority/placement/buffer/rate/Windows policy change, no CPU comparison
+yet. Private assets/captures/reports/binaries outsideGit. SyntheticFlash/zeroWave/
+mappedmarker/finite scenario limits remain, no hardware/realbank/Windows claim.
+Next: remaining Flash/state/UI/IO/extended, typed native coordinator removing all
+architectural bridges, final product/full musical/whole-process CPU and push.

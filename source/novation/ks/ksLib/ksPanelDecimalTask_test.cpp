@@ -1,0 +1,7 @@
+#include "ksPanelDecimalTask.h"
+#include <stdexcept>
+#include <iostream>
+#include <vector>
+#include <utility>
+#include <string>
+int main(){using T=ks::PanelDecimalTask;using S=T::Stage;unsigned cases=0;auto verify=[&](unsigned value,unsigned width,unsigned padding){T t;unsigned valueReads=0,widthReads=0,padReads=0;std::vector<std::pair<int,unsigned>>writes;while(t.stage()!=S::Complete){auto cost=t.nextClocks();if(t.advanceBefore(cost-1,[](T::Read){return 0;},[](int32_t,uint8_t){}))throw std::runtime_error("early");t.advanceBefore(cost,[&](T::Read r){if(r==T::Read::Value){++valueReads;return value;}if(r==T::Read::Width){++widthReads;return width;}++padReads;return padding;},[&](int32_t at,uint8_t byte){writes.emplace_back(at,byte);});}unsigned count=width?width:256;std::string digits=std::to_string(value);std::vector<std::pair<int,unsigned>>expected;for(unsigned i=0;i<count;++i)expected.emplace_back(i,padding);expected.emplace_back(count,0);for(unsigned i=0;i<digits.size();++i)expected.emplace_back(int(count)-1-int(i),unsigned(digits[digits.size()-1-i]));if(writes!=expected||t.position()!=int(count)-int(digits.size())||valueReads!=1||widthReads!=1||padReads!=count)throw std::runtime_error("decimal padding/digit order/late capture/returned cursor");++cases;};for(unsigned width=0;width<256;++width)for(unsigned value=0;value<256;++value)verify(value,width,0x20);for(unsigned padding=0;padding<256;++padding)for(unsigned value=0;value<256;++value)verify(value,3,padding);std::cout<<"PASS: "<<cases<<" pure panel-decimal properties\n";}

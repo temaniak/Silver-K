@@ -267,3 +267,23 @@ target_sources(ksLib PRIVATE ksArpEventCalls.cpp)
 target_sources(ksLib PRIVATE ksArpSelectCalls.cpp)
 
 target_sources(ksLib PRIVATE ksResetImageCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateManualEditCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStatePostEditCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelControlCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelToggleCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelDecimalCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPanelTextCalls.cpp)
+
+target_sources(ksLib PRIVATE ksInternalMidiCalls.cpp)
+
+target_sources(ksLib PRIVATE ksInternalNoteCalls.cpp)
+
+target_sources(ksLib PRIVATE ksSysExFrameCalls.cpp)
+
+target_sources(ksLib PRIVATE ksExceptionReturnCalls.cpp)

@@ -1,0 +1,4 @@
+#include "ksPanelToggleTask.h"
+#include <stdexcept>
+#include <iostream>
+int main(){using T=ks::PanelToggleTask;using S=T::Stage;unsigned cases=0;for(unsigned kind=0;kind<2;++kind)for(unsigned old=0;old<256;++old)for(unsigned input=0;input<256;++input){T t(static_cast<T::Kind>(kind));unsigned used=0,writes=0,children=0;while(t.stage()!=S::Complete){if(t.awaiting()){++children;t.resumeChild();continue;}auto cost=t.nextClocks();if(t.advanceBefore(cost-1,[](T::Read){return 0;},[](uint8_t){}))throw std::runtime_error("early");used+=t.advanceBefore(cost,[&](T::Read r){return r==T::Read::Input?input:old;},[&](uint8_t value){if(value!=((old&(kind?2:1))|(input?(kind?1:2):0)))throw std::runtime_error("mirror bit formula");++writes;});}if(writes!=1||children!=1||used!=92+(input?3:0))throw std::runtime_error("lifecycle/clocks");++cases;}std::cout<<"PASS: "<<cases<<" pure panel-toggle properties\n";}

@@ -1,0 +1,91 @@
+#include "ksStateManualEditCalls.h"
+#include "ksRuntimeBoundary.h"
+#include <stdexcept>
+namespace ks {namespace {using T=StateManualEditTask;using S=T::Stage;StateManualEditPartialTest partialTest=nullptr;struct Point{unsigned location,length;};constexpr std::array<Point,82> points{{{0x6ae6,4},{0x6aea,2},{0x6aec,2},{0x6aee,8},{0x6af6,2},{0x6af8,8},{0x6b00,2},{0x6b02,8},{0x6b0a,2},{0x6b0c,2},{0x6b0e,2},{0x6b10,2},{0x6b12,4},{0x6b16,2},{0x6b18,8},{0x6b20,2},{0x6b22,2},{0x6b24,2},{0x6b26,2},{0x6b28,2},{0x6b2a,6},{0x6b30,8},{0x6b38,2},{0x6b3a,2},{0x6b3c,2},{0x6b3e,2},{0x6b40,2},{0x6b42,2},{0x6b44,2},{0x6b46,2},{0x6b48,2},{0x6b4a,2},{0x6b4c,2},{0x6b4e,2},{0x6b50,2},{0x6b52,2},{0x6b54,4},{0x6b58,2},{0x6b5a,2},{0x6b5c,2},{0x6b5e,2},{0x6b60,2},{0x6b62,4},{0x6b66,2},{0x6b68,4},{0x6b6c,2},{0x6b6e,2},{0x6b70,2},{0x6b72,2},{0x6b74,2},{0x6b76,6},{0x6b7c,8},{0x6b84,2},{0x6b86,2},{0x6b88,8},{0x6b90,2},{0x6b92,8},{0x6b9a,2},{0x6b9c,2},{0x6b9e,2},{0x6ba0,2},{0x6ba2,6},{0x6ba8,8},{0x6bb0,2},{0x6bb2,2},{0x6bb4,8},{0x6bbc,2},{0x6bbe,2},{0x6bc0,2},{0x6bc2,2},{0x6bc4,2},{0x6bc6,4},{0x6bca,2},{0x6bcc,2},{0x6bce,4},{0x6bd2,6},{0x6bd8,6},{0x6bde,4},{0x6be2,2},{0x6be4,6},{0x6bea,2},{0x6bec,4}}};Point point(const T& t){return t.awaitingPost()?Point{0x6bf0,0}:points[unsigned(t.awaitingChild()?t.resumeStage():t.stage())];}}
+void setStateManualEditPartialForTests(StateManualEditPartialTest f){partialTest=f;}
+void StateManualEditCalls::retireReturns(ControllerCpu& h){for(auto& c:calls)if(c&&c->token==h.getSP()&&c->task.awaitingPost()&&unsigned(h.getPC())==0x6bf0){c->task.retirePost();c.reset();++completed;}}
+bool StateManualEditCalls::step(ControllerCpu& h){using namespace controllerDetail;retireReturns(h);const unsigned pc=unsigned(h.getPC());std::optional<Call>* selected=nullptr;for(auto& c:calls)if(c&&c->token==h.getSP()){selected=&c;break;}if(pc==0x6ae6){if(!selected)for(auto& c:calls)if(!c){selected=&c;break;}if(!selected)throw std::runtime_error("Native manual edit capacity exceeded");selected->emplace(uint32_t(h.regs[1].er),uint8_t(h.regs[6].rh),h.getSP());++started;}
+ if(!selected||point((*selected)->task).location!=pc){if(selected)selected->reset();if(partialTest&&partialTest(h)){++partialEntries;return true;}return false;}auto& call=**selected;auto& task=call.task;auto& r=h.regs;if(task.awaitingChild())task.resumeChild(uint8_t(r[0].rl),uint32_t(r[1].er));const auto stage=task.stage();const uint32_t address=stage==S::WriteInput?task.reference():stage==S::WriteMarker||stage==S::WriteCached?call.live+task.field():stage==S::WritePreset?call.writeBase+task.field():stage==S::WritePart?0x17526:0x1679c;const unsigned physical=address&0xffffff;const unsigned storeClocks=physical<0x400000?((h.lastwrite&1)||int(physical)!=(h.lastwrite|1)?3:0):3;const auto cost=task.nextClocks(storeClocks);const auto before=h.cycles;RuntimeBoundary f(h,pc,point(task).length);uint32_t observed=0;
+ auto read=[&](T::Read what)->uint32_t{switch(what){case T::Read::Override:return observed=uint32_t(h.read32(0x167a6));case T::Read::Current:return observed=uint32_t(h.read32(0x167bc));case T::Read::LiveBase:return observed=call.live=uint32_t(h.read32(0x167c0));case T::Read::WriteOverride:return observed=call.writeBase=uint32_t(h.read32(0x167a6));case T::Read::WriteCurrent:return observed=call.writeBase=uint32_t(h.read32(0x167bc));default:break;}return observed=uint8_t(h.read8(what==T::Read::Type?71586+task.field():what==T::Read::Cached?call.live+task.field():what==T::Read::Input?task.reference():what==T::Read::Pickup?0x168fc+253:what==T::Read::StorePolicy||what==T::Read::MidiPolicy?0x168fc+241:what==T::Read::MidiControl?71330+task.field():0x16798));};auto write=[&](T::Write,uint8_t value){f.store8(address,value);};if(task.advanceBefore(cost,read,write,storeClocks)!=cost)throw std::runtime_error("Native manual admission differs");switch(stage){case S::RetainReference:{f.push(r[1].er);break;}
+case S::RetainRequest:{f.push(r[6].r);break;}
+case S::CaptureReference:{f.move(r[3].er,r[1].er);break;}
+case S::ReadOverride:{f.move(r[0].er,observed);break;}
+case S::AdmitOverride:{;break;}
+case S::ReadCurrent:{f.move(r[0].er,observed);break;}
+case S::ComputeField:{r[1].er=h.sub32(r[1].er,r[0].er);break;}
+case S::ReadType:{f.move(r[2].rl,observed);break;}
+case S::AdmitDirect:{;break;}
+case S::ComparePackedType:{h.sub8(r[2].rl,0x6);break;}
+case S::AdmitPackedType:{;break;}
+case S::WriteInput:{;break;}
+case S::PackFields:{f.call(0x688e);break;}
+case S::CapturePackedValue:{f.move(r[6].rh,r[0].rl);break;}
+case S::ReadLiveBase:{f.move(r[0].er,observed);break;}
+case S::AddLiveField:{r[0].er=h.add32(r[0].er,r[1].er);break;}
+case S::ReadCached:{f.move(r[2].rh,observed);break;}
+case S::CaptureType:{f.move(r[2].rl,r[2].rl);break;}
+case S::AdmitSpecial:{;break;}
+case S::ReadInput:{f.move(r[6].rl,observed);break;}
+case S::SetGlobalPickup:{f.move(r[3].er,0x168fc);break;}
+case S::ReadPickup:{f.move(r[3].rl,observed);break;}
+case S::AdmitPickup:{;break;}
+case S::ComparePending:{h.sub8(r[2].rh,0xffffffff);break;}
+case S::AdmitPending:{;break;}
+case S::SetUpMarker:{f.move(r[3].rl,0xfffffffe);break;}
+case S::CompareInput:{h.sub8(r[6].rh,r[6].rl);break;}
+case S::AdmitSameInput:{;break;}
+case S::AdmitUpDirection:{;break;}
+case S::SetDownMarker:{f.move(r[3].rl,0xfffffffd);break;}
+case S::WriteMarker:{;break;}
+case S::CaptureMarker:{f.move(r[2].rh,r[3].rl);break;}
+case S::CompareUpMarker:{h.sub8(r[2].rh,0xfffffffe);break;}
+case S::AdmitUpMarker:{;break;}
+case S::IncrementInput:{f.inc(r[6].rl,1);break;}
+case S::CompareUpInput:{h.sub8(r[6].rh,r[6].rl);break;}
+case S::AdmitUpInput:{h.clockI(2);break;}
+case S::SkipDownMarker:{;break;}
+case S::CompareDownMarker:{h.sub8(r[2].rh,0xfffffffd);break;}
+case S::AdmitDownMarker:{;break;}
+case S::DecrementInput:{f.inc(r[6].rl,-1);break;}
+case S::CompareDownInput:{h.sub8(r[6].rh,r[6].rl);break;}
+case S::AdmitDownInput:{h.clockI(2);break;}
+case S::CompareCached:{h.sub8(r[6].rh,r[2].rh);break;}
+case S::AdmitSameCached:{h.clockI(2);break;}
+case S::WriteCached:{;break;}
+case S::CompareForced127:{h.sub8(r[2].rl,0x7f);break;}
+case S::AdmitForced127:{;break;}
+case S::CompareForced254:{h.sub8(r[2].rl,0xfffffffe);break;}
+case S::AdmitForced254:{;break;}
+case S::SetGlobalStore:{f.move(r[0].er,0x168fc);break;}
+case S::ReadStorePolicy:{f.move(r[0].rl,observed);break;}
+case S::CompareStorePolicy:{h.sub8(r[0].rl,0x3f);break;}
+case S::AdmitStorePolicy:{;break;}
+case S::ReadWriteOverride:{f.move(r[0].er,observed);break;}
+case S::AdmitWriteOverride:{;break;}
+case S::ReadWriteCurrent:{f.move(r[0].er,observed);break;}
+case S::AddWriteField:{r[0].er=h.add32(r[0].er,r[1].er);break;}
+case S::WritePreset:{;break;}
+case S::CaptureMidiType:{f.move(r[2].rl,r[2].rl);break;}
+case S::AdmitMidiType:{;break;}
+case S::SetGlobalMidi:{f.move(r[0].er,0x168fc);break;}
+case S::ReadMidiPolicy:{f.move(r[0].rl,observed);break;}
+case S::CompareMidiPolicy:{h.sub8(r[0].rl,0x3f);break;}
+case S::AdmitMidiPolicy:{;break;}
+case S::ReadMidiControl:{f.move(r[6].rl,observed);break;}
+case S::AdmitMidiControl:{;break;}
+case S::MaskMidiControl:{r[6].rl&=0x7f;value(h,r[6].rl);break;}
+case S::RetainMidiRequest:{f.push(r[6].r);break;}
+case S::CaptureMidiValue:{f.move(r[6].rh,r[6].rl);break;}
+case S::SetMidiHigh:{f.move(r[6].rl,0x62);break;}
+case S::DispatchMidiHigh:{f.call(0x2be8);break;}
+case S::RestoreMidiRequest:{f.pop(r[6].r);break;}
+case S::SetMidiLow:{f.move(r[6].rl,0x6);break;}
+case S::DispatchMidi:{f.call(0x2be8);break;}
+case S::ReadPart:{f.move(r[0].rl,observed);break;}
+case S::WritePart:{;break;}
+case S::MarkDirty:{f.call(0x7364);break;}
+case S::MarkEdited:{f.move(r[0].rl,0x1);break;}
+case S::WriteEdited:{;break;}
+case S::RestoreRequest:{f.pop(r[6].r);break;}
+case S::RestoreReference:{f.pop(r[1].er);break;} default:break;}
+ if(h.cycles-before!=cost)throw std::runtime_error("Native manual clocks differ");if(!task.awaitingChild())call.token=h.getSP();h.pc=h.makepc(task.awaitingChild()?f.next:point(task).location);return true;}}

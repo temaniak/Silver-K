@@ -38,6 +38,16 @@
 #include "ksArpEventCalls.h"
 #include "ksArpSelectCalls.h"
 #include "ksResetImageCalls.h"
+#include "ksStateManualEditCalls.h"
+#include "ksStatePostEditCalls.h"
+#include "ksPanelControlCalls.h"
+#include "ksPanelToggleCalls.h"
+#include "ksPanelDecimalCalls.h"
+#include "ksPanelTextCalls.h"
+#include "ksInternalMidiCalls.h"
+#include "ksInternalNoteCalls.h"
+#include "ksSysExFrameCalls.h"
+#include "ksExceptionReturnCalls.h"
 #include <cstdint>
 #include <cstddef>
 #include <utility>
@@ -109,6 +119,16 @@ public:
     ArpEventCalls arpEventCalls;
     ArpSelectCalls arpSelectCalls;
     ResetImageCalls resetImageCalls;
+    StateManualEditCalls stateManualEditCalls;
+    StatePostEditCalls statePostEditCalls;
+    PanelControlCalls panelControlCalls;
+    PanelToggleCalls panelToggleCalls;
+    PanelDecimalCalls panelDecimalCalls;
+    PanelTextCalls panelTextCalls;
+    InternalMidiCalls internalMidiCalls;
+    InternalNoteCalls internalNoteCalls;
+    SysExFrameCalls sysExFrameCalls;
+    ExceptionReturnCalls exceptionReturnCalls;
     LiveNoteController noteActions;
     LiveVoiceController voiceActions;
     ParameterScaleCalls parameterScaleCalls;
@@ -162,6 +182,16 @@ public:
         arpEventCalls.resetMetrics();
         arpSelectCalls.resetMetrics();
         resetImageCalls.resetMetrics();
+        stateManualEditCalls.resetMetrics();
+        statePostEditCalls.resetMetrics();
+        panelControlCalls.resetMetrics();
+        panelToggleCalls.resetMetrics();
+        panelDecimalCalls.resetMetrics();
+        panelTextCalls.resetMetrics();
+        internalMidiCalls.resetMetrics();
+        internalNoteCalls.resetMetrics();
+        sysExFrameCalls.resetMetrics();
+        exceptionReturnCalls.resetMetrics();
         nativeSteps=bytes=messages=noteOn=noteOff=controls=originalStepCalls=0;
         noteActions.resetMetrics();parameterScaleCalls.resetMetrics();faultCalls.resetMetrics();bootStreamCalls.resetMetrics();bootSetupCalls.resetMetrics();startupCalls.resetMetrics();scheduledTimerCalls.resetMetrics();serviceCycleCalls.resetMetrics();stateInitCalls.resetMetrics();voiceActions.resetMetrics();
         if(!originalPages.empty())std::fill(originalPages.begin(),originalPages.end(),0);
