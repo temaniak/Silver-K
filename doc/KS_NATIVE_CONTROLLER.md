@@ -167,8 +167,8 @@ musical timelines match, with zero test recovery or retired-batch work. Single
 and Multi also match full tape and raw audio without either legacy experimental
 flag. Task/bridge allocation and sanitizer checks pass. This stage rebuilds
 engine tests; products/callbacks were last verified at the preceding word-write
-checkpoint and require fresh final validation. The bootstrap firmware stream (the separate `0x23ce` path) and
-caller/cache/reset/parser/voice/parameter/clock/state paths still need semantic
+checkpoint and require fresh final validation. The remaining bootstrap setup and caller/cache/reset/parser/voice/parameter/
+clock/state paths still need semantic
 conversion; no CPU comparison or push has been performed.
 
 
@@ -186,8 +186,26 @@ tasks. Forced word/address timeouts execute all 96 complete native fault jobs.
 Healthy musical scenarios observe no faults, so they do not stand in for that
 explicit error-path proof. Full tapes, 14 raw musical timelines and two default
 Single/Multi cases match. Allocation/sanitizer scope and product-validation
-limits remain in the journal. The separate bootstrap byte stream, its parent
-initialization and the broader controller/caller model still need conversion.
+limits remain in the journal. The parent bootstrap initialization and broader controller/caller model
+still need conversion.
+
+
+`DspBootStreamTask` now owns the separate firmware byte stream: native word
+count/data cursor/latched byte, actual source observations after TX readiness,
+retries/timeouts and exact durations. Its source is a native byte-index
+callback, with no CPU fields or addresses. The old 20 body boundaries are
+comparison-only; `DspBootStreamCalls` still provides the temporary old-caller
+projection. Sources are bounded to mapped three-clock ROM/Flash/SRAM spans.
+
+Admission `ks-native-dsp-boot-stream-20261016`: 132,336 outer calls plus 112
+children, full 16-bit count edges including 65,536 words, changing source
+bytes, 1,024 IRQ/RTE points and eight live contexts match direct H8. Each cold
+and musical start proves two complete native firmware streams (1,871 and
+2,840 words), zero recovery and zero native interpreter work. All full tape/
+audio/default-path checks pass. Private raw evidence is retained in
+`/private/tmp/ks-native-dsp-boot-stream-20261016`; product/callback validation
+still requires a fresh final pass. The parent header, delay, boot-ready and
+frequency-table setup remains register-bound and is the next conversion.
 
 
 ## Remaining removal gates

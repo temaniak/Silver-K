@@ -66,6 +66,9 @@ int main(int argc,char** argv){try{
     if(nativeMode)check(board->h8InterpretedSteps()==0,"Native startup used H8 interpreter");
     const double bootCost=cpu()-bootCpu,bootWall=std::chrono::duration<double>(Clock::now()-bootBegin).count();
     const uint64_t bootH8Steps=board->h8InterpretedSteps();
+    const auto* bootLive=board->liveMidiController();
+    const uint64_t bootStreamStarts=bootLive?bootLive->bootStreamCalls.started:0,bootStreamReturns=bootLive?bootLive->bootStreamCalls.completed:0,bootStreamPartial=bootLive?bootLive->bootStreamCalls.partialEntries:0;
+    if(nativeMode)check(bootStreamStarts==2 && bootStreamReturns==2 && !bootStreamPartial,"Native startup did not complete both DSP firmware streams without recovery");
     if(nativeMode)board->enableNativeController();
     auto send=[&](const std::vector<uint8_t>& m){check(board->enqueueMidi(m.data(),m.size()),"MIDI rejected");};
     auto discard=[&](unsigned n){for(unsigned i=0;i<n;++i)board->renderSample();};
@@ -250,6 +253,7 @@ int main(int argc,char** argv){try{
     auto snapshotDigest=[&](const auto& data){return mode=="replay"?std::string("null"):"\""+std::to_string(digest(data))+"\"";};
     std::vector<uint8_t> midiOut;uint8_t transmitted=0;while(board->popMidiOut(transmitted))midiOut.push_back(transmitted);
     if(nativeMode && !toggling)check(board->liveMidiController()->noteActions.keySearchCalls.partialEntries==0,"Native playback used the test-only partial-key adapter");
+    if(nativeMode && !toggling)check(board->liveMidiController()->bootStreamCalls.partialEntries==0,"Native playback used partial bootstrap-stream recovery");
     if(nativeMode && !toggling)check(board->liveMidiController()->faultCalls.partialEntries==0,"Native playback used partial fault recovery");
     if(nativeMode && !toggling)check(board->liveMidiController()->voiceActions.addressCalls.partialEntries==0,"Native playback used partial DSP-address recovery");
     if(nativeMode && !toggling)check(board->liveMidiController()->voiceActions.wordCalls.partialEntries==0,"Native playback used partial DSP-word recovery");
@@ -268,6 +272,12 @@ int main(int argc,char** argv){try{
         <<",\"state_digest\":"<<snapshotDigest(stateBytes)<<",\"flash_digest\":"<<snapshotDigest(flashBytes)
         <<",\"flash_revision\":"<<board->flashRevision<<",\"midi_tx_digest\":"<<snapshotDigest(midiOut)<<",\"midi_tx_bytes\":"<<midiOut.size()
         <<",\"midi_received\":"<<board->midiReceived
+        <<",\"native_boot_stream_calls_before_metrics\":"<<bootStreamStarts
+        <<",\"native_boot_stream_returns_before_metrics\":"<<bootStreamReturns
+        <<",\"native_boot_stream_test_partial_before_metrics\":"<<bootStreamPartial
+        <<",\"native_boot_stream_calls\":"<<(board->liveMidiController()?board->liveMidiController()->bootStreamCalls.started:0)
+        <<",\"native_boot_stream_returns\":"<<(board->liveMidiController()?board->liveMidiController()->bootStreamCalls.completed:0)
+        <<",\"native_boot_stream_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->bootStreamCalls.partialEntries:0)
         <<",\"native_dsp_fault_calls\":"<<(board->liveMidiController()?board->liveMidiController()->faultCalls.started:0)
         <<",\"native_dsp_fault_returns\":"<<(board->liveMidiController()?board->liveMidiController()->faultCalls.completed:0)
         <<",\"native_dsp_fault_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->faultCalls.partialEntries:0)

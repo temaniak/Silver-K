@@ -3443,3 +3443,74 @@ table initialization and remaining reset, caller/cache, parser, note/voice/
 parameter, clock/arp and state/Flash lifecycles. Remove every temporary bridge
 and shared register/flag/stack/PC model. Only then run final equality/product
 checks, compare whole-process CPU with direct H8 and push the full transfer.
+
+
+## 2026-10-16 — Mac: native DSP firmware byte stream, bootstrap parent pending
+
+Test ID: `ks-native-dsp-boot-stream-20261016`. Source parent
+`474d185f0e37b8b413651c579b9e33ddf2974c7c` plus stream task/caller changes;
+M1 Pro arm64 Release, AppleClang21/C++17, same pinned dependencies. Frozen
+source/binary manifests and private evidence are in
+`/private/tmp/ks-native-dsp-boot-stream-20261016`. Automatic approval review
+of an escalated test launch timed out; the identical frozen binaries ran with
+ordinary permissions and temporary-directory outputs. No work remains blocked
+by that transient review failure. No CPU comparison or push is performed.
+
+`DspBootStreamTask` owns logical word count (zero encodes 65,536), native byte
+cursor/latched data, live source observations after ready, retry/timeout state
+and calibrated duration. No CPU registers, flags, stack, PC or addresses occur
+in its state. The temporary bridge binds mapped three-clock ROM/Flash/SRAM
+spans and projects old callers/IRQs/traces. One-clock IO and crossing spans are
+rejected. Reads are not prefetched and a source byte can change between reads
+or after reading, without changing the already latched transmission byte.
+The 20 old body boundaries move to comparison-only code. A repeated entry
+starts the next word of the existing job, not a new partial-frame replay.
+
+Actual validation:
+
+- 132,336 complete outer calls / 63,156,160 direct original-H8 outer steps,
+  plus 112 child calls / 3,312 child steps. All byte seeds/eight retained masks,
+  both DSPs, low/high/full-tagged source pointers, live source changes, mapped/
+  clock-only fetch, odd/even SRAM frames and count edges through 65,536 words
+  match after every boundary. Values/flags/PC projection, cycles, source/data/
+  stack/return accesses and final full memory match. No reference/recovery
+  factory is linked; candidate H8 and partial recovery remain zero.
+- 1,024 IRQ save/RTE/resume points, 132,448 in-flight metric resets and eight
+  live tasks pass. Explicit child interleaving is separate from IRQ timing.
+  All 48 forced fault services execute complete native fault jobs, including
+  the boundary between 65,536 busy reads without timeout and the next busy
+  observation that times out. Stream state survives the handler unchanged.
+- 163,864 public native-task source/readiness/deadline/mutation/count cases
+  pass. Ordinary data uses 96 body clocks per no-busy word, followed by the
+  caller's 17-clock return. Insufficient intervals perform no access or
+  progress. Full timeout park/resume and multiword count wrap are checked.
+- Four complete cold/reset/warm/playback timelines, nine complete frozen H8
+  tapes (8,085,451 events) and 14 raw-audio timelines match. Audio is 6,075,618
+  frames x 24 streams / 583,259,328 bytes per side, including long Multi/pedal/
+  clock and H8 test round trips. State/Flash/MIDI/controller/DSP/serial fields
+  match. All 56 stages pass exact frozen-source identity. Each cold start and
+  each musical preparation proves both native firmware streams complete:
+  1,871 words on A and 2,840 on B, with zero test recovery/interpreter work.
+- Additional default Single/Multi cases match complete tapes/raw audio without
+  the old flags: another 362,724 frames / 34,821,504 bytes per side. No retired
+  HDI batch or partial recovery runs.
+- Allocation and ASan/UBSan probes pass 9,456 sampled outer calls plus 112
+  children, including large-count/IRQ/fault cases: zero new/new[] inside native
+  runtime steps. The new stream bridge/task are instrumented; original H8 is
+  excluded and other libraries are uninstrumented. Fresh component CTest:
+  seven pass, six skip without private ROM, zero fail (13 selected); actual
+  private calls run separately above. `ksLib` has no H8 core/decoder symbols,
+  and normal product commands exclude the comparison object.
+
+Product/callback evidence remains the earlier word-write checkpoint, not a
+fresh validation of this source. Full semantic removal and final products,
+callbacks and Windows build/private fidelity/CPU checks remain pending.
+Same synthetic Flash/zero Wave ROM/mapped markers; no new real-bank or physical
+hardware admission. DSP/JIT, Device, B/A order, clocks, resampling, buffers,
+waits, priorities and placement are unchanged. Probe CPU fields are ignored.
+
+Next: native parent header/delay/boot-ready/frequency-table setup (`0x2332`),
+then outer bootstrap/reset and the remaining controller/caller lifecycles.
+The parent still has a compatibility frame: native byte loading alone is not
+the full requested port. Delete every bridge and shared register/flag/stack/PC
+model before final equality/product checks, CPU comparison and push.

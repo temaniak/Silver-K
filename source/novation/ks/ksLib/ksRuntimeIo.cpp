@@ -8,6 +8,7 @@ using namespace controllerDetail;
 // remains external; instruction fetch reads account for original bus clocks.
 bool RuntimeController::io(ControllerCpu& h){
     if(DspFaultCalls::candidate(unsigned(h.getPC())))return shared.faultCalls.step(h);
+    if(DspBootStreamCalls::candidate(unsigned(h.getPC())))return shared.bootStreamCalls.step(h);
     auto& r=h.regs;
 #define N(P,L,...) case P:{RuntimeBoundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
     switch(unsigned(h.getPC())){
@@ -2786,26 +2787,6 @@ bool RuntimeController::io(ControllerCpu& h){
     N(0x23c8,2,f.inc(r[2].e,-1))
     N(0x23ca,2,f.branch(!(h.ccr&4),0x23b2))
     N(0x23cc,2,f.ret())
-    N(0x23ce,8,f.move(r[0].rl,h.read8(r[5].er+4)))
-    N(0x23d6,2,r[0].rl&=0x2;value(h,r[0].rl))
-    N(0x23d8,2,f.branch(!(h.ccr&4),0x23f2))
-    N(0x23da,2,r[0].e=h.sub16(r[0].e,r[0].e))
-    N(0x23dc,8,f.move(r[0].rl,h.read8(r[5].er+4)))
-    N(0x23e4,2,r[0].rl&=0x2;value(h,r[0].rl))
-    N(0x23e6,2,f.branch(!(h.ccr&4),0x23f2))
-    N(0x23e8,2,f.inc(r[0].e,-1))
-    N(0x23ea,2,f.branch(!(h.ccr&4),0x23dc))
-    N(0x23ec,4,f.call(0x2304))
-    N(0x23f0,2,f.branch(true,0x23da))
-    N(0x23f2,2,f.move(r[0].rl,h.read8(r[4].er));r[4].er+=1;h.clockI(2))
-    N(0x23f4,8,f.store8(r[5].er+10,r[0].rl))
-    N(0x23fc,2,f.move(r[0].rl,h.read8(r[4].er));r[4].er+=1;h.clockI(2))
-    N(0x23fe,8,f.store8(r[5].er+12,r[0].rl))
-    N(0x2406,2,f.move(r[0].rl,h.read8(r[4].er));r[4].er+=1;h.clockI(2))
-    N(0x2408,8,f.store8(r[5].er+14,r[0].rl))
-    N(0x2410,2,f.inc(r[3].e,-1))
-    N(0x2412,2,f.branch(!(h.ccr&4),0x23ce))
-    N(0x2414,2,f.ret())
     N(0x25fe,4,f.move(r[0].r,h.read16(0xffffe6)))
     N(0x2602,2,f.ret())
     N(0x2604,2,f.call(0x260a))

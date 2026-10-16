@@ -6,6 +6,7 @@
 #include "ksDspWordCalls.h"
 #include "ksDspAddressCalls.h"
 #include "ksDspFaultCalls.h"
+#include "ksDspBootStreamCalls.h"
 #include "ksDspTransport.h"
 #include <iostream>
 #include <memory>
@@ -46,6 +47,15 @@ int main(){try{
     ks::DspFaultCalls faults;state->pc=0x662;
     if(faults.step(*state) || faults.partialEntries || state->cycles!=123 || state->pc!=0x662)
         throw std::runtime_error("Production exposed partial fault recovery");
+    ks::DspBootStreamCalls streams;state->pc=0x23f2;
+    if(streams.step(*state) || streams.partialEntries || state->cycles!=123 || state->pc!=0x23f2)
+        throw std::runtime_error("Production exposed partial bootstrap stream recovery");
+    state->pc=0x23ce;state->regs[3].e=1;state->regs[4].er=0xffff62;
+    if(streams.step(*state) || streams.partialEntries || state->cycles!=123 || state->pc!=0x23ce)
+        throw std::runtime_error("Native firmware source admitted one-clock control IO");
+    state->regs[4].er=0x87ffff;
+    if(streams.step(*state) || streams.partialEntries || state->cycles!=123 || state->pc!=0x23ce)
+        throw std::runtime_error("Native firmware source admitted a crossing data span");
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

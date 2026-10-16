@@ -246,3 +246,16 @@ target_include_directories(ksDspFaultCalls_test PRIVATE "${ROOT}/source/cpu")
 target_link_libraries(ksDspFaultCalls_test PRIVATE ksLib)
 add_test(NAME ks_dsp_fault_calls COMMAND ksDspFaultCalls_test)
 set_tests_properties(ks_dsp_fault_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Native bootstrap streaming, independent of CPU state and private ROM.
+add_executable(ksDspBootStreamTask_test "${ROOT}/source/novation/ks/ksLib/ksDspBootStreamTask_test.cpp")
+target_link_libraries(ksDspBootStreamTask_test PRIVATE ksLib)
+add_test(NAME ks_dsp_boot_stream_properties COMMAND ksDspBootStreamTask_test)
+set_tests_properties(ks_dsp_boot_stream_properties PROPERTIES TIMEOUT 90)
+
+# Actual bootstrap stream against direct H8; no reference/recovery factory.
+add_executable(ksDspBootStreamCalls_test "${ROOT}/source/novation/ks/ksLib/ksDspBootStreamCalls_test.cpp")
+target_include_directories(ksDspBootStreamCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksDspBootStreamCalls_test PRIVATE ksLib)
+add_test(NAME ks_dsp_boot_stream_calls COMMAND ksDspBootStreamCalls_test)
+set_tests_properties(ks_dsp_boot_stream_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
