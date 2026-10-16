@@ -3768,3 +3768,65 @@ register/flag/stack/PC storage remains, so this is not the completed requested
 migration. Complete those removals before final equality/product checks,
 whole-process H8/native CPU comparison and publication to Optimized. Private
 firmware, tapes/audio/binaries and personal reports stay outside Git.
+
+
+## 2026-10-16 — Mac: native voice-slot selection/reuse and gate-off
+
+Test ID `ks-native-voice-selection-20261016`; source parent
+`0dd0fc5cf4222399c371b73a261191df70ad544a` plus selection/gate change.
+M1 Pro arm64 Release AppleClang21/C++17, same pinned dependencies. Frozen
+source/binaries and private evidence: `/private/tmp/ks-native-voice-selection-20261016`.
+No CPU comparison or push. Windows and fresh products/callbacks pending.
+
+`VoiceSelectionTask` implements the original four selection modes, held-key
+branching, live part/unison ownership, minimum/maximum unsigned packed age,
+active-age bits, strict tie behavior, repeated-note reuse, zero count encoding
+256 slots and the original release sequence. Mutable indices/slot fields are
+observed individually at their admitted clocks; lookup children return typed
+part/slot handles. A writer supplies paired-store bus latency. It requests
+existing native lookup/routing/wire children and `VoiceGateOffTask`, which owns
+the zero gate command. Native core state has no registers, condition flags,
+stack, PC or device addresses. Temporary caller projections still bind inputs,
+child responses, IRQs and trace context. The 129 old bodies move to tests.
+Selection completes at the existing population handoff; it does not claim the
+following population/voice-start calculations are already native tasks.
+
+Validation: 72 independently admitted original scenarios cover all four modes,
+held/nonheld, nine age/ownership/note shapes and 14/256-slot scans. Native
+results and own clocks match each. 8,192 independent random high-level policy
+cases and gate command/deadline properties pass. 95,226 actual selection/gate
+jobs / 71,766,674 direct original steps cover all modes, held kinds (including
+high bytes), ten age shapes, all initial flags, random ownership/note states,
+both DSPs, mapped/clock-only fetch, odd/even SRAM and live field mutations.
+Every access/value/cycle/projected state and final full memory matches. 4,398
+selected first-visited IRQ save/RTE points, 95,236 metric resets and ten nested
+jobs pass. Actual fixture links no synchronized H8/recovery factory; candidate
+interpreter and recovery counts are zero. Native gate return acknowledges its
+parent selection job without requiring another instruction at the handoff.
+The first live projection check caught missing two-clock additions for long
+branches; corrected projections now verify every native boundary's bus clocks.
+Production rejects unowned partial selector/gate states without mutation.
+
+Allocation/ASan/UBSan samples: 9,786 calls / 5,859,014 original steps, 4,398 IRQ
+points, 9,796 metric resets and ten nested jobs; zero new/new[] in native steps.
+New bridge/core instrumented, original H8 excluded, other libraries uninstrumented.
+Public component checks: one pass, one private-ROM skip, zero fail; actual
+private fixture passes separately. ksLib has no original H8 symbols and normal
+product commands exclude the comparison object.
+
+Four full cold/reset/warm variants, whole-runtime fuzzing and focused default
+Multi/FX/voice-steal/pedal full tapes/raw audio/state/Flash/MIDI/controller/DSP/
+serial checks pass exact frozen identity (nine focused stages). Every musical
+case exercises native selection/gate/velocity/part work with zero recovery.
+Verified duplicate captures are retained once with SHA-256/storage manifests;
+older cold tapes are losslessly compressed. Synthetic Flash/zero Wave/mapped
+markers retain prior limitations: no new real-bank/physical-hardware proof.
+No DSP/JIT, clock/IRQ timing, B/A order, rates, buffers, threads, waits,
+priorities or placement changes. The final large musical/product matrix and
+whole-process direct-H8/native CPU comparison wait for global model removal.
+
+Next: native selected-slot population/transposition/velocity/glide setup, then
+remaining voice startup, parameter, MIDI/parser/clock/state/reset/caller paths.
+The broad compatibility register/flags/stack/PC model is still present. Complete
+its removal before final validation and push to Optimized. Private firmware,
+raw reports/tapes/audio/binaries are not committed.

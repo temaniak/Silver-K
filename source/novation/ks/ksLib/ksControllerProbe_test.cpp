@@ -261,6 +261,7 @@ int main(int argc,char** argv){try{
     if(nativeMode && !toggling)check(!board->liveMidiController()->voiceActions.routingCalls.partialEntries,"Native playback used partial routing recovery");
     if(nativeMode && !toggling)check(!board->liveMidiController()->noteActions.partControlCalls.partialEntries && !board->liveMidiController()->voiceActions.partControlCalls.partialEntries,"Native playback used partial part-control recovery");
     if(nativeMode && !toggling)check(!board->liveMidiController()->voiceActions.velocityCurveCalls.partialEntries,"Native playback used partial velocity recovery");
+    if(nativeMode && !toggling)check(!board->liveMidiController()->voiceActions.selectionCalls.partialEntries,"Native playback used partial selection/gate recovery");
     if(nativeMode && !toggling)check(board->liveMidiController()->bootSetupCalls.partialEntries==0,"Native playback used partial bootstrap setup recovery");
     if(nativeMode && !toggling)check(board->liveMidiController()->bootStreamCalls.partialEntries==0,"Native playback used partial bootstrap-stream recovery");
     if(nativeMode && !toggling)check(board->liveMidiController()->faultCalls.partialEntries==0,"Native playback used partial fault recovery");
@@ -285,6 +286,11 @@ int main(int argc,char** argv){try{
         <<",\"native_startup_returns_before_metrics\":"<<startupReturns
         <<",\"native_dsp_reset_returns_before_metrics\":"<<resetReturns
         <<",\"native_startup_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->startupCalls.partialEntries:0)
+        <<",\"native_voice_selection_calls\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.selectionCalls.started:0)
+        <<",\"native_voice_selection_returns\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.selectionCalls.completed:0)
+        <<",\"native_gate_calls\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.selectionCalls.gateStarted:0)
+        <<",\"native_gate_returns\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.selectionCalls.gateCompleted:0)
+        <<",\"native_selection_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.selectionCalls.partialEntries:0)
         <<",\"native_velocity_calls\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.velocityCurveCalls.started:0)
         <<",\"native_velocity_returns\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.velocityCurveCalls.completed:0)
         <<",\"native_velocity_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.velocityCurveCalls.partialEntries:0)

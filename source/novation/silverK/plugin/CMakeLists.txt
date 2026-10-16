@@ -316,3 +316,14 @@ target_include_directories(ksVelocityCurveCalls_test PRIVATE "${ROOT}/source/cpu
 target_link_libraries(ksVelocityCurveCalls_test PRIVATE ksLib)
 add_test(NAME ks_velocity_curve_calls COMMAND ksVelocityCurveCalls_test)
 set_tests_properties(ks_velocity_curve_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Native voice selection/reuse/stealing and gate off, direct H8 only in fixture.
+add_executable(ksVoiceSelectionTask_test "${ROOT}/source/novation/ks/ksLib/ksVoiceSelectionTask_test.cpp")
+target_link_libraries(ksVoiceSelectionTask_test PRIVATE ksLib)
+add_test(NAME ks_voice_selection_properties COMMAND ksVoiceSelectionTask_test)
+set_tests_properties(ks_voice_selection_properties PROPERTIES TIMEOUT 90)
+add_executable(ksVoiceSelectionCalls_test "${ROOT}/source/novation/ks/ksLib/ksVoiceSelectionCalls_test.cpp")
+target_include_directories(ksVoiceSelectionCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksVoiceSelectionCalls_test PRIVATE ksLib)
+add_test(NAME ks_voice_selection_calls COMMAND ksVoiceSelectionCalls_test)
+set_tests_properties(ks_voice_selection_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)

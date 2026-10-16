@@ -73,7 +73,7 @@ The probe can optionally preallocate `SILVER_KS_AUDIO_CAPTURE` and write all
 raw native frames after rendering. That instrumented run is for correctness,
 not performance. Probe duration is bounded to 2–30 seconds.
 
-## Latest admitted Mac stage — 2026-10-16
+## Earlier CPU measurement — before semantic model removal, 2026-10-16
 
 Final AU total-process CPU, 48 kHz/256, effects, 16 held keys total,
 three alternating pairs of 16-second windows, sequential DSPs and profiling
@@ -370,3 +370,16 @@ pairs at selected curves, all flags, mutable thresholds, 298 IRQ points and
 plus Multi with both legacy flags enabled, match. No retired control/HDI
 batch executes. Allocation/sanitizer checks pass. Global register/flag/stack/PC
 removal, final product tests and CPU comparison/push remain pending.
+
+
+`VoiceSelectionTask` now owns free/oldest/owner reuse/note-retrigger policy,
+unsigned age comparisons, ties, active-age bits, 14/256-slot scans, live index
+observations and release requests. `VoiceGateOffTask` emits the original zero
+command. The 129 former selection/gate bodies are comparison-only. Native
+selection ends at the slot-population handoff; population and remaining voice
+startup/parameter work still need conversion. Admission
+`ks-native-voice-selection-20261016`: 8,192 independent random policies and
+72 original result/own-clock admissions; 95,226 actual calls / 71,766,674 direct
+original steps, 4,398 selected IRQ points and ten nested calls pass. Four cold
+variants and focused Multi/FX/steal/pedal tapes/raw audio match. No CPU comparison
+or push; the global register/flag/stack/PC model remains.
