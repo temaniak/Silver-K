@@ -4273,3 +4273,70 @@ full parameter, clock/state/reset/caller lifecycles. The production broad
 register/flags/stack/PC compatibility model still exists. Complete its removal
 before final musical/product checks, whole-process direct-H8/native CPU comparison
 and push to Optimized. Firmware/reports/tapes/audio/binaries remain private.
+
+
+## 2026-10-16 — Mac: native keyboard publication, priority, modulation and voice sweeps
+
+Test ID `ks-native-key-state-families-20261016`, source parent `e482406` plus
+this change. M1 Pro arm64 Release AppleClang21/C++17, same pinned DSP/JUCE/asmjit.
+Independent analysis subscopes `ks-native-oscillator-agent-20261016`,
+`ks-native-key-priority-agent-20261016`, `ks-native-voice-service-agent-20261016`
+and parent key fixtures retain private evidence under `/private/tmp`. Integrated
+source identities/executables are frozen with the nine-stage focused report.
+No CPU comparison, push, Windows validation or fresh product build in this step.
+
+Native `KeyActivityTask` scans physical/held words in order and retains the first
+nonzero word. `NoteOnStateTask` owns append admission, ordered note/velocity,
+late MIDI publications, counters, velocity memory and both maps; full-byte index
+aliases and child-selected part changes remain exact. `KeyCompactTask` removes
+the first duplicate and re-reads the count before publishing it. `MonoPriorityTask`
+retains signed invalid sentinels, byte distances and the original source key for
+velocity lookup. `OscillatorModulationTask` shares the four wrapped signed curve
+calculations; `GlobalModulationTask` shares six live level publications ordered
+B then A. `VoiceSweepTask` owns release-all and part retuning, live age/owner/index
+admission and native DSP children. Pure tasks have no processor registers, flags,
+stack, PC or CPU pointers. Temporary Calls bridges still project old caller/IRQ
+state. All 393 original boundaries retired by this change are comparison-only;
+remaining controller compatibility code is explicitly not a complete native port.
+
+ROM-free properties pass: activity 23,040; Note On 269,312; compaction 262,144
+and mono 262,144; oscillator modulation 786,432; global modulation 262,144.
+Independent original H8 complete-call tests, re-run through integrated production
+routing with no synchronized factory, pass:
+
+| Family | Complete calls | Original steps | Selected IRQs | Metric resets | Nested |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Activity | 92,216 | 2,654,640 | 36 | 358,732 | 12 |
+| Note On state | 28,850 | 2,558,400 | 136 | 359,602 | 12 |
+| Compaction/mono | 12,020 | 1,505,918 | 690 | 213,374 | 12 |
+| Oscillator modulation | 133,324 | 37,233,668 | 1,716 | 666,632 | 12 |
+| Global modulation | 132,298 | 31,027,656 | 690 | 529,204 | 12 |
+| Release-all/retune | 133,618 | 29,957,464 | 334 | 870,842 | 12 |
+
+Every boundary compares projected state, data/stack addresses/values/order,
+clocks and in-flight context; final memory agrees. Both fetch modes, SRAM
+alignments, full-byte notes/flags/depths, relevant count/sign/clamp/tag/part edges,
+live mutation and diagnostic reset/nesting are covered. Candidate interpreter,
+partial entries and synchronized recovery are zero. Independent agent allocation/
+ASan/UBSan samples passed for priority (1,460 calls), oscillator (2,060), global
+(1,034), sweep (2,098), with native new/new[] zero. New cores/bridges/fixtures
+instrumented, original H8 excluded, frozen libraries uninstrumented. Parent
+activity/Note On have actual differential/deadline coverage but no separate new
+sanitizer sample in this checkpoint; do not extrapolate whole-synth sanitization.
+
+Four full cold/reset/warm variants, runtime arbitrary-state comparison and
+focused Multi/FX/steal/pedal complete DSP tapes plus raw PCM and functional report
+keys pass with exact frozen identity. All newly exposed completed-task metrics
+balance; comparison-partial counters zero. Original H8 is absent from ksLib's
+symbols; test adapter remains excluded from product targets. Duplicate private
+tapes/audio were removed only after byte equality and retained hashes/canonical
+copies. Synthetic Flash/zero Wave and mapped markers are unchanged limitations;
+this is not new real-bank/physical hardware evidence. DSP sound/JIT, guest clock/
+IRQ boundaries, B/A ordering, rates/buffers, workers/waits/priorities/placement
+are unchanged.
+
+Next: remaining pitch/full-parameter calculations, Note Off/part/arp/MIDI
+handlers, timers, global voice service/state/IO/startup and caller lifecycle.
+Remove the broad production register/flag/stack/PC model before final product/
+musical validation, whole-process H8/native CPU comparison and push to Optimized.
+Private firmware/banks/audio/traces/binaries/reports stay out of Git.

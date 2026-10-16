@@ -960,3 +960,19 @@ the native task onto old callers/IRQ saves; it is transitional, not completion
 of the register/flag/stack/PC removal. The dated journal entry and private test
 ID `ks-native-parameter-calls-20261016` state actual test scopes and limitations.
 CPU comparison stays deferred until the complete semantic controller is ready.
+
+
+### Keyboard/priority/modulation/sweep admission (2026-10-16)
+
+Test ID `ks-native-key-state-families-20261016` records integrated native routes
+and exact private command/audio checks; see dated optimization log for scopes.
+New public properties/private-ROM call fixtures are registered after the H8
+reference target scan and deliberately assert `!controllerReferenceAvailable()`.
+The public call tests skip with 77 without a private OS argument. New probe
+prefixes `native_key_activity`, `native_note_on_state`, `native_key_priority`,
+`native_oscillator_modulation`, `native_global_modulation`, `native_voice_sweep`
+count jobs, returns and comparison-only partial entries. Fresh native musical
+runs reject partial recovery and check balanced completed contexts. An in-flight
+task survives diagnostic reset; counts are not elapsed time or CPU measurements.
+Pure native tasks retain no CPU model; projection bridges remain transitional.
+CPU comparisons remain deferred until the entire KS compatibility model is gone.

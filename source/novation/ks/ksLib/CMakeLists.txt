@@ -61,3 +61,21 @@ target_sources(ksLib PRIVATE ksVelocityModulationCalls.cpp)
 target_sources(ksLib PRIVATE ksGlideCalls.cpp)
 
 target_sources(ksLib PRIVATE ksVoiceStartCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksKeyActivityCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksNoteOnStateCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksOscillatorModulationCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksGlobalModulationCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksVoiceSweepCalls.cpp)
+
+
+target_sources(ksLib PRIVATE ksKeyPriorityCalls.cpp)

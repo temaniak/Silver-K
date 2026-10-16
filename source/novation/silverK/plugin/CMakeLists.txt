@@ -410,3 +410,63 @@ target_include_directories(ksVoiceStartCalls_test PRIVATE "${ROOT}/source/cpu")
 target_link_libraries(ksVoiceStartCalls_test PRIVATE ksLib)
 add_test(NAME ks_voice_start_calls COMMAND ksVoiceStartCalls_test)
 set_tests_properties(ks_voice_start_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Native keyboard activity scans, independent original H8 only in fixture.
+add_executable(ksKeyActivityTask_test "${ROOT}/source/novation/ks/ksLib/ksKeyActivityTask_test.cpp")
+target_link_libraries(ksKeyActivityTask_test PRIVATE ksLib)
+add_test(NAME ks_key_activity_properties COMMAND ksKeyActivityTask_test)
+add_executable(ksKeyActivityCalls_test "${ROOT}/source/novation/ks/ksLib/ksKeyActivityCalls_test.cpp")
+target_include_directories(ksKeyActivityCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksKeyActivityCalls_test PRIVATE ksLib)
+add_test(NAME ks_key_activity_calls COMMAND ksKeyActivityCalls_test)
+set_tests_properties(ks_key_activity_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+# Native Note On key-state publication, original H8 only in independent fixture.
+add_executable(ksNoteOnStateCalls_test "${ROOT}/source/novation/ks/ksLib/ksNoteOnStateCalls_test.cpp")
+target_include_directories(ksNoteOnStateCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksNoteOnStateCalls_test PRIVATE ksLib)
+add_test(NAME ks_note_on_state_calls COMMAND ksNoteOnStateCalls_test)
+set_tests_properties(ks_note_on_state_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+add_executable(ksNoteOnStateTask_test "${ROOT}/source/novation/ks/ksLib/ksNoteOnStateTask_test.cpp")
+target_link_libraries(ksNoteOnStateTask_test PRIVATE ksLib)
+add_test(NAME ks_note_on_state_properties COMMAND ksNoteOnStateTask_test)
+
+add_executable(ksOscillatorModulationCalls_test "${ROOT}/source/novation/ks/ksLib/ksOscillatorModulationCalls_test.cpp")
+target_include_directories(ksOscillatorModulationCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksOscillatorModulationCalls_test PRIVATE ksLib)
+add_test(NAME ks_oscillator_modulation_calls COMMAND ksOscillatorModulationCalls_test)
+set_tests_properties(ks_oscillator_modulation_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+add_executable(ksOscillatorModulationTask_test "${ROOT}/source/novation/ks/ksLib/ksOscillatorModulationTask_test.cpp")
+target_include_directories(ksOscillatorModulationTask_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksOscillatorModulationTask_test PRIVATE ksLib)
+add_test(NAME ks_oscillator_modulation_properties COMMAND ksOscillatorModulationTask_test)
+
+add_executable(ksGlobalModulationCalls_test "${ROOT}/source/novation/ks/ksLib/ksGlobalModulationCalls_test.cpp")
+target_include_directories(ksGlobalModulationCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksGlobalModulationCalls_test PRIVATE ksLib)
+add_test(NAME ks_global_modulation_calls COMMAND ksGlobalModulationCalls_test)
+set_tests_properties(ks_global_modulation_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+add_executable(ksGlobalModulationTask_test "${ROOT}/source/novation/ks/ksLib/ksGlobalModulationTask_test.cpp")
+target_include_directories(ksGlobalModulationTask_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksGlobalModulationTask_test PRIVATE ksLib)
+add_test(NAME ks_global_modulation_properties COMMAND ksGlobalModulationTask_test)
+
+add_executable(ksVoiceSweepCalls_test "${ROOT}/source/novation/ks/ksLib/ksVoiceSweepCalls_test.cpp")
+target_include_directories(ksVoiceSweepCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksVoiceSweepCalls_test PRIVATE ksLib)
+add_test(NAME ks_voice_sweep_calls COMMAND ksVoiceSweepCalls_test)
+set_tests_properties(ks_voice_sweep_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+add_executable(ksKeyPriorityCalls_test "${ROOT}/source/novation/ks/ksLib/ksKeyPriorityCalls_test.cpp")
+target_include_directories(ksKeyPriorityCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksKeyPriorityCalls_test PRIVATE ksLib)
+add_test(NAME ks_key_priority_calls COMMAND ksKeyPriorityCalls_test)
+set_tests_properties(ks_key_priority_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+add_executable(ksKeyPriorityTask_test "${ROOT}/source/novation/ks/ksLib/ksKeyPriorityTask_test.cpp")
+target_include_directories(ksKeyPriorityTask_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksKeyPriorityTask_test PRIVATE ksLib)
+add_test(NAME ks_key_priority_properties COMMAND ksKeyPriorityTask_test)

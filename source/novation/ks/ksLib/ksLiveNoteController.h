@@ -3,7 +3,10 @@
 #include "ksPartControlCalls.h"
 #include "ksKeySearchCalls.h"
 #include "ksKeyResetCalls.h"
+#include "ksKeyActivityCalls.h"
+#include "ksNoteOnStateCalls.h"
 #include "ksVoiceReleaseCalls.h"
+#include "ksKeyPriorityCalls.h"
 #include <cstdint>
 
 namespace ks {
@@ -21,12 +24,15 @@ public:
     }
     static void verify(const ControllerCpu&);
     bool step(ControllerCpu&);
-    void resetMetrics(){steps=noteOnCalls=noteOffCalls=pedalCalls=pedalReleaseCalls=0;keySearchCalls.resetMetrics();keyResetCalls.resetMetrics();releaseCalls.resetMetrics();partControlCalls.resetMetrics();}
-    void discardTransientCalls(){keySearchCalls.discardCalls();keyResetCalls.discardCalls();releaseCalls.discardCalls();partControlCalls.discardCalls();}
+    void resetMetrics(){keyPriorityCalls.resetMetrics();steps=noteOnCalls=noteOffCalls=pedalCalls=pedalReleaseCalls=0;keySearchCalls.resetMetrics();keyResetCalls.resetMetrics();keyActivityCalls.resetMetrics();noteOnStateCalls.resetMetrics();releaseCalls.resetMetrics();partControlCalls.resetMetrics();}
+    void discardTransientCalls(){keyPriorityCalls.discardCalls();keySearchCalls.discardCalls();keyResetCalls.discardCalls();keyActivityCalls.discardCalls();noteOnStateCalls.discardCalls();releaseCalls.discardCalls();partControlCalls.discardCalls();}
     KeySearchCalls keySearchCalls;
     KeyResetCalls keyResetCalls;
+    KeyActivityCalls keyActivityCalls;
+    NoteOnStateCalls noteOnStateCalls;
     VoiceReleaseCalls releaseCalls;
     PartControlCalls partControlCalls;
+    KeyPriorityCalls keyPriorityCalls;
     uint64_t steps=0,noteOnCalls=0,noteOffCalls=0,pedalCalls=0,pedalReleaseCalls=0;
 };
 }

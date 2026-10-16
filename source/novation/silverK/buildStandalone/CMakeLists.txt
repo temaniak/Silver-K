@@ -114,3 +114,21 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVelocityModulat
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksGlideCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVoiceStartCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksKeyActivityCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNoteOnStateCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksOscillatorModulationCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksGlobalModulationCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVoiceSweepCalls.cpp")
+
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksKeyPriorityCalls.cpp")
