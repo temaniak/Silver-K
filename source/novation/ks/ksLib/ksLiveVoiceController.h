@@ -3,6 +3,7 @@
 #include "ksDspWordCalls.h"
 #include "ksDspAddressCalls.h"
 #include "ksDspStartupCalls.h"
+#include "ksDspRoutingCalls.h"
 #include <cstdint>
 
 namespace ks {
@@ -18,11 +19,12 @@ public:
     }
     static void verify(const ControllerCpu&);
     bool step(ControllerCpu&);
-    void resetMetrics(){steps=allocationCalls=startCalls=releaseCalls=transportSteps=0;wordCalls.resetMetrics();addressCalls.resetMetrics();selectCalls.resetMetrics();}
-    void discardTransientCalls(){wordCalls.discardCalls();addressCalls.discardCalls();selectCalls.discardCalls();}
+    void resetMetrics(){steps=allocationCalls=startCalls=releaseCalls=transportSteps=0;wordCalls.resetMetrics();addressCalls.resetMetrics();selectCalls.resetMetrics();routingCalls.resetMetrics();}
+    void discardTransientCalls(){wordCalls.discardCalls();addressCalls.discardCalls();selectCalls.discardCalls();routingCalls.discardCalls();}
     DspWordCalls wordCalls;
     DspAddressCalls addressCalls;
     DspSelectCalls selectCalls;
+    DspRoutingCalls routingCalls;
     uint64_t steps=0,allocationCalls=0,startCalls=0,releaseCalls=0,transportSteps=0;
 };
 }

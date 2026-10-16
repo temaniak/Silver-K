@@ -3614,3 +3614,45 @@ priorities or placement changes. Raw private evidence stays outside Git.
 Next: native DSP address/voice-window preparation, then parser/voice/parameters/
 clock/state and the remaining bootstrap/caller lifecycle. The broad register/
 flag/stack/PC model still exists; this is not the complete requested migration.
+
+
+## 2026-10-16 — Mac: native DSP voice-window and command preparation
+
+Test ID `ks-native-dsp-routing-20261016`; source parent `7408f47` plus routing
+change, M1 Pro arm64 Release AppleClang21/C++17, same pinned dependencies.
+Frozen identity/binaries and private evidence: `/private/tmp/ks-native-dsp-routing-20261016`.
+No CPU comparison/push. Windows and fresh products/callbacks are pending.
+
+`DspRoutingTask` owns both signed voice/part address windows, alternate reads,
+B voice strides (101/22), A voice/base byte-difference and signed clamp (53/5),
+address mirror publication and typed child requests. Mirrors/indices are read
+live at the admitted clocks. Preserve the original unconditional address
+request even when its mirror compares equal. This is preparation and child
+orchestration, not a cached-request optimization. Absolute write preparation
+hands address-then-word to existing native wire tasks. Fifty-one old bodies are
+test-only; caller/IRQ projections still require removal with their callers.
+
+524,544 native property/deadline cases pass, including every 16-bit address,
+every A voice/base byte pair, all B voice bytes and every root. 529,238 complete
+actual calls / 13,293,680 direct original steps match every access/value/cycle,
+projected flags/state and final full memory, with all initial flags, both DSPs,
+odd/even SRAM, mapped/clock-only fetch and mid-task mirror/index mutations.
+126 selected first-visited IRQ points, 529,256 metric resets and 18 nested
+calls pass. No synchronized reference/recovery factory in the actual fixture.
+Native production rejects unowned partial routing without mutation.
+
+Allocation/ASan/UBSan sampled checks: 2,678 calls / 67,024 original steps,
+126 IRQ points, 2,696 metric resets and 18 nested calls; zero new/new[] inside
+native steps. New routing bridge/task instrumented; original H8 and other
+libraries uninstrumented. Four cold/reset/warm variants, whole-runtime fuzzing
+and focused default Multi/FX full tapes/raw audio/state/Flash/MIDI/controller/
+DSP/serial data match H8. Seven focused stages pass exact frozen source.
+The final large musical/product matrix remains deferred until global removal.
+Synthetic Flash/zero Wave limitations remain; no real-bank/physical-hardware
+proof. DSP/JIT, instruction-boundary timing, B/A order, rate adapters, buffers,
+waits, threads, priorities and placement are unchanged.
+
+Next: typed part/voice lookup and control-mirror copy, retire their historical
+register-driven batch, then remaining parser/voice/parameters/clock/state and
+reset/caller lifecycles. Broad register/flags/stack/PC state remains; this is
+not the complete requested port. Raw private evidence is not committed.

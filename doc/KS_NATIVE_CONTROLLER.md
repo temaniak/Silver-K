@@ -336,3 +336,15 @@ caller/IRQ projections still exist. Admission `ks-native-dsp-startup-20261016`:
 90 selected IRQ points, 602 metric resets and four nested jobs pass. Four cold
 variants and focused Multi/FX full tape/raw audio cases match; no H8/recovery.
 Global register/flag/stack/PC elimination and final validation remain pending.
+
+
+`DspRoutingTask` now owns DSP command preparation, both signed relative address
+windows, B voice offsets and A part voice/base clamping. All 51 old bodies are
+comparison-only. The address mirror comparison remains observational: the
+original still sends the address even on a cache hit. The temporary bridge
+publishes the typed request to the native wire tasks and retains caller/IRQ
+projections. Admission `ks-native-dsp-routing-20261016`: 524,544 native property
+cases and 529,238 complete actual calls / 13,293,680 original steps pass, including
+all 16-bit relative/read addresses and every A voice/base pair. Focused cold,
+Multi/FX tape/raw-audio and allocation/sanitizer checks pass. Global controller
+model removal remains pending; no CPU comparison or push.

@@ -90,3 +90,5 @@ endforeach()
 add_subdirectory(../plugin silverPlugin)
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksDspStartupCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksDspRoutingCalls.cpp")

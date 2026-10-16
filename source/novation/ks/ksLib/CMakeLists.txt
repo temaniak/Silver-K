@@ -37,3 +37,5 @@ target_sources(ksLib PRIVATE ksDspBootStreamCalls.cpp ksDspBootStreamCalls.h ksD
 target_sources(ksLib PRIVATE ksDspBootSetupCalls.cpp ksDspBootSetupCalls.h ksDspBootSetupTask.h)
 
 target_sources(ksLib PRIVATE ksDspStartupCalls.cpp)
+
+target_sources(ksLib PRIVATE ksDspRoutingCalls.cpp)

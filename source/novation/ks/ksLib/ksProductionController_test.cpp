@@ -66,6 +66,8 @@ int main(){try{
     if(startup.step(*state)||startup.partialEntries||state->cycles!=123||state->pc!=0x2316)throw std::runtime_error("Production exposed partial DSP startup recovery");
     ks::DspSelectCalls selector;state->pc=0x24aa;
     if(selector.step(*state)||selector.partialEntries||state->cycles!=123||state->pc!=0x24aa)throw std::runtime_error("Production exposed partial DSP select recovery");
+    ks::DspRoutingCalls routing;state->pc=0x7826;
+    if(routing.step(*state)||routing.partialEntries||state->cycles!=123||state->pc!=0x7826)throw std::runtime_error("Production exposed partial DSP routing recovery");
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

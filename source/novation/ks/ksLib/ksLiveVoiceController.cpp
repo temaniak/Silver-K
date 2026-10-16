@@ -13,6 +13,10 @@ void LiveVoiceController::verify(const ControllerCpu& h){
 }
 bool LiveVoiceController::step(ControllerCpu& h){
     auto& r=h.regs;const unsigned pc=h.getPC();
+    if(DspRoutingCalls::candidate(pc)){
+        if(!routingCalls.step(h))return false;
+        ++steps;if(pc<0x25fe)++transportSteps;return true;
+    }
     if(DspSelectCalls::candidate(pc)){
         if(!selectCalls.step(h))return false;
         ++steps;++transportSteps;return true;
@@ -33,60 +37,9 @@ bool LiveVoiceController::step(ControllerCpu& h){
     // Select DSP B/A and invalidate the sequential address cache.
     // Host write: select address, wait for transmit space, then write the
     // high/middle/low bytes of ER1 >> 8 and advance the address mirror.
-    N(0x24b2,6,f.store16(0x159f2,r[4].r))
-    N(0x24b8,4,f.call(0x2416))
-    N(0x24bc,2,f.ret())
-    N(0x24be,6,f.move(r[5].er,0x600000))
-    N(0x24c4,2,f.branch(true,0x24cc))
-    N(0x24c6,6,f.move(r[5].er,0x400000))
-    N(0x24cc,6,f.move(r[0].r,h.read16(0x159f2)))
-    N(0x24d2,2,h.sub16(r[4].r,r[0].r))
-    N(0x24d4,4,f.call(0x2416))
     // 0x77dc..0x7872: verified interruptible controller boundaries.
     // Voice/part address windows. Negative R4 selects the alternate
     // control region; selection and offset mirrors remain guest-visible.
-    N(0x77dc,6,f.move(r[0].r,h.read16(0x174a8)))
-    N(0x77e2,2,f.move(r[4].r,r[4].r))
-    N(0x77e4,2,f.branch(!(h.ccr&8),0x77ec))
-    N(0x77e6,6,f.move(r[0].r,h.read16(0x174aa)))
-    N(0x77ec,2,r[4].r=h.add16(r[4].r,r[0].r))
-    N(0x77ee,4,f.call(0x24b2))
-    N(0x77f2,2,f.ret())
-    N(0x77f4,6,f.move(r[1].rl,h.read8(0x174a7)))
-    N(0x77fa,2,r[1].r&=0xff;value(h,r[1].r))
-    N(0x77fc,4,f.move(r[0].r,0x65))
-    N(0x7800,2,r[0].er=uint16_t(r[0].er)*uint32_t(uint16_t(r[1].r));h.clockI(20))
-    N(0x7802,6,f.store16(0x174a8,r[0].r))
-    N(0x7808,4,f.move(r[0].r,0x16))
-    N(0x780c,2,r[0].er=uint16_t(r[0].er)*uint32_t(uint16_t(r[1].r));h.clockI(20))
-    N(0x780e,6,f.store16(0x174aa,r[0].r))
-    N(0x7814,4,f.call(0x248e))
-    N(0x7818,2,f.ret())
-    N(0x781a,6,f.move(r[1].rl,h.read8(0x17526)))
-    N(0x7820,6,f.move(r[0].rl,h.read8(0x167ba)))
-    N(0x7826,2,r[1].rl=h.sub8(r[1].rl,r[0].rl))
-    N(0x7828,2,f.branch(!(h.ccr&8),0x782c))
-    N(0x782a,2,f.move(r[1].rl,0x0))
-    N(0x782c,2,r[1].r&=0xff;value(h,r[1].r))
-    N(0x782e,4,f.move(r[0].r,0x35))
-    N(0x7832,2,r[0].er=uint16_t(r[0].er)*uint32_t(uint16_t(r[1].r));h.clockI(20))
-    N(0x7834,6,f.store16(0x174a8,r[0].r))
-    N(0x783a,4,f.move(r[0].r,0x5))
-    N(0x783e,2,r[0].er=uint16_t(r[0].er)*uint32_t(uint16_t(r[1].r));h.clockI(20))
-    N(0x7840,6,f.store16(0x174aa,r[0].r))
-    N(0x7846,4,f.call(0x24a0))
-    N(0x784a,2,f.ret())
-    N(0x784c,6,f.move(r[0].r,h.read16(0x174aa)))
-    N(0x7852,2,r[4].r=h.add16(r[4].r,r[0].r))
-    N(0x7854,4,f.call(0x2560))
-    N(0x7858,2,f.ret())
-    N(0x785a,6,f.move(r[0].r,h.read16(0x174a8)))
-    N(0x7860,2,f.move(r[4].r,r[4].r))
-    N(0x7862,2,f.branch(!(h.ccr&8),0x786a))
-    N(0x7864,6,f.move(r[0].r,h.read16(0x174aa)))
-    N(0x786a,2,r[4].r=h.add16(r[4].r,r[0].r))
-    N(0x786c,4,f.call(0x24cc))
-    N(0x7870,2,f.ret())
     // 0x8fc0..0x9374: verified interruptible controller boundaries.
     // Release the selected DSP voice by writing zero to its gate command.
     N(0x8fc0,2,r[1].er=h.sub32(r[1].er,r[1].er))

@@ -27,6 +27,7 @@ void same(ks::Board& a,ks::Board& b){
     check(b.h8InterpretedSteps()==0,"Native reset called original interpreter");
     check(b.liveMidiController()->noteActions.keySearchCalls.partialEntries==0,"Native reset used the test-only partial-key adapter");
     check(!b.liveMidiController()->startupCalls.partialEntries && !b.liveMidiController()->voiceActions.selectCalls.partialEntries,"Native reset used partial startup/select recovery");
+    check(!b.liveMidiController()->voiceActions.routingCalls.partialEntries,"Native reset used partial routing recovery");
     check(b.liveMidiController()->bootSetupCalls.partialEntries==0,"Native reset used partial bootstrap setup recovery");
     check(b.liveMidiController()->bootStreamCalls.partialEntries==0,"Native reset used partial bootstrap-stream recovery");
     check(b.liveMidiController()->faultCalls.partialEntries==0,"Native reset used partial fault recovery");
