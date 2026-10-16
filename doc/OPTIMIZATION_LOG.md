@@ -5263,3 +5263,47 @@ Windows claim. Private captures/ROM/binaries/reports remain outside Git.
 Next: remaining services and typed voice/state/MIDI/IRQ/scheduling wiring, remove
 all compatibility CPU state, full product and evolving music proof, then measure
 whole-process H8/native CPU on this Mac and push Optimized.
+
+
+## 2026-10-16 — Verified stop checkpoint: Extended and upper State (macOS arm64)
+
+Source52df243 plus this change; isolated codex/ks-native-controller worktree,
+same Release AppleClang21, pinned dependencies and KS2.1.02. User changed the
+instruction to STOP further migration, preserve evidence and hand off to a new
+bounded analysis task. Complete port, CPU comparison and push are no longer
+conditions for stopping. No new reverse engineering/optimization after stop.
+
+Last bounded stage removes880 old instruction bodies from production switches:
+322State (ProgramChange64,NameEditor70,BankDisplay74,DspFactoryTransfer24,
+DspFactoryReset16,DspFactoryUpload74),44TimingTables and all514 remaining
+Extended (MidiFileEvent67,MonoArp86,MidiFileTransport79,EditAddress62,EditScene72,
+EditDecision148). Old bodies stay comparison-only. Existing empty Extended
+scaffold preserved. NameEditor5340/75e0 and BankDisplay9662/9b8/976 terminal
+metadata retire after arbitration before any owner, no added clocks. Native
+Aux Noop3640 closes an actual MIDI-file descriptor target with17-clock return.
+Task cores are semantic; their Calls bridges still project into CPU state.
+
+Actual validation, all PASS before stop:
+-244-step coherent build of all affected owners and participating comparison binaries.
+-ks-native-upper-state-file-edit-components-20261016: all28Task/Calls tests plus legacy live entry; exact independent H8 accesses/clocks/state/final memory with IRQ/reset/nesting matrices.
+-ks-native-upper-state-file-edit-focused-20261016: four cold/reset/warm variants,441248normal runtime boundaries plus reset/IRQ/HDI/deadline checks, four-second Multi/FX/steal/pedal canonical complete DSP tapes/rawPCM/functional keys. All lifecycle/descriptor balances and partial-entry0 gates pass; source hashes unchanged.
+-PublicCTest28:14properties pass,14private-ROM calls skip77, no failures.
+
+Per-family results, frozen source/binary hashes and allocation/sanitizer sample
+limits are retained under those private proof IDs and agent manifests. Existing
+EditAddress/EditDecision668c commit seams and some component frozen descendants
+remain explicit limitations; no claim that all evolving edit sequences or real
+Flash hardware were validated. Factory descriptor fixture loads private ROM at
+runtime; no ROM/descriptor payload committed. Original audio is nonzero; synthetic
+Flash/zeroWave/mapped-marker limits remain. Mac validation does not validate
+Windows. Original H8 headers/static dependencies are partly uninstrumented.
+
+Full migration is NOT complete: compatibility ControllerCpu registers/CCR/EXR/
+SP/stack/PC, RuntimeBoundary and PC-directed Calls dispatch remain. CPU-free
+native graphs are checked building blocks, not the live complete controller.
+No CPU savings measured; no final product rebuild/install or final full-musical
+matrix. DSP/JIT/sound/guest timing/IRQ/B-A ordering, worker waits/priorities/
+placement, buffers/rates and Windows policy unchanged. Main checkout/host preset
+manager untouched. Private ROM/banks/traces/audio/binaries/reports stay outside
+Git. Next action is a bounded read-only architectural/status analysis and user
+decision; do not resume migration or automatically add H8 fallback.

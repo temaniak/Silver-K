@@ -337,3 +337,29 @@ target_sources(ksLib PRIVATE ksFirmwareLayoutCheckCalls.cpp)
 target_sources(ksLib PRIVATE ksSysExDumpCalls.cpp)
 
 target_sources(ksLib PRIVATE ksMidiFileTimeCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateProgramChangeCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateNameEditorCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateBankDisplayCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateDspFactoryTransferCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateDspFactoryResetCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateDspFactoryUploadCalls.cpp)
+
+target_sources(ksLib PRIVATE ksTimingTablesCalls.cpp)
+
+target_sources(ksLib PRIVATE ksMidiFileEventCalls.cpp)
+
+target_sources(ksLib PRIVATE ksMonoArpCalls.cpp)
+
+target_sources(ksLib PRIVATE ksMidiFileTransportCalls.cpp)
+
+target_sources(ksLib PRIVATE ksEditAddressCalls.cpp)
+
+target_sources(ksLib PRIVATE ksEditSceneCalls.cpp)
+
+target_sources(ksLib PRIVATE ksEditDecisionCalls.cpp)

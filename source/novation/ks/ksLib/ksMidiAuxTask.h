@@ -3,17 +3,17 @@
 namespace ks {
 class MidiAuxTask final {
 public:
- enum class Kind {Parameter,GlobalControl,Start,Continue,Program,ConditionalProgram,Stop};
+ enum class Kind {Parameter,GlobalControl,Start,Continue,Program,ConditionalProgram,Stop,Noop};
  enum class Stage {CompareLocal,AdmitLocal,CompareLocalValue,AdmitLocalValue,CopyLocal,ZeroLocal,CompareLocalThreshold,AdmitLocalThreshold,HighLocal,SkipLocal,
  CompareSelector,AdmitSelector,CaptureSelector,DispatchSelectorPart,AwaitSelectorPart,PublishSelector,FinishSelector,
  CompareEntry,AdmitEntry,CaptureEntry,DispatchEntryPart,AwaitEntryPart,ReadSelector,AdmitSelectorValue,DispatchEntry,AwaitEntry,FinishEntry,
  CaptureGenericController,CaptureGenericValue,DispatchGeneric,AwaitGeneric,FinishGeneric,
  GlobalReadController,GlobalReadValue,GlobalCompareBank,GlobalAdmitBank,GlobalCaptureBank,GlobalMaskBank,GlobalAdmitMask,GlobalDispatchPart,GlobalAwaitPart,GlobalPublishBank,GlobalFinish,
  DispatchStart,AwaitStart,FinishStart,DispatchContinue,AwaitContinue,FinishContinue,
- DispatchProgramPart,AwaitProgramPart,ReadBank,AdmitBank,SetInvalidBank,PublishInvalidBank,ReadProgram,TailProgram,FinishProgram,TailStop,HandoffProgram,HandoffStop,Complete};
+ DispatchProgramPart,AwaitProgramPart,ReadBank,AdmitBank,SetInvalidBank,PublishInvalidBank,ReadProgram,TailProgram,FinishProgram,TailStop,HandoffProgram,HandoffStop,FinishNoop,Complete};
  enum class Read {Controller,Value,EventFirst,EventSecond,Selector,Bank};
  enum class Write {Selector,Bank,InvalidateBank};
- explicit MidiAuxTask(Kind kind):kind_(kind),stage_(kind==Kind::Parameter?Stage::CompareLocal:kind==Kind::GlobalControl?Stage::GlobalReadController:kind==Kind::Start?Stage::DispatchStart:kind==Kind::Continue?Stage::DispatchContinue:kind==Kind::Stop?Stage::TailStop:Stage::DispatchProgramPart){}
+ explicit MidiAuxTask(Kind kind):kind_(kind),stage_(kind==Kind::Parameter?Stage::CompareLocal:kind==Kind::GlobalControl?Stage::GlobalReadController:kind==Kind::Start?Stage::DispatchStart:kind==Kind::Continue?Stage::DispatchContinue:kind==Kind::Stop?Stage::TailStop:kind==Kind::Noop?Stage::FinishNoop:Stage::DispatchProgramPart){}
  Kind kind()const{return kind_;}Stage stage()const{return stage_;}uint8_t part()const{return part_;}uint8_t controller()const{return controller_;}uint8_t value()const{return value_;}uint8_t localValue()const{return localValue_;}
  uint8_t selector()const{return selector_;}uint8_t bank()const{return bank_;}uint8_t program()const{return program_;}uint8_t bankMask()const{return value_&0x60;}
  bool awaitingPart()const{return stage_==Stage::AwaitSelectorPart||stage_==Stage::AwaitEntryPart||stage_==Stage::GlobalAwaitPart||stage_==Stage::AwaitProgramPart;}
@@ -27,7 +27,7 @@ public:
  case Stage::DispatchSelectorPart:case Stage::DispatchEntryPart:case Stage::DispatchEntry:case Stage::DispatchGeneric:case Stage::GlobalDispatchPart:case Stage::DispatchStart:case Stage::DispatchContinue:case Stage::DispatchProgramPart:return 20;
  case Stage::ReadSelector:case Stage::ReadBank:return 15;case Stage::PublishSelector:case Stage::GlobalPublishBank:case Stage::PublishInvalidBank:return 12+store;
  case Stage::GlobalReadController:case Stage::ReadProgram:return 6;case Stage::GlobalReadValue:return 9;case Stage::TailProgram:case Stage::TailStop:return 8;
- case Stage::FinishSelector:case Stage::FinishEntry:case Stage::FinishGeneric:case Stage::GlobalFinish:case Stage::FinishStart:case Stage::FinishContinue:case Stage::FinishProgram:return 17;
+ case Stage::FinishSelector:case Stage::FinishEntry:case Stage::FinishGeneric:case Stage::GlobalFinish:case Stage::FinishStart:case Stage::FinishContinue:case Stage::FinishProgram:case Stage::FinishNoop:return 17;
  case Stage::AwaitSelectorPart:case Stage::AwaitEntryPart:case Stage::AwaitEntry:case Stage::AwaitGeneric:case Stage::GlobalAwaitPart:case Stage::AwaitStart:case Stage::AwaitContinue:case Stage::AwaitProgramPart:case Stage::HandoffProgram:case Stage::HandoffStop:case Stage::Complete:return 0;default:return 3;}}
  template<class Reader,class Writer,class Timing>unsigned advanceBefore(unsigned available,Reader&& read,Writer&& write,Timing&& timing){unsigned used=0;while(const auto cost=nextClocks(publication()?timing(publicationOffset()):3)){
   if(cost>available-used)break;
@@ -55,7 +55,7 @@ public:
   case Stage::AdmitBank:stage_=bank_>=128?Stage::FinishProgram:Stage::SetInvalidBank;break;case Stage::SetInvalidBank:stage_=Stage::PublishInvalidBank;break;
   case Stage::PublishInvalidBank:write(Write::InvalidateBank,255);stage_=Stage::ReadProgram;break;case Stage::ReadProgram:program_=uint8_t(read(Read::EventFirst));stage_=Stage::TailProgram;break;
   case Stage::TailProgram:stage_=Stage::HandoffProgram;break;case Stage::TailStop:stage_=Stage::HandoffStop;break;
-  case Stage::FinishSelector:case Stage::FinishEntry:case Stage::FinishGeneric:case Stage::GlobalFinish:case Stage::FinishStart:case Stage::FinishContinue:case Stage::FinishProgram:stage_=Stage::Complete;break;default:break;
+  case Stage::FinishSelector:case Stage::FinishEntry:case Stage::FinishGeneric:case Stage::GlobalFinish:case Stage::FinishStart:case Stage::FinishContinue:case Stage::FinishProgram:case Stage::FinishNoop:stage_=Stage::Complete;break;default:break;
   }used+=cost;
  }return used;}
 private:Kind kind_;Stage stage_;bool normalized_=false;uint8_t part_=0,controller_=0,value_=0,localValue_=0,selector_=0,bank_=0,program_=0;

@@ -73,6 +73,19 @@
 #include "ksFirmwareLayoutCheckCalls.h"
 #include "ksSysExDumpCalls.h"
 #include "ksMidiFileTimeCalls.h"
+#include "ksStateProgramChangeCalls.h"
+#include "ksStateNameEditorCalls.h"
+#include "ksStateBankDisplayCalls.h"
+#include "ksStateDspFactoryTransferCalls.h"
+#include "ksStateDspFactoryResetCalls.h"
+#include "ksStateDspFactoryUploadCalls.h"
+#include "ksTimingTablesCalls.h"
+#include "ksMidiFileEventCalls.h"
+#include "ksMonoArpCalls.h"
+#include "ksMidiFileTransportCalls.h"
+#include "ksEditAddressCalls.h"
+#include "ksEditSceneCalls.h"
+#include "ksEditDecisionCalls.h"
 #include <cstdint>
 #include <cstddef>
 #include <utility>
@@ -179,6 +192,19 @@ public:
     FirmwareLayoutCheckCalls firmwareLayoutCheckCalls;
     SysExDumpCalls sysExDumpCalls;
     MidiFileTimeCalls midiFileTimeCalls;
+    StateProgramChangeCalls stateProgramChangeCalls;
+    StateNameEditorCalls stateNameEditorCalls;
+    StateBankDisplayCalls stateBankDisplayCalls;
+    StateDspFactoryTransferCalls stateDspFactoryTransferCalls;
+    StateDspFactoryResetCalls stateDspFactoryResetCalls;
+    StateDspFactoryUploadCalls stateDspFactoryUploadCalls;
+    TimingTablesCalls timingTablesCalls;
+    MidiFileEventCalls midiFileEventCalls;
+    MonoArpCalls monoArpCalls;
+    MidiFileTransportCalls midiFileTransportCalls;
+    EditAddressCalls editAddressCalls;
+    EditSceneCalls editSceneCalls;
+    EditDecisionCalls editDecisionCalls;
     LiveNoteController noteActions;
     LiveVoiceController voiceActions;
     ParameterScaleCalls parameterScaleCalls;
@@ -267,6 +293,19 @@ public:
         firmwareLayoutCheckCalls.resetMetrics();
         sysExDumpCalls.resetMetrics();
         midiFileTimeCalls.resetMetrics();
+        stateProgramChangeCalls.resetMetrics();
+        stateNameEditorCalls.resetMetrics();
+        stateBankDisplayCalls.resetMetrics();
+        stateDspFactoryTransferCalls.resetMetrics();
+        stateDspFactoryResetCalls.resetMetrics();
+        stateDspFactoryUploadCalls.resetMetrics();
+        timingTablesCalls.resetMetrics();
+        midiFileEventCalls.resetMetrics();
+        monoArpCalls.resetMetrics();
+        midiFileTransportCalls.resetMetrics();
+        editAddressCalls.resetMetrics();
+        editSceneCalls.resetMetrics();
+        editDecisionCalls.resetMetrics();
         nativeSteps=bytes=messages=noteOn=noteOff=controls=originalStepCalls=0;
         noteActions.resetMetrics();parameterScaleCalls.resetMetrics();faultCalls.resetMetrics();bootStreamCalls.resetMetrics();bootSetupCalls.resetMetrics();startupCalls.resetMetrics();scheduledTimerCalls.resetMetrics();serviceCycleCalls.resetMetrics();stateInitCalls.resetMetrics();voiceActions.resetMetrics();
         if(!originalPages.empty())std::fill(originalPages.begin(),originalPages.end(),0);
