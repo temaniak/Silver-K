@@ -67,9 +67,13 @@ int main(int argc,char**argv){try{
     toggle=true;byte(0x90);for(unsigned n=0;n<128;++n){byte(uint8_t(n));byte(uint8_t(random()&127));}
     byte(0xb0);for(uint8_t cc:{1,7,10,11,64,105,120,123}){byte(cc);byte(0);byte(cc);byte(127);}
     check(x.ram==y.ram,"Final MIDI RAM differs");
-    for(uint8_t unsupported:{0xa0,0xc0,0xd0,0xe0,0xf0,0xf1,0xf8,0xff}){
-        native->pc=native->makepc(0x2de8);native->regs[6].rl=int8_t(unsupported);
-        check(!controller.step(*native),"Unsupported status did not retain H8 path");
+    // All verified descriptor families now enter the same semantic decoder.
+    // Complete status/system paths are covered by MidiDecodeCalls_test; this
+    // legacy toggle fixture checks native admission through the hybrid entry.
+    for(unsigned status=0;status<256;++status){
+        controller.midiDecodeCalls.discardCalls();
+        for(auto*h:{original.get(),native.get()}){h->pc=h->makepc(0x2de8);h->regs[6].rl=int8_t(status);}
+        x.accesses.clear();y.accesses.clear();check(controller.step(*native),"Verified status was not admitted natively");original->step();same(*original,*native,x,y);
     }
     native->pc=native->makepc(0x2de8);native->regs[6].rl=int8_t(0x90);
     native->pending_irqs=1ull<<32;native->interruptPriority[32]=6;native->exr=0;
@@ -106,7 +110,7 @@ int main(int argc,char**argv){try{
             try{same(*original,*native,x,y);}catch(const std::exception&){std::cerr<<"Note transition PC="<<std::hex<<pc<<std::dec<<" sample="<<sample<<'\n';throw;}
         }
     }
-    check(noteBoundaries==462*32,"Note transition coverage differs");
+    check(noteBoundaries==506*32,"Note transition coverage differs");
     check(x.ram==y.ram,"Note transition RAM differs");
     ks::LiveVoiceController voices;uint64_t voiceBoundaries=0;
     for(unsigned pc=0;pc<0xa69e;pc+=2)if(ks::LiveVoiceController::candidate(pc)){
@@ -124,7 +128,7 @@ int main(int argc,char**argv){try{
             try{same(*original,*native,x,y);}catch(const std::exception&){std::cerr<<"Voice transition PC="<<std::hex<<pc<<std::dec<<" sample="<<sample<<'\n';throw;}
         }
     }
-    check(voiceBoundaries==640*32,"Voice transition coverage differs");
+    check(voiceBoundaries==716*32,"Voice transition coverage differs");
     check(x.ram==y.ram,"Voice transition RAM differs");
     for(unsigned pc:{0x2416,0x77f4,0x8fcc,0xa338}){
         native->pc=native->makepc(pc);native->pending_irqs=1ull<<32;
@@ -134,6 +138,6 @@ int main(int argc,char**argv){try{
         native->pending_irqs=0;
     }
     std::cout<<"PASS: "<<bytes<<" live bytes, "<<controller.messages<<" Note/CC messages, "<<steps
-        <<" decoder boundaries + "<<noteBoundaries<<" note/pedal + "<<voiceBoundaries<<" voice/transport boundaries: original H8 vs C++ registers/flags/clocks/PC and every bus access; toggle mid-message, unsupported statuses, interrupts and firmware guard\n";
+        <<" decoder boundaries + "<<noteBoundaries<<" note/pedal + "<<voiceBoundaries<<" voice/transport boundaries: original H8 vs C++ registers/flags/clocks/PC and every bus access; toggle mid-message, all status admissions, interrupts and firmware guard\n";
     return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

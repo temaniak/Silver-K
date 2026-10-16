@@ -173,3 +173,37 @@ target_sources(ksLib PRIVATE ksGlobalTimeTailCalls.cpp)
 target_sources(ksLib PRIVATE ksGlobalFinishScalarCalls.cpp)
 
 target_sources(ksLib PRIVATE ksGlobalFinalCalls.cpp)
+
+target_sources(ksLib PRIVATE ksMidiDecodeCalls.cpp)
+
+target_sources(ksLib PRIVATE ksMidiControlCalls.cpp)
+
+target_sources(ksLib PRIVATE ksMidiAuxCalls.cpp)
+
+target_sources(ksLib PRIVATE ksHardwareSetupCalls.cpp)
+
+target_sources(ksLib PRIVATE ksMidiPartInitCalls.cpp)
+
+target_sources(ksLib PRIVATE ksMidiRouteCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateFieldMapCalls.cpp)
+
+target_sources(ksLib PRIVATE ksGlobalEffectCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPartModulationCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPartRouteCalls.cpp)
+
+target_sources(ksLib PRIVATE ksVoiceFeedbackCalls.cpp)
+
+target_sources(ksLib PRIVATE ksVoiceTableInitCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateParameterEditCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStatePatchNameCalls.cpp)
+
+target_sources(ksLib PRIVATE ksStateStorageCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPartEnableCalls.cpp)
+
+target_sources(ksLib PRIVATE ksPartSignalCalls.cpp)

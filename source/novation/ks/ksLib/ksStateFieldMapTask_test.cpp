@@ -1,0 +1,18 @@
+#include "ksStateFieldMapTask.h"
+#include <iostream>
+#include <stdexcept>
+using T=ks::StateFieldMapTask;
+void check(bool b,const char* w){if(!b)throw std::runtime_error(w);}
+int main(){try{uint64_t cases=0;auto verify=[&](unsigned p,unsigned value,unsigned right,unsigned limit,unsigned mask,unsigned left,unsigned field,unsigned current,uint32_t context){T task(p,value,context);unsigned reads=0,clocks=0;const unsigned shifted=right>=8?0:value>>right;const bool accepted=p>=104&&p<=107&&shifted<limit;
+ auto read=[&](T::Read r)->uint32_t{++reads;switch(r){case T::Read::Descriptor:check(task.descriptorNumber()==p-104,"Descriptor index differs");return 0x12345678;case T::Read::RightCount:check(task.descriptorOffset()==0,"Right offset differs");return right;case T::Read::Limit:check(task.descriptorOffset()==1,"Limit offset differs");return limit;case T::Read::Mask:check(task.descriptorOffset()==2,"Mask offset differs");return mask;case T::Read::Spare:check(task.descriptorOffset()==3,"Spare offset differs");return 0xa5;case T::Read::LeftCount:check(task.descriptorOffset()==4+(shifted&254),"Pair offset differs");return left;case T::Read::Field:check(task.descriptorOffset()==5+(shifted&254),"Field offset differs");return field;case T::Read::Base:return 0x87654321;case T::Read::Current:check(task.field()==field,"Current index differs");return current;}return 0;};
+ while(!task.complete()){const auto c=task.nextClocks(),before=reads;check(c>0,"Mapper stalled");check(!task.advanceBefore(c-1,read)&&reads==before,"Early mapper read");check(task.advanceBefore(c,read)==c,"Mapper admission differs");clocks+=c;}
+ unsigned expectedClocks;T::Outcome outcome;unsigned expectedValue=value;uint32_t expectedField=context;
+ if(p<104||p>107){outcome=T::Outcome::Unmapped;expectedClocks=p<104?26:32;check(reads==0,"Unmapped read");}else if(!accepted){outcome=shifted==limit?T::Outcome::EqualLimit:T::Outcome::AboveLimit;expectedField=(context&0xffffff00)|limit;expectedClocks=96+9*right;check(reads==3,"Rejected read");}else{outcome=T::Outcome::Packed;expectedField=field;const unsigned shift=left%8;unsigned inverse=(~mask)&255;if(shift)inverse=((inverse<<shift)|(inverse>>(8-shift)))&255;expectedValue=(left>=8?0:((value&mask)<<left)&255)|(current&inverse);expectedClocks=180+9*right+12*left;check(reads==9,"Packed read");check(task.preserveMask()==inverse,"Rotate mask differs");}
+ if(clocks!=expectedClocks){std::cerr<<"clocks="<<clocks<<" expected="<<expectedClocks<<" p="<<p<<" right="<<right<<" left="<<left<<" accepted="<<accepted<<'\n';throw std::runtime_error("Mapper clocks differ");}
+ check(task.outcome()==outcome&&task.value()==expectedValue&&task.field()==expectedField,"Mapper result differs");check(!task.advanceBefore(999,read),"Complete task restarted");++cases;};
+ for(unsigned p=0;p<256;++p)for(unsigned v=0;v<256;++v)verify(p,v,p%9,(v*17+p*31)&255,(p*13+v*19)&255,(p*3+v*7)&15,(p+v)&255,(p*7+v*13)&255,0xffa12345);
+ for(unsigned right=0;right<256;++right)for(unsigned left=0;left<256;++left)for(unsigned v:{0u,1u,127u,128u,255u})verify(104,v,right,255,0x35,left,255,0xa5,0xfedcba98);
+ for(unsigned mask=0;mask<256;++mask)for(unsigned current=0;current<256;++current)for(unsigned left:{0u,1u,7u,8u,15u,255u})verify(107,(mask*17+current*23)&255,1,255,mask,left,mask,current,0xabcdef01);
+ for(unsigned limit=0;limit<256;++limit)for(unsigned v=0;v<256;++v)verify(105,v,0,limit,0x33,3,0,0x55,0xdeadbeef);
+ std::cout<<"PASS: "<<cases<<" mapper semantic properties, threshold trichotomy, all byte counts/masks/current, shifts/wrap/rotation/index, exact read deadlines/clocks\n";return 0;
+}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

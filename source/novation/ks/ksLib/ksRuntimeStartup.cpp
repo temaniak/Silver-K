@@ -6,6 +6,7 @@ using namespace controllerDetail;
 // No instruction decoder or interpreter. This remains a transitional ABI,
 // not the semantic typed-state controller required for complete removal.
 bool RuntimeController::startup(ControllerCpu& h){
+    if(HardwareSetupCalls::candidate(unsigned(h.getPC()))&&shared.hardwareSetupCalls.step(h))return true;
     auto& r=h.regs;
 #define N(P,L,...) case P:{RuntimeBoundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
     switch(unsigned(h.getPC())){
@@ -115,29 +116,6 @@ bool RuntimeController::startup(ControllerCpu& h){
     N(0x44a,6,f.move(r[6].er,0x298))
     N(0x450,4,f.call(0x9b8))
     N(0x454,2,f.branch(true,0x454))
-    N(0x456,2,f.move(r[0].rl,0x25))
-    N(0x458,2,f.store8(0xffff39,r[0].rl))
-    N(0x45a,2,f.move(r[0].rl,0x18))
-    N(0x45c,2,f.store8(0xffffac,r[0].rl))
-    N(0x45e,2,f.move(r[0].rl,0xffffffff))
-    N(0x460,4,f.store8(0xfffffeb1,r[0].rl))
-    N(0x464,2,f.move(r[0].rl,0x30))
-    N(0x466,2,f.store8(0xffff62,r[0].rl))
-    N(0x468,2,f.move(r[0].rl,0x3f))
-    N(0x46a,4,f.store8(0xfffffeb2,r[0].rl))
-    N(0x46e,2,f.move(r[0].rl,3))
-    N(0x470,4,f.store8(0xfffffeb5,r[0].rl))
-    N(0x474,2,f.move(r[0].rl,0x10))
-    N(0x476,4,f.store8(0xfffffeb9,r[0].rl))
-    N(0x47a,2,f.move(r[0].rl,0))
-    N(0x47c,2,f.store8(0xffff45,r[0].rl))
-    N(0x47e,2,f.move(r[0].rl,0xffffff8f))
-    N(0x480,4,f.store8(0xfffffebe,r[0].rl))
-    N(0x484,2,f.move(r[0].rl,1))
-    N(0x486,2,f.store8(0xffff6f,r[0].rl))
-    N(0x488,2,f.move(r[0].rl,0x1f))
-    N(0x48a,4,f.store8(0xfffffebf,r[0].rl))
-    N(0x48e,2,f.ret())
     default:return false;
     }
 #undef N

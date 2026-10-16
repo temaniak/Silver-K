@@ -4623,3 +4623,119 @@ and extended semantic owners; then replace transitional caller ABI with typed
 native scheduling and remove all production CPU registers/flags/stack/PC. Only
 then run final product/musical tests and H8-versus-entirely-native whole-process
 CPU comparison on this Mac, then push the completed source to Optimized.
+
+
+## 2026-10-16 — Native MIDI routing, state edits, DSP feedback and board/voice defaults (Mac)
+
+Source base5b668ce plus this change, isolated codex/ks-native-controller;
+Mac Apple M1 Pro arm64 Release AppleClang21/C++17, profiling off, same pinned
+DSP/JUCE/asmjit and authenticated KS OS2.1.02 as above. Frozen source/binary and
+combined proof ID: ks-native-engine-services-verified-20261016; independent
+component ID: ks-native-engine-services-components-20261016. No CPU comparison,
+Windows validation or final AU/VST3/Standalone product rebuild claimed.
+
+Another743 old production N bodies moved into H8-reference-only partial fixtures:
+MIDI302, fixed hardware setup61, state168, voice/effect services174, voice default
+initialization38. New semantic owners cover all MIDI byte/descriptor parsing,
+pitch/pressure/CC/auxiliary transport and program decisions, five part/control
+initializations, per-part MIDI dispatch/fallback/mirror, packed parameter-field
+mapping/edit, patch-name copies and current/live/multi/dirty/table bindings,
+global effect coefficient routing, modulation/routing/enable/signal jobs, DSP
+feedback and14voice initialization. Engine name data/copies are controller state;
+plugin preset-manager/UI files from the other chat were not modified.
+
+LiveMidiController's duplicate restricted80/90/B0 register-switch parser was
+removed. Shared native parser now handles the verified complete descriptor set;
+external IRQ gating remains. Raw function references occur only in transitional
+Calls projection/dispatch bridges; task cores retain semantic descriptor/handler
+flavor. This does **not** finish global CPU-model removal: remaining production
+IO/state/arp/reset/extended bodies and Calls adapters still contain old register,
+flag, stack and PC projections. No renamed interpreter is claimed as completion.
+
+Fixed hardware defaults use typed fields and ordered publications, with actual
+one-clock MMIO and adjacent-byte write history supplied by the bus adapter.
+Public properties independently test zero/one/three-cycle transport contracts;
+actual MMIO schedules retain real bus costs and pairing history.
+Voice initialization publishes112 ordered fields from14 late mapping reads,
+including original signed lower/upper note-bound split and8bit wrap.
+
+Independent full-call H8 comparisons pass each original boundary and final full
+memory: PC/register/CCR/EXR projection, IRQ/return/read-write history, ordered
+address/value/cycle/in-flight data/stack access. Factory absent, interpreter and
+partial-recovery counters zero. Both fetch modes, aligned/odd stacks, raw byte/
+word domains, relevant tagged references, late live mutations, metric resets
+and selected IRQ/nested cases are included:
+
+| Native owner | Jobs | Original steps | Selected IRQ cases |
+| --- | ---: | ---: | ---: |
+| MIDI decoder/descriptors | 144,770 | 1,757,634 | 364 |
+| MIDI control | 143,746 | 22,921,370 | 356 |
+| MIDI auxiliary | 268,030 | 2,979,002 | 216 |
+| MIDI part/control initialization | 8,292 | 23,802,174 | 88 |
+| MIDI routing | 29,814 | 4,033,568 | 1,114 |
+| Hardware setup | 4,356 | 67,316 | 244 |
+| Field mapping | 137,766 | 1,387,762 | 1,198 |
+| Parameter edit | 139,472 | 11,803,780 | 1,160 |
+| Patch names | 42,168 | 3,285,534 | 594 |
+| Storage/bindings | 789,798 | 6,312,996 | 222 |
+| Global effect | 263,476 | 62,518,724 | 1,224 |
+| Part modulation | 532,820 | 23,714,606 | 244 |
+| Part routing | 268,988 | 39,528,196 | 628 |
+| Part enable | 131,694 | 1,843,936 | 80 |
+| Part signal | 526,842 | 20,418,058 | 386 |
+| Voice feedback | 526,808 | 35,974,698 | 1,768 |
+| Voice table initialization | 24,732 | 8,799,620 | 152 |
+
+Scope limits: decoder32 system-dispatch cases stop at the actual downstream
+handler; auxiliary260,484parameter-child cases stop at6d10/6cfe. Those edit/map
+children now have separate full-call proof; arbitrary full SysEx is not thereby
+proven. Edit whole fixtures select screen mode1 to avoid repaint; pure tests
+cover both notification decisions. Modulation all256part handles use suppression;
+unsuppressed tests cover real parts0..3/all gate bytes, not arbitrary high-part
+aliasing. Existing child dependencies are distinguished in private fixtures.
+
+ROM-free properties pass: decoder256descriptor+720,896incremental jobs;
+control262,400; auxiliary458,755; initialization1,024; routing295,168;
+hardware1,024; mapper851,968; edit917,504; names589,824; storage393,216;
+effect131,072; modulation262,144; part routing131,072; enable65,536;
+signal262,144; feedback327,936; voice initialization6,144. They independently
+check arithmetic/sign/wrap/threshold/trichotomy, ordered reads/publications,
+child lifetimes, own schedules and refusal before deadlines.
+
+Native new/new[] and ASan+UBSan probes pass for delivered cores/bridges/fixtures.
+Parent hardware sample516calls/8,756steps/244IRQ/1,132resets and voice-init
+sample1,692/602,052/152/85,648 each pass allocation and sanitizer. These reduced
+flag/seed matrices retain all selected IRQ cases. Original H8 excluded, other
+linked libraries uninstrumented: not whole-synth sanitizer coverage.
+
+Legacy live/toggle fixture also passes:12,626live bytes/6,288Note/CC messages/
+315,950decoder boundaries plus16,192note and22,912voice transitions, exact all
+state/access/clocks, all status admissions and IRQ/firmware guards. Its old
+462/640boundary expectations were stale after previous native reference hooks;
+new fixed counts506/716increase tested coverage. Initial intermediate runtime
+suite failed its13766count assertion because all23pin-setup boundaries now also
+admit via shared normal IO. A separate exhaustive admission inventory found
+13,789unique supported points and no missing old body (only reset-only points
+outside normal runtime). Updated fixed count13,789 and independent reset-frame
+cleanup; no assertion weakened. Runtime now passes441,248boundary trials,
+4,128reset/overlay cases,80IRQ/mask/tie entries,1,216HDI jobs and86,016deadline
+cases/471,684reference boundaries. Initial hardware test attempt overlapped a
+relink and selected the stale executable; the frozen verified component run is
+the authoritative pass. Failed private logs retained for diagnosis.
+
+Verified nine-stage frozen suite passes four complete cold/reset/warm variants,
+runtime differential and Multi/FX/steal/pedal full DSP tapes/raw PCM/functional
+keys. New/old start/return/initial-active/handoff/active ownership balances and
+zero-partial assertions pass. Public CTest34tests: private-ROM calls skipped,
+properties pass, zero failures. Synthetic Flash/zero Wave/mapped-marker/finite
+scenario limits remain; no real-bank/physical hardware/fullSysEx or Windows
+claim. Sound/JIT, guest clocks/IRQ, B/A ordering, buffers/rates, workers/waits/
+priorities/placement unchanged. Only proven duplicate own captures removed with
+private retained canonical/hash manifests; ROM/banks/captures/binaries/reports
+stay outside Git.
+
+Next: finish remaining arp/clock, state serialization and services, panel/UART/
+reset/extended owners; eliminate all transitional caller CPU projections and
+replace them with typed native scheduling. Full product/musical validation,
+whole-process H8-vs-entirely-native CPU comparison and push remain deferred until
+the complete global removal requested by the user.

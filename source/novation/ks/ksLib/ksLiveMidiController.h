@@ -1,5 +1,16 @@
 #pragma once
 #include "ksControllerState.h"
+#include "ksMidiDecodeCalls.h"
+#include "ksMidiControlCalls.h"
+#include "ksMidiAuxCalls.h"
+#include "ksHardwareSetupCalls.h"
+#include "ksMidiPartInitCalls.h"
+#include "ksMidiRouteCalls.h"
+#include "ksStateFieldMapCalls.h"
+#include "ksVoiceTableInitCalls.h"
+#include "ksStateParameterEditCalls.h"
+#include "ksStatePatchNameCalls.h"
+#include "ksStateStorageCalls.h"
 #include <cstdint>
 #include <cstddef>
 #include <utility>
@@ -31,8 +42,19 @@ public:
     static bool candidate(unsigned pc){
         // Cheap page filter in the hot Board loop; step() validates exact PCs.
         constexpr uint64_t pages[]{0x007be03000000000ull,0x0180000000000001ull,0x0000007e001f8000ull,0x0000000000000000ull};
-        return pc<0x10000 && ((pages[pc>>14]>>((pc>>8)&63))&1);
+        return MidiPartInitCalls::candidate(pc)||MidiRouteCalls::candidate(pc)||MidiDecodeCalls::candidate(pc)||MidiControlCalls::candidate(pc)||MidiAuxCalls::candidate(pc)||(pc<0x10000 && ((pages[pc>>14]>>((pc>>8)&63))&1));
     }
+    MidiDecodeCalls midiDecodeCalls;
+    MidiControlCalls midiControlCalls;
+    MidiAuxCalls midiAuxCalls;
+    HardwareSetupCalls hardwareSetupCalls;
+    MidiPartInitCalls midiPartInitCalls;
+    MidiRouteCalls midiRouteCalls;
+    StateFieldMapCalls stateFieldMapCalls;
+    VoiceTableInitCalls voiceTableInitCalls;
+    StateParameterEditCalls stateParameterEditCalls;
+    StatePatchNameCalls statePatchNameCalls;
+    StateStorageCalls stateStorageCalls;
     LiveNoteController noteActions;
     LiveVoiceController voiceActions;
     ParameterScaleCalls parameterScaleCalls;
@@ -48,6 +70,17 @@ public:
     void delegated(unsigned pc){++originalStepCalls;if(!originalPages.empty())++originalPages[(pc&0xffffff)>>8];}
     void enableDelegationProfile(){originalPages.assign(65536,0);originalStepCalls=0;}
     void resetMetrics(){
+        midiDecodeCalls.resetMetrics();
+        midiControlCalls.resetMetrics();
+        midiAuxCalls.resetMetrics();
+        hardwareSetupCalls.resetMetrics();
+        midiPartInitCalls.resetMetrics();
+        midiRouteCalls.resetMetrics();
+        stateFieldMapCalls.resetMetrics();
+        voiceTableInitCalls.resetMetrics();
+        stateParameterEditCalls.resetMetrics();
+        statePatchNameCalls.resetMetrics();
+        stateStorageCalls.resetMetrics();
         nativeSteps=bytes=messages=noteOn=noteOff=controls=originalStepCalls=0;
         noteActions.resetMetrics();parameterScaleCalls.resetMetrics();faultCalls.resetMetrics();bootStreamCalls.resetMetrics();bootSetupCalls.resetMetrics();startupCalls.resetMetrics();scheduledTimerCalls.resetMetrics();serviceCycleCalls.resetMetrics();stateInitCalls.resetMetrics();voiceActions.resetMetrics();
         if(!originalPages.empty())std::fill(originalPages.begin(),originalPages.end(),0);
@@ -58,8 +91,6 @@ public:
     // default Windows stack when a probe explicitly enables it.
     std::vector<uint64_t> originalPages;
     uint64_t nativeSteps=0,bytes=0,messages=0,noteOn=0,noteOff=0,controls=0;
-private:
-    bool decoding=false;
-    static bool supported(uint8_t status);
+
 };
 }

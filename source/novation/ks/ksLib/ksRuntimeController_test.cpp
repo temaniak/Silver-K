@@ -65,8 +65,9 @@ int main(int argc,char** argv){try{
     native->interpreterAllowed=false;std::mt19937 random(0x4b534e52);uint64_t boundaries=0;
     for(unsigned pc=0x170;pc<0xb8e8;pc+=2){
         for(unsigned sample=0;sample<32;++sample){
-            shared.noteActions.discardTransientCalls();shared.parameterScaleCalls.discardCalls();shared.voiceActions.discardTransientCalls();shared.faultCalls.discardCalls();shared.bootStreamCalls.discardCalls();shared.bootSetupCalls.discardCalls();shared.startupCalls.discardCalls();shared.scheduledTimerCalls.discardCalls();shared.serviceCycleCalls.discardCalls();shared.stateInitCalls.discardCalls();
-            native->nativeFetchClocksOnly=bool(sample&1);
+            shared.midiDecodeCalls.discardCalls();shared.midiControlCalls.discardCalls();shared.midiAuxCalls.discardCalls();shared.hardwareSetupCalls.discardCalls();shared.midiPartInitCalls.discardCalls();shared.midiRouteCalls.discardCalls();shared.stateFieldMapCalls.discardCalls();shared.voiceTableInitCalls.discardCalls();shared.stateParameterEditCalls.discardCalls();shared.statePatchNameCalls.discardCalls();shared.stateStorageCalls.discardCalls();shared.noteActions.discardTransientCalls();shared.parameterScaleCalls.discardCalls();shared.voiceActions.discardTransientCalls();shared.faultCalls.discardCalls();shared.bootStreamCalls.discardCalls();shared.bootSetupCalls.discardCalls();shared.startupCalls.discardCalls();shared.scheduledTimerCalls.discardCalls();shared.serviceCycleCalls.discardCalls();shared.stateInitCalls.discardCalls();
+            shared.hardwareSetupCalls.discardCalls();
+        native->nativeFetchClocksOnly=bool(sample&1);
             for(unsigned i=0;i<8;++i)original->regs[i].er=native->regs[i].er=int32_t(random());
             original->pc=original->makepc(pc);native->pc=native->makepc(pc);
             original->setSP(0xfff000);native->setSP(0xfff000);
@@ -78,7 +79,8 @@ int main(int argc,char** argv){try{
             try{same(*original,*native,x,y);}catch(const std::exception&){std::cerr<<"Runtime PC="<<std::hex<<pc<<std::dec<<" sample="<<sample<<'\n';throw;}
         }
     }
-    check(boundaries==13766*32,"Native runtime boundary coverage differs");
+    // The 23 shared pin-setup boundaries now also admit through normal IO.
+    check(boundaries==13789*32,"Native runtime boundary coverage differs");
     // Reset boundaries are independently checked even for firmware-update,
     // checksum-failure, all branch outcomes and arbitrary partial frames.
     // These cases supplement full production-reset timelines.
@@ -90,6 +92,7 @@ int main(int argc,char** argv){try{
     }
     uint64_t resetCases=0;
     for(unsigned pc:{0x170u,0x180u,0x2ecu,0x2f2u,0x2f8u,0x2feu,0x300u,0x302u,0x304u,0x306u,0x30au,0x30eu,0x312u,0x314u,0x318u,0x31au,0x31eu,0x320u,0x322u,0x324u,0x326u,0x328u,0x32au,0x32eu,0x332u,0x336u,0x33au,0x33cu,0x342u,0x346u,0x34cu,0x34eu,0x350u,0x356u,0x35cu,0x360u,0x362u,0x364u,0x366u,0x368u,0x36au,0x36eu,0x374u,0x376u,0x37au,0x37eu,0x380u,0x382u,0x388u,0x38eu,0x392u,0x394u,0x396u,0x398u,0x39au,0x39cu,0x39eu,0x3a0u,0x3a6u,0x3b0u,0x3b2u,0x3b4u,0x3b6u,0x3b8u,0x3bau,0x3bcu,0x3beu,0x3c6u,0x3c8u,0x3cau,0x3ccu,0x3d0u,0x3dau,0x3dcu,0x3deu,0x3e6u,0x3e8u,0x3eau,0x3ecu,0x3eeu,0x3f0u,0x3f4u,0x3fau,0x3feu,0x400u,0x404u,0x40au,0x410u,0x414u,0x416u,0x418u,0x41au,0x41cu,0x41eu,0xffffec00u,0xffffec04u,0xffffec06u,0xffffec0au,0x430u,0x436u,0x43au,0x440u,0x446u,0x44au,0x450u,0x454u,0x456u,0x458u,0x45au,0x45cu,0x45eu,0x460u,0x464u,0x466u,0x468u,0x46au,0x46eu,0x470u,0x474u,0x476u,0x47au,0x47cu,0x47eu,0x480u,0x484u,0x486u,0x488u,0x48au,0x48eu})for(unsigned sample=0;sample<32;++sample){
+        shared.hardwareSetupCalls.discardCalls();
         native->nativeFetchClocksOnly=bool(sample&1);
         for(unsigned i=0;i<8;++i)original->regs[i].er=native->regs[i].er=int32_t(random());
         for(auto* h:{original.get(),native.get()}){
