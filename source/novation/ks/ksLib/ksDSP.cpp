@@ -163,6 +163,15 @@ namespace ks
         return cycles() - initialCycles;
     }
 
+    void DSP::catchUpToCycle(const int64_t target)
+    {
+        while (int64_t(cycles()) < target)
+        {
+            discardAudio();
+            step(1);
+        }
+    }
+
     bool DSP::popAudioFrame(AudioFrame& frame)
     {
         if (m_audioRead == m_audioWrite) return false;

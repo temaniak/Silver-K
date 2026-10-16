@@ -24,7 +24,7 @@ public:
  void rescan(std::function<void()> completed={});
  bool isSourceEnabled(const pluginLib::patchDB::DataSource&)const override;
  void addFactory(const std::vector<std::vector<uint8_t>>&,const juce::String&);
- void requestBankSources(std::function<void(std::vector<pluginLib::patchDB::DataSourceNodePtr>&&) >);
+ void requestBankSources(std::function<void(std::vector<pluginLib::patchDB::DataSourceNodePtr>&&) >,bool hideKSDrums=false);
 protected:
  void onLoadFinished()override;
 private:

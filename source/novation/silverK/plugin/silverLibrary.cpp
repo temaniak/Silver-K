@@ -33,7 +33,7 @@ juce::String patchName(const Patch& patch){
 }
 std::shared_ptr<Library> sharedLibrary(const juce::File& dir){static std::mutex mutex;static std::map<juce::String,std::weak_ptr<Library>> instances;std::lock_guard guard(mutex);auto& weak=instances[dir.getFullPathName()];if(auto existing=weak.lock())return existing;auto library=std::make_shared<Library>(dir);weak=library;return library;}
 
-Library::Library(const juce::File& dir):DB(dir),importVersion(dir.getChildFile("silver-import-version.txt")),sourceSettings(dir.getChildFile("silver-sources.json")),migrateImports(importVersion.loadFileAsString().trim()!="4"){
+Library::Library(const juce::File& dir):DB(dir),importVersion(dir.getChildFile("silver-import-version.txt")),sourceSettings(dir.getChildFile("silver-sources.json")),migrateImports(importVersion.loadFileAsString().trim()!="5"){
  const auto saved=juce::JSON::parse(sourceSettings);managedFolder=saved["managedFolder"].toString();
  if(const auto* paths=saved["excluded"].getArray())for(const auto& path:*paths)if(juce::File::isAbsolutePath(path.toString()))excludedPaths.insert(path.toString());
  if(const auto* paths=saved["included"].getArray())for(const auto& path:*paths)if(juce::File::isAbsolutePath(path.toString()))includedPaths.insert(path.toString());
@@ -46,10 +46,14 @@ Library::Library(const juce::File& dir):DB(dir),importVersion(dir.getChildFile("
  if(migrateImports)runOnLoaderThread([this]{std::vector<DataSourceNodePtr> sources;getDataSources(sources);for(const auto& ds:sources)if(ds->origin==DataSourceOrigin::Manual && (ds->type==SourceType::File || ds->type==SourceType::Folder) && juce::File(ds->name).exists())refreshDataSource(ds);});
 }
 Library::~Library(){stopLoaderThread();}
-void Library::onLoadFinished(){if(migrateImports && importVersion.replaceWithText("4\n"))migrateImports=false;}
+void Library::onLoadFinished(){if(migrateImports && importVersion.replaceWithText("5\n"))migrateImports=false;}
 PatchPtr Library::initializePatch(Data&& data,const std::string& fallback){const auto original=data;std::string importedName;const bool vStation=unpackVStationPatch(data,importedName);if(!vStation)unpackNamedRecord(data,importedName);if(!validPatch(data))return {};auto p=std::make_shared<Patch>();const auto model=modelOf(data);p->sysex=std::move(data);p->bank=p->sysex[11];p->program=p->sysex[12];const bool perf=p->sysex.size()==1038;const unsigned offset=perf?192:(model==Model::KS || model==Model::XStation)?151:0;
  if(model==Model::KS || model==Model::XStation){juce::String name;for(unsigned i=offset;i<offset+16;++i){auto c=p->sysex[13+i];name+=juce::String::charToString(c>=32 && c<127?c:' ');}p->name=name.trim().toStdString();}if(!importedName.empty())p->name=importedName;if(p->name.empty()){const auto stem=juce::String(fallback).trim();p->name=(stem.isNotEmpty()?stem:numberedName(vStation?Model::VStation:model,p->bank*100+p->program+1)).toStdString();}
- p->tags.add(TagType::CustomA,modelName(vStation?Model::VStation:model).toStdString());p->tags.add(TagType::Category,perf?"Performance":"Program");p->setHashFromMessages(13,1);if(vStation){
+ if(drumMap(p->sysex.data(),p->sysex.size())){
+  juce::String name;for(unsigned i=151;i<167;++i){const auto c=p->sysex[49*270+13+i];name+=juce::String::charToString(c>=32 && c<127?c:' ');}
+  p->name=("Drum Map "+juce::String(p->bank)+(name.trim().isNotEmpty()?" - "+name.trim():juce::String{})).toStdString();
+ }
+ p->tags.add(TagType::CustomA,modelName(vStation?Model::VStation:model).toStdString());p->tags.add(TagType::Category,patchType(p->sysex.data(),p->sysex.size()).toStdString());p->setHashFromMessages(13,1);if(vStation){
  const auto label=juce::String(importedName).trim();const auto suffix=label.substring(5);
  if(p->sysex[7]==1 && (label.isEmpty() || (label.startsWithIgnoreCase("User ") && suffix.isNotEmpty() && suffix.containsOnly("0123456789"))))p->tags.add(TagType::CustomB,"V-Station user slot");
  p->tags.add(TagType::Tag,"V-Station");const baseLib::MD5 digest(original.data(),uint32_t(original.size()));std::memcpy(p->hash.data(),digest.getWords().data(),p->hash.size());}return p;}
@@ -103,13 +107,20 @@ void Library::rescan(std::function<void()> completed){
   runOnLoaderThread([this,completed]{if(completed)runOnUiThread(completed);});
  });
 }
-void Library::requestBankSources(std::function<void(std::vector<DataSourceNodePtr>&&) > callback){
+void Library::requestBankSources(std::function<void(std::vector<DataSourceNodePtr>&&) > callback,bool hideKSDrums){
  // Read the import tree on its owning loader thread. Individual files remain
  // searchable in the table; only collections belong in the bank selector.
- runOnLoaderThread([this,callback=std::move(callback)]()mutable{
+ runOnLoaderThread([this,callback=std::move(callback),hideKSDrums]()mutable{
   std::vector<DataSourceNodePtr> all,banks;getDataSources(all);std::set<DataSourceNodePtr> populatedFolders;
   for(const auto& ds:all)if(!ds->patches.empty())for(auto parent=ds->getParent();parent;parent=parent->getParent())populatedFolders.insert(parent);
   for(const auto& ds:all)if((ds->type==SourceType::Folder && (ds->origin==DataSourceOrigin::Manual || populatedFolders.count(ds))) || (ds->type==SourceType::File && (ds->patches.size()>1 || ds->origin==DataSourceOrigin::Manual || juce::File(ds->name).hasFileExtension("fxb;zip"))) || ((ds->type==SourceType::LocalStorage || ds->type==SourceType::Rom) && !ds->patches.empty()))banks.push_back(ds);
+  if(hideKSDrums){
+   std::set<DataSourceNodePtr> populated,playable;
+   for(const auto& ds:all)for(const auto& patch:ds->patches)for(auto node=ds;node;node=node->getParent()){
+    populated.insert(node);if(!ksDrum(patch->sysex.data(),patch->sysex.size()))playable.insert(node);
+   }
+   banks.erase(std::remove_if(banks.begin(),banks.end(),[&](const auto& ds){return populated.count(ds) && !playable.count(ds);}),banks.end());
+  }
   runOnUiThread([callback=std::move(callback),banks=std::move(banks)]()mutable{callback(std::move(banks));});
  });
 }
@@ -139,6 +150,8 @@ bool Library::parseFileData(DataList& output,const Data& input,const std::string
    append(std::move(program));
   }
  }
+ std::vector<std::vector<uint8_t>> imported;for(size_t i=before;i<output.size();++i)imported.emplace_back(output[i].begin(),output[i].end());
+ output.resize(before);for(auto& bytes:groupDrumMaps(imported))output.emplace_back(bytes.begin(),bytes.end());
  return output.size()!=before;
 }
 bool Library::loadFile(DataList& data,const std::string& path){
@@ -161,5 +174,5 @@ bool Library::loadFile(DataList& data,const std::string& path){
  return data.size()!=before;
 }
 
-void Library::addFactory(const std::vector<std::vector<uint8_t>>& data,const juce::String& name){DataSource ds;ds.type=SourceType::LocalStorage;ds.origin=DataSourceOrigin::Manual;ds.name=name.toStdString();std::vector<PatchPtr> patches;for(const auto& bytes:data)if(auto p=createPatch(Data(bytes.begin(),bytes.end()),name.toStdString()))patches.push_back(p);replaceLocalStorage(ds,patches);}
+void Library::addFactory(const std::vector<std::vector<uint8_t>>& data,const juce::String& name){DataSource ds;ds.type=SourceType::LocalStorage;ds.origin=DataSourceOrigin::Manual;ds.name=name.toStdString();std::vector<PatchPtr> patches;for(const auto& bytes:groupDrumMaps(data))if(auto p=createPatch(Data(bytes.begin(),bytes.end()),name.toStdString()))patches.push_back(p);replaceLocalStorage(ds,patches);}
 }

@@ -5,14 +5,48 @@ juce::String semanticId(const juce::String& id){if(id=="amp_attack" || id=="amp_
 
 Model modelOf(const uint8_t* p,size_t size){if(!p || size<14 || p[0]!=0xf0 || p[1]!=0 || p[2]!=0x20 || p[3]!=0x29 || p[4]!=1)return Model::Unknown;switch(p[5]){case 0x40:return Model::AStation;case 0x41:return Model::KStation;case 0x42:if(p[9]==0x10 && p[10]==0)return Model::XStation;return p[9]==0x11 && p[10]==2?Model::KS:Model::Unknown;default:return Model::Unknown;}}
 juce::String modelName(Model m){switch(m){case Model::KStation:return "K-Station";case Model::KS:return "KS";case Model::AStation:return "A-Station";case Model::XStation:return "X-Station";case Model::VStation:return "V-Station";default:return "Unknown";}}
-bool validPatch(const uint8_t* p,size_t size){const auto m=modelOf(p,size);const bool program=(m==Model::KStation || m==Model::AStation)?size==142:(m==Model::KS || m==Model::XStation) && size==270;const bool performance=m==Model::KS && size==1038;return (program || performance) && p[size-1]==0xf7 && std::all_of(p+1,p+size-1,[](uint8_t b){return b<128;}) && (program?(p[7]==0 || p[7]==1):(p[7]==2 || p[7]==3));}
+bool drumMap(const uint8_t* p,size_t size){
+ if(!p || size!=DrumMapSize)return false;
+ const auto bank=p[11];if(bank<5 || bank>8)return false;
+ for(unsigned n=0;n<50;++n){const auto* frame=p+n*270;
+  if(!validPatch(frame,270) || modelOf(frame,270)!=Model::KS || frame[7]!=1 || frame[11]!=bank || frame[12]!=n)return false;
+ }return true;
+}
+bool validPatch(const uint8_t* p,size_t size){if(size==DrumMapSize)return drumMap(p,size);const auto m=modelOf(p,size);const bool program=(m==Model::KStation || m==Model::AStation)?size==142:(m==Model::KS || m==Model::XStation) && size==270;const bool performance=m==Model::KS && size==1038;return (program || performance) && p[size-1]==0xf7 && std::all_of(p+1,p+size-1,[](uint8_t b){return b<128;}) && (program?(p[7]==0 || p[7]==1):(p[7]==2 || p[7]==3));}
+unsigned ksBank(const uint8_t* p,size_t size){
+ if(modelOf(p,size)!=Model::KS)return 0;
+ if(size==1038 && (p[7]==2 || p[7]==3))return 9;
+ if((size==270 || size==DrumMapSize) && p[7]==1 && p[11]>=1 && p[11]<=8 && p[12]<(p[11]<=4?100:50))return p[11];
+ return 0;
+}
+bool ksDrum(const uint8_t* p,size_t size){const auto bank=ksBank(p,size);return bank>=5 && bank<=8;}
+juce::String patchType(const uint8_t* p,size_t size){
+ if(size==DrumMapSize && drumMap(p,size))return "Drum Map";
+ if(ksDrum(p,size))return p[12]==49?"Drum Map FX":"Drum sound";
+ return size==1038?"Performance":"Program";
+}
+std::vector<std::vector<uint8_t>> groupDrumMaps(const std::vector<std::vector<uint8_t>>& input){
+ std::array<std::array<int,50>,4> slots{};for(auto& bank:slots)bank.fill(-1);
+ std::array<bool,4> duplicate{};
+ for(size_t i=0;i<input.size();++i){const auto& frame=input[i];if(frame.size()!=270 || !validPatch(frame) || !ksDrum(frame.data(),frame.size()))continue;
+  auto& slot=slots[frame[11]-5][frame[12]];if(slot>=0)duplicate[frame[11]-5]=true;else slot=int(i);
+ }
+ std::vector<std::vector<uint8_t>> output;std::array<bool,4> emitted{};
+ for(const auto& frame:input){if(frame.size()==270 && validPatch(frame) && ksDrum(frame.data(),frame.size())){
+   const unsigned bank=frame[11]-5;const auto& indices=slots[bank];
+   if(!duplicate[bank] && std::all_of(indices.begin(),indices.end(),[](int i){return i>=0;})){
+    if(!emitted[bank]){std::vector<uint8_t> map;map.reserve(DrumMapSize);for(int i:indices)map.insert(map.end(),input[i].begin(),input[i].end());output.push_back(std::move(map));emitted[bank]=true;}continue;
+   }
+  }output.push_back(frame);
+ }return output;
+}
 std::vector<ksPlugin::Control> kControls(){std::vector<ksPlugin::Control> result;for(const auto& s:kstation::controls::Catalog)result.push_back({s.id,s.label,s.group,s.section,s.mapping==kstation::controls::Mapping::CC?ksPlugin::Mapping::CC:ksPlugin::Mapping::NRPN,s.number,s.minimum,s.maximum,s.defaultValue,s.patchOffset,s.patchMask,s.patchShift,s.wireMask,s.wireShift,s.enumLabels,s.enumCount,s.displayOffset});return result;}
 namespace {
 void encode(const ksPlugin::Control& c,uint8_t* p,int v){if(c.patchOffset>=0)p[c.patchOffset]=uint8_t((p[c.patchOffset]&~c.patchMask)|((v<<c.patchShift)&c.patchMask));}
 int readValue(const ksPlugin::Control& c,const uint8_t* p){return c.patchOffset<0?c.defaultValue:(p[c.patchOffset]&c.patchMask)>>c.patchShift;}
 }
 Conversion convertPatch(const uint8_t* input,size_t size,Model target,unsigned part){
- Conversion out;if(!validPatch(input,size) || (target!=Model::KS && target!=Model::KStation))return out;const auto source=modelOf(input,size);
+ Conversion out;if(!validPatch(input,size) || size==DrumMapSize || (target==Model::KStation && ksDrum(input,size)) || (target!=Model::KS && target!=Model::KStation))return out;const auto source=modelOf(input,size);
  // A/K share the complete 128-byte sound format. X/KS share the 256-byte
  // synth format. Normalize the transport header, retaining the original library dump.
  if(source==Model::AStation || source==Model::XStation){

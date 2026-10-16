@@ -12,6 +12,10 @@ struct State {
     bool performance=false;
     uint8_t globalChannel=0, activeMask=1;
 };
+inline std::array<uint8_t,5> singleSelection(const uint8_t* program,uint8_t channel){
+    const auto bank=program[187];const bool drum=bank>=5 && bank<=8 && program[188]<50;
+    return {uint8_t(0xb0|(channel&15)),32,uint8_t(drum?32+bank:33),uint8_t(0xc0|(channel&15)),uint8_t(drum?program[188]:0)};
+}
 // Canonical SysEx packing of the controller's unpacked editing mirrors.
 // OS 2.1.02: unpack 0x6726, pack 0x687e, performance serialization 0x71ba.
 inline void packMirrors(Program& p) {

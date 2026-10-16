@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+import platform
 from pathlib import Path
 import statistics
 import subprocess
@@ -24,12 +25,15 @@ def main():
     p.add_argument('--reference-executable', type=Path, help='Optional frozen original-H8 fixture (records its identity; legacy state snapshots may be unavailable)')
     p.add_argument('--output', type=Path, default=Path('output/perf-live-controller'))
     p.add_argument('--repeats', type=int, default=3)
-    p.add_argument('--scenarios', nargs='+', choices=['single', 'multi', 'midi', 'pedal', 'controls', 'state', 'clock', 'steal'], default=['single', 'multi', 'midi', 'pedal'])
+    p.add_argument('--scenarios', nargs='+', choices=['single', 'multi', 'midi', 'pedal', 'controls', 'state', 'clock', 'steal', 'fx'], default=['single', 'multi', 'midi', 'pedal'])
     p.add_argument('--seconds', type=float, default=4., help='Same bounded 2..4 s work for bus/audio/CPU')
     p.add_argument('--dsp-threads', choices=['1', '2'], default='1')
     p.add_argument('--controller', choices=['hybrid', 'native'], default='hybrid', help='Staged hybrid or full native post-boot execution')
+    p.add_argument('--dsp-transport', choices=['compat', 'events'], default='compat', help='Native HDI compatibility boundaries or timed live protocol jobs')
     p.add_argument('--toggle', action='store_true', help='Disable at 0.65 s and re-enable at 0.95 s')
     args = p.parse_args()
+    if args.dsp_transport == 'events' and args.controller != 'native':
+        p.error('Event DSP transport requires the full native controller')
     if args.repeats < 1 or not 2 <= args.seconds <= 4 or any(not v.is_file() for v in [args.executable, args.ks_rom, args.flash, args.wave]):
         p.error('Positive repeats and existing executable/private inputs required')
     if args.reference_executable and not args.reference_executable.is_file():
@@ -42,7 +46,9 @@ def main():
         executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest(),
         reference_executable_sha256=hashlib.sha256(reference.read_bytes()).hexdigest(),
         runner_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
-        started_utc=datetime.now(timezone.utc).isoformat(), controller=args.controller, dsp_threads=args.dsp_threads, toggle=args.toggle, seconds=args.seconds,
+        started_utc=datetime.now(timezone.utc).isoformat(), platform=platform.platform(), architecture=platform.machine(),
+        cpu_measurement=('whole-process user+kernel; render only' if os.name == 'nt' or platform.system() == 'Darwin' else 'unavailable'),
+        controller=args.controller, dsp_transport=args.dsp_transport, dsp_threads=args.dsp_threads, toggle=args.toggle, seconds=args.seconds,
         comparison=('original H8 vs full native post-boot C++ control flow; no H8 fallback' if args.controller == 'native' else 'original H8 vs staged hybrid C++ controller')), indent=2))
     print('Local results:', root, flush=True)
     rows, summaries = [], []
@@ -51,9 +57,10 @@ def main():
         folder = root / tag
         folder.mkdir()
         env = os.environ.copy()
-        for name in ('SILVER_WORKER_WAIT', 'SILVER_KS_WORKER_CORES', 'SILVER_KS_DSP_THREADS', 'SILVER_KS_CONTROLLER'):
+        for name in ('SILVER_WORKER_WAIT', 'SILVER_KS_WORKER_CORES', 'SILVER_KS_DSP_THREADS', 'SILVER_KS_CONTROLLER', 'SILVER_KS_DSP_TRANSPORT'):
             env.pop(name, None)
         env['SILVER_KS_DSP_THREADS'] = args.dsp_threads
+        env['SILVER_KS_DSP_TRANSPORT'] = args.dsp_transport
         report, tape = folder / 'report.json', folder / 'bus.kst'
         print('Running', tag, flush=True)
         with (folder / 'fixture.log').open('w', encoding='utf-8') as log:
@@ -109,6 +116,8 @@ def main():
                             raise ValueError('Native mode did not establish H8-free execution')
                         if not args.toggle and current.get('h8_interpreted_steps_after_boot', -1) != 0:
                             raise ValueError('H8 executed during native post-boot preparation/playback')
+                        if args.dsp_transport == 'events' and (current.get('transport_jobs', 0) == 0 or current.get('transport_job_boundaries', 0) == 0):
+                            raise ValueError('Native event transport did not execute live protocol jobs')
         summary = dict(scenario=scenario, full_bus_bytes_identical=True, state_flash_midi_snapshots_compared=snapshot_available,
                        audio_and_guest_counters_identical=True, frames=before['frames'],
                        audio_hash=before['audio_hash'], trace_events=before['trace_events'],
@@ -125,14 +134,16 @@ def main():
                        native_runtime_steps=after.get('native_runtime_steps'),
                        native_interrupt_entries=after.get('native_interrupt_entries'),
                        h8_interpreted_steps_after_boot=after.get('h8_interpreted_steps_after_boot'),
-                       h8_interpreted_steps_since_handoff=after.get('h8_interpreted_steps_since_handoff'))
+                       h8_interpreted_steps_since_handoff=after.get('h8_interpreted_steps_since_handoff'),
+                       dsp_transport=args.dsp_transport, transport_jobs=after.get('transport_jobs', 0),
+                       transport_job_boundaries=after.get('transport_job_boundaries', 0))
         for mode in ['h8', candidate]:
             group = [r['report'] for r in rows if r['scenario'] == scenario and r['mode'] == mode]
             summary['modes'][mode] = dict(runs=len(group),
                 cpu_seconds=[r['cpu_seconds'] for r in group], wall_seconds=[r['wall_seconds'] for r in group],
                 median_cpu_seconds=statistics.median(r['cpu_seconds'] for r in group),
                 median_wall_seconds=statistics.median(r['wall_seconds'] for r in group))
-        if os.name == 'nt':
+        if os.name == 'nt' or platform.system() == 'Darwin':
             summary['cpu_change_percent'] = (summary['modes'][candidate]['median_cpu_seconds'] /
                                              summary['modes']['h8']['median_cpu_seconds'] - 1) * 100
         summaries.append(summary)

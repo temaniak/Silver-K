@@ -26,8 +26,8 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
   try{board=std::make_unique<Board>(os,bank,flash,true);if(!board->boot())throw std::runtime_error("KS controller boot timeout");
    if(controllerMode()==ControllerMode::Native)board->enableNativeController();else if(controllerMode()==ControllerMode::Hybrid)board->enableLiveMidiController();
    if(program.size()==270 || program.size()==1038){
-    const uint8_t select[]{uint8_t(0xb0|(flash[0x1ff08]&15)),32,uint8_t(program.size()==1038?65:33),uint8_t(0xc0|(flash[0x1ff08]&15)),0};
-    board->enqueueMidi(select,sizeof(select));board->enqueueMidi(program.data(),program.size());
+    auto select=singleSelection(program.data()+13,flash[0x1ff08]);if(program.size()==1038){select[2]=65;select[4]=0;}
+    board->enqueueMidi(select.data(),select.size());board->enqueueMidi(program.data(),program.size());
     if(program.size()==270){const auto metadata=singleMetadata(program.data()+13,flash[0x1ff08]);board->enqueueMidi(metadata.data(),metadata.size());}
     for(unsigned n=0;n<20000;++n)board->renderSample();}
    // Compile ordinary voice branches before opening audio. Keep warm-up notes
@@ -60,7 +60,7 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
    for(unsigned n=0;n<8192;++n)board->renderSample();
    for(uint8_t part=0;part<PartCount;++part){for(uint8_t note:{36,60,69,96}){const uint8_t off[]{uint8_t(0x80|part),note,0};board->enqueueMidi(off,3);}const uint8_t off[]{uint8_t(0xb0|part),120,0};board->enqueueMidi(off,3);}
    for(unsigned n=0;n<45340;++n)board->renderSample();
-   if(!originalState.performance){const uint8_t select[]{uint8_t(0xb0|channel),32,33,uint8_t(0xc0|channel),0};board->enqueueMidi(select,sizeof(select));}
+   if(!originalState.performance){const auto select=singleSelection(originalState.parts[0].data(),channel);board->enqueueMidi(select.data(),select.size());}
    board->enqueueMidi(original.data(),original.size());
    if(!originalState.performance){const auto metadata=singleMetadata(originalState.parts[0].data(),channel);board->enqueueMidi(metadata.data(),metadata.size());}
    for(unsigned n=0;n<20000;++n)board->renderSample();

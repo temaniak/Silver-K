@@ -304,13 +304,42 @@ void Processor::processK(KEngine& engine,juce::AudioBuffer<float>& audio,juce::M
 bool Processor::activatePatch(const pluginLib::patchDB::PatchPtr& patch,juce::String& error){return activatePatchForPart(patch,currentPart(),error);}
 bool Processor::activatePatchForPart(const pluginLib::patchDB::PatchPtr& patch,unsigned part,juce::String& error){
  if(part>=ks::PartCount){error="Invalid part";return false;}
- if(!patch || !firmwareReady()){error="Load firmware first";return false;}auto converted=convertPatch(patch->sysex,isKStation()?Model::KStation:Model::KS,part);if(converted.data.empty()){error="Unsupported or malformed program dump";return false;}
+ if(!patch || !firmwareReady()){error="Load firmware first";return false;}
+ const auto& source=patch->sysex;
+ if(ksDrum(source.data(),source.size())){
+  if(isKStation()){error="Drum Maps require KS firmware";return false;}
+  if(!validPatch(source)){error="Malformed KS Drum Map";return false;}
+  std::lock_guard lock(controlMutex);if(!ownedDevice){error="Load KS firmware first";return false;}
+  const auto bankNumber=source[11];const bool complete=drumMap(source.data(),source.size());
+  const auto saved=ownedDevice->saveFlash();const size_t offset=0x20000-0x1fc00+(400+(bankNumber-5)*50)*256;
+  // A partial dump cannot supply the other keys or shared effects. It is safe
+  // to select it only when it matches the instance's already loaded bank.
+  const size_t soundOffset=offset+source[12]*256;
+  if(!complete && (saved.size()<soundOffset+256 || !std::equal(source.begin()+13,source.begin()+269,saved.begin()+soundOffset))){error="Import the complete Drum Map (49 sounds + effects), or load its KS factory data in Setup";return false;}
+  bool sameBank=saved.size()>=offset+50*256;
+  if(complete && sameBank)for(unsigned n=0;n<50;++n)if(!std::equal(source.begin()+n*270+13,source.begin()+n*270+269,saved.begin()+offset+n*256)){sameBank=false;break;}
+  std::vector<uint8_t> bytes;
+  if(complete && !sameBank){bytes.assign(source.begin(),source.end());for(unsigned n=0;n<50;++n){bytes[n*270+6]=0x7f;bytes[n*270+8]=1;}}
+  const auto state=ownedDevice->fullSnapshot();const uint8_t number=complete?0:source[12];
+  if(state.performance){
+   auto next=state;auto& target=next.parts[part];
+   // The firmware uses 187/188 to retain each part's drum-bank identity.
+   // All keys read the bank in guest Flash; shared effects live in slot 49.
+   if(complete)std::copy_n(source.data()+49*270+13,179,target.begin());
+   else std::copy_n(source.data()+13,179,target.begin());
+   target[187]=bankNumber;target[188]=number;
+   const auto message=ks::stateMessage(next);bytes.insert(bytes.end(),message.begin(),message.end());
+  }else{const auto channel=controlChannel.load();bytes.insert(bytes.end(),{uint8_t(0xb0|channel),32,uint8_t(32+bankNumber),uint8_t(0xc0|channel),number});}
+  if(!queueUiMidi(bytes.data(),bytes.size())){error="Preset queue is full";return false;}
+  resetPending();if(part==currentPart())currentPatch=patchName(*patch);error.clear();return true;
+ }
+ auto converted=convertPatch(source,isKStation()?Model::KStation:Model::KS,part);if(converted.data.empty()){error="Unsupported or malformed program dump";return false;}
  // V-Station banks can drive the K fixed-point effect sum to its ceiling.
  // Reserve firmware program level; preserve the authored filter/drive and the
  // untouched library payload. A post-output limiter cannot undo that clipping.
  if(isKStation() && patchModel(*patch)==Model::VStation){converted.data[13+125]=uint8_t(std::max(0,int(converted.data[13+125])-6));converted.changes.add("V-Station level: -6 dB");}
  if(!isKStation() && patchModel(*patch)==Model::VStation){std::fill_n(converted.data.begin()+13+151,16,' ');const juce::String name(patch->getName());for(int n=0;n<std::min(16,name.length());++n){const auto c=name[n];converted.data[13+151+n]=uint8_t(c>=32 && c<127?c:'?');}}
- bool ok=false;{std::lock_guard lock(controlMutex);if(ownedK)ok=queueUiMidi(converted.data.data(),converted.data.size());else if(ownedDevice){if(converted.data.size()==1038){ks::State state;state.performance=true;for(unsigned i=0;i<4;++i)std::copy_n(converted.data.data()+13+256*i,256,state.parts[i].begin());state.activeMask=state.parts[0][190]&15;ok=queueState(state,true,error);}else{auto state=ownedDevice->fullSnapshot();std::copy_n(converted.data.data()+13,179,state.parts[part].begin());ok=queueState(state,false,error);}}}
+ bool ok=false;{std::lock_guard lock(controlMutex);if(ownedK)ok=queueUiMidi(converted.data.data(),converted.data.size());else if(ownedDevice){if(converted.data.size()==1038){ks::State state;state.performance=true;for(unsigned i=0;i<4;++i)std::copy_n(converted.data.data()+13+256*i,256,state.parts[i].begin());state.activeMask=state.parts[0][190]&15;ok=queueState(state,true,error);}else{auto state=ownedDevice->fullSnapshot();std::copy_n(converted.data.data()+13,179,state.parts[part].begin());const bool exitDrum=state.parts[part][187]>=5 && state.parts[part][187]<=8;if(exitDrum){state.parts[part][187]=1;state.parts[part][188]=0;}ok=queueState(state,exitDrum && !state.performance,error);}}}
  if(!ok){if(error.isEmpty())error="MIDI queue full";return false;}resetPending();if(part==currentPart())currentPatch=patchName(*patch);error=converted.changes.joinIntoString("\n");return true;
 }
 bool Processor::saveCurrentPatch(const juce::File& file,juce::String& error){std::lock_guard lock(controlMutex);std::vector<uint8_t> data;if(ownedDevice)data=ownedDevice->dumpProgram();else if(ownedK){std::array<uint8_t,128> patch;std::array<uint8_t,2048> cc;uint64_t rev;if(!ownedK->device.getControlSnapshot(patch,cc,rev)){error="Snapshot unavailable; try again";return false;}data={0xf0,0,0x20,0x29,1,0x41,0x7f,0,0,0x11,1,0,0};data.insert(data.end(),patch.begin(),patch.end());data.push_back(0xf7);}if(data.empty() || !file.replaceWithData(data.data(),data.size())){error="Cannot save current sound";return false;}patchLibrary.addPath(file);return true;}

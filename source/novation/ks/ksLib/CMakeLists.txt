@@ -3,6 +3,7 @@ add_library(ksLib STATIC ksBoard.cpp ksBoard.h ksDSP.cpp ksDSP.h ksDevice.cpp ks
 target_compile_features(ksLib PUBLIC cxx_std_17)
 target_sources(ksLib PRIVATE ksDspWorkers.cpp ksDspWorkers.h)
 target_sources(ksLib PRIVATE ksControllerTrace.cpp ksControllerTrace.h)
+target_sources(ksLib PRIVATE ksDspTransport.cpp ksDspTransport.h)
 target_sources(ksLib PRIVATE ksLiveMidiController.cpp ksLiveMidiController.h)
 target_sources(ksLib PRIVATE ksLiveNoteController.cpp ksLiveNoteController.h)
 target_sources(ksLib PRIVATE ksLiveVoiceController.cpp ksLiveVoiceController.h ksControllerBoundary.h)

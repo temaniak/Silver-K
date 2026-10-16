@@ -41,8 +41,9 @@ public:
     uint64_t h8StepsSinceNativeHandoff()const{return nativeRuntime?h8->interpretedSteps-nativeH8Steps:0;}
     const LiveMidiController* liveMidiController()const{return liveMidi.get();}
     void enableControllerDelegationProfile(){if(liveMidi)liveMidi->enableDelegationProfile();}
-    void resetControllerMetrics(){if(liveMidi)liveMidi->resetMetrics();if(nativeRuntime)nativeRuntime->steps=nativeRuntime->interruptEntries=0;}
-    const char* controllerBackend()const{return recordedController?"recorded-cpp-prototype":nativeRuntime?"native-cpp-runtime":liveMidi?"live-cpp-midi-hybrid":"original-h8";}
+    void resetControllerMetrics(){if(liveMidi)liveMidi->resetMetrics();if(nativeRuntime)nativeRuntime->steps=nativeRuntime->interruptEntries=0;transportJobs=transportBoundaries=0;}
+    const char* controllerBackend()const{return recordedController?"recorded-cpp-prototype":nativeRuntime?(eventDspTransport?"native-cpp-events-transport":"native-cpp-runtime"):liveMidi?"live-cpp-midi-hybrid":"original-h8";}
+    uint64_t transportJobs=0,transportBoundaries=0;
     uint64_t controllerCycles()const{return recordedController?recordedController->cycles():h8->cycles;}
     uint64_t checkedControllerPorts()const{return recordedController?recordedController->checkedPorts():0;}
     bool enqueueMidi(const uint8_t* b,size_t n);
@@ -73,6 +74,8 @@ private:
     uint64_t diagnosticAdvances=0;
     void tick(uint64_t previous);
     void tickNative(uint64_t previous);
+    uint64_t nextControllerEvent(uint64_t limit)const;
+    bool eventDspTransport=false;
     void adaptStoredProgram(uint8_t*,size_t);
     void muteStoredPrograms();
     bool enqueueNativeMidi(const uint8_t*,size_t);

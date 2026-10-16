@@ -6,8 +6,20 @@
 #include <thread>
 #if JUCE_MAC
 #include <CoreFoundation/CoreFoundation.h>
+#include <sys/resource.h>
 #endif
 
+namespace {
+double processCpuSeconds(){
+#if JUCE_MAC
+ rusage usage{};if(getrusage(RUSAGE_SELF,&usage))return -1;
+ return double(usage.ru_utime.tv_sec)+double(usage.ru_stime.tv_sec)
+       +double(usage.ru_utime.tv_usec+usage.ru_stime.tv_usec)*1.e-6;
+#else
+ return -1; // This fixture's process CPU counter is currently macOS-only.
+#endif
+}
+}
 // Private ROMs only. Keep UI/state work off the simulated host audio thread.
 int main(int argc,char** argv){
  if(argc!=5)return 2;
@@ -28,7 +40,7 @@ int main(int argc,char** argv){
  if(reportPath.isNotEmpty() && !p.setPerformanceDiagnostics(diagnosticMode)){std::cerr<<"Cannot start diagnostics\n";return 4;}
  juce::AudioBuffer<float> audio(4,block);juce::MidiBuffer midi;midi.ensureSize(4096);
  const auto before=p.underruns();std::atomic<uint64_t> warm{before};std::atomic<bool> warmCaptured{false};
- const auto begin=std::chrono::steady_clock::now();
+ const auto beforeCpu=processCpuSeconds();const auto begin=std::chrono::steady_clock::now();
  std::atomic<bool> done{false};std::atomic<unsigned> saves{0};double maxSaveMs=0;
  std::thread stateReader([&]{
   while(!done.load()){
@@ -75,11 +87,14 @@ int main(int argc,char** argv){
 #endif
  audioThread.join();
  done=true;stateReader.join();controlActions.join();const auto after=p.underruns();
+ const auto afterCpu=processCpuSeconds();
+ const auto processCpu=beforeCpu>=0 && afterCpu>=0?afterCpu-beforeCpu:-1;
+ const auto processWall=std::chrono::duration<double>(std::chrono::steady_clock::now()-begin).count();
  if(reportPath.isNotEmpty()){
   p.setPerformanceDiagnostics(0);
   if(!juce::File(reportPath).replaceWithText(p.performanceReport())){std::cerr<<"Cannot save diagnostics report\n";return 4;}
  }
- std::cout<<"model="<<(k?"K":"KS")<<" prepared="<<prepared<<" block="<<block<<" save="<<save<<" profile="<<profile<<" sweep="<<sweep<<" latency_ms="<<initialLatency/48.0<<" final_latency_ms="<<p.getLatencySamples()/48.0<<" note_onset_ms="<<first/48.0<<" startup_missed_frames="<<warm.load()-before<<" steady_missed_frames="<<after-warm.load()<<" state_reads="<<saves<<" max_state_ms="<<maxSaveMs<<" max_callback_ms="<<maxCallback<<" peak="<<peak<<std::endl;
+ std::cout<<"model="<<(k?"K":"KS")<<" prepared="<<prepared<<" block="<<block<<" save="<<save<<" profile="<<profile<<" sweep="<<sweep<<" latency_ms="<<initialLatency/48.0<<" final_latency_ms="<<p.getLatencySamples()/48.0<<" note_onset_ms="<<first/48.0<<" startup_missed_frames="<<warm.load()-before<<" steady_missed_frames="<<after-warm.load()<<" state_reads="<<saves<<" max_state_ms="<<maxSaveMs<<" max_callback_ms="<<maxCallback<<" peak="<<peak<<" process_cpu_seconds="<<processCpu<<" process_wall_seconds="<<processWall<<std::endl;
  const bool responsive=profile!=0 || prepared<=block || sweep || p.getLatencySamples()<initialLatency;
  return responsive && finite && first>=0 && peak>1e-4 && after==warm.load()?0:1;
 }

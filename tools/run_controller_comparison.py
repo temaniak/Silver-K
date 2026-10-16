@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
+import platform
 from pathlib import Path
 import statistics
 import subprocess
@@ -22,16 +23,18 @@ def main():
         parser.add_argument('--' + name, type=Path, required=True)
     parser.add_argument('--output', type=Path, default=Path('output/perf-controller'))
     parser.add_argument('--repeats', type=int, default=3)
-    parser.add_argument('--scenarios', nargs='+', choices=['single', 'multi'], default=['single', 'multi'])
+    parser.add_argument('--scenarios', nargs='+', choices=['single', 'multi', 'fx'], default=['single', 'multi'])
+    parser.add_argument('--seconds', type=float, default=2., help='Same bounded 2..4 s render for each mode')
     parser.add_argument('--dsp-threads', choices=['1', '2'], default='1')
     args = parser.parse_args()
-    if args.repeats < 1 or any(not p.is_file() for p in [args.executable, args.ks_rom, args.flash, args.wave]):
+    if args.repeats < 1 or not 2 <= args.seconds <= 4 or any(not p.is_file() for p in [args.executable, args.ks_rom, args.flash, args.wave]):
         parser.error('Positive repeats and existing executable/private input files required')
     root = args.output.resolve() / time.strftime('%Y%m%d-%H%M%S')
     root.mkdir(parents=True, exist_ok=False)
     exe = args.executable.resolve()
     metadata = dict(executable_sha256=hashlib.sha256(exe.read_bytes()).hexdigest(),
-                    started_utc=datetime.now(timezone.utc).isoformat(), dsp_threads=args.dsp_threads)
+                    started_utc=datetime.now(timezone.utc).isoformat(), dsp_threads=args.dsp_threads,
+                    platform=platform.platform(), seconds=args.seconds)
     (root / 'metadata.json').write_text(json.dumps(metadata, indent=2))
     rows = []
     print('Local results:', root, flush=True)
@@ -47,7 +50,7 @@ def main():
         print('Running', tag, flush=True)
         with (folder / 'fixture.log').open('w', encoding='utf-8') as log:
             result = subprocess.run([str(exe), str(args.ks_rom.resolve()), str(args.flash.resolve()),
-                                     str(args.wave.resolve()), str(report), mode, scenario, str(tape)],
+                                     str(args.wave.resolve()), str(report), mode, scenario, str(tape), str(args.seconds)],
                                     env=env, stdout=log, stderr=subprocess.STDOUT, timeout=120)
         row = dict(test_id=tag, returncode=result.returncode, mode=mode, scenario=scenario,
                    completed_utc=datetime.now(timezone.utc).isoformat())
@@ -86,7 +89,7 @@ def main():
                 median_cpu_seconds=statistics.median(r['cpu_seconds'] for r in group),
                 median_wall_seconds=statistics.median(r['wall_seconds'] for r in group))
         before, after = summary['modes']['h8'], summary['modes']['replay']
-        if os.name == 'nt':
+        if os.name == 'nt' or platform.system() == 'Darwin':
             summary['cpu_change_percent'] = (after['median_cpu_seconds'] / before['median_cpu_seconds'] - 1) * 100
         summary['wall_change_percent'] = (after['median_wall_seconds'] / before['median_wall_seconds'] - 1) * 100
         summaries.append(summary)

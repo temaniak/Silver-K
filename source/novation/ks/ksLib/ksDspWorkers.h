@@ -5,8 +5,9 @@
 #include <memory>
 
 namespace ks {
-// Two persistent DSP executors. One coordinator submits at most one slice and
-// joins BOTH results before touching H8, host ports, serial IO or snapshots.
+// Two DSP executors, joined at every slice before H8/host/serial/snapshots.
+// macOS runs DSP A on the coordinator and DSP B on one persistent helper;
+// other platforms retain two persistent helpers.
 class DspWorkers final {
 public:
     using Execute = void(*)(void*, unsigned, int64_t, bool);

@@ -60,7 +60,16 @@ struct alignas(64) Signal {
         changed.notify_one();
     }
     uint32_t waitChange(uint32_t old) {
-        for(unsigned n=0;n<256;++n){auto v=value.load(std::memory_order_acquire);if(v!=old)return v;relax();}
+        // A KS slice has only a few microseconds of DSP work. On macOS the
+        // short 256-probe window parks on almost every slice, making condvar
+        // wakeups cost more than both DSPs. Cover the ordinary handoff before
+        // parking; the bound still lets idle helpers sleep when audio is full.
+#ifdef __APPLE__
+        constexpr unsigned spinProbes=8192;
+#else
+        constexpr unsigned spinProbes=256;
+#endif
+        for(unsigned n=0;n<spinProbes;++n){auto v=value.load(std::memory_order_acquire);if(v!=old)return v;relax();}
 #ifdef _WIN32
         if(api().wait && api().wake)for(;;){
             parked.exchange(true,std::memory_order_seq_cst);
@@ -86,7 +95,16 @@ struct DspWorkers::Worker {
     std::exception_ptr failure;
     uint32_t generation=0;
     std::thread thread;
+#ifdef __APPLE__
+    void* inlineContext=nullptr;
+    Execute inlineExecute=nullptr;
+#endif
     Worker(void* context,Execute execute,unsigned index) {
+#ifdef __APPLE__
+        // The existing audio worker executes DSP A while the helper executes B.
+        // A third runnable realtime thread otherwise only spins at the barrier.
+        if(index==0){inlineContext=context;inlineExecute=execute;return;}
+#endif
         thread=std::thread([this,context,execute,index]{
             dsp56k::ThreadTools::setCurrentThreadName(index?"KS DSP B experiment":"KS DSP A experiment");
             // Same priority/realtime parameters as the existing live KS worker.
@@ -108,7 +126,7 @@ struct DspWorkers::Worker {
             }
         });
     }
-    ~Worker(){stop=true;command.publish(++generation);if(thread.joinable())thread.join();}
+    ~Worker(){if(thread.joinable()){stop=true;command.publish(++generation);thread.join();}}
 };
 DspWorkers::DspWorkers(void* context,Execute execute,int r,unsigned b):rate(r),block(b) {
     for(unsigned i=0;i<2;++i)workers[i]=std::make_unique<Worker>(context,execute,i);
@@ -118,11 +136,24 @@ void DspWorkers::configure(int r,unsigned b) noexcept {rate=r;block=b;}
 void DspWorkers::run(const std::array<int64_t,2>& targets,bool sampled) {
     for(unsigned i=0;i<2;++i){auto& w=*workers[i];
         w.target=targets[i];w.sampled=sampled;w.rate=rate;w.block=block;
-        w.failure=nullptr;w.command.publish(++w.generation);
+        w.failure=nullptr;
+#ifdef __APPLE__
+        if(i==0)continue;
+#endif
+        w.command.publish(++w.generation);
     }
+#ifdef __APPLE__
+    auto& inlineWorker=*workers[0];
+    try{inlineWorker.inlineExecute(inlineWorker.inlineContext,0,inlineWorker.target,sampled);}
+    catch(...){inlineWorker.failure=std::current_exception();}
+#endif
     // Always drain both workers, including when one failed. Exception unwinding
     // must never leave a DSP writing into a board being destroyed.
-    for(auto& w:workers){const auto previous=w->generation-1;
+    for(auto& w:workers){
+#ifdef __APPLE__
+        if(w->inlineExecute)continue;
+#endif
+        const auto previous=w->generation-1;
         if(w->completed.value.load(std::memory_order_acquire)!=w->generation)w->completed.waitChange(previous);
     }
     for(auto& w:workers)if(w->failure)std::rethrow_exception(w->failure);

@@ -38,6 +38,9 @@ namespace ks
         // False means a data word was rejected because the host ignored TXDE.
         bool hostWrite(uint32_t byteOffset, uint8_t value);
         uint64_t step(uint32_t instructionBudget = 256);
+        // Same step(1)/discard sequence, contained in one translation unit so
+        // the hot catch-up loop need not cross the wrapper boundary per block.
+        void catchUpToCycle(int64_t target);
         bool bootFinished() const { return m_boot.finished(); }
 
         bool popAudioFrame(AudioFrame& frame);

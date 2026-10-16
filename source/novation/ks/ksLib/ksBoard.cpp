@@ -1,11 +1,16 @@
 #include "ksBoard.h"
 #include "ksControllerTimers.h"
+#include "ksDspTransport.h"
+#include <cstdlib>
+#include <cstring>
 #include <algorithm>
 #include <stdexcept>
 #include <sstream>
 namespace ks {
 Board::Board(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& storage,bool isolateParts)
  : h8(std::make_unique<ControllerCpu>()),rom(os),flash(0x80000,0xff),waves(bank) {
+    const auto* transport=std::getenv("SILVER_KS_DSP_TRANSPORT");
+    eventDspTransport=transport && std::strcmp(transport,"events")==0;
     if(os.size()!=87360 || bank.size()!=WaveSize)throw std::invalid_argument("KS OS/bank size mismatch");
     // Update excludes container checksum. Rebuild its transport field, which
     // original reset code verifies while copying Flash to SRAM.
@@ -132,6 +137,28 @@ void Board::tick(uint64_t previous){
 }
 // Native timers preserve the reference UART/ADC boundaries. TPU0 advances
 // arithmetically; the original per-clock loop above remains the H8 control.
+uint64_t Board::nextControllerEvent(uint64_t limit)const {
+    const auto now=h8->cycles;
+    if(txDue)limit=std::min(limit,txDue);
+    if((io[0x18a]&0x10) && !(io[0x18c]&0x40) && midiIn.size())
+        limit=std::min(limit,rxDue);
+    if(adcDue && (io[0x198]&0x20) && !(io[0x198]&0x80))
+        limit=std::min(limit,adcDue);
+    if((io[0x1c0]&1) && (io[0x1d1]&15)==0) {
+        const unsigned shift=unsigned(io[0x1d0]&7)*2;
+        const unsigned count=(unsigned(io[0x1d6])<<8)|io[0x1d7];
+        const unsigned compare=(unsigned(io[0x1d8])<<8)|io[0x1d9];
+        if(shift<8 && compare) {
+            const uint64_t distance=compare>count?compare-count:65536ull+compare-count;
+            limit=std::min(limit,((now>>shift)+distance)<<shift);
+        }
+    }
+    if((io[0x1c0]&2) && (io[0x1e1]&15)==0 && io[0x1e0]==6) {
+        const unsigned count=(unsigned(io[0x1e6])<<8)|io[0x1e7];
+        limit=std::min(limit,((now>>8)+65536-count)<<8);
+    }
+    return limit;
+}
 void Board::tickNative(uint64_t previous){
     auto now=h8->cycles;
     if(txDue && now>=txDue){txDue=0;io[0x18c]|=0x84;if(io[0x18a]&0x80)h8->interrupt(90);if(io[0x18a]&4)h8->interrupt(91);}
@@ -256,6 +283,10 @@ State Board::state() {
     for(unsigned part=0;part<(result.performance?PartCount:1);++part){auto& p=result.parts[part];const unsigned index=result.performance?part+1:0;
         for(unsigned n=0;n<256;++n)p[n]=read(0x168fc+index*256+n);
         for(unsigned n=0;n<8;++n)p[179+n]=read(0x174ae + 20*index+9+n);
+        const auto address=result.performance?0x167b0+part*2:0x167ac;
+        const auto bank=read(address);
+        if(result.performance || (bank>=5 && bank<=8)){p[187]=bank;p[188]=read(address+1);}
+        else if(p[187]>=5){p[187]=p[188]=0;}
         packMirrors(p);if(result.performance)placeholder.restorePart(part,p.data());else restoreDesiredLevels(p.data());
         if(partMidi.enabled && result.performance)p[181]=partMidi.channels[part];
     }
@@ -274,7 +305,26 @@ void Board::advance(uint32_t budget){
     }else{
         const auto begin=h8->cycles;if(controllerRecorder)controllerRecorder->beginSlice(begin);
         if(nativeRuntime){
-            while(h8->cycles-begin<budget){auto before=h8->cycles;nativeRuntime->step(*h8);tickNative(before);}
+            if(!eventDspTransport){
+                // Preserve the original tight compatibility loop when the
+                // transport experiment is disabled.
+                while(h8->cycles-begin<budget){auto before=h8->cycles;nativeRuntime->step(*h8);tickNative(before);}
+            }else{
+            while(h8->cycles-begin<budget){
+                const auto before=h8->cycles;
+                unsigned batched=0;
+                const unsigned pc=h8->getPC();
+                if(pc>=0x2416 && pc<=0x25e4 && DspTransport::candidate(pc))
+                    batched=DspTransport::service(*h8,nextControllerEvent(begin+budget));
+                if(batched){
+                    ++transportJobs;transportBoundaries+=batched;
+                    nativeRuntime->steps+=batched;
+                    liveMidi->voiceActions.steps+=batched;
+                    liveMidi->voiceActions.transportSteps+=batched;
+                }else nativeRuntime->step(*h8);
+                tickNative(before);
+            }
+            }
         }else if(liveMidi){
             while(h8->cycles-begin<budget){auto before=h8->cycles;
                 const unsigned pc=h8->getPC();
@@ -296,7 +346,7 @@ void Board::advance(uint32_t budget){
         Scope dspTiming(performance,i?Metric::DspB:Metric::DspA,0,0,true,sample);
         if(!started[i]){epochs[i]=int64_t(dspTime(nowController))-int64_t(dsps[i]->cycles());started[i]=true;if(i==1)aToB.reset();}
         const auto target=int64_t(dspTime(nowController))-epochs[i];
-        while(int64_t(dsps[i]->cycles())<target){dsps[i]->discardAudio();dsps[i]->step(1);}
+        dsps[i]->catchUpToCycle(target);
     }}
     // Both DSPs share the master's serial clock and frame sync. Independent
     // peripheral clocks can stretch differently when interrupt work is pending.
@@ -324,7 +374,7 @@ void Board::catchUpDsp(unsigned i,int64_t target,bool sampled){
     Scope dspTiming(performance,i?Metric::DspB:Metric::DspA,0,0,true,sampled);
     // ESAI clocks stay disabled; all cross-DSP callbacks are serviced by the
     // coordinator AFTER both catch-ups, exactly as in sequential advance().
-    while(int64_t(dsps[i]->cycles())<target){dsps[i]->discardAudio();dsps[i]->step(1);}
+    dsps[i]->catchUpToCycle(target);
 }
 uint64_t Board::controllerCheckpoint()const {
     uint64_t hash=14695981039346656037ull;

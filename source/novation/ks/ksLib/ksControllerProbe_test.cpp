@@ -11,6 +11,8 @@
 #include <stdexcept>
 #ifdef _WIN32
 #include <Windows.h>
+#elif defined(__APPLE__)
+#include <sys/resource.h>
 #endif
 
 namespace {
@@ -21,6 +23,10 @@ double cpu(){
 #ifdef _WIN32
     FILETIME c{},e{},k{},u{};check(GetProcessTimes(GetCurrentProcess(),&c,&e,&k,&u)!=0,"GetProcessTimes failed");
     return double((uint64_t(k.dwHighDateTime)<<32)|k.dwLowDateTime)*1.e-7+double((uint64_t(u.dwHighDateTime)<<32)|u.dwLowDateTime)*1.e-7;
+#elif defined(__APPLE__)
+    rusage usage{};check(getrusage(RUSAGE_SELF,&usage)==0,"getrusage failed");
+    return double(usage.ru_utime.tv_sec)+double(usage.ru_utime.tv_usec)*1.e-6
+        +double(usage.ru_stime.tv_sec)+double(usage.ru_stime.tv_usec)*1.e-6;
 #else
     return 0; // Portability/correctness runs only; do not label as CPU evidence.
 #endif
@@ -41,7 +47,7 @@ struct Stats {
 };
 }
 int main(int argc,char** argv){try{
-    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal|controls|state|clock|steal, trace path, optional seconds (up to 4) required\n";return 77;}
+    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal|controls|state|clock|steal|fx, trace path, optional seconds (up to 4) required\n";return 77;}
     const double duration=argc==9?std::stod(argv[8]):2.;
     check(std::isfinite(duration)&&duration>=2.&&duration<=4.,"Controller probe duration must be 2..4 seconds");
     const std::string mode=argv[5],scenario=argv[6];
@@ -50,8 +56,8 @@ int main(int argc,char** argv){try{
     const bool recording=mode=="native-record" || mode=="native-toggle-record" || mode=="record" || mode=="live-record" || mode=="live-toggle-record";
     const bool toggling=mode=="native-toggle" || mode=="native-toggle-record" || mode=="live-toggle" || mode=="live-toggle-record";
     check(mode=="h8" || mode=="record" || mode=="replay" || mode=="boot" || liveMode,"Unknown controller probe mode");
-    check(scenario=="single" || scenario=="multi" || scenario=="midi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal","Unknown controller probe scenario");
-    const bool multi=scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal";
+    check(scenario=="single" || scenario=="multi" || scenario=="midi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx","Unknown controller probe scenario");
+    const bool multi=scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx";
     const auto* threads=std::getenv("SILVER_KS_DSP_THREADS");const bool parallel=threads&&std::string(threads)=="2";
     const auto setup=Clock::now();ks::Rom os(argv[1]);check(os.isValid(),"Invalid KS OS");
     auto board=std::make_unique<ks::Board>(os.data(),bytes(argv[3]),bytes(argv[2]),true);
@@ -76,6 +82,7 @@ int main(int argc,char** argv){try{
             if(scenario=="pedal")for(unsigned i=0;i<4;++i){auto& p=state.parts[i];p[0]=uint8_t((p[0]&~24)|(i<<3));p[88]&=~4;p[182]=36;p[183]=84;}
             if(scenario=="clock")for(auto& p:state.parts){p[88]=uint8_t((p[88]&~31)|12);p[84]=30;p[85]=9;p[86]=32;p[87]=0;}
             if(scenario=="steal")for(auto& p:state.parts)p[0]=uint8_t((p[0]&~31)|18); // Poly, two unison voices.
+            if(scenario=="fx")for(auto& p:state.parts){p[100]=48;p[107]=48;p[110]=32;p[65]=0;}
             state.parts[0][189]=1;state.parts[0][190]=15;
             send({0xb0,32,65,0xc0,0});send(ks::stateMessage(state));discard(24000);
         }
@@ -177,14 +184,33 @@ int main(int argc,char** argv){try{
                 add(.5+group*.5,std::move(data));}
             add(1.35,four({0xb0,64,0}));add(1.65,four({0xb0,120,0}));add(1.75,four({0x90,60,110}));
         }
+        if(scenario=="fx"){
+            events.clear();std::vector<uint8_t> on,off;
+            for(unsigned part=0;part<4;++part)for(unsigned note=0;note<4;++note){
+                on.insert(on.end(),{uint8_t(0x90|part),uint8_t(48+part+note*4),uint8_t(80+note*7)});
+                off.insert(off.end(),{uint8_t(0x80|part),uint8_t(48+part+note*4),0});
+            }
+            add(.1,std::move(on));add(.6,four({0xb0,92,72}));add(.9,four({0xb0,91,80}));
+            add(.7,four({0xb0,64,127}));add(1.2,four({0xb0,93,48}));
+            add(1.6,std::move(off));add(1.7,four({0xb0,64,0}));
+        }
         std::stable_sort(events.begin(),events.end(),[](const auto& a,const auto& b){return a.frame<b.frame;});
         if(liveMode){if(!nativeMode)board->enableLiveMidiController();board->resetControllerMetrics();if(recording)board->enableControllerDelegationProfile();}
         if(recording)board->startControllerTrace();
         if(mode=="replay"){tape=ks::ControllerTape::load(argv[7]);board->startRecordedController(tape);}
         h8Start=board->cpu().cycles;size_t next=0;
+        auto coverage=[](const ks::LiveMidiController& live){return std::array<uint64_t,8>{
+            live.messages,live.noteActions.noteOnCalls,live.noteActions.noteOffCalls,live.noteActions.pedalCalls,
+            live.voiceActions.allocationCalls,live.voiceActions.startCalls,live.voiceActions.releaseCalls,live.voiceActions.transportSteps};};
+        std::array<uint64_t,8> beforeSwitch{};
         const auto begin=Clock::now();const double before=cpu();
         for(uint64_t n=0;n<frames;++n){
-            if(toggling && n==native(.65))board->enableLiveMidiController(false);
+            if(toggling && n==native(.65)){
+                // Handoff destroys this native instance. Retain coverage from
+                // its actual live interval, not just the new instance at .95 s.
+                beforeSwitch=coverage(*board->liveMidiController());
+                board->enableLiveMidiController(false);
+            }
             if(toggling && n==native(.95)){if(nativeMode)board->enableNativeController();else board->enableLiveMidiController();if(recording)board->enableControllerDelegationProfile();}
             if(mode!="replay")while(next<events.size() && events[next].frame==n)send(events[next++].bytes);
             const auto a=board->renderSample();for(auto v:a){hash^=uint32_t(v);hash*=1099511628211ull;peak=std::max(peak,std::abs(int64_t(v)));}
@@ -193,8 +219,9 @@ int main(int argc,char** argv){try{
         check(peak>1000,"Controller probe rendered silence");
         if(recording){tape=board->finishControllerTrace();tape->validate();tape->save(argv[7]);}
         if(liveMode){const auto& live=*board->liveMidiController();
-            check(live.messages>0 && live.noteActions.noteOnCalls>0 && live.noteActions.noteOffCalls>0 && live.noteActions.pedalCalls>0,"Live note/sustain handlers were not exercised");
-            check(live.voiceActions.allocationCalls>0 && live.voiceActions.startCalls>0 && live.voiceActions.releaseCalls>0 && live.voiceActions.transportSteps>0,"Live voice/transport handlers were not exercised");
+            const auto last=coverage(live);
+            for(unsigned i=0;i<last.size();++i)check(last[i]+beforeSwitch[i]>0,
+                i<4?"Live note/sustain handlers were not exercised":"Live voice/transport handlers were not exercised");
             uint64_t delegated=0;for(const auto count:live.originalPages)delegated+=count;
             if(recording)check(delegated==live.originalStepCalls && (nativeMode?delegated==0:delegated>0),"Original H8 delegation accounting differs");}
         if(nativeMode){
@@ -227,7 +254,8 @@ int main(int argc,char** argv){try{
         <<",\"checked_ports\":"<<board->checkedControllerPorts()
         <<",\"state_digest\":"<<snapshotDigest(stateBytes)<<",\"flash_digest\":"<<snapshotDigest(flashBytes)
         <<",\"flash_revision\":"<<board->flashRevision<<",\"midi_tx_digest\":"<<snapshotDigest(midiOut)<<",\"midi_tx_bytes\":"<<midiOut.size()
-        <<",\"midi_received\":"<<board->midiReceived;
+        <<",\"midi_received\":"<<board->midiReceived
+        <<",\"transport_jobs\":"<<board->transportJobs<<",\"transport_job_boundaries\":"<<board->transportBoundaries;
     report<<",\"h8_interpreted_steps_boot\":"<<bootH8Steps
         <<",\"h8_interpreted_steps_after_boot\":"<<(board->h8InterpretedSteps()-bootH8Steps)
         <<",\"h8_interpreted_steps_since_handoff\":"<<board->h8StepsSinceNativeHandoff();
@@ -246,7 +274,7 @@ int main(int argc,char** argv){try{
             if(!first)report<<',';first=false;report<<"{\"page\":"<<page<<",\"calls\":"<<live->originalPages[page]<<'}';
         }report<<']';
     }
-    report<<",\"notes\":\"Original H8 boots every mode. Native runtime takes over immediately after boot and also prepares/warmups without H8; verified fixed C++ control flow preserves the guest ABI/timing grid. Hybrid live mode retains original callees. h8 cycle fields are the shared guest clock, not proof of interpreted execution. Interpreter call counters establish handoff; native mode has no fallback. original_h8_step_calls includes interrupt arbitration, not instruction or CPU-time counts; page counts cover only the current enabled segment. Replay is separate finite tape playback. CPU counts whole process user+kernel on Windows, no boot/setup/trace file IO. Raw trace may contain private firmware/presets. Native runtime retains H8 state/clock storage for reversible comparison, not H8 instruction execution. ROM update/bootloader entry is outside the native playback range.\"}";
+    report<<",\"notes\":\"Original H8 boots every mode. Native runtime takes over immediately after boot and also prepares/warmups without H8; verified fixed C++ control flow preserves the guest ABI/timing grid. Hybrid live mode retains original callees. h8 cycle fields are the shared guest clock, not proof of interpreted execution. Interpreter call counters establish handoff; native mode has no fallback. original_h8_step_calls includes interrupt arbitration, not instruction or CPU-time counts; page counts cover only the current enabled segment. Replay is separate finite tape playback. CPU counts whole process user+kernel on Windows/macOS, no boot/setup/trace file IO; unavailable on other platforms. Raw trace may contain private firmware/presets. Native runtime retains H8 state/clock storage for reversible comparison, not H8 instruction execution. ROM update/bootloader entry is outside the native playback range.\"}";
     std::ifstream existing(argv[4]);check(!existing.good(),"Refusing to overwrite controller report");std::ofstream out(argv[4]);out<<report.str();check(bool(out),"Cannot save controller report");
     std::cout<<report.str()<<'\n';return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

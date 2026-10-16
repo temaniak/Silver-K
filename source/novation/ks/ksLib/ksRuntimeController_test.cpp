@@ -1,5 +1,6 @@
 #include "ksRuntimeController.h"
 #include "ksLiveMidiController.h"
+#include "ksDspTransport.h"
 #include "ksRom.h"
 #include <algorithm>
 #include <iostream>
@@ -89,6 +90,64 @@ int main(int argc,char** argv){try{
         x.accesses.clear();y.accesses.clear();controller.step(*native);original->step();same(*original,*native,x,y);
     }
     check(x.ram==y.ram && native->interpretedSteps==0,"Native runtime executed interpreter or changed final RAM");
+    // Independent original-H8 oracle for complete timed HDI jobs. Randomize
+    // live port replies/words/flags, both DSPs and entry bus history. Discover
+    // and remove each reference code fetch with the original disassembler;
+    // every data access, in-flight PC and access cycle must remain identical.
+    uint64_t jobs=0;
+    native->nativeFetchClocksOnly=true;native->nativeLowBase=os.data().data();
+    native->nativeLowSize=unsigned(os.data().size());native->nativeLowWritable=true;
+    for(unsigned pc:{0x2416,0x2424,0x245e,0x246c,0x24d8,0x24e6,0x2520,0x252e,
+        0x256e,0x257c,0x25b6,0x25c4,0x243a,0x2482,0x2592,0x25da,0x24fc,0x2544,0x25e4})
+        for(unsigned port:{0x400000,0x600000})for(unsigned trial=0;trial<32;++trial){
+            for(unsigned i=0;i<8;++i)original->regs[i].er=native->regs[i].er=int32_t(random());
+            for(unsigned off=0;off<16;++off)x.ram[port+off]=y.ram[port+off]=uint8_t(random());
+            if(trial<8){
+                constexpr int16_t countdowns[]{0,1,2,32767,-32768,-1,-2,3};
+                original->regs[0].e=native->regs[0].e=countdowns[trial];
+                x.ram[port+4]=y.ram[port+4]=0; // Busy, including timeout/wrap edges.
+            }
+            for(auto* h:{original.get(),native.get()}){
+                h->pc=h->makepc(pc);h->cycles=1000;h->regs[5].er=port;
+                h->pending_irqs=h->pending_irqs_high=0;h->interruptMode2=true;
+                h->setSP(0xfff000);h->indent=0;
+            }
+            original->ccr=native->ccr=uint8_t(random());original->exr=native->exr=uint8_t(random()&7);
+            for(auto* h:{original.get(),native.get()}){
+                h->interruptPriority[0]=h->interruptPriority[90]=1;
+                if(trial&1){h->exr=6;h->pending_irqs=1;h->pending_irqs_high=1ull<<(90-64);}
+            }
+            original->lastread=native->lastread=int(random());original->lastwrite=native->lastwrite=int(random());
+            x.accesses.clear();y.accesses.clear();
+            check(ks::DspTransport::candidate(pc),"HDI entry not recognized");
+            // A task without sufficient time (or with pending arbitration)
+            // must leave even the bus and register frame untouched.
+            check(!ks::DspTransport::service(*native,1001),"HDI job crossed its deadline");
+            const auto pending=native->pending_irqs;const auto mask=native->exr;
+            native->pending_irqs=1;native->interruptPriority[0]=7;native->exr=0;
+            check(!ks::DspTransport::service(*native,1100),"HDI job skipped unmasked IRQ");
+            native->pending_irqs=pending;native->interruptPriority[0]=1;native->exr=mask;
+            const auto high=native->pending_irqs_high;
+            native->pending_irqs_high=1ull<<(90-64);native->interruptPriority[90]=7;native->exr=6;
+            check(!ks::DspTransport::service(*native,1100),"HDI job skipped unmasked high IRQ");
+            native->pending_irqs_high=high;native->interruptPriority[90]=1;native->exr=mask;
+            check(native->getPC()==pc && native->cycles==1000 && y.accesses.empty(),"Rejected HDI job mutated state");
+            const unsigned count=ks::DspTransport::service(*native,1100);check(count>0 && native->cycles<=1100,"HDI job did not execute within deadline");
+            std::vector<std::tuple<bool,uint32_t,uint8_t,uint64_t,uint32_t>> data;
+            for(unsigned n=0;n<count;++n){
+                const auto entry=original->getPC();lengthOracle->pc=lengthOracle->makepc(entry);lengthOracle->step();
+                const auto bytes=unsigned(lengthOracle->getPC())-entry;
+                x.accesses.clear();original->step();check(x.accesses.size()>=bytes,"HDI reference fetch truncated");
+                for(unsigned i=0;i<bytes;++i)check(!std::get<0>(x.accesses[i]) && std::get<1>(x.accesses[i])==entry+i,"HDI reference fetch differs");
+                data.insert(data.end(),x.accesses.begin()+bytes,x.accesses.end());
+            }
+            x.accesses=std::move(data);
+            // same() removes code only when comparing one native boundary.
+            native->nativeFetchClocksOnly=false;same(*original,*native,x,y);native->nativeFetchClocksOnly=true;
+            ++jobs;
+        }
+    check(jobs==1216 && x.ram==y.ram && native->interpretedSteps==0,"HDI job coverage/RAM/interpreter differs");
+    native->nativeLowBase=nullptr;native->nativeLowWritable=false;
     bool rejected=false;try{native->step();}catch(const std::logic_error&){rejected=true;}
     check(rejected && native->interpretedSteps==0,"Native interpreter lock did not reject execution");
     native->pc=native->makepc(0xf00000);native->pending_irqs=native->pending_irqs_high=0;rejected=false;
@@ -100,6 +159,6 @@ int main(int argc,char** argv){try{
     native->memory[0xa0b000]^=1;rejected=false;
     try{ks::RuntimeController bad(*native,shared);}catch(const std::runtime_error&){rejected=true;}
     check(rejected,"Native runtime accepted different active code image");
-    std::cout<<"PASS: "<<boundaries<<" native boundaries and 80 interrupt/mask/tie entries; registers/flags/clocks/PC/data/IO bus and RAM match H8 with read-back and clock-only code fetch; zero interpreter calls; unknown-state, ROM/image and interpreter-lock guards\n";
+    std::cout<<"PASS: "<<boundaries<<" native boundaries, 80 interrupt/mask/tie entries and "<<jobs<<" timed HDI jobs; registers/flags/clocks/PC/data/IO bus and RAM match H8; zero interpreter calls; deadline/IRQ, unknown-state, ROM/image and interpreter-lock guards\n";
     return 0;
 }catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

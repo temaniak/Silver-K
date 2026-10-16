@@ -120,3 +120,15 @@ Rescan rebuilds all connected file/folder trees and detects added, modified and 
 The V-Station importer supports the known separate sound/name-table chunk layout with 1–400 slots, as well as standard FxBk lists containing supported FPCh presets. It validates the complete container before appending patches. NUL-terminated names can contain arbitrary padding after the terminator, and legacy extended-byte names are decoded. ZIP archives can contain banks or individual presets; macOS resource-fork entries are ignored. Unknown VST layouts remain rejected and are reported in the browser.
 
 silver_persistence_and_rescan is a ROM-free regression test for these behaviours, including Unicode paths, nested manual sources, add/change/delete/rescan, exclusions and restart, favourites, browser columns/sorting/search and settings isolation between instances/projects. Optional K and KS firmware arguments also check automatic boot without an editor and host-state precedence. The test is included in Windows CI.
+
+## KS banks and Drum Maps
+
+With KS firmware, Patches has a separate memory-bank selector: banks 1–4 contain Programs, banks 5–8 contain Drum Maps, and Performances have their own bank. The Bank column and No. column show original KS addresses, such as 207 or 500–548. The source selector still chooses the folder/file/collection; the memory-bank selector filters within that source. Bank selection is remembered.
+
+A complete drum bank in KS Factory, SYX or MIDI is represented by one Drum Map entry containing all 49 sounds and the shared effects record. Search also matches the names of sounds inside a map. Export .syx on this entry exports the complete map with its original sound data. Incomplete banks remain labelled Drum sound or Drum Map FX; missing sounds/effects are never filled in automatically.
+
+Selecting a map activates the keyboard layout on MIDI notes 36–84. Its bank is loaded into the current instance's guest Flash when necessary; original files on disk are unchanged. Parts referencing the same drum bank share its contents. In Performance, selection changes the selected part's bank assignment, including when MIDI channels are shared. Drum-bank identity is retained in DAW state and on returning from Performance to Program mode. Selecting an ordinary Program exits the drum layout.
+
+K-Station hides the KS memory-bank selector, Bank column, drum entries and sources containing only drum entries. Ordinary KS Programs remain available through the existing conversion path. A separate per-key drum editor is not included in this browser change. Save current still saves the current edit buffer; use Export .syx on a Drum Map library entry to export its complete stored bank.
+
+Validation on macOS arm64 (2026-10-15): ROM-free parser/browser regressions and original KS OS 2.1.02 playback using synthetic drum Programs. The playback check covers distinct sounds on adjacent keys, DAW state restore, shared-channel part assignment and return to a normal Program. This is not hardware sound-equivalence validation; Windows runtime validation is pending.

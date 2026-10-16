@@ -27,6 +27,77 @@ static std::vector<uint8_t> program(Model model){
  if(data.size()==270){const std::string name=model==Model::XStation?"Zulu X patch":"Alpha KS patch";std::fill(data.begin()+164,data.begin()+180,' ');std::copy(name.begin(),name.end(),data.begin()+164);}
  return data;
 }
+static std::vector<std::vector<uint8_t>> drumFrames(unsigned bank){
+ std::vector<std::vector<uint8_t>> frames;
+ for(unsigned n=0;n<50;++n){auto frame=program(Model::KS);frame[7]=1;frame[8]=1;frame[11]=uint8_t(bank);frame[12]=uint8_t(n);
+  std::fill_n(frame.begin()+164,16,' ');const auto name=n==49?std::string("Test Kit FX"):"Drum "+std::to_string(n);std::copy(name.begin(),name.end(),frame.begin()+164);
+  frame[13+168]=uint8_t(n==0?36:n==1?60:72);frame[13+173]=0;frame[13+62]=frame[13+65]=0;frame[13+64]=127;frame[13+100]=frame[13+107]=frame[13+110]=0;
+  frames.push_back(std::move(frame));
+ }return frames;
+}
+static void drumParserChecks(Library& library){
+ const auto frames=drumFrames(5);auto grouped=groupDrumMaps(frames);check(grouped.size()==1 && validPatch(grouped[0]) && drumMap(grouped[0].data(),grouped[0].size()),"Complete drum bank not recognized");
+ const auto& map=grouped[0];for(unsigned n=0;n<50;++n)check(std::equal(frames[n].begin(),frames[n].end(),map.begin()+n*270),"Drum map changed original data");
+ auto patch=library.createPatch(Data(map.begin(),map.end()),{});check(patch && patch->name=="Drum Map 5 - Test Kit FX" && patch->tags.containsAdded(TagType::Category,"Drum Map"),"Drum map name/type");
+ check(convertPatch(map,Model::KStation).data.empty() && convertPatch(frames[0],Model::KStation).data.empty(),"KS drums converted into K-Station");
+ auto broken=map;broken[270+12]=0;check(!validPatch(broken),"Duplicate drum slot accepted as complete map");broken=map;broken.back()=0;check(!validPatch(broken),"Damaged drum map accepted");
+ auto partial=frames;partial.pop_back();check(groupDrumMaps(partial).size()==49,"Incomplete bank synthesized missing effects");
+ auto duplicate=frames;duplicate.push_back(frames[0]);check(groupDrumMaps(duplicate).size()==51,"Duplicate banks silently discarded");
+ auto shuffled=frames;std::reverse(shuffled.begin(),shuffled.end());check(groupDrumMaps(shuffled)==grouped,"Drum slot order depends on file order");
+ DataList parsed;check(library.parseFileData(parsed,Data(map.begin(),map.end()),"kit.syx") && parsed.size()==1 && std::equal(parsed[0].begin(),parsed[0].end(),map.begin(),map.end()),"Drum map SysEx round trip");
+ juce::MidiMessageSequence track;for(const auto& frame:shuffled)track.addEvent(juce::MidiMessage(frame.data(),int(frame.size()),0));juce::MidiFile midi;midi.setTicksPerQuarterNote(96);midi.addTrack(track);juce::MemoryOutputStream stream;check(midi.writeTo(stream),"Drum MIDI fixture");const auto* bytes=static_cast<const uint8_t*>(stream.getData());parsed.clear();check(library.parseFileData(parsed,Data(bytes,bytes+stream.getDataSize()),"kit.mid") && parsed.size()==1,"Drum map MIDI import");
+ check(patchType(frames[0].data(),270)=="Drum sound" && patchType(frames[49].data(),270)=="Drum Map FX","Partial drum classification");
+ auto x=program(Model::XStation);x[7]=1;x[11]=5;check(!ksDrum(x.data(),x.size()) && ksBank(x.data(),x.size())==0,"X-Station treated as KS Drum Map");
+ std::cout<<"PASS: KS Drum Maps preserve 49 sounds/shared FX, SysEx/MIDI round trip, incomplete/duplicate banks, K conversion guard\n";
+}
+static void drumBrowserChecks(Processor& p,const juce::File& root){
+ p.browserState.clear();const auto folder=root.getChildFile(p.isKStation()?"Drums-K":"Drums-KS");check(folder.createDirectory().wasOk(),"Drum browser fixture folder");Data data;
+ for(unsigned bank:{1u,2u}){auto frame=program(Model::KS);frame[7]=1;frame[11]=uint8_t(bank);frame[12]=7;frame[13+7]=uint8_t(60+bank);data.insert(data.end(),frame.begin(),frame.end());}
+ for(unsigned bank:{5u,6u})for(const auto& frame:drumFrames(bank))data.insert(data.end(),frame.begin(),frame.end());
+ auto partial=drumFrames(7)[0];data.insert(data.end(),partial.begin(),partial.end());const auto file=folder.getChildFile("banks.syx");check(file.replaceWithData(data.data(),data.size()),"Write bank fixtures");p.patchLibrary.addPath(folder);const auto onlyDrums=root.getChildFile(p.isKStation()?"Only-drums-K.syx":"Only-drums-KS.syx");const auto kit=groupDrumMaps(drumFrames(8))[0];check(onlyDrums.replaceWithData(kit.data(),kit.size()),"Write drum-only source");p.patchLibrary.addPath(onlyDrums);
+ {
+  Browser browser(p);browser.setBounds(0,0,1280,600);auto* source=dynamic_cast<juce::ComboBox*>(find(browser,"patchSource"));auto* bank=dynamic_cast<juce::ComboBox*>(find(browser,"ksBank"));auto* table=dynamic_cast<juce::TableListBox*>(find(browser,"patchTable"));check(source&&bank&&table,"Bank controls missing");auto* rows=table->getTableListBoxModel();bool selected=false;
+  auto pump=[&]{browser.pollLibrary();std::this_thread::sleep_for(std::chrono::milliseconds(5));};
+  for(int n=0;n<800;++n){pump();if(!selected)for(int i=0;i<source->getNumItems();++i)if(source->getItemText(i)==folder.getFileName()){source->setSelectedId(source->getItemId(i),juce::dontSendNotification);source->onChange();selected=true;break;}if(selected && rows->getNumRows()==(p.isKStation()?2:5))break;}
+  check(selected && rows->getNumRows()==(p.isKStation()?2:5),"Model-specific bank rows");check(bank->isVisible()==!p.isKStation() && table->getHeader().isColumnVisible(8)==!p.isKStation(),"KS banks visible in wrong model");
+  if(!p.isKStation()){
+   bank->setSelectedId(6,juce::dontSendNotification);bank->onChange();for(int n=0;n<800 && rows->getNumRows()!=1;++n)pump();check(rows->getNumRows()==1 && rows->getCellTooltip(0,3)=="Drum Map" && rows->getCellTooltip(0,7)=="500-548","KS Drum Map filter/address");
+   check(rows->getCellTooltip(0,8)=="Bank 5 / Drums","KS bank column");bank->setSelectedId(3,juce::dontSendNotification);bank->onChange();for(int n=0;n<800 && !(rows->getNumRows()==1 && rows->getCellTooltip(0,7)=="207");++n)pump();check(rows->getNumRows()==1 && rows->getCellTooltip(0,7)=="207","KS address must use source bank/slot, not database row");
+   bank->setSelectedId(6,juce::dontSendNotification);bank->onChange();for(int n=0;n<800 && !(rows->getNumRows()==1 && rows->getCellTooltip(0,3)=="Drum Map");++n)pump();
+  }else for(int n=0;n<rows->getNumRows();++n)check(rows->getCellTooltip(n,3)=="Program","Drum entries exposed in K-Station");
+  for(int n=0;n<50;++n)pump();bool drumSource=false;for(int n=0;n<source->getNumItems();++n)drumSource|=source->getItemText(n)==onlyDrums.getFileName();check(drumSource==!p.isKStation(),"Drum-only bank source visible in wrong model");
+  const auto capture=juce::SystemStats::getEnvironmentVariable("SILVER_K_UI_CAPTURE",{});if(capture.isNotEmpty()){
+   const auto dir=juce::File(capture);dir.createDirectory();auto out=dir.getChildFile(p.isKStation()?"K-browser.png":"KS-browser.png").createOutputStream();juce::PNGImageFormat png;check(out && png.writeImageToStream(browser.createComponentSnapshot(browser.getLocalBounds()),*out),"Browser preview");
+  }
+ }
+ if(!p.isKStation()){Browser restored(p);auto* bank=dynamic_cast<juce::ComboBox*>(find(restored,"ksBank"));check(bank && bank->getSelectedId()==6,"KS bank preference lost");}
+ p.browserState.clear();std::cout<<"PASS: "<<(p.isKStation()?"K":"KS")<<" bank visibility, complete-map rows, original addresses and bank preference\n";
+}
+
+static void drumPlaybackChecks(Processor& p,const juce::File& root){
+ Library library(root.getChildFile("drum-playback-db"));auto grouped=groupDrumMaps(drumFrames(7));const auto& map=grouped[0];auto patch=library.createPatch(Data(map.begin(),map.end()),{});juce::String error;
+ p.setNonRealtime(true);juce::AudioBuffer<float> audio(4,256);juce::MidiBuffer midi;midi.ensureSize(1024);
+ auto render=[&](int count){for(int n=0;n<count;++n){audio.clear();p.processBlock(audio,midi);}p.refreshControls();};
+ auto snapshot=[&]{juce::MemoryBlock state;p.getStateInformation(state);return juce::AudioProcessor::getXmlFromBinary(state.getData(),int(state.getSize()));};
+ check(p.activatePatch(patch,error),error.toRawUTF8());bool stored=false;
+ for(int n=0;n<60&&!stored;++n){render(100);auto xml=snapshot();juce::MemoryBlock flash;check(xml && flash.fromBase64Encoding(xml->getStringAttribute("userFlash")),"Drum Flash snapshot");const auto* bytes=static_cast<const uint8_t*>(flash.getData());const size_t offset=0x20000-0x1fc00+(400+2*50)*256;stored=flash.getSize()>=offset+50*256;for(unsigned i=0;i<50&&stored;++i)stored=bytes[offset+i*256+168]==map[i*270+13+168];}
+ check(stored,"Complete Drum Map not installed in instance Flash");render(100);
+ auto play=[&](int note){midi.addEvent(juce::MidiMessage::noteOn(1,note,uint8_t(100)),0);double peak=0;unsigned crossings=0;float previous=0;
+  for(int n=0;n<200;++n){render(1);if(n<100)continue;for(int i=0;i<256;++i){const auto sample=audio.getSample(0,i);check(std::isfinite(sample),"Nonfinite drum audio");peak=std::max(peak,double(std::abs(sample)));if(previous<0 && sample>=0)++crossings;previous=sample;}}
+  midi.addEvent(juce::MidiMessage::noteOff(1,note),0);midi.addEvent(juce::MidiMessage::controllerEvent(1,120,0),0);render(60);check(peak>1e-5 && crossings>5,"Silent drum key");return crossings;
+ };
+ const auto low=play(36),high=play(37);check(high>low*3 && high<low*5,"Drum keys did not select different stored sounds");
+ juce::MemoryBlock project;p.getStateInformation(project);p.setStateInformation(project.getData(),int(project.getSize()));render(200);const auto restoredLow=play(36),restoredHigh=play(37);check(restoredHigh>restoredLow*3 && restoredHigh<restoredLow*5,"Drum Map lost on DAW state restore");
+ auto melodic=program(Model::KS);auto melodicPatch=library.createPatch(Data(melodic.begin(),melodic.end()),{});check(p.activatePatch(melodicPatch,error),error.toRawUTF8());render(150);
+ check(p.setPerformanceMode(true,error),error.toRawUTF8());render(150);const auto before=snapshot();
+ check(p.activatePatchForPart(patch,1,error),error.toRawUTF8());render(200);auto after=snapshot();juce::MemoryBlock state;check(after && state.fromBase64Encoding(after->getStringAttribute("program")),"Read Drum Performance");auto* bytes=static_cast<const uint8_t*>(state.getData());check(state.getSize()==1038 && bytes[13+256+187]==7,"Drum bank reference lost in Performance");
+ // Route two parts to one user channel: selection must still affect only Part 2.
+ p.selectPart(1);auto* channel=p.uiParameter("part_channel");check(channel!=nullptr,"Part channel control");channel->setValueNotifyingHost(channel->convertTo0to1(0));render(100);
+ check(p.activatePatchForPart(patch,1,error),error.toRawUTF8());render(200);after=snapshot();check(state.fromBase64Encoding(after->getStringAttribute("program")),"Shared-channel snapshot");bytes=static_cast<const uint8_t*>(state.getData());check(bytes[13+187]!=7 && bytes[13+256+187]==7,"Drum selection changed another layered part");
+ p.selectPart(0);check(p.setPerformanceMode(false,error),error.toRawUTF8());render(150);auto normal=program(Model::KS);auto sound=library.createPatch(Data(normal.begin(),normal.end()),{});check(p.activatePatch(sound,error),error.toRawUTF8());render(150);const auto normalLow=play(36),normalHigh=play(37);check(std::abs(int(normalHigh)-int(normalLow))<int(normalLow)/3,"Normal Program retained Drum Map key mapping");
+ std::cout<<"PASS: original KS firmware installs complete map, keys 36/37 select different voices ("<<low<<"/"<<high<<"), DAW map restore, layered Performance part isolation, normal Program return\n";
+}
+
 static void importChecks(Library& library){
  for(auto model:{Model::AStation,Model::KStation,Model::KS,Model::XStation}){
   auto bytes=program(model);check(validPatch(bytes) && modelOf(bytes)==model,"Source model identification");
@@ -113,7 +184,7 @@ static void cacheMigrationChecks(const juce::File& root){
   patch->name=" 0";check(db.getChildFile("silver-import-version.txt").deleteFile(),"Reset disposable old-cache marker");
  }
  {
-  Library library(db);auto patch=wait(library,true);check(patch->getTags(TagType::Favourites).containsAdded("Favourite"),"Source migration lost favourites");check(db.getChildFile("silver-import-version.txt").loadFileAsString().trim()=="4","Migration completion not remembered");
+  Library library(db);auto patch=wait(library,true);check(patch->getTags(TagType::Favourites).containsAdded("Favourite"),"Source migration lost favourites");check(db.getChildFile("silver-import-version.txt").loadFileAsString().trim()=="5","Migration completion not remembered");
  }
  std::cout<<"PASS: old zero-name cache refreshed from source, favourites preserved, migration remembered\n";
 }
@@ -287,10 +358,14 @@ static void nativeImports(Library& library,const juce::File& os,const juce::File
 }
 int main(int argc,char** argv){std::cout<<std::unitbuf;std::cerr<<std::unitbuf;try{
  juce::ScopedJuceInitialiser_GUI gui;const auto root=juce::File(juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",juce::File::getSpecialLocation(juce::File::tempDirectory).getFullPathName())).getChildFile("workflow-"+juce::Uuid().toString());check(root.createDirectory().wasOk(),"Test folder");
- queueChecks();{Library library(root.getChildFile("parse-db"));importChecks(library);vStationChecks(library);vStationProgramChecks(library);namingChecks(library);}cacheMigrationChecks(root);
+ queueChecks();{Library library(root.getChildFile("parse-db"));importChecks(library);drumParserChecks(library);vStationChecks(library);vStationProgramChecks(library);namingChecks(library);}cacheMigrationChecks(root);
  if(argc>=6 && !juce::SystemStats::getEnvironmentVariable("SILVER_TEST_IMPORTS_ONLY",{}).isEmpty()){Library library(root.getChildFile("reference-db"));nativeImports(library,juce::File(argv[2]),juce::File(argv[4]),juce::File(argv[3]),juce::File(argv[5]));return 0;}
  const bool browserOnly=!juce::SystemStats::getEnvironmentVariable("SILVER_TEST_BROWSER_ONLY",{}).isEmpty();
  Processor p;folderChecks(p,root);bufferChecks(p);p.prepareToPlay(48000,256);
+ if(argc>=2 && !juce::SystemStats::getEnvironmentVariable("SILVER_TEST_DRUMS_ONLY",{}).isEmpty()){
+  juce::String error;check(p.loadFirmware(juce::File(argv[1]),error),error.toRawUTF8());drumBrowserChecks(p,root);drumPlaybackChecks(p,root);
+  if(argc>=3){check(p.loadFirmware(juce::File(argv[2]),error),error.toRawUTF8());drumBrowserChecks(p,root);}return 0;
+ }
  const auto levelFile=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_LEVEL",{});
  if(argc>=5 && levelFile.isNotEmpty()){for(int model:{1,2}){p.flashFile=juce::File(argv[3]);p.bankFile=juce::File(argv[4]);juce::String error;check(p.loadFirmware(juce::File(argv[model]),error),error.toRawUTF8());levelProbe(p,juce::File(levelFile));}return 0;}
  if(argc>=5 && !juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FXP_ONLY",{}).isEmpty()){
@@ -303,9 +378,9 @@ int main(int argc,char** argv){std::cout<<std::unitbuf;std::cerr<<std::unitbuf;t
   return 0;
  }
  if(argc>=5 && juce::SystemStats::getEnvironmentVariable("SILVER_TEST_SKIP_K",{}).isEmpty()){p.flashFile=juce::File(argv[3]);p.bankFile=juce::File(argv[4]);juce::String error;check(p.loadFirmware(juce::File(argv[1]),error),error.toRawUTF8());if(!browserOnly)audioClock(p,root);}
- auto banks=root.getChildFile("browser-banks-"+juce::Uuid().toString());banks.createDirectory();browserChecks(p,banks);
+ auto banks=root.getChildFile("browser-banks-"+juce::Uuid().toString());banks.createDirectory();browserChecks(p,banks);drumBrowserChecks(p,root);
  if(browserOnly)return 0;
- if(argc>=5){p.flashFile=juce::File(argv[3]);p.bankFile=juce::File(argv[4]);juce::String error;check(p.loadFirmware(juce::File(argv[2]),error),error.toRawUTF8());audioClock(p,root);}
+ if(argc>=5){p.flashFile=juce::File(argv[3]);p.bankFile=juce::File(argv[4]);juce::String error;check(p.loadFirmware(juce::File(argv[2]),error),error.toRawUTF8());audioClock(p,root);drumBrowserChecks(p,root);}
  if(argc>=6){Library library(root.getChildFile("external-db"));unsigned counts[5]{};for(const auto& file:juce::File(argv[5]).findChildFiles(juce::File::findFiles,true,"*.syx")){DataList data;library.loadFile(data,file.getFullPathName().toStdString());for(auto& message:data)if(auto patch=library.createPatch(std::move(message),file.getFileNameWithoutExtension().toStdString())){++counts[int(modelOf(patch->sysex))];for(auto target:{Model::KStation,Model::KS})check(validPatch(convertPatch(patch->sysex,target).data),"External bank conversion");}}
   for(int m=1;m<=4;++m)std::cout<<modelName(Model(m))<<" external programs="<<counts[m]<<'\n';check(counts[int(Model::AStation)] && counts[int(Model::XStation)],"External A/X banks missing");
   nativeImports(library,juce::File(argv[2]),juce::File(argv[4]),juce::File(argv[3]),juce::File(argv[5]));

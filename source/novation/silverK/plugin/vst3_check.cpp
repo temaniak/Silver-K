@@ -4,6 +4,9 @@
 #include <thread>
 #include <cmath>
 #include <fstream>
+#if JUCE_MAC
+#include "dsp56kBase/threadtools.h"
+#endif
 #include "wrapperClock_test.h"
 int main(int argc,char** argv){if(argc!=5 && argc!=6)return 2;const bool live=argc==6 && juce::String(argv[5])=="live";const bool multi=argc==6 && juce::String(argv[5])=="multi";const int channels=multi?4:2;juce::ScopedJuceInitialiser_GUI gui;juce::VST3PluginFormat format;juce::OwnedArray<juce::PluginDescription> descriptions;format.findAllTypesForFile(descriptions,argv[1]);if(descriptions.size()!=1)return 3;juce::String error;auto plugin=format.createInstanceFromDescription(*descriptions[0],48000,256,error);if(!plugin){std::cerr<<error<<std::endl;return 4;}
  {std::unique_ptr<juce::AudioProcessorEditor> e(plugin->createEditorIfNeeded());if(!e)return 5;}
@@ -20,6 +23,16 @@ int main(int argc,char** argv){if(argc!=5 && argc!=6)return 2;const bool live=ar
  if(argc==6 && !live && !multi){auto wave=std::stoi(argv[5]);plugin->getParameters()[1]->setValueNotifyingHost(float(wave)/31);for(int n:{5,6,13,14,15})plugin->getParameters()[n]->setValueNotifyingHost(0);plugin->getParameters()[12]->setValueNotifyingHost(0);}
 
  WrapperClock clock;if(clock.enabled())plugin->setPlayHead(&clock);
+ const bool hostAudioPriority=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_HOST_AUDIO_PRIORITY","0")=="1";
+ if(hostAudioPriority){
+#if JUCE_MAC
+  if(!realtime || !dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::Highest)
+     || !dsp56k::ThreadTools::setCurrentThreadRealtimeParameters(48000,256))return 20;
+#else
+  return 20; // Optional audio-priority host model is currently macOS-only.
+#endif
+ }
+ std::cout<<"host_audio_priority="<<hostAudioPriority<<std::endl;
  juce::AudioBuffer<float> a(channels,256),capture(channels,192000);std::array<double,4> channelPeaks{};juce::MidiBuffer m;m.ensureSize(4096);double peak=0,maxms=0,pre=0,note=0,tail=0;int onset=-1;
  if(clock.enabled()){WrapperClock::setupParameters(*plugin,kModel);const auto warmStart=std::chrono::steady_clock::now();for(int n=0;n<(kModel?3000:6000);++n){plugin->processBlock(a,m);m.clear();clock.advance();if(realtime)std::this_thread::sleep_until(warmStart+std::chrono::microseconds(int64_t((n+1)*256*1000000.0/48000)));}}
  const int64_t warmUnderruns=clock.enabled()?WrapperClock::underruns(*plugin):0;

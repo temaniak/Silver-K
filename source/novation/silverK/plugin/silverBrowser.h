@@ -15,7 +15,7 @@ private:
  Processor& p;
  juce::TableListBox table;
  juce::TextEditor search,tags,tagFilter;
- juce::ComboBox model,source;
+ juce::ComboBox model,source,ksBankSelect;
  juce::ToggleButton favourite{"Favourite"},onlyFavourites{"Favourites only"},showAllSlots{"Show all bank slots"};
  juce::TextButton addFolder{"Add folder"},addFile{"Add file"},refresh{"Rescan"},remove{"Remove source"},saveTags{"Save tags"},exportPatch{"Export .syx"},saveCurrent{"Save current"};
  juce::Label info;
@@ -30,6 +30,7 @@ private:
  pluginLib::patchDB::SearchHandle handle=pluginLib::patchDB::g_invalidSearchHandle;
  bool dirty=true,lastK=false,updatingRows=false,resultsDirty=true;
  int sortColumn=7;bool sortAscending=true;
+ void updateModel();
  void rememberView();
  pluginLib::patchDB::PatchPtr lastActivatedPatch;
  std::array<pluginLib::patchDB::PatchPtr,4> partPrograms{};

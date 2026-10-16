@@ -51,6 +51,23 @@ int main(){try{
             ++operations;check(reference->cycles==native->cycles && reference->lastread==native->lastread && reference->lastwrite==native->lastwrite,"Native RAM bus timing differs");
         }
     }
+    // Unaligned and crossing reads exercise actual H8 bus clocks/callbacks,
+    // including partial reads that throw and the 24-bit address wrap.
+    for(bool overlay:{true,false}){
+        x.overlay=y.overlay=overlay;native->nativeLowBase=overlay?native->memory+0xa00000:y.rom.data();
+        native->nativeLowSize=overlay?0x200000:unsigned(y.rom.size());native->nativeLowWritable=overlay;
+        for(unsigned address:{0u,1u,4093u,4094u,4095u,0x1ffffdu,0x1ffffeu,0x1fffffu,
+            0xa00001u,0xbffffdu,0xbffffeu,0xbfffffu,0xffdbffu,0xffdc01u,0xfffbfdu,
+            0xfffbfeu,0xfffbffu,0xfffc00u,0x3fffffu,0x400001u,0x40000du,0x40000fu,
+            0x60000fu,0xfffffeu,0xffffffu})for(unsigned width:{2u,4u}){
+            uint32_t a=0,b=0;bool ax=false,bx=false;
+            try{a=width==2?reference->read16(int(address)):reference->read32(int(address));}catch(const std::runtime_error&){ax=true;}
+            try{b=width==2?native->read16(int(address)):native->read32(int(address));}catch(const std::runtime_error&){bx=true;}
+            check(ax==bx && (ax || a==b),"Native crossing read result/exception differs");
+            check(reference->cycles==native->cycles && reference->lastread==native->lastread,"Native crossing read clocks differ");
+            check(x.ioReads==y.ioReads,"Native crossing read bypassed IO");++operations;
+        }
+    }
     check(std::equal(std::begin(reference->memory),std::end(reference->memory),std::begin(native->memory)),"Native final RAM/IO bytes differ");
     check(x.ioReads==y.ioReads && x.ioWrites==y.ioWrites && x.ioReads>0 && x.ioWrites>0,"Native RAM path bypassed MMIO side effects");
     y.rejectCode=true;bool rejected=false;const auto old=native->memory[0xa00562];
