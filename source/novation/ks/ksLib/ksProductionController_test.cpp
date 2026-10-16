@@ -4,6 +4,7 @@
 #include "ksParameterScaleCalls.h"
 #include "ksControllerJobs.h"
 #include "ksDspWordCalls.h"
+#include "ksDspAddressCalls.h"
 #include "ksDspTransport.h"
 #include <iostream>
 #include <memory>
@@ -33,6 +34,14 @@ int main(){try{
     if(ks::DspTransport::candidate(0x2520) || ks::DspTransport::candidate(0x2544)
         || ks::DspTransport::service(*state,1000) || state->cycles!=123 || state->pc!=0x2544)
         throw std::runtime_error("Production exposed retired register-driven DSP-word batch");
+    ks::DspAddressCalls addresses;state->pc=0x2592;
+    if(addresses.step(*state) || addresses.partialEntries || state->cycles!=123 || state->pc!=0x2592)
+        throw std::runtime_error("Production exposed partial DSP-address recovery");
+    for(unsigned entry:{0x2416u,0x2424u,0x245eu,0x246cu,0x256eu,0x257cu,0x25b6u,0x25c4u,0x243au,0x2482u,0x2592u,0x25dau,0x25e4u}){
+        state->pc=entry;
+        if(ks::DspTransport::candidate(entry) || ks::DspTransport::service(*state,1000) || state->cycles!=123 || state->pc!=entry)
+            throw std::runtime_error("Production exposed retired address/read batch");
+    }
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

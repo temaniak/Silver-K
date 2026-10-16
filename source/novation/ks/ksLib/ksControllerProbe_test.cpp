@@ -250,6 +250,7 @@ int main(int argc,char** argv){try{
     auto snapshotDigest=[&](const auto& data){return mode=="replay"?std::string("null"):"\""+std::to_string(digest(data))+"\"";};
     std::vector<uint8_t> midiOut;uint8_t transmitted=0;while(board->popMidiOut(transmitted))midiOut.push_back(transmitted);
     if(nativeMode && !toggling)check(board->liveMidiController()->noteActions.keySearchCalls.partialEntries==0,"Native playback used the test-only partial-key adapter");
+    if(nativeMode && !toggling)check(board->liveMidiController()->voiceActions.addressCalls.partialEntries==0,"Native playback used partial DSP-address recovery");
     if(nativeMode && !toggling)check(board->liveMidiController()->voiceActions.wordCalls.partialEntries==0,"Native playback used partial DSP-word recovery");
     if(nativeMode && !toggling)check(board->liveMidiController()->parameterScaleCalls.partialEntries==0,"Native playback used partial coefficient recovery");
     if(scenario=="state")check(board->flashRevision>0,"State scenario did not complete a Flash page write");
@@ -266,6 +267,9 @@ int main(int argc,char** argv){try{
         <<",\"state_digest\":"<<snapshotDigest(stateBytes)<<",\"flash_digest\":"<<snapshotDigest(flashBytes)
         <<",\"flash_revision\":"<<board->flashRevision<<",\"midi_tx_digest\":"<<snapshotDigest(midiOut)<<",\"midi_tx_bytes\":"<<midiOut.size()
         <<",\"midi_received\":"<<board->midiReceived
+        <<",\"native_dsp_address_calls\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.addressCalls.started:0)
+        <<",\"native_dsp_address_returns\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.addressCalls.completed:0)
+        <<",\"native_dsp_address_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.addressCalls.partialEntries:0)
         <<",\"native_dsp_word_calls\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.wordCalls.started:0)
         <<",\"native_dsp_word_returns\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.wordCalls.completed:0)
         <<",\"native_dsp_word_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->voiceActions.wordCalls.partialEntries:0)

@@ -13,6 +13,10 @@ void LiveVoiceController::verify(const ControllerCpu& h){
 }
 bool LiveVoiceController::step(ControllerCpu& h){
     auto& r=h.regs;const unsigned pc=h.getPC();
+    if(DspAddressCalls::candidate(pc)){
+        if(!addressCalls.step(h))return false;
+        ++steps;++transportSteps;return true;
+    }
     if(DspWordCalls::candidate(pc)){
         if(!wordCalls.step(h))return false;
         ++steps;++transportSteps;return true;
@@ -22,40 +26,6 @@ bool LiveVoiceController::step(ControllerCpu& h){
     if(pc==0x8fc0)++releaseCalls;
 #define N(P,L,...) case P:{Boundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);++steps;if(P<0x25fe)++transportSteps;return true;}
     switch(pc){
-    // 0x2416..0x25fe: verified interruptible controller boundaries.
-    // Select DSP address with HF3; poll the same readiness bits and retain
-    // original timeout handling. Never replace a busy response with a cached one.
-    N(0x2416,8,f.move(r[0].rl,h.read8(r[5].er+4)))
-    N(0x241e,2,r[0].rl&=0x4;value(h,r[0].rl))
-    N(0x2420,2,f.branch(!(h.ccr&4),0x243a))
-    N(0x2422,2,r[0].e=h.sub16(r[0].e,r[0].e))
-    N(0x2424,8,f.move(r[0].rl,h.read8(r[5].er+4)))
-    N(0x242c,2,r[0].rl&=0x4;value(h,r[0].rl))
-    N(0x242e,2,f.branch(!(h.ccr&4),0x243a))
-    N(0x2430,2,f.inc(r[0].e,-1))
-    N(0x2432,2,f.branch(!(h.ccr&4),0x2424))
-    N(0x2434,4,f.call(0x2304))
-    N(0x2438,2,f.branch(true,0x2422))
-    N(0x243a,2,f.move(r[0].rl,0x8))
-    N(0x243c,8,f.store8(r[5].er+0,r[0].rl))
-    N(0x2444,2,f.move(r[0].rl,0x0))
-    N(0x2446,8,f.store8(r[5].er+10,r[0].rl))
-    N(0x244e,8,f.store8(r[5].er+12,r[4].rh))
-    N(0x2456,8,f.store8(r[5].er+14,r[4].rl))
-    N(0x245e,8,f.move(r[0].rl,h.read8(r[5].er+4)))
-    N(0x2466,2,r[0].rl&=0x4;value(h,r[0].rl))
-    N(0x2468,2,f.branch(!(h.ccr&4),0x2482))
-    N(0x246a,2,r[0].e=h.sub16(r[0].e,r[0].e))
-    N(0x246c,8,f.move(r[0].rl,h.read8(r[5].er+4)))
-    N(0x2474,2,r[0].rl&=0x4;value(h,r[0].rl))
-    N(0x2476,2,f.branch(!(h.ccr&4),0x2482))
-    N(0x2478,2,f.inc(r[0].e,-1))
-    N(0x247a,2,f.branch(!(h.ccr&4),0x246c))
-    N(0x247c,4,f.call(0x2304))
-    N(0x2480,2,f.branch(true,0x246a))
-    N(0x2482,2,f.move(r[0].rl,0x0))
-    N(0x2484,8,f.store8(r[5].er+0,r[0].rl))
-    N(0x248c,2,f.ret())
     // Select DSP B/A and invalidate the sequential address cache.
     N(0x248e,6,f.move(r[5].er,0x600000))
     N(0x2494,4,f.move(r[0].r,0xffff))
@@ -76,45 +46,6 @@ bool LiveVoiceController::step(ControllerCpu& h){
     N(0x24cc,6,f.move(r[0].r,h.read16(0x159f2)))
     N(0x24d2,2,h.sub16(r[4].r,r[0].r))
     N(0x24d4,4,f.call(0x2416))
-    // Host read on B/A: send the read address under HF3, wait for receive
-    // data, clear HF3 and read all three bytes through the actual DSP port.
-    N(0x2560,6,f.move(r[5].er,0x600000))
-    N(0x2566,2,f.branch(true,0x256e))
-    N(0x2568,6,f.move(r[5].er,0x400000))
-    N(0x256e,8,f.move(r[0].rl,h.read8(r[5].er+4)))
-    N(0x2576,2,r[0].rl&=0x4;value(h,r[0].rl))
-    N(0x2578,2,f.branch(!(h.ccr&4),0x2592))
-    N(0x257a,2,r[0].e=h.sub16(r[0].e,r[0].e))
-    N(0x257c,8,f.move(r[0].rl,h.read8(r[5].er+4)))
-    N(0x2584,2,r[0].rl&=0x4;value(h,r[0].rl))
-    N(0x2586,2,f.branch(!(h.ccr&4),0x2592))
-    N(0x2588,2,f.inc(r[0].e,-1))
-    N(0x258a,2,f.branch(!(h.ccr&4),0x257c))
-    N(0x258c,4,f.call(0x2304))
-    N(0x2590,2,f.branch(true,0x257a))
-    N(0x2592,2,f.move(r[0].rl,0x8))
-    N(0x2594,8,f.store8(r[5].er+0,r[0].rl))
-    N(0x259c,2,f.move(r[0].rl,0xffffff80))
-    N(0x259e,8,f.store8(r[5].er+10,r[0].rl))
-    N(0x25a6,8,f.store8(r[5].er+12,r[4].rh))
-    N(0x25ae,8,f.store8(r[5].er+14,r[4].rl))
-    N(0x25b6,8,f.move(r[0].rl,h.read8(r[5].er+4)))
-    N(0x25be,2,r[0].rl&=0x1;value(h,r[0].rl))
-    N(0x25c0,2,f.branch(!(h.ccr&4),0x25da))
-    N(0x25c2,2,r[0].e=h.sub16(r[0].e,r[0].e))
-    N(0x25c4,8,f.move(r[0].rl,h.read8(r[5].er+4)))
-    N(0x25cc,2,r[0].rl&=0x1;value(h,r[0].rl))
-    N(0x25ce,2,f.branch(!(h.ccr&4),0x25da))
-    N(0x25d0,2,f.inc(r[0].e,-1))
-    N(0x25d2,2,f.branch(!(h.ccr&4),0x25c4))
-    N(0x25d4,4,f.call(0x2304))
-    N(0x25d8,2,f.branch(true,0x25c2))
-    N(0x25da,2,f.move(r[0].rl,0x0))
-    N(0x25dc,8,f.store8(r[5].er+0,r[0].rl))
-    N(0x25e4,8,f.move(r[4].rh,h.read8(r[5].er+10)))
-    N(0x25ec,8,f.move(r[4].rl,h.read8(r[5].er+12)))
-    N(0x25f4,8,f.move(r[0].rl,h.read8(r[5].er+14)))
-    N(0x25fc,2,f.ret())
     // 0x77dc..0x7872: verified interruptible controller boundaries.
     // Voice/part address windows. Negative R4 selects the alternate
     // control region; selection and offset mirrors remain guest-visible.

@@ -3,11 +3,9 @@
 
 namespace ks {
 class ControllerCpu;
-// First event-controller stage: live HDI protocol jobs, not recorded traffic.
-// The compatibility frame is materialized at job boundaries for IRQs, slices
-// and switching back to H8. No job may cross the caller's next event deadline.
-using DspWordPartialBatchTest=unsigned(*)(ControllerCpu&,uint64_t);
-void setDspWordPartialBatchForTests(DspWordPartialBatchTest);
+// Retired batch ABI for comparison tests. Normal exchange uses native tasks.
+using DspTransportPartialBatchTest=unsigned(*)(ControllerCpu&,uint64_t);
+void setDspTransportPartialBatchForTests(DspTransportPartialBatchTest);
 class DspTransport final {
 public:
     static bool candidate(unsigned pc);

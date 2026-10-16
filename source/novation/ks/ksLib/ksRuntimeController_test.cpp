@@ -147,8 +147,7 @@ int main(int argc,char** argv){try{
             }
             original->lastread=native->lastread=int(random());original->lastwrite=native->lastwrite=int(random());
             x.accesses.clear();y.accesses.clear();
-            const bool retired=pc==0x24d8 || pc==0x24e6 || pc==0x24fc || pc==0x2520 || pc==0x252e || pc==0x2544;
-            check(ks::DspTransport::candidate(pc)!=retired,"HDI production/retired entry selection differs");
+            check(!ks::DspTransport::candidate(pc),"Retired HDI batch remained a production candidate");
             // A task without sufficient time (or with pending arbitration)
             // must leave even the bus and register frame untouched.
             check(!ks::DspTransport::service(*native,1001),"HDI job crossed its deadline");

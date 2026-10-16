@@ -3275,3 +3275,91 @@ convert reset, foreground, parser, note/voice/parameter, clock/arp and state/
 Flash callers. Remove every temporary projection and shared register/flag/
 stack/PC model. Only after that removal, perform final equality tests, compare
 whole-process CPU with direct H8 and push the completed migration.
+
+
+## 2026-10-16 — Mac: native DSP address/read tasks; historical HDI batches test-only
+
+Test ID: `ks-native-dsp-address-calls-20261016`. Isolated source parent
+`2cc9cd5897e0cbc56d61e196f59de076474fb93e` plus address/read task changes;
+exact source/binary manifests and private reports remain in ignored output.
+Same M1 Pro arm64 Release build, AppleClang 21/C++17 and pinned dependencies.
+No CPU comparison or push has been performed; the complete global port remains
+active and unfinished.
+
+`DspAddressTask` owns address/request values, A/B read-port selection, both live
+readiness phases, retries/timeouts, HF3 request/release and optional three-byte
+reply assembly. It contains no CPU registers, flags, stack, PC or instruction
+addresses. `DspAddressCalls` remains a temporary old-caller/IRQ/trace projection.
+A timeout still parks for the actual existing GPIO fault service; that service
+and the caller/cache/selection wrappers still require semantic conversion.
+The separate bootstrap firmware-stream loop at `0x23ce` also remains in the
+compatibility path. These task connections do not finish the requested global
+model removal.
+
+The remaining 68 transport body boundaries move to the comparison object.
+All historical HDI batch calculations, accesses and IRQ/deadline guards also
+move there. Normal `DspTransport` has no register-driven implementation and
+returns no production candidates. Its closed-by-default test hook preserves
+historical partial-frame comparisons without exposing fallback in real jobs.
+The old event flag remains accepted for diagnostic compatibility; native
+address/word/read jobs run independently of it. The opt-in part-lookup jobs
+remain unchanged.
+
+Actual validation:
+
+- 819,920 complete outer runtime calls / 47,307,578 directly executed original
+  H8 steps, plus 84 explicitly interleaved child calls / 2,460 child steps.
+  Every 16-bit address, both DSPs/selectors, all reply byte positions, retained
+  masks, readiness delays and mapped/clock-only fetch are exercised. Every
+  intermediate value, flag, clock, PC projection, ordered/timed data/return
+  access and final full memory match. The actual-call fixture deliberately
+  links no synchronized H8/recovery factory; candidate H8 and recovery are zero.
+- Both phases exercise full 16-bit timeouts and the real error GPIO handler,
+  totaling 72 original fault-service entries. 636 IRQ save/RTE/resume points,
+  820,004 in-flight metric resets and eight live tasks pass. Child context
+  interleaving is separately scoped from actual IRQ entry timing.
+- 393,216 public native-task payload/deadline/dual-readiness/selection cases
+  pass, including no premature accesses and exact own durations. Full fault
+  park/resume runs independently in each readiness phase.
+- Four cold/reset/warm/playback timelines pass (normal/irregular budgets,
+  Multi, mapped markers), with full RAM/IO/IRQ/state/Flash, exact DSP tape and
+  audible 24-stream output. Candidate H8 and partial recovery remain zero.
+- Nine complete frozen H8 DSP tapes match all 8,085,451 events. No retired
+  HDI batches or partial recovery execute. Native address admissions in the
+  measurement windows: Single 47,921; Multi 28,758; MIDI 53,728; pedal 32,033;
+  controls 30,399; state 32,980; clock/arp 29,312; stealing 33,376; FX 32,801
+  (321,308 total). The windows record 321,311 returns: calls already in flight
+  at metric reset can finish inside the window, or remain live at its end.
+  These independent work counters are not paired calls or a CPU result.
+- Fourteen complete raw-audio timelines match: 6,075,618 frames x 24 streams
+  per side, 583,259,328 bytes per side. Includes 30-second Multi/pedal/clock
+  and pedal/FX H8 round trips. State, Flash, MIDI, controller/DSP clocks and
+  instruction totals and serial state match. All 52 correctness stages pass
+  against the frozen source identity.
+- Two additional Single/Multi checks remove both old experiment flags and
+  match complete original-H8 tapes plus all raw audio bytes: another 362,724
+  frames / 34,821,504 bytes per side across 24 streams. Native address/word
+  jobs execute with zero recovery/batches/H8 work on the default path.
+- Private allocation/sanitizer probes run 23,288 sampled outer calls plus 84
+  nested calls, actual dual-phase fault and IRQ paths. No `new/new[]` occurs
+  inside native runtime steps. ASan/UBSan pass for the new address bridge/task;
+  original H8 is excluded and unchanged libraries are uninstrumented.
+- Fresh selected component CTest: five pass, four skip without private ROM,
+  zero fail (nine selected). The private actual-call/runtime cases execute
+  above. `ksLib` has no H8 core/decoder symbols and normal product target
+  commands exclude the comparison object. This stage rebuilds engine tests;
+  AU/VST3/Standalone and callback evidence remains the preceding word-write
+  checkpoint, not a fresh validation of this source. Final products/callbacks
+  must be rebuilt and revalidated after the full semantic removal.
+
+Limits: same synthetic Flash, zero Wave ROM and explicit mapped boot markers;
+real sampled banks/physical hardware are not established. DSP/JIT, Device,
+B/A order, clocks, resampling, buffers, waits, priorities and placement are
+unchanged. Existing probe CPU fields are ignored. Windows build, private
+fidelity and CPU evidence remain pending separately; these are Mac results.
+
+Next: lift the actual transport fault notification, then the remaining caller/
+cache/selection, reset, parser, note/voice/parameter, clock/arp and state/Flash
+lifecycles. Delete every temporary projection and all shared registers, flags,
+stack and PC. Only after that full removal, run final equality/product checks,
+compare whole-process CPU with direct H8, and push the completed migration.

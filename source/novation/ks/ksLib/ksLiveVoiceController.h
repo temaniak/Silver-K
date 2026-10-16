@@ -1,12 +1,13 @@
 #pragma once
 #include "ksControllerState.h"
 #include "ksDspWordCalls.h"
+#include "ksDspAddressCalls.h"
 #include <cstdint>
 
 namespace ks {
 class ControllerCpu;
 // Native voice lifecycle and DSP host transport. Parameter calculators and
-// periodic voice servicing remain H8; this is deliberately a staged ABI bridge.
+// periodic voice servicing retain the compatibility ABI during migration.
 class LiveVoiceController final {
 public:
     static constexpr bool candidate(unsigned pc){
@@ -16,9 +17,10 @@ public:
     }
     static void verify(const ControllerCpu&);
     bool step(ControllerCpu&);
-    void resetMetrics(){steps=allocationCalls=startCalls=releaseCalls=transportSteps=0;wordCalls.resetMetrics();}
-    void discardTransientCalls(){wordCalls.discardCalls();}
+    void resetMetrics(){steps=allocationCalls=startCalls=releaseCalls=transportSteps=0;wordCalls.resetMetrics();addressCalls.resetMetrics();}
+    void discardTransientCalls(){wordCalls.discardCalls();addressCalls.discardCalls();}
     DspWordCalls wordCalls;
+    DspAddressCalls addressCalls;
     uint64_t steps=0,allocationCalls=0,startCalls=0,releaseCalls=0,transportSteps=0;
 };
 }

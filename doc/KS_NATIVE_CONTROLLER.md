@@ -37,9 +37,10 @@ or renaming that frame would not finish the migration.
 
 Implemented opt-in live jobs:
 
-- `SILVER_KS_DSP_TRANSPORT=events`: the remaining address/read HDI batches
-  within the next event/slice deadline. DSP-word transmission now uses its
-  native task independently of this flag; the old word batch is test-only.
+- The former `SILVER_KS_DSP_TRANSPORT=events` flag remains accepted for
+  diagnostic compatibility. Address/word/read exchange now always uses typed
+  native tasks. All old HDI batch implementations are comparison-only; the
+  production batch candidate is always false.
 - `SILVER_KS_CONTROL_JOBS=1`: part-state selection, part-parameter-table
   selection. The signed coefficient calculation now uses its own native task,
   independently of this flag. A complete remaining part
@@ -50,8 +51,8 @@ Implemented opt-in live jobs:
   The part-lookup jobs retain the compatibility frame at yields. They use actual SRAM/return-stack data, exact reference
   flags, memory clocks and wrap behavior. They cannot change interrupt masks.
 
-Both flags apply to production C++ playback. They are independent
-and default off. The new diagnostic backend names are
+The control-job flag applies independently to production C++ playback and
+defaults off. The retained diagnostic backend names are
 `native-cpp-control-jobs` and, with HDI jobs, `native-cpp-events-control`.
 No installed bundle is replaced by this research build.
 
@@ -147,6 +148,28 @@ DSP tapes and 14 raw-audio/state timelines match. Allocation and sanitizer
 scope, fresh Mac products/callbacks and remaining limitations are in the
 optimization journal. Address selection/read reply tasks and all remaining
 callers still need conversion before deleting the shared compatibility model.
+
+
+`DspAddressTask` now owns address requests and optional read replies, both live
+readiness phases, their retry/timeout state, HF3 sequencing, actual byte reads
+and A/B read-port selection. Its native state contains no CPU register/flag/
+stack/PC or instruction addresses. `DspAddressCalls` still supplies the old
+caller projection, so the global removal remains unfinished. All 68 retired
+body boundaries and all historical HDI batch arithmetic, port access and IRQ/
+deadline guards now compile only in the comparison object. The normal batch
+ABI is a closed-by-default test hook and never a production candidate.
+
+Admission `ks-native-dsp-address-calls-20261016`: 819,920 complete outer calls
+and 84 interleaved child calls against direct original H8, every address, both
+DSPs/selectors, reply byte positions, masks, dual-phase timeouts, actual GPIO
+fault service, IRQs and eight live tasks. All nine full DSP tapes and 14 raw
+musical timelines match, with zero test recovery or retired-batch work. Single
+and Multi also match full tape and raw audio without either legacy experimental
+flag. Task/bridge allocation and sanitizer checks pass. This stage rebuilds
+engine tests; products/callbacks were last verified at the preceding word-write
+checkpoint and require fresh final validation. The bootstrap firmware stream (the separate `0x23ce` path), fault notification
+and caller/cache/reset/parser/voice/parameter/clock/state paths still need semantic
+conversion; no CPU comparison or push has been performed.
 
 
 ## Remaining removal gates
