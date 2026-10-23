@@ -465,3 +465,11 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksClockPulseCalls
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksClockDisplayCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateScreenCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelSettingsCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateEditContextCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateScreenEditCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateMenuFormatCalls.cpp")

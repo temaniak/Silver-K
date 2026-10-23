@@ -412,3 +412,11 @@ target_sources(ksLib PRIVATE ksClockPulseCalls.cpp ksClockPulseCalls.h ksClockPu
 target_sources(ksLib PRIVATE ksClockDisplayCalls.cpp ksClockDisplayCalls.h ksClockDisplayTask.h)
 
 target_sources(ksLib PRIVATE ksStateScreenCalls.cpp ksStateScreenCalls.h ksStateScreenTask.h)
+
+target_sources(ksLib PRIVATE ksPanelSettingsCalls.cpp ksPanelSettingsCalls.h ksPanelSettingsTask.h)
+
+target_sources(ksLib PRIVATE ksStateEditContextCalls.cpp ksStateEditContextCalls.h ksStateEditContextTask.h)
+
+target_sources(ksLib PRIVATE ksStateScreenEditCalls.cpp ksStateScreenEditCalls.h ksStateScreenEditTask.h)
+
+target_sources(ksLib PRIVATE ksStateMenuFormatCalls.cpp ksStateMenuFormatCalls.h ksStateMenuFormatTask.h)

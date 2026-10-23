@@ -13,6 +13,10 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksStateMenuFormatCalls.h"
+#include "ksStateScreenEditCalls.h"
+#include "ksStateEditContextCalls.h"
+#include "ksPanelSettingsCalls.h"
 #include "ksStateScreenCalls.h"
 #include "ksClockDisplayCalls.h"
 #include "ksClockPulseCalls.h"
@@ -176,6 +180,18 @@ int main(){try{
     ks::StateScreenCalls stateScreenCalls;
     for(unsigned entry:{0x582cu}){state->pc=entry;
         if(stateScreenCalls.step(*state)||stateScreenCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateScreen recovery");}
+    ks::PanelSettingsCalls panelSettingsCalls;
+    for(unsigned entry:{0x1f88u,0x21a0u}){state->pc=entry;
+        if(panelSettingsCalls.step(*state)||panelSettingsCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial PanelSettings recovery");}
+    ks::StateEditContextCalls stateEditContextCalls;
+    for(unsigned entry:{0x5a4au}){state->pc=entry;
+        if(stateEditContextCalls.step(*state)||stateEditContextCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateEditContext recovery");}
+    ks::StateScreenEditCalls stateScreenEditCalls;
+    for(unsigned entry:{0x59aeu}){state->pc=entry;
+        if(stateScreenEditCalls.step(*state)||stateScreenEditCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateScreenEdit recovery");}
+    ks::StateMenuFormatCalls stateMenuFormatCalls;
+    for(unsigned entry:{0x5ae4u}){state->pc=entry;
+        if(stateMenuFormatCalls.step(*state)||stateMenuFormatCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateMenuFormat recovery");}
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

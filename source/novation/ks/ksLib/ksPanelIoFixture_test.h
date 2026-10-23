@@ -13,7 +13,7 @@ public:
         baseCounter_=uint16_t((unsigned(board_.read(0xfffff6))<<8)|board_.read(0xfffff7));
         counter_=baseCounter_;
     }
-    void configureScreens(unsigned edit,unsigned next,unsigned previous){screenKeys_={edit,next,next,next,next,next,previous,next,edit};screenMode_=true;}
+    void configureScreens(unsigned edit,unsigned next,unsigned previous,bool encoder=false){screenEncoderMode_=encoder;screenKeys_={edit,next,next,next,next,next,previous,next,edit};screenMode_=true;}
     void apply(uint64_t frame,double rate,unsigned storeKey,bool multi){
         const auto at=[&](double seconds){return uint64_t(std::llround(seconds*rate));};
         rows_.fill(255);bool pressed=false;
@@ -23,7 +23,7 @@ public:
         const bool pedal=(frame>=at(.12)&&frame<at(.4))||(frame>=at(1.6)&&frame<at(1.9));
         port_=pedal?0xbf:0xff;if(pedal!=pedal_){++pedalTransitions;pedal_=pedal;}
         int detents=0;
-        if(!screenMode_&&frame>=at(2.2)){
+        if((!screenMode_||screenEncoderMode_)&&frame>=at(2.2)){
             const unsigned step=unsigned((frame-at(2.2))/std::max<uint64_t>(1,at(.02)));
             detents=step<24?int(step):step<56?48-int(step):-8;
         }
@@ -48,7 +48,7 @@ public:
     uint64_t matrixReads=0,pedalReads=0,encoderReads=0,adcReads=0;
     uint64_t buttonTransitions=0,pedalTransitions=0,encoderTransitions=0,adcTransitions=0;
 private:
-    bool screenMode_=false;std::array<unsigned,9> screenKeys_{};
+    bool screenEncoderMode_=false;bool screenMode_=false;std::array<unsigned,9> screenKeys_{};
     Board& board_;std::array<uint8_t,6> rows_{};std::array<uint16_t,4> adc_{};
     uint16_t baseCounter_=0,counter_=0;uint8_t port_=255;bool pressed_=false,pedal_=false;
 };
