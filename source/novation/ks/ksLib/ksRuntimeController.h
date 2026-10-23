@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <array>
 #include <optional>
-#include "ksInterruptService.h"
+#include "ksInterruptScheduler.h"
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
 #include <vector>
 #include <algorithm>
@@ -35,32 +35,26 @@ public:
     uint64_t nativeInterruptStarts=0,nativeInterruptReturns=0,nativeInterruptPhases=0,nativeInterruptInitial=0;
     std::array<uint64_t,6> nativeInterruptKinds{};
     uint32_t nativeTpuComponents=0,nativeAdcComponents=0,nativeSerialReceiveComponents=0;
-    unsigned activeNativeInterrupts() const { return interruptCount; }
+    unsigned activeNativeInterrupts() const { return interruptScheduler.depth(); }
     // Const diagnostic of the current typed continuation, separate from the
     // cumulative component-coverage mask and any saved compatibility CPU PC.
     bool nativeTpu0At(Tpu0Service::Component component,bool requireCritical=false) const {
-        if(!interruptCount)return false;
-        const auto&service=interrupts[interruptCount-1]->service;
+        if(!interruptScheduler.active())return false;
+        const auto&service=*interruptScheduler.current();
         return service.timerAt(component)&&(!requireCritical||service.critical());
     }
-    bool nativeAdcAt(AdcService::Component component) const { return interruptCount&&interrupts[interruptCount-1]->service.adcAt(component); }
-    bool nativeSerialReceiveAt(SerialReceiveService::Component component) const { return interruptCount&&interrupts[interruptCount-1]->service.serialReceiveAt(component); }
+    bool nativeAdcAt(AdcService::Component component) const { return interruptScheduler.active()&&interruptScheduler.current()->adcAt(component); }
+    bool nativeSerialReceiveAt(SerialReceiveService::Component component) const { return interruptScheduler.active()&&interruptScheduler.current()->serialReceiveAt(component); }
     // Diagnostic only; allocated before playback when explicitly enabled.
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
     std::vector<uint64_t> boundaryProfile;
 #endif
 private:
     LiveMidiController& shared;
-    struct Interrupt {
-        InterruptService service;
-        uint8_t previousPriority,priority;
-        int depth;
-        Interrupt(InterruptService::Kind kind,uint8_t previous,uint8_t admitted,int level)
-            :service(kind),previousPriority(previous),priority(admitted),depth(level){}
-    };
-    // Seven priority levels bound native nesting without dynamic allocation.
-    std::array<std::optional<Interrupt>,7> interrupts{};
-    unsigned interruptCount=0;
+    InterruptScheduler interruptScheduler;
+    // Temporary caller-depth projection belongs only to the compatibility edge.
+    // The scheduler's priority stack has no CPU depth, register or return token.
+    std::array<int,InterruptScheduler::Capacity> compatibilityIrqDepth{};
     bool serviceInterrupt(ControllerCpu&);
     bool startup(ControllerCpu&);
     bool io(ControllerCpu&);

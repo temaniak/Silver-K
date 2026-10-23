@@ -8,18 +8,8 @@ bool RuntimeController::serviceInterrupt(ControllerCpu& h) {
     // comparison executables and arbitrary partial CPU frames retain their
     // existing explicit compatibility adapter.
     if (!h.nativeFetchClocksOnly || !h.nativeLowBase || !h.interruptMode2) return false;
-    int selected=-1,priority=h.exr&7;
-    for (unsigned base=0;base<=64;base+=64) {
-        auto pending=base?h.pending_irqs_high:h.pending_irqs;
-        while (pending) {
-            unsigned bit=0; auto word=pending;
-            while (!(word&1)) { ++bit; word>>=1; }
-            if (h.interruptPriority[base+bit]>priority) {
-                selected=int(base+bit); priority=h.interruptPriority[selected];
-            }
-            pending&=pending-1;
-        }
-    }
+    const auto selection=InterruptScheduler::select(h.pending_irqs,h.pending_irqs_high,h.interruptPriority,h.exr);
+    const int selected=selection.vector;const auto priority=selection.priority;
     if (selected>=0) {
         const auto vector=unsigned(selected)*4;
         if (vector+4>h.nativeLowSize) return false;
@@ -44,43 +34,41 @@ bool RuntimeController::serviceInterrupt(ControllerCpu& h) {
         // The remaining compatibility stack must be in ordinary internal RAM
         // for its old entry/return clock credits to apply. No bytes are pushed.
         if ((h.getSP()&1) || h.getSP()<0xfff400 || h.getSP()>0xfffc00) return false;
-        if (interruptCount==interrupts.size()) throw std::logic_error("Native interrupt capacity exceeded");
-        auto& slot=interrupts[interruptCount];
-        slot.emplace(kind,h.exr,uint8_t(priority),h.indent+1); ++interruptCount;
+        const auto level=interruptScheduler.depth();
+        if(!interruptScheduler.admit(kind,priority,h.exr))throw std::logic_error("Native interrupt capacity/priority exceeded");
+        compatibilityIrqDepth[level]=h.indent+1;
         if (selected<64) h.pending_irqs&=~(1ull<<selected);
         else h.pending_irqs_high&=~(1ull<<(selected-64));
         h.exr=uint8_t(priority); ++h.indent;
         // Original mode-2 admission: 12+6 save clocks, 4 internal clocks,
         // six vector-read clocks. The native continuation stays in C++.
-        h.cycles+=28; h.lastwrite=-1;
+        h.cycles+=InterruptScheduler::AdmissionClocks; h.lastwrite=-1;
         ++interruptEntries; ++nativeInterruptStarts; ++nativeInterruptKinds[unsigned(kind)];
     }
-    if (!interruptCount || interrupts[interruptCount-1]->depth!=h.indent) return false;
-    auto& frame=*interrupts[interruptCount-1];
-    auto& service=frame.service;
-    const auto cost=service.nextClocks(); const auto start=h.cycles;
+    if(!interruptScheduler.active()||compatibilityIrqDepth[interruptScheduler.depth()-1]!=h.indent)return false;
+    const auto cost=interruptScheduler.nextClocks();const auto start=h.cycles;
     const auto history=[](uint32_t address) {
         return address<0x400000 || (address>=0xfffd10 && address<0xffffa0) ? int(address) : -1;
     };
-    const auto used=service.advanceBefore(cost,[&](uint32_t address,unsigned offset) {
+    const auto result=interruptScheduler.advanceBefore(cost,[&](uint32_t address,unsigned offset) {
         h.cycles=start+offset; h.lastread=history(address);
         return h.readResource(address);
     },[&](uint32_t address,uint8_t value,unsigned offset) {
         h.cycles=start+offset; h.lastwrite=history(address);
         h.writeResource(address,value);
     });
-    if (used!=cost || !cost) throw std::logic_error("Native interrupt admission differs");
+    if (result.clocks!=cost || !cost) throw std::logic_error("Native interrupt admission differs");
     h.cycles=start+cost; ++nativeInterruptPhases;
-    h.exr=service.critical()?7:frame.priority;
-    nativeTpuComponents|=service.timerComponents();
-    nativeAdcComponents|=service.adcComponents();
-    nativeSerialReceiveComponents|=service.serialReceiveComponents();
-    if (service.complete()) {
-        h.exr=frame.previousPriority; --h.indent;
+    h.exr=result.mask;
+    nativeTpuComponents|=result.timer;
+    nativeAdcComponents|=result.adc;
+    nativeSerialReceiveComponents|=result.receive;
+    if (result.returned) {
+        --h.indent;
         // Only bus history crosses back into the migration ABI. No register,
         // CCR, SP or PC was changed by this closed interrupt lifecycle.
         h.lastread=-1;
-        interrupts[--interruptCount].reset(); ++nativeInterruptReturns;
+        ++nativeInterruptReturns;
     }
     return true;
 }

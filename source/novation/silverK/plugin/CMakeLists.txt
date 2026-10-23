@@ -2571,3 +2571,7 @@ add_executable(ksSerialReceiveGraph_test "${ROOT}/source/novation/ks/ksLib/ksSer
 target_compile_features(ksSerialReceiveGraph_test PRIVATE cxx_std_17)
 add_test(NAME ks_serial_receive_graph COMMAND ksSerialReceiveGraph_test)
 set_tests_properties(ks_serial_receive_graph PROPERTIES TIMEOUT 240)
+
+add_executable(ksInterruptScheduler_test "${ROOT}/source/novation/ks/ksLib/ksInterruptScheduler_test.cpp")
+target_compile_features(ksInterruptScheduler_test PRIVATE cxx_std_17)
+add_test(NAME ks_interrupt_scheduler COMMAND ksInterruptScheduler_test)
