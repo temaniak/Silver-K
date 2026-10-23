@@ -12,13 +12,14 @@ void check(bool v,const char* why){if(!v)throw std::runtime_error(why);}
 std::vector<uint8_t> bytes(const std::filesystem::path& p){std::ifstream f(p,std::ios::binary);check(bool(f),"Cannot read fixture");return {std::istreambuf_iterator<char>(f),{}};}
 void same(ks::Board& a,ks::Board& b){
     auto& x=static_cast<ks::ControllerCpu&>(a.cpu());auto& y=static_cast<ks::ControllerCpu&>(b.cpu());
-    if(x.cycles!=y.cycles || x.getPC()!=y.getPC()){
+    const bool nativeIrq=b.nativeController()&&b.nativeController()->activeNativeInterrupts();
+    if(x.cycles!=y.cycles || (!nativeIrq&&x.getPC()!=y.getPC())){
         std::cerr<<"reference pc="<<std::hex<<x.getPC()<<" candidate pc="<<y.getPC()<<std::dec<<" cycles "<<x.cycles<<" / "<<y.cycles<<'\n';
         throw std::runtime_error("Reset cycle/PC mismatch");
     }
-    check(x.ccr==y.ccr && x.exr==y.exr,"Reset condition/mask mismatch");
-    for(unsigned n=0;n<8;++n)if(x.regs[n].er!=y.regs[n].er){std::cerr<<"register "<<n<<" values "<<std::hex<<x.regs[n].er<<" / "<<y.regs[n].er<<std::dec<<'\n';throw std::runtime_error("Reset ABI mismatch");}
-    check(x.lastread==y.lastread && x.lastwrite==y.lastwrite && x.indent==y.indent,"Reset bus/stack history mismatch");
+    check((nativeIrq||x.ccr==y.ccr) && x.exr==y.exr,"Reset condition/mask mismatch");
+    for(unsigned n=0;n<8;++n)if(!nativeIrq&&x.regs[n].er!=y.regs[n].er){std::cerr<<"register "<<n<<" values "<<std::hex<<x.regs[n].er<<" / "<<y.regs[n].er<<std::dec<<'\n';throw std::runtime_error("Reset ABI mismatch");}
+    check((nativeIrq||(x.lastread==y.lastread && x.lastwrite==y.lastwrite)) && x.indent==y.indent,"Reset bus/stack history mismatch");
     if(x.pending_irqs!=y.pending_irqs || x.pending_irqs_high!=y.pending_irqs_high || x.interruptMode2!=y.interruptMode2){
         std::cerr<<"pc="<<std::hex<<x.getPC()<<" pending="<<x.pending_irqs<<"/"<<y.pending_irqs<<" high="<<x.pending_irqs_high<<"/"<<y.pending_irqs_high<<" mode="<<x.interruptMode2<<"/"<<y.interruptMode2<<std::dec<<'\n';throw std::runtime_error("Reset IRQ mismatch");}
 
@@ -118,7 +119,14 @@ int main(int argc,char** argv){try{
     check(b->liveMidiController()->bootStreamCalls.started==2 && b->liveMidiController()->bootStreamCalls.completed==2,"Cold startup did not complete both native DSP firmware streams");
     check(b->liveMidiController()->panelAdcCalibrationCalls.started>0&&b->liveMidiController()->panelAdcCalibrationCalls.completed>0,"Cold start did not exercise native ADC calibration");
     check(b->liveMidiController()->panelAdcScanCalls.started>0&&b->liveMidiController()->panelAdcIrqCalls.started>0,"Cold start did not exercise native ADC scan/IRQ");
-    check(std::equal(std::begin(a->cpu().memory),std::end(a->cpu().memory),std::begin(b->cpu().memory)),"Complete boot memory mismatch");
+    // Native IRQs no longer materialize temporary CPU frames. Only the
+    // firmware's reserved scratch stack may differ; all other 16 MiB bytes
+    // remain part of the independent cold-boot comparison.
+    const auto sameResources=[&]{
+        const auto*x=a->cpu().memory;const auto*y=b->cpu().memory;
+        return std::equal(x,x+0xfff000,y)&&std::equal(x+0xfffc00,x+(1<<24),y+0xfffc00);
+    };
+    check(sameResources(),"Complete boot resource memory mismatch");
     if(variant=="multi")check(a->state().performance && b->state().performance,"Performance startup not exercised");
     if(variant=="mapped")check(!a->zeroBank() && !b->zeroBank(),"Mapped wave bank adaptation not disabled");
     const uint8_t on[]{0x90,60,100};check(a->enqueueMidi(on,3)&&b->enqueueMidi(on,3),"MIDI rejected");
@@ -134,9 +142,9 @@ int main(int argc,char** argv){try{
     check(bytes(out/"h8.kst")==bytes(out/"cpp.kst"),"Full reset DSP bus/slice mismatch");
     check(a->saveUserFlash()==b->saveUserFlash(),"Reset Flash mismatch");
     check(ks::stateMessage(a->state())==ks::stateMessage(b->state()),"Reset musical state mismatch");
-    check(std::equal(std::begin(a->cpu().memory),std::end(a->cpu().memory),std::begin(b->cpu().memory)),"Post-reset memory mismatch");
+    check(sameResources(),"Post-reset resource memory mismatch");
     check(a->serialDepth()==b->serialDepth() && a->serialUnderruns==b->serialUnderruns && a->serialOverflows==b->serialOverflows,"Reset serial state mismatch");
     uint8_t v=0,w=0;while(a->popMidiOut(v))check(b->popMidiOut(w)&&v==w,"Reset MIDI output mismatch");check(!b->popMidiOut(w),"Trailing reset MIDI output");
-    std::cout<<"PASS: "<<variant<<" cold reset, "<<slice<<" original coordinator slices, "<<x->events.size()<<" exact DSP port events, full memory/state/Flash/IO/IRQ, 24000 exact 24-stream audible frames; reference H8 steps="<<a->h8InterpretedSteps()<<", candidate H8 steps="<<b->h8InterpretedSteps()<<"\n";
+    std::cout<<"PASS: "<<variant<<" cold reset, "<<slice<<" original coordinator slices, "<<x->events.size()<<" exact DSP port events, all resource memory (CPU scratch stack excluded)/state/Flash/IO/IRQ, 24000 exact 24-stream audible frames; reference H8 steps="<<a->h8InterpretedSteps()<<", candidate H8 steps="<<b->h8InterpretedSteps()<<"\n";
     return 0;
 }catch(const std::exception& e){std::cerr<<"slice="<<slice<<": "<<e.what()<<'\n';return 1;}}

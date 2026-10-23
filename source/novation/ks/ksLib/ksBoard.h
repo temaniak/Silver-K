@@ -35,13 +35,13 @@ public:
     void startRecordedController(std::shared_ptr<const ControllerTape>);
     void enableLiveMidiController(bool enabled=true);
     void enableNativeController(bool enabled=true);
-    const RuntimeController* nativeController()const{return nativeRuntime.get();}
+    const RuntimeController* nativeController()const{return referenceTail?nullptr:nativeRuntime.get();}
     uint64_t h8InterpretedSteps()const{return h8->interpretedSteps;}
-    uint64_t h8StepsSinceNativeHandoff()const{return nativeRuntime?h8->interpretedSteps-nativeH8Steps:0;}
-    const LiveMidiController* liveMidiController()const{return liveMidi.get();}
+    uint64_t h8StepsSinceNativeHandoff()const{return nativeController()?h8->interpretedSteps-nativeH8Steps:0;}
+    const LiveMidiController* liveMidiController()const{return referenceTail&&!referenceTailHybrid?nullptr:liveMidi.get();}
     void enableControllerDelegationProfile(){if(liveMidi)liveMidi->enableDelegationProfile();}
     void resetControllerMetrics(){if(liveMidi)liveMidi->resetMetrics();if(nativeRuntime)nativeRuntime->resetMetrics();transportJobs=transportBoundaries=controlJobs=controlBoundaries=0;}
-    const char* controllerBackend()const{return recordedController?"recorded-cpp-prototype":nativeRuntime?(eventControlJobs?(eventDspTransport?"native-cpp-events-control":"native-cpp-control-jobs"):eventDspTransport?"native-cpp-events-transport":"native-cpp-runtime"):liveMidi?"live-cpp-midi-hybrid":"original-h8";}
+    const char* controllerBackend()const{return recordedController?"recorded-cpp-prototype":nativeController()?(eventControlJobs?(eventDspTransport?"native-cpp-events-control":"native-cpp-control-jobs"):eventDspTransport?"native-cpp-events-transport":"native-cpp-runtime"):liveMidiController()?"live-cpp-midi-hybrid":"original-h8";}
     uint64_t transportJobs=0,transportBoundaries=0,controlJobs=0,controlBoundaries=0;
     uint64_t controllerCycles()const{return recordedController?recordedController->cycles():h8->cycles;}
     uint64_t checkedControllerPorts()const{return recordedController?recordedController->checkedPorts():0;}
@@ -109,6 +109,10 @@ private:
     std::unique_ptr<RecordedController> recordedController;
     std::unique_ptr<LiveMidiController> liveMidi;
     std::unique_ptr<RuntimeController> nativeRuntime;
+    // A test-only reference/hybrid selection can arrive between phases of a
+    // native IRQ. Keep its owner alive and finish it on the same slice clock;
+    // there is no CPU interrupt frame to hand back midway through that job.
+    bool referenceTail=false,referenceTailHybrid=false;
     uint64_t nativeH8Steps=0;
     // Destroy/join before any DSP, queue, diagnostics or callback state.
     std::unique_ptr<DspWorkers> dspWorkers;

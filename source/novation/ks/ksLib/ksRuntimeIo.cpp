@@ -1,8 +1,7 @@
 #include "ksRuntimeController.h"
-#include "ksRuntimeBoundary.h"
+#include "ksLiveMidiController.h"
 
 namespace ks {
-using namespace controllerDetail;
 // UART queues, timer/clock interrupts, hardware control and host transport.
 // Fixed native control flow for the verified KS revision. Private ROM data
 // remains external; instruction fetch reads account for original bus clocks.

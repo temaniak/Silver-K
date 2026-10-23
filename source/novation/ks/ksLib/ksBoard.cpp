@@ -86,7 +86,7 @@ uint8_t Board::read(uint32_t a){
     std::ostringstream s;s<<"Unmapped KS read 0x"<<std::hex<<a<<" pc="<<h8->getPC();throw std::runtime_error(s.str());
 }
 void Board::write(uint32_t a,uint8_t v){
-    if(nativeRuntime && nativeCodeSealed){
+    if(nativeController() && nativeCodeSealed){
         const uint32_t code=a>=0xa00000 && a<0xc00000?a-0xa00000:a;
         if((code>=0x170 && code<0x172)||(code>=0x490 && code<0x2a0c)||(code>=0x2a18 && code<0xb8e8))
             throw std::runtime_error("Native KS controller cannot modify verified executable SRAM");
@@ -110,7 +110,7 @@ void Board::write(uint32_t a,uint8_t v){
     }
     if(a>=0xfffe00){
         auto off=a&511;auto old=io[off];io[off]=v;
-        if(a==0xffff6f){overlay=!(v&1);if(nativeRuntime){h8->nativeLowBase=overlay?h8->memory+0xa00000:rom.data();h8->nativeLowSize=overlay?0x200000:unsigned(rom.size());h8->nativeLowWritable=overlay;}}
+        if(a==0xffff6f){overlay=!(v&1);if(nativeController()){h8->nativeLowBase=overlay?h8->memory+0xa00000:rom.data();h8->nativeLowSize=overlay?0x200000:unsigned(rom.size());h8->nativeLowWritable=overlay;}}
         if(a==0xffff39)h8->interruptMode2=(v&0x30)==0x20;
         if(a==0xffff8b){midiOut.push(v);io[0x18c]&=0x7b;txDue=h8->cycles+8000;}
         if(a==0xffff98 && (v&0x20) && !(old&0x20))adcDue=h8->cycles+1064;
@@ -309,6 +309,7 @@ void Board::nativeStartupBoundary(){
     if(!nativeCodeSealed && overlay){RuntimeController::verifyImage(*h8);nativeCodeSealed=true;}
 }
 void Board::nativeReadyBoundary(){
+    if(nativeRuntime->activeNativeInterrupts())return;
     if(h8->getPC()==0x41e2)mainEntered=true;
     if(mainEntered && h8->getPC()==0x4334)ready=true;
 }
@@ -321,7 +322,24 @@ void Board::advance(uint32_t budget){
             [this](unsigned i,unsigned offset,uint8_t value){++hostWrites[i];return dsps[i]->hostWrite(offset,value);});
     }else{
         const auto begin=h8->cycles;if(controllerRecorder)controllerRecorder->beginSlice(begin);
-        if(nativeRuntime){
+        if(nativeRuntime && referenceTail){
+            nativeQueuedMidi=uint32_t(midiIn.size());
+            while(h8->cycles-begin<budget){
+                const auto before=h8->cycles;
+                if(nativeRuntime->activeNativeInterrupts()){
+                    nativeRuntime->step(*h8);tickNative(before);
+                    if(!nativeRuntime->activeNativeInterrupts()){
+                        h8->interpreterAllowed=true;h8->nativeFetchClocksOnly=false;h8->nativeLowBase=nullptr;
+                    }
+                }else{
+                    if(referenceTailHybrid){
+                        const auto pc=unsigned(h8->getPC());
+                        if(!LiveMidiController::candidate(pc)||!liveMidi->step(*h8)){liveMidi->delegated(pc);h8->step();}
+                    }else h8->step();
+                    tick(before);
+                }
+            }
+        }else if(nativeRuntime){
             // Host MIDI reaches this Board only on the coordinator, outside
             // this slice. Empty UART polls have no guest-visible side effect.
             nativeQueuedMidi=uint32_t(midiIn.size());
@@ -429,12 +447,16 @@ std::shared_ptr<const ControllerTape> Board::finishControllerTrace(){
     auto result=controllerRecorder->finish();controllerRecorder.reset();return result;
 }
 void Board::startRecordedController(std::shared_ptr<const ControllerTape> tape){
-    if(controllerRecorder || recordedController || liveMidi || !ready || !started[0] || !started[1])throw std::logic_error("KS controller replay requires completed original boot");
+    if(controllerRecorder || recordedController || liveMidiController() || (nativeRuntime&&nativeRuntime->activeNativeInterrupts()) || !ready || !started[0] || !started[1])throw std::logic_error("KS controller replay requires completed original boot");
     recordedController=std::make_unique<RecordedController>(std::move(tape),controllerCheckpoint(),h8->cycles);
 }
 void Board::enableLiveMidiController(bool enabled){
     if(!controllerReferenceAvailable())throw std::logic_error("KS hybrid controller is available only in comparison tests");
     if(recordedController || !ready)throw std::logic_error("Live KS MIDI requires completed original boot, without replay");
+    if(nativeRuntime && nativeRuntime->activeNativeInterrupts()){
+        referenceTail=true;referenceTailHybrid=enabled;return;
+    }
+    referenceTail=false;
     nativeRuntime.reset();h8->interpreterAllowed=true;h8->nativeFetchClocksOnly=false;h8->nativeLowBase=nullptr;
     if(enabled){if(!liveMidi)liveMidi=std::make_unique<LiveMidiController>(*h8);}
     else liveMidi.reset(); // All guest ABI state remains current; H8 can resume.
@@ -443,11 +465,14 @@ void Board::enableNativeController(bool enabled){
     if(!enabled && !controllerReferenceAvailable())throw std::logic_error("KS H8 is available only in comparison tests");
     if(!enabled){enableLiveMidiController(false);return;}
     if(recordedController || !ready || !started[0] || !started[1])throw std::logic_error("Native KS runtime requires completed original boot without replay");
-    if(nativeRuntime)return;
+    if(nativeRuntime && !referenceTail)return;
+    if(nativeRuntime && nativeRuntime->activeNativeInterrupts()){
+        referenceTail=false;return; // Cancel a pending reference selection.
+    }
     // Validate/allocate before changing ownership or disabling the interpreter.
     auto state=std::make_unique<LiveMidiController>(*h8);
     auto runtime=std::make_unique<RuntimeController>(*h8,*state);
-    liveMidi=std::move(state);nativeRuntime=std::move(runtime);
+    liveMidi=std::move(state);nativeRuntime=std::move(runtime);referenceTail=false;
     nativeH8Steps=h8->interpretedSteps;h8->interpreterAllowed=false;h8->nativeFetchClocksOnly=true;
     h8->nativeLowBase=overlay?h8->memory+0xa00000:rom.data();h8->nativeLowSize=overlay?0x200000:unsigned(rom.size());h8->nativeLowWritable=overlay;
 }

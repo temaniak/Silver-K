@@ -1,9 +1,7 @@
 #include "ksRuntimeController.h"
-#include "ksRuntimeBoundary.h"
 #include "ksLiveMidiController.h"
 
 namespace ks {
-using namespace controllerDetail;
 // Parameter scaling, internal MIDI/arp, compatibility and performance-edit helpers.
 // Fixed native control flow for the verified KS revision. Private ROM data
 // remains external; instruction fetch reads account for original bus clocks.
@@ -24,11 +22,6 @@ bool RuntimeController::extended(ControllerCpu& h){
     if(EditAddressCalls::candidate(unsigned(h.getPC()))&&shared.editAddressCalls.step(h))return true;
     if(EditSceneCalls::candidate(unsigned(h.getPC()))&&shared.editSceneCalls.step(h))return true;
     if(EditDecisionCalls::candidate(unsigned(h.getPC()))&&shared.editDecisionCalls.step(h))return true;
-    auto& r=h.regs;
-#define N(P,L,...) case P:{RuntimeBoundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
-    switch(unsigned(h.getPC())){
-    default:return false;
-    }
-#undef N
+    return false;
 }
 }

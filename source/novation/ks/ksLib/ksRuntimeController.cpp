@@ -83,12 +83,14 @@ bool RuntimeController::stepCode(ControllerCpu& h){
     return true;
 }
 void RuntimeController::stepStartup(ControllerCpu& h){
+    if(serviceInterrupt(h)){++steps;return;}
     const int depth=h.indent;arbitrate(h);if(h.indent!=depth)++interruptEntries;
     if(startup(h)){++steps;return;}
     if(stepCode(h))return;
     throw std::runtime_error("Unsupported native KS reset state (no H8 fallback)");
 }
 void RuntimeController::step(ControllerCpu& h){
+    if(serviceInterrupt(h)){++steps;return;}
     const int depth=h.indent;arbitrate(h);if(h.indent!=depth)++interruptEntries;
     if(stepCode(h))return;
     std::ostringstream message;message<<"Unsupported native KS controller state 0x"<<std::hex<<h.getPC()

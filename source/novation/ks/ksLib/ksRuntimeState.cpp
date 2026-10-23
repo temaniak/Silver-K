@@ -1,8 +1,7 @@
 #include "ksRuntimeController.h"
-#include "ksRuntimeBoundary.h"
+#include "ksLiveMidiController.h"
 
 namespace ks {
-using namespace controllerDetail;
 // Main controller service, preset/part/global edits, serialization and Flash state.
 // Fixed native control flow for the verified KS revision. Private ROM data
 // remains external; instruction fetch reads account for original bus clocks.

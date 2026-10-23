@@ -1484,7 +1484,15 @@ int main(int argc,char** argv){try{
     report<<",\"h8_interpreted_steps_boot\":"<<bootH8Steps
         <<",\"h8_interpreted_steps_after_boot\":"<<(board->h8InterpretedSteps()-bootH8Steps)
         <<",\"h8_interpreted_steps_since_handoff\":"<<board->h8StepsSinceNativeHandoff();
-    if(const auto* runtime=board->nativeController())report<<",\"native_runtime_steps\":"<<runtime->steps<<",\"native_interrupt_entries\":"<<runtime->interruptEntries;
+    if(const auto* runtime=board->nativeController())report<<",\"native_runtime_steps\":"<<runtime->steps<<",\"native_interrupt_entries\":"<<runtime->interruptEntries
+        <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
+        <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
+        <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases
+        <<",\"native_interrupt_service_initial\":"<<runtime->nativeInterruptInitial
+        <<",\"native_interrupt_service_active\":"<<runtime->activeNativeInterrupts()
+        <<",\"native_interrupt_serial_error\":"<<runtime->nativeInterruptKinds[0]
+        <<",\"native_interrupt_serial_transmit\":"<<runtime->nativeInterruptKinds[1]
+        <<",\"native_interrupt_unused\":"<<runtime->nativeInterruptKinds[2];
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
     if(const auto* runtime=board->nativeController();runtime && !runtime->boundaryProfile.empty()){
         report<<",\"native_boundary_profile\":[";bool first=true;

@@ -2515,3 +2515,27 @@ add_executable(ksStateProgramEventTask_test "${ROOT}/source/novation/ks/ksLib/ks
 target_compile_features(ksStateProgramEventTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_state_program_event_properties COMMAND ksStateProgramEventTask_test)
 set_tests_properties(ks_state_program_event_properties PROPERTIES TIMEOUT 90)
+
+# Direct, unsynchronized original H8 oracle for CPU-free interrupt lifecycles.
+add_executable(ksNativeInterrupts_test "${ROOT}/source/novation/ks/ksLib/ksNativeInterrupts_test.cpp")
+target_include_directories(ksNativeInterrupts_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksNativeInterrupts_test PRIVATE ksLib)
+add_test(NAME ks_native_interrupts COMMAND ksNativeInterrupts_test)
+set_tests_properties(ks_native_interrupts PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+add_executable(ksInterruptService_test "${ROOT}/source/novation/ks/ksLib/ksInterruptService_test.cpp")
+target_compile_features(ksInterruptService_test PRIVATE cxx_std_17)
+add_test(NAME ks_interrupt_service COMMAND ksInterruptService_test)
+add_executable(ksInterruptHandoff_test "${ROOT}/source/novation/ks/ksLib/ksInterruptHandoff_test.cpp")
+target_sources(ksInterruptHandoff_test PRIVATE $<TARGET_OBJECTS:ksH8Reference>)
+target_include_directories(ksInterruptHandoff_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksInterruptHandoff_test PRIVATE ksLib)
+add_test(NAME ks_interrupt_handoff COMMAND ksInterruptHandoff_test)
+set_tests_properties(ks_interrupt_handoff PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+add_executable(ksInterruptTimeline_test "${ROOT}/source/novation/ks/ksLib/ksInterruptTimeline_test.cpp")
+target_sources(ksInterruptTimeline_test PRIVATE $<TARGET_OBJECTS:ksH8Reference>)
+target_include_directories(ksInterruptTimeline_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksInterruptTimeline_test PRIVATE ksLib)
+add_test(NAME ks_interrupt_timeline COMMAND ksInterruptTimeline_test)
+set_tests_properties(ks_interrupt_timeline PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
