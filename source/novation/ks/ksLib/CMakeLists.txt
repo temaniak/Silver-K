@@ -456,3 +456,23 @@ target_sources(ksLib PRIVATE ksLoaderPacketsCalls.cpp ksLoaderPacketsCalls.h ksL
 target_sources(ksLib PRIVATE ksLoaderProgramCalls.cpp ksLoaderProgramCalls.h ksLoaderProgramTask.h)
 
 target_sources(ksLib PRIVATE ksLoaderSessionCalls.cpp ksLoaderSessionCalls.h ksLoaderSessionTask.h)
+
+target_sources(ksLib PRIVATE ksStateValueBoundsCalls.cpp ksStateValueBoundsCalls.h ksStateValueBoundsTask.h)
+
+target_sources(ksLib PRIVATE ksStateEditLabelCalls.cpp ksStateEditLabelCalls.h ksStateEditLabelTask.h)
+
+target_sources(ksLib PRIVATE ksStateFieldActionsCalls.cpp ksStateFieldActionsCalls.h ksStateFieldActionsTask.h)
+
+target_sources(ksLib PRIVATE ksStateBankNavigationCalls.cpp ksStateBankNavigationCalls.h ksStateBankNavigationTask.h)
+
+target_sources(ksLib PRIVATE ksStateStatusDisplayCalls.cpp ksStateStatusDisplayCalls.h ksStateStatusDisplayTask.h)
+
+target_sources(ksLib PRIVATE ksStateStoredValueCalls.cpp ksStateStoredValueCalls.h ksStateStoredValueTask.h)
+
+target_sources(ksLib PRIVATE ksStateBrowseWorkflowCalls.cpp ksStateBrowseWorkflowCalls.h ksStateBrowseWorkflowTask.h)
+
+target_sources(ksLib PRIVATE ksStateProgramBrowseCalls.cpp ksStateProgramBrowseCalls.h ksStateProgramBrowseTask.h)
+
+target_sources(ksLib PRIVATE ksStateProgramDisplayCalls.cpp ksStateProgramDisplayCalls.h ksStateProgramDisplayTask.h)
+
+target_sources(ksLib PRIVATE ksStateProgramEventCalls.cpp ksStateProgramEventCalls.h ksStateProgramEventTask.h)

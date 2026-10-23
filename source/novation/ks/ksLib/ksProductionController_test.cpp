@@ -13,6 +13,16 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksStateProgramEventCalls.h"
+#include "ksStateProgramDisplayCalls.h"
+#include "ksStateProgramBrowseCalls.h"
+#include "ksStateBrowseWorkflowCalls.h"
+#include "ksStateStoredValueCalls.h"
+#include "ksStateStatusDisplayCalls.h"
+#include "ksStateBankNavigationCalls.h"
+#include "ksStateFieldActionsCalls.h"
+#include "ksStateEditLabelCalls.h"
+#include "ksStateValueBoundsCalls.h"
 #include "ksLoaderSessionCalls.h"
 #include "ksLoaderProgramCalls.h"
 #include "ksLoaderPacketsCalls.h"
@@ -264,6 +274,36 @@ int main(){try{
     ks::LoaderSessionCalls loaderSessionCalls;
     for(unsigned entry:{0xd0eu}){state->pc=entry;
         if(loaderSessionCalls.step(*state)||loaderSessionCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial LoaderSession recovery");}
+    ks::StateValueBoundsCalls stateValueBoundsCalls;
+    for(unsigned entry:{0x5116u}){state->pc=entry;
+        if(stateValueBoundsCalls.step(*state)||stateValueBoundsCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateValueBounds recovery");}
+    ks::StateEditLabelCalls stateEditLabelCalls;
+    for(unsigned entry:{0x5014u}){state->pc=entry;
+        if(stateEditLabelCalls.step(*state)||stateEditLabelCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateEditLabel recovery");}
+    ks::StateFieldActionsCalls stateFieldActionsCalls;
+    for(unsigned entry:{0x4f0eu,0x51dcu,0x52e6u,0x5310u}){state->pc=entry;
+        if(stateFieldActionsCalls.step(*state)||stateFieldActionsCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateFieldActions recovery");}
+    ks::StateBankNavigationCalls stateBankNavigationCalls;
+    for(unsigned entry:{0x5342u}){state->pc=entry;
+        if(stateBankNavigationCalls.step(*state)||stateBankNavigationCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateBankNavigation recovery");}
+    ks::StateStatusDisplayCalls stateStatusDisplayCalls;
+    for(unsigned entry:{0x55e8u}){state->pc=entry;
+        if(stateStatusDisplayCalls.step(*state)||stateStatusDisplayCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateStatusDisplay recovery");}
+    ks::StateStoredValueCalls stateStoredValueCalls;
+    for(unsigned entry:{0x57e4u}){state->pc=entry;
+        if(stateStoredValueCalls.step(*state)||stateStoredValueCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateStoredValue recovery");}
+    ks::StateBrowseWorkflowCalls stateBrowseWorkflowCalls;
+    for(unsigned entry:{0x5db8u}){state->pc=entry;
+        if(stateBrowseWorkflowCalls.step(*state)||stateBrowseWorkflowCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateBrowseWorkflow recovery");}
+    ks::StateProgramBrowseCalls stateProgramBrowseCalls;
+    for(unsigned entry:{0x5f6au}){state->pc=entry;
+        if(stateProgramBrowseCalls.step(*state)||stateProgramBrowseCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateProgramBrowse recovery");}
+    ks::StateProgramDisplayCalls stateProgramDisplayCalls;
+    for(unsigned entry:{0x6096u}){state->pc=entry;
+        if(stateProgramDisplayCalls.step(*state)||stateProgramDisplayCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateProgramDisplay recovery");}
+    ks::StateProgramEventCalls stateProgramEventCalls;
+    for(unsigned entry:{0x61eeu}){state->pc=entry;
+        if(stateProgramEventCalls.step(*state)||stateProgramEventCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateProgramEvent recovery");}
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

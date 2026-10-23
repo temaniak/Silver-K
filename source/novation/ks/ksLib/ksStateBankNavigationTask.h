@@ -1,0 +1,165 @@
+#pragma once
+#include <cstdint>
+namespace ks {
+// StateBankNavigation semantic policy: logical data, decisions and deferred effects; compatibility frame stays in Calls.
+class StateBankNavigationTask final {
+public:
+ enum class Kind { Refresh, BankEntry, Bank, Heading, Parts, Step, Return, Resolve, Notice, ClearNotice };enum class Stage { BindRefreshFlag, WriteRefreshFlag, BindRefreshPosition, ShowRefreshPosition, ReadRefreshSpecial, SelectRefreshSpecial, ClearRefreshDelta, ReadRefreshLatch, SelectRefreshLatch, ReadRefreshEdit, SelectRefreshEdit, ReadRefreshMode, SelectRefreshMode, ReadRefreshPage, SelectRefreshPage, ReadRefreshPart, SelectRefreshPart, BindPerformancePosition, ShowPerformancePosition, ShowBankScreen, ReadPerformancePage, SelectPerformanceParts, ShowPerformanceParts, ReturnPerformance, ShowProgramCategory, ShowProgramScreen, ReturnProgramScreen, TestBankDelta, SelectBankDelta, ReadBankLatch, SelectBankLatch, ClearBankLatch, ReturnBankLatch, ReturnBankLatchValue, BindBankLimit, ReadBankNumber, AddBankDelta, SelectBankNegative, AddBankLimit, CompareBankLimit, SelectBankLimit, SubtractBankLimit, WriteBankNumber, BindBankChanged, ReturnBankChanged, ReadDigitLatch, SelectDigitLatch, CompareDigitLatch, SelectSecondDigit, ReadSecondDigit, MaskSecondDigit, BindDigitStride, ScaleSecondDigit, AddThirdDigit, WriteEnteredNumber, ReadFirstDigit, MaskFirstDigit, WriteEnteredBank, ClearDigitLatch, BindEntryChanged, ReturnEntryChanged, TestFirstDigit, RejectZeroDigit, BindFirstDigitLimit, CompareFirstDigit, RejectFirstDigit, AddFirstDigitAscii, WriteFirstDigit, BindBlankDigit, WriteSecondBlank, WriteThirdBlank, TickDigitLatch, WriteDigitLatch, BindEntryPosition, ShowEntryPosition, BindEntryHeading, ShowEntryHeading, BindEntryDigits, ReadFirstCharacter, ShowFirstCharacter, ReadSecondCharacter, ShowSecondCharacter, ReadThirdCharacter, ShowThirdCharacter, ClearEntryResult, ReturnEntryResult, AddSecondDigitAscii, WriteSecondDigit, JoinSecondDigit, BindBankPosition, ShowBankPosition, ReadBankPage, CompareBankPage, SelectBankPage, BindMultiName, ShowMultiName, BindNameQuote, ShowNameQuote, BindNameSpace, ShowNameSpace, ReadNameSlot, AddNameSlot, ShowNameSlot, BindNameEnd, ShowNameEnd, JoinBankName, ResolveBankName, ShowBankName, ReadBankDigit, AddBankDigit, ShowBankDigit, ReadBankNumberDisplay, ShowBankNumber, ClearBankDisplayLatch, WriteBankDisplayLatch, ReturnBankDisplay, ReadHeadingPage, SelectHeadingPage, BindSingleHeading, TickHeadingPage, SelectPerformanceHeading, BindPerformanceHeading, SaveHeadingValue, BindHeadingValue, ShowHeadingValue, RestoreHeadingValue, ShowHeadingText, BindHeadingSpace, ShowHeadingSpace, BindPartsTable, BindPartPosition, BindPartCount, ReadPartMask, SavePartPosition, ShowPartPosition, ShiftPartMask, SelectPartMask, ReadPartBank, AddPartBank, ShowPartBank, ReadPartNumber, ShowPartNumber, JoinPartNumber, SkipPartNumber, BindMissingBank, ShowMissingBank, BindMissingTens, ShowMissingTens, BindMissingUnits, ShowMissingUnits, BindPartSeparator, ShowPartSeparator, RestorePartPosition, NextPartPosition, TickPartCount, RepeatPartDisplay, BindPartsEnd, ShowPartsEnd, ReturnParts, TestPartDelta, SelectPartDelta, ReadSelectedPart, SelectSelectedPart, BindFirstPart, TestPartDirection, SelectFirstPart, BindLastPart, JoinFirstPart, AddPartDelta, SelectPartZero, BindZeroPart, JoinZeroPart, ComparePartLimit, SelectPartLimit, ClampPart, WriteSelectedPart, ResolveSelectedPart, ReadPartEnabled, SelectPartEnabled, WriteCurrentPart, WriteRequestedPart, ApplyPartRouting, RefreshPart, ReturnPart, ClearPartIndex, ReadPartIndex, DoublePartIndex, ReadPartMarker, WritePartMarker, ReturnPartMarker, ShowNotice, BindNoticeFlag, WriteNoticeFlag, BindNoticeDelay, BindNoticeCallback, ScheduleNotice, ReturnNotice, ClearNoticeFlag, WriteClearedNotice, RefreshNotice, ReturnClearedNotice, AwaitChild, Complete };
+ enum class Exit { None, Special, EditLatch, Edit, Refresh, Character };Exit exit()const{return exit_;}enum class Read { Refresh, Special, EditLatch, Edit, Mode, Page, Part, DigitLatch, Number, Bank, FirstDigit, SecondDigit, ThirdDigit, Slot, PartMask, PartValue, Enabled };enum class Write { Refresh, EditLatch, Part, DigitLatch, Number, Bank, FirstDigit, SecondDigit, ThirdDigit, CurrentPart, RequestedPart, Marker, Notice };uint32_t value()const{return value_;}uint32_t page()const{return page_;}uint32_t latch()const{return latch_;}uint32_t mask()const{return mask_;}
+ explicit StateBankNavigationTask(Kind kind,uint16_t event=0){digit_=uint8_t(event);delta_=uint8_t(event>>8);switch(kind){case Kind::Refresh:stage_=Stage::BindRefreshFlag;break;case Kind::BankEntry:stage_=Stage::TestBankDelta;break;case Kind::Bank:stage_=Stage::BindBankPosition;break;case Kind::Heading:stage_=Stage::ReadHeadingPage;break;case Kind::Parts:stage_=Stage::BindPartsTable;break;case Kind::Step:stage_=Stage::TestPartDelta;break;case Kind::Return:stage_=Stage::ReturnPart;break;case Kind::Resolve:stage_=Stage::ClearPartIndex;break;case Kind::Notice:stage_=Stage::ShowNotice;break;case Kind::ClearNotice:stage_=Stage::ClearNoticeFlag;break;}}
+ Stage stage()const{return stage_;}Stage resumeStage()const{return resume_;}bool awaitingChild()const{return stage_==Stage::AwaitChild;}bool complete()const{return stage_==Stage::Complete;}
+ bool resumeChild(uint32_t pointer){if(!awaitingChild())return false;if(resume_==Stage::ReadPartEnabled)pointer_=pointer;stage_=resume_;return true;}
+ unsigned nextClocks(unsigned store=3)const{switch(stage_){case Stage::WriteRefreshFlag:case Stage::ReadRefreshSpecial:case Stage::ReadRefreshLatch:case Stage::ReadRefreshEdit:case Stage::ReadRefreshMode:case Stage::ReadRefreshPage:case Stage::ReadRefreshPart:case Stage::ReadPerformancePage:case Stage::ReadBankLatch:case Stage::ReadBankNumber:case Stage::WriteBankNumber:case Stage::ReadDigitLatch:case Stage::ReadSecondDigit:case Stage::WriteEnteredNumber:case Stage::ReadFirstDigit:case Stage::WriteEnteredBank:case Stage::WriteFirstDigit:case Stage::WriteSecondBlank:case Stage::WriteThirdBlank:case Stage::WriteDigitLatch:case Stage::WriteSecondDigit:case Stage::ReadBankPage:case Stage::ReadNameSlot:case Stage::ReadBankDigit:case Stage::ReadBankNumberDisplay:case Stage::WriteBankDisplayLatch:case Stage::ReadHeadingPage:case Stage::ReadPartMask:case Stage::ReadSelectedPart:case Stage::WriteSelectedPart:case Stage::WriteCurrentPart:case Stage::WriteRequestedPart:case Stage::ReadPartIndex:case Stage::WritePartMarker:case Stage::WriteNoticeFlag:case Stage::WriteClearedNotice:return 9+store; case Stage::ShowRefreshPosition:case Stage::ShowPerformancePosition:case Stage::ShowBankScreen:case Stage::ShowPerformanceParts:case Stage::ShowProgramCategory:case Stage::ShowProgramScreen:case Stage::ClearBankLatch:case Stage::ClearDigitLatch:case Stage::ShowEntryPosition:case Stage::ShowEntryHeading:case Stage::ShowFirstCharacter:case Stage::ShowSecondCharacter:case Stage::ShowThirdCharacter:case Stage::ShowBankPosition:case Stage::ShowNameQuote:case Stage::ShowNameSpace:case Stage::ShowNameSlot:case Stage::ShowNameEnd:case Stage::ResolveBankName:case Stage::ShowBankDigit:case Stage::ShowBankNumber:case Stage::SaveHeadingValue:case Stage::ShowHeadingValue:case Stage::RestoreHeadingValue:case Stage::ShowHeadingText:case Stage::ShowPartPosition:case Stage::ShowPartBank:case Stage::ShowPartNumber:case Stage::ShowMissingBank:case Stage::ShowMissingTens:case Stage::ShowMissingUnits:case Stage::ShowPartSeparator:case Stage::ShowPartsEnd:case Stage::ApplyPartRouting:case Stage::ShowNotice:case Stage::ScheduleNotice:case Stage::RefreshNotice:return 20; case Stage::SelectRefreshSpecial:case Stage::SelectRefreshLatch:case Stage::SelectRefreshEdit:case Stage::SelectSecondDigit:case Stage::ShowHeadingSpace:case Stage::RefreshPart:return 8; case Stage::ReturnPerformance:case Stage::ReturnProgramScreen:case Stage::ReturnBankLatchValue:case Stage::ReturnBankChanged:case Stage::ReturnEntryChanged:case Stage::ReturnEntryResult:case Stage::ReturnBankDisplay:case Stage::ReturnParts:case Stage::ReturnPart:case Stage::ReturnPartMarker:case Stage::ReturnNotice:case Stage::ReturnClearedNotice:return 17; case Stage::ScaleSecondDigit:case Stage::ShowMultiName:case Stage::ShowBankName:case Stage::ResolveSelectedPart:return 15; case Stage::BindEntryHeading:case Stage::BindEntryDigits:case Stage::BindMultiName:case Stage::BindSingleHeading:case Stage::BindPerformanceHeading:case Stage::BindPartsTable:case Stage::BindNoticeCallback:return 9; case Stage::ReadFirstCharacter:case Stage::ReadSecondCharacter:case Stage::ReadThirdCharacter:case Stage::ReadPartBank:case Stage::ReadPartNumber:return 5+store; case Stage::SavePartPosition:case Stage::RestorePartPosition:return 11; case Stage::ReadPartEnabled:case Stage::ReadPartMarker:return 12+store; case Stage::BindNoticeDelay:return 6; case Stage::AwaitChild:case Stage::Complete:return 0;default:return 3;}}
+ template<class Reader,class Writer>unsigned advanceBefore(unsigned available,Reader&& read,Writer&& write,unsigned store=3){const auto cost=nextClocks(store);if(!cost||cost>available)return 0;switch(stage_){case Stage::WriteRefreshFlag:write(Write::Refresh,0,1);next();break;
+case Stage::ReadRefreshSpecial:value_=uint8_t(read(Read::Special,0));next();break;
+case Stage::SelectRefreshSpecial:if(value_)finish(Exit::Special);else next();break;
+case Stage::ReadRefreshLatch:value_=uint8_t(read(Read::EditLatch,0));next();break;
+case Stage::SelectRefreshLatch:if(value_)finish(Exit::EditLatch);else next();break;
+case Stage::ReadRefreshEdit:value_=uint8_t(read(Read::Edit,0));next();break;
+case Stage::SelectRefreshEdit:if(value_)finish(Exit::Edit);else next();break;
+case Stage::ReadRefreshMode:value_=uint8_t(read(Read::Mode,0));next();break;
+case Stage::SelectRefreshMode:stage_=value_?Stage::ReadRefreshPage:Stage::ShowProgramCategory;break;
+case Stage::ReadRefreshPage:page_=uint8_t(read(Read::Page,0));next();break;
+case Stage::SelectRefreshPage:stage_=page_?Stage::ReadRefreshPart:Stage::BindPerformancePosition;break;
+case Stage::ReadRefreshPart:value_=uint8_t(read(Read::Part,0));next();break;
+case Stage::SelectRefreshPart:stage_=value_?Stage::ShowProgramCategory:Stage::BindPerformancePosition;break;
+case Stage::ReadPerformancePage:page_=uint8_t(read(Read::Page,0));next();break;
+case Stage::SelectPerformanceParts:stage_=page_?Stage::ReturnPerformance:Stage::ShowPerformanceParts;break;
+case Stage::SelectBankDelta:stage_=delta_?Stage::ReadBankLatch:Stage::ReadDigitLatch;break;
+case Stage::ReadBankLatch:latch_=uint8_t(read(Read::DigitLatch,0));next();break;
+case Stage::SelectBankLatch:stage_=latch_?Stage::ClearBankLatch:Stage::BindBankLimit;break;
+case Stage::ReadBankNumber:value_=uint8_t(read(Read::Number,0));next();break;
+case Stage::AddBankDelta:value_=uint8_t(value_+delta_);next();break;
+case Stage::SelectBankNegative:stage_=value_&128?Stage::AddBankLimit:Stage::CompareBankLimit;break;
+case Stage::AddBankLimit:value_=uint8_t(value_+100);next();break;
+case Stage::SelectBankLimit:stage_=value_<100?Stage::WriteBankNumber:Stage::SubtractBankLimit;break;
+case Stage::SubtractBankLimit:value_=uint8_t(value_-100);next();break;
+case Stage::WriteBankNumber:write(Write::Number,0,value_);next();break;
+case Stage::ReadDigitLatch:latch_=uint8_t(read(Read::DigitLatch,0));next();break;
+case Stage::SelectDigitLatch:stage_=latch_?Stage::CompareDigitLatch:Stage::TestFirstDigit;break;
+case Stage::SelectSecondDigit:stage_=latch_==1?Stage::AddSecondDigitAscii:Stage::ReadSecondDigit;break;
+case Stage::ReadSecondDigit:value_=uint8_t(read(Read::SecondDigit,0));next();break;
+case Stage::MaskSecondDigit:value_&=15;next();break;
+case Stage::ScaleSecondDigit:value_=uint8_t(value_*10);next();break;
+case Stage::AddThirdDigit:value_=uint8_t(value_+digit_);next();break;
+case Stage::WriteEnteredNumber:write(Write::Number,0,value_);next();break;
+case Stage::ReadFirstDigit:value_=uint8_t(read(Read::FirstDigit,0));next();break;
+case Stage::MaskFirstDigit:value_&=15;next();break;
+case Stage::WriteEnteredBank:write(Write::Bank,0,value_);next();break;
+case Stage::RejectZeroDigit:stage_=digit_?Stage::BindFirstDigitLimit:Stage::ClearEntryResult;break;
+case Stage::RejectFirstDigit:stage_=digit_>1?Stage::ClearEntryResult:Stage::AddFirstDigitAscii;break;
+case Stage::AddFirstDigitAscii:digit_=uint8_t(digit_+48);next();break;
+case Stage::WriteFirstDigit:write(Write::FirstDigit,0,digit_);next();break;
+case Stage::WriteSecondBlank:write(Write::SecondDigit,0,95);next();break;
+case Stage::WriteThirdBlank:write(Write::ThirdDigit,0,95);next();break;
+case Stage::TickDigitLatch:++latch_;next();break;
+case Stage::WriteDigitLatch:write(Write::DigitLatch,0,latch_);next();break;
+case Stage::ReadFirstCharacter:value_=uint8_t(read(Read::FirstDigit,0));next();break;
+case Stage::ReadSecondCharacter:value_=uint8_t(read(Read::SecondDigit,0));next();break;
+case Stage::ReadThirdCharacter:value_=uint8_t(read(Read::ThirdDigit,0));next();break;
+case Stage::AddSecondDigitAscii:digit_=uint8_t(digit_+48);next();break;
+case Stage::WriteSecondDigit:write(Write::SecondDigit,0,digit_);next();break;
+case Stage::ReadBankPage:page_=uint8_t(read(Read::Page,0));next();break;
+case Stage::SelectBankPage:stage_=page_<2?Stage::ResolveBankName:Stage::BindMultiName;break;
+case Stage::ReadNameSlot:value_=uint8_t(read(Read::Slot,0));next();break;
+case Stage::ReadBankDigit:value_=uint8_t(read(Read::Bank,0));next();break;
+case Stage::ReadBankNumberDisplay:value_=uint8_t(read(Read::Number,0));next();break;
+case Stage::WriteBankDisplayLatch:write(Write::EditLatch,0,0);next();break;
+case Stage::ReadHeadingPage:page_=uint8_t(read(Read::Page,0));next();break;
+case Stage::SelectHeadingPage:stage_=page_?Stage::BindSingleHeading:Stage::ShowHeadingText;break;
+case Stage::TickHeadingPage:--page_;next();break;
+case Stage::SelectPerformanceHeading:stage_=page_?Stage::BindPerformanceHeading:Stage::SaveHeadingValue;break;
+case Stage::BindPartsTable:pointer_=0x167b0;next();break;
+case Stage::BindPartCount:remaining_=4;next();break;
+case Stage::ReadPartMask:mask_=uint8_t(read(Read::PartMask,0));next();break;
+case Stage::ShiftPartMask:active_=mask_&1;mask_>>=1;next();break;
+case Stage::SelectPartMask:stage_=active_?Stage::ReadPartBank:Stage::SkipPartNumber;break;
+case Stage::ReadPartBank:value_=uint8_t(read(Read::PartValue,pointer_++));next();break;
+case Stage::ReadPartNumber:value_=uint8_t(read(Read::PartValue,pointer_++));next();break;
+case Stage::SkipPartNumber:pointer_+=2;next();break;
+case Stage::TickPartCount:--remaining_;next();break;
+case Stage::RepeatPartDisplay:stage_=remaining_?Stage::SavePartPosition:Stage::BindPartsEnd;break;
+case Stage::SelectPartDelta:stage_=digit_?Stage::ReadSelectedPart:Stage::ResolveSelectedPart;break;
+case Stage::ReadSelectedPart:value_=uint8_t(read(Read::Part,0));next();break;
+case Stage::SelectSelectedPart:stage_=value_?Stage::AddPartDelta:Stage::BindFirstPart;break;
+case Stage::BindFirstPart:value_=1;next();break;
+case Stage::SelectFirstPart:stage_=digit_&128?Stage::WriteSelectedPart:Stage::BindLastPart;break;
+case Stage::BindLastPart:value_=4;next();break;
+case Stage::AddPartDelta:value_=uint8_t(value_+digit_);next();break;
+case Stage::SelectPartZero:stage_=value_?Stage::ComparePartLimit:Stage::BindZeroPart;break;
+case Stage::BindZeroPart:value_=4;next();break;
+case Stage::SelectPartLimit:stage_=value_<=4?Stage::WriteSelectedPart:Stage::ClampPart;break;
+case Stage::ClampPart:value_=1;next();break;
+case Stage::WriteSelectedPart:write(Write::Part,0,value_);next();break;
+case Stage::ReadPartEnabled:value_=uint8_t(read(Read::Enabled,pointer_+65957));next();break;
+case Stage::SelectPartEnabled:stage_=value_?Stage::WriteCurrentPart:Stage::RefreshPart;break;
+case Stage::WriteCurrentPart:write(Write::CurrentPart,0,value_);next();break;
+case Stage::WriteRequestedPart:write(Write::RequestedPart,0,value_);next();break;
+case Stage::ReadPartIndex:value_=uint8_t(read(Read::Part,0));next();break;
+case Stage::DoublePartIndex:pointer_=uint8_t(value_<<1);next();break;
+case Stage::ReadPartMarker:value_=uint8_t(read(Read::Enabled,pointer_+65956));next();break;
+case Stage::WritePartMarker:write(Write::Marker,0,value_);next();break;
+case Stage::WriteNoticeFlag:write(Write::Notice,0,1);next();break;
+case Stage::WriteClearedNotice:write(Write::Notice,0,0);next();break;
+case Stage::JoinSecondDigit:stage_=Stage::TickDigitLatch;break;
+case Stage::JoinBankName:stage_=Stage::ClearBankDisplayLatch;break;
+case Stage::ShowHeadingSpace:finish(Exit::Character);break;
+case Stage::JoinPartNumber:stage_=Stage::BindPartSeparator;break;
+case Stage::JoinFirstPart:stage_=Stage::WriteSelectedPart;break;
+case Stage::JoinZeroPart:stage_=Stage::WriteSelectedPart;break;
+case Stage::RefreshPart:stage_=Stage::BindRefreshFlag;break;
+case Stage::ShowRefreshPosition:await(Stage::ReadRefreshSpecial);break;
+case Stage::ShowPerformancePosition:await(Stage::ShowBankScreen);break;
+case Stage::ShowBankScreen:await(Stage::ReadPerformancePage);break;
+case Stage::ShowPerformanceParts:await(Stage::ReturnPerformance);break;
+case Stage::ReturnPerformance:stage_=Stage::Complete;break;
+case Stage::ShowProgramCategory:await(Stage::ShowProgramScreen);break;
+case Stage::ShowProgramScreen:await(Stage::ReturnProgramScreen);break;
+case Stage::ReturnProgramScreen:stage_=Stage::Complete;break;
+case Stage::ClearBankLatch:await(Stage::ReturnBankLatch);break;
+case Stage::ReturnBankLatchValue:stage_=Stage::Complete;break;
+case Stage::ReturnBankChanged:stage_=Stage::Complete;break;
+case Stage::ClearDigitLatch:await(Stage::BindEntryChanged);break;
+case Stage::ReturnEntryChanged:stage_=Stage::Complete;break;
+case Stage::ShowEntryPosition:await(Stage::BindEntryHeading);break;
+case Stage::ShowEntryHeading:await(Stage::BindEntryDigits);break;
+case Stage::ShowFirstCharacter:await(Stage::ReadSecondCharacter);break;
+case Stage::ShowSecondCharacter:await(Stage::ReadThirdCharacter);break;
+case Stage::ShowThirdCharacter:await(Stage::ClearEntryResult);break;
+case Stage::ReturnEntryResult:stage_=Stage::Complete;break;
+case Stage::ShowBankPosition:await(Stage::ReadBankPage);break;
+case Stage::ShowMultiName:await(Stage::BindNameQuote);break;
+case Stage::ShowNameQuote:await(Stage::BindNameSpace);break;
+case Stage::ShowNameSpace:await(Stage::ReadNameSlot);break;
+case Stage::ShowNameSlot:await(Stage::BindNameEnd);break;
+case Stage::ShowNameEnd:await(Stage::JoinBankName);break;
+case Stage::ResolveBankName:await(Stage::ShowBankName);break;
+case Stage::ShowBankName:await(Stage::ReadBankDigit);break;
+case Stage::ShowBankDigit:await(Stage::ReadBankNumberDisplay);break;
+case Stage::ShowBankNumber:await(Stage::ClearBankDisplayLatch);break;
+case Stage::ReturnBankDisplay:stage_=Stage::Complete;break;
+case Stage::ShowHeadingValue:await(Stage::RestoreHeadingValue);break;
+case Stage::ShowHeadingText:await(Stage::BindHeadingSpace);break;
+case Stage::ShowPartPosition:await(Stage::ShiftPartMask);break;
+case Stage::ShowPartBank:await(Stage::ReadPartNumber);break;
+case Stage::ShowPartNumber:await(Stage::JoinPartNumber);break;
+case Stage::ShowMissingBank:await(Stage::BindMissingTens);break;
+case Stage::ShowMissingTens:await(Stage::BindMissingUnits);break;
+case Stage::ShowMissingUnits:await(Stage::BindPartSeparator);break;
+case Stage::ShowPartSeparator:await(Stage::RestorePartPosition);break;
+case Stage::ShowPartsEnd:await(Stage::ReturnParts);break;
+case Stage::ReturnParts:stage_=Stage::Complete;break;
+case Stage::ResolveSelectedPart:await(Stage::ReadPartEnabled);break;
+case Stage::ApplyPartRouting:await(Stage::RefreshPart);break;
+case Stage::ReturnPart:stage_=Stage::Complete;break;
+case Stage::ReturnPartMarker:stage_=Stage::Complete;break;
+case Stage::ShowNotice:await(Stage::BindNoticeFlag);break;
+case Stage::ScheduleNotice:await(Stage::ReturnNotice);break;
+case Stage::ReturnNotice:stage_=Stage::Complete;break;
+case Stage::RefreshNotice:await(Stage::ReturnClearedNotice);break;
+case Stage::ReturnClearedNotice:stage_=Stage::Complete;break; default:next();break;}return cost;}
+private:
+ void next(){stage_=Stage(unsigned(stage_)+1);}void await(Stage resume){resume_=resume;stage_=Stage::AwaitChild;}
+ Stage stage_=Stage::Complete,resume_=Stage::Complete;void finish(Exit e){exit_=e;stage_=Stage::Complete;}Exit exit_=Exit::None;uint32_t pointer_=0;uint8_t digit_=0,delta_=0,value_=0,page_=0,latch_=0,mask_=0,remaining_=0;bool active_=false;
+};
+}

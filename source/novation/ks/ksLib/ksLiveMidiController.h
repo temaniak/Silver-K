@@ -53,6 +53,16 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksStateProgramEventCalls.h"
+#include "ksStateProgramDisplayCalls.h"
+#include "ksStateProgramBrowseCalls.h"
+#include "ksStateBrowseWorkflowCalls.h"
+#include "ksStateStoredValueCalls.h"
+#include "ksStateStatusDisplayCalls.h"
+#include "ksStateBankNavigationCalls.h"
+#include "ksStateFieldActionsCalls.h"
+#include "ksStateEditLabelCalls.h"
+#include "ksStateValueBoundsCalls.h"
 #include "ksLoaderSessionCalls.h"
 #include "ksLoaderProgramCalls.h"
 #include "ksLoaderPacketsCalls.h"
@@ -218,6 +228,16 @@ public:
     TimerServiceCalls timerServiceCalls;
     StateChannelCalls stateChannelCalls;
     PanelInputCalls panelInputCalls;
+    StateProgramEventCalls stateProgramEventCalls;
+    StateProgramDisplayCalls stateProgramDisplayCalls;
+    StateProgramBrowseCalls stateProgramBrowseCalls;
+    StateBrowseWorkflowCalls stateBrowseWorkflowCalls;
+    StateStoredValueCalls stateStoredValueCalls;
+    StateStatusDisplayCalls stateStatusDisplayCalls;
+    StateBankNavigationCalls stateBankNavigationCalls;
+    StateFieldActionsCalls stateFieldActionsCalls;
+    StateEditLabelCalls stateEditLabelCalls;
+    StateValueBoundsCalls stateValueBoundsCalls;
     LoaderSessionCalls loaderSessionCalls;
     LoaderProgramCalls loaderProgramCalls;
     LoaderPacketsCalls loaderPacketsCalls;
@@ -365,6 +385,16 @@ public:
         timerServiceCalls.resetMetrics();
         stateChannelCalls.resetMetrics();
         panelInputCalls.resetMetrics();
+        stateProgramEventCalls.resetMetrics();
+        stateProgramDisplayCalls.resetMetrics();
+        stateProgramBrowseCalls.resetMetrics();
+        stateBrowseWorkflowCalls.resetMetrics();
+        stateStoredValueCalls.resetMetrics();
+        stateStatusDisplayCalls.resetMetrics();
+        stateBankNavigationCalls.resetMetrics();
+        stateFieldActionsCalls.resetMetrics();
+        stateEditLabelCalls.resetMetrics();
+        stateValueBoundsCalls.resetMetrics();
         loaderSessionCalls.resetMetrics();
         loaderProgramCalls.resetMetrics();
         loaderPacketsCalls.resetMetrics();

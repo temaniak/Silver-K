@@ -116,6 +116,16 @@ int main(int argc,char** argv){try{
     if(nativeMode)check(!bootLive->loaderPacketsCalls.partialEntries,"Native startup used partial LoaderPackets recovery before metric reset");
     if(nativeMode)check(!bootLive->loaderProgramCalls.partialEntries,"Native startup used partial LoaderProgram recovery before metric reset");
     if(nativeMode)check(!bootLive->loaderSessionCalls.partialEntries,"Native startup used partial LoaderSession recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateValueBoundsCalls.partialEntries,"Native startup used partial StateValueBounds recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateEditLabelCalls.partialEntries,"Native startup used partial StateEditLabel recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateFieldActionsCalls.partialEntries,"Native startup used partial StateFieldActions recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateBankNavigationCalls.partialEntries,"Native startup used partial StateBankNavigation recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateStatusDisplayCalls.partialEntries,"Native startup used partial StateStatusDisplay recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateStoredValueCalls.partialEntries,"Native startup used partial StateStoredValue recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateBrowseWorkflowCalls.partialEntries,"Native startup used partial StateBrowseWorkflow recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateProgramBrowseCalls.partialEntries,"Native startup used partial StateProgramBrowse recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateProgramDisplayCalls.partialEntries,"Native startup used partial StateProgramDisplay recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateProgramEventCalls.partialEntries,"Native startup used partial StateProgramEvent recovery before metric reset");
     if(nativeMode)check(!bootLive->panelAdcScaleCalls.partialEntries&&!bootLive->panelAdcCalibrationCalls.partialEntries&&!bootLive->panelAdcIrqCalls.partialEntries&&!bootLive->panelAdcScanCalls.partialEntries,"Native startup used partial ADC recovery before metric reset");
     if(nativeMode)board->enableNativeController();
     auto send=[&](const std::vector<uint8_t>& m){check(board->enqueueMidi(m.data(),m.size()),"MIDI rejected");};
@@ -1146,6 +1156,56 @@ int main(int argc,char** argv){try{
         <<",\"native_loader_session_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->loaderSessionCalls.initialActive:0)
         <<",\"native_loader_session_active\":"<<(board->liveMidiController()?board->liveMidiController()->loaderSessionCalls.activeCalls():0)
         <<",\"native_loader_session_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->loaderSessionCalls.partialEntries:0)
+        <<",\"native_state_value_bounds_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateValueBoundsCalls.started:0)
+        <<",\"native_state_value_bounds_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateValueBoundsCalls.completed:0)
+        <<",\"native_state_value_bounds_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateValueBoundsCalls.initialActive:0)
+        <<",\"native_state_value_bounds_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateValueBoundsCalls.activeCalls():0)
+        <<",\"native_state_value_bounds_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateValueBoundsCalls.partialEntries:0)
+        <<",\"native_state_edit_label_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateEditLabelCalls.started:0)
+        <<",\"native_state_edit_label_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateEditLabelCalls.completed:0)
+        <<",\"native_state_edit_label_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateEditLabelCalls.initialActive:0)
+        <<",\"native_state_edit_label_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateEditLabelCalls.activeCalls():0)
+        <<",\"native_state_edit_label_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateEditLabelCalls.partialEntries:0)
+        <<",\"native_state_field_actions_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateFieldActionsCalls.started:0)
+        <<",\"native_state_field_actions_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateFieldActionsCalls.completed:0)
+        <<",\"native_state_field_actions_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateFieldActionsCalls.initialActive:0)
+        <<",\"native_state_field_actions_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateFieldActionsCalls.activeCalls():0)
+        <<",\"native_state_field_actions_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateFieldActionsCalls.partialEntries:0)
+        <<",\"native_state_bank_navigation_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateBankNavigationCalls.started:0)
+        <<",\"native_state_bank_navigation_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateBankNavigationCalls.completed:0)
+        <<",\"native_state_bank_navigation_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateBankNavigationCalls.initialActive:0)
+        <<",\"native_state_bank_navigation_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateBankNavigationCalls.activeCalls():0)
+        <<",\"native_state_bank_navigation_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateBankNavigationCalls.partialEntries:0)
+        <<",\"native_state_status_display_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateStatusDisplayCalls.started:0)
+        <<",\"native_state_status_display_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateStatusDisplayCalls.completed:0)
+        <<",\"native_state_status_display_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateStatusDisplayCalls.initialActive:0)
+        <<",\"native_state_status_display_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateStatusDisplayCalls.activeCalls():0)
+        <<",\"native_state_status_display_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateStatusDisplayCalls.partialEntries:0)
+        <<",\"native_state_stored_value_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateStoredValueCalls.started:0)
+        <<",\"native_state_stored_value_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateStoredValueCalls.completed:0)
+        <<",\"native_state_stored_value_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateStoredValueCalls.initialActive:0)
+        <<",\"native_state_stored_value_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateStoredValueCalls.activeCalls():0)
+        <<",\"native_state_stored_value_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateStoredValueCalls.partialEntries:0)
+        <<",\"native_state_browse_workflow_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateBrowseWorkflowCalls.started:0)
+        <<",\"native_state_browse_workflow_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateBrowseWorkflowCalls.completed:0)
+        <<",\"native_state_browse_workflow_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateBrowseWorkflowCalls.initialActive:0)
+        <<",\"native_state_browse_workflow_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateBrowseWorkflowCalls.activeCalls():0)
+        <<",\"native_state_browse_workflow_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateBrowseWorkflowCalls.partialEntries:0)
+        <<",\"native_state_program_browse_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramBrowseCalls.started:0)
+        <<",\"native_state_program_browse_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramBrowseCalls.completed:0)
+        <<",\"native_state_program_browse_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramBrowseCalls.initialActive:0)
+        <<",\"native_state_program_browse_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramBrowseCalls.activeCalls():0)
+        <<",\"native_state_program_browse_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramBrowseCalls.partialEntries:0)
+        <<",\"native_state_program_display_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramDisplayCalls.started:0)
+        <<",\"native_state_program_display_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramDisplayCalls.completed:0)
+        <<",\"native_state_program_display_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramDisplayCalls.initialActive:0)
+        <<",\"native_state_program_display_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramDisplayCalls.activeCalls():0)
+        <<",\"native_state_program_display_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramDisplayCalls.partialEntries:0)
+        <<",\"native_state_program_event_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramEventCalls.started:0)
+        <<",\"native_state_program_event_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramEventCalls.completed:0)
+        <<",\"native_state_program_event_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramEventCalls.initialActive:0)
+        <<",\"native_state_program_event_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramEventCalls.activeCalls():0)
+        <<",\"native_state_program_event_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateProgramEventCalls.partialEntries:0)
         <<",\"native_panel_input_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.started:0)
         <<",\"native_panel_input_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.completed:0)
         <<",\"native_panel_input_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.initialActive:0)

@@ -78,6 +78,16 @@ void same(ks::Board& a,ks::Board& b){
     check(!b.liveMidiController()->loaderPacketsCalls.partialEntries,"Native reset used partial LoaderPackets recovery");
     check(!b.liveMidiController()->loaderProgramCalls.partialEntries,"Native reset used partial LoaderProgram recovery");
     check(!b.liveMidiController()->loaderSessionCalls.partialEntries,"Native reset used partial LoaderSession recovery");
+    check(!b.liveMidiController()->stateValueBoundsCalls.partialEntries,"Native reset used partial StateValueBounds recovery");
+    check(!b.liveMidiController()->stateEditLabelCalls.partialEntries,"Native reset used partial StateEditLabel recovery");
+    check(!b.liveMidiController()->stateFieldActionsCalls.partialEntries,"Native reset used partial StateFieldActions recovery");
+    check(!b.liveMidiController()->stateBankNavigationCalls.partialEntries,"Native reset used partial StateBankNavigation recovery");
+    check(!b.liveMidiController()->stateStatusDisplayCalls.partialEntries,"Native reset used partial StateStatusDisplay recovery");
+    check(!b.liveMidiController()->stateStoredValueCalls.partialEntries,"Native reset used partial StateStoredValue recovery");
+    check(!b.liveMidiController()->stateBrowseWorkflowCalls.partialEntries,"Native reset used partial StateBrowseWorkflow recovery");
+    check(!b.liveMidiController()->stateProgramBrowseCalls.partialEntries,"Native reset used partial StateProgramBrowse recovery");
+    check(!b.liveMidiController()->stateProgramDisplayCalls.partialEntries,"Native reset used partial StateProgramDisplay recovery");
+    check(!b.liveMidiController()->stateProgramEventCalls.partialEntries,"Native reset used partial StateProgramEvent recovery");
     for(unsigned n=0xfffe00;n<=0xffffff;++n)check(a.read(n)==b.read(n),"Reset IO mismatch");
     check(a.waveReads==b.waveReads && a.hostWrites[0]==b.hostWrites[0] && a.hostWrites[1]==b.hostWrites[1],"Reset hardware counters mismatch");
 }
