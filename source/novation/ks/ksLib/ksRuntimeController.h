@@ -5,6 +5,7 @@
 #include "ksInterruptScheduler.h"
 #include "ksSerialForeground.h"
 #include "ksStateResetForeground.h"
+#include "ksStateEventsForeground.h"
 #include "ksPanelControlsForeground.h"
 #include "ksPanelScanForeground.h"
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
@@ -27,7 +28,7 @@ public:
     static void verifyImage(const ControllerCpu&);
     void step(ControllerCpu&);
     void stepStartup(ControllerCpu&);
-    void resetMetrics(){panelControlsForeground.resetMetrics();panelScanForeground.resetMetrics();stateResetForeground.resetMetrics();serialForeground.resetMetrics();steps=interruptEntries=0;nativeInterruptStarts=nativeInterruptReturns=nativeInterruptPhases=0;nativeInterruptInitial=activeNativeInterrupts();nativeInterruptKinds.fill(0);nativeTpuComponents=nativeAdcComponents=nativeSerialReceiveComponents=0;
+    void resetMetrics(){stateEventsForeground.resetMetrics();panelControlsForeground.resetMetrics();panelScanForeground.resetMetrics();stateResetForeground.resetMetrics();serialForeground.resetMetrics();steps=interruptEntries=0;nativeInterruptStarts=nativeInterruptReturns=nativeInterruptPhases=0;nativeInterruptInitial=activeNativeInterrupts();nativeInterruptKinds.fill(0);nativeTpuComponents=nativeAdcComponents=nativeSerialReceiveComponents=0;
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
         std::fill(boundaryProfile.begin(),boundaryProfile.end(),0);
 #endif
@@ -41,9 +42,10 @@ public:
     uint32_t nativeTpuComponents=0,nativeAdcComponents=0,nativeSerialReceiveComponents=0;
     PanelScanForeground panelScanForeground;
     PanelControlsForeground panelControlsForeground;
+    StateEventsForeground stateEventsForeground;
     StateResetForeground stateResetForeground;
     SerialForeground serialForeground;
-    bool activeNativeWork() const {return panelControlsForeground.active()||activeNativeInterrupts()||serialForeground.active()||stateResetForeground.active()||panelScanForeground.active();}
+    bool activeNativeWork() const {return stateEventsForeground.active()||panelControlsForeground.active()||activeNativeInterrupts()||serialForeground.active()||stateResetForeground.active()||panelScanForeground.active();}
     unsigned activeNativeInterrupts() const { return interruptScheduler.depth(); }
     // Const diagnostic of the current typed continuation, separate from the
     // cumulative component-coverage mask and any saved compatibility CPU PC.

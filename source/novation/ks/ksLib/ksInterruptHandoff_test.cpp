@@ -108,7 +108,7 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
  auto a=std::make_unique<ks::Board>(rom.data(),wave,flash,true),b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
  check(a->boot()&&b->boot(),"Reference boot failed");same(*a,*b);
  uint64_t frames=0,peak=0;
- for(phase=0;phase<17;++phase)for(mode=0;mode<3;++mode){
+ for(phase=0;phase<22;++phase)for(mode=0;mode<3;++mode){
   if(phase>=10&&phase<13){
    a=std::make_unique<ks::Board>(rom.data(),wave,flash,true);b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
    initialMainBoundary(*a);initialMainBoundary(*b);dirtyResetRings(*a);dirtyResetRings(*b);
@@ -126,11 +126,14 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    else if(phase==8)pedalOutput(*board);
    else if(phase==9)board->write(0xffed68,2);
    else if(phase==13){board->write(0x15400,0xfe);const auto tick=uint16_t((unsigned(board->read(0xffec12))<<8)|board->read(0xffec13));word(*board,0x16780,uint16_t(tick-25));}
-   if(phase>=14){
+   if(phase>=14&&phase<17){
     pedalOutput(*board);board->write(0x156e2,36);
     // Retained timer histories force a moving encoder on the next real tick.
     board->write(0xffee72,uint8_t((unsigned(board->read(0xfffff7))>>2)-1));
    }
+   if(phase==17){word(*board,0x1537c,2);word(*board,0x1537e,0);word(*board,0x15380,0x0121);}
+   if(phase==18){word(*board,0x156e8,2);word(*board,0x156ea,0);word(*board,0x156ec,0x643c);}
+   if(phase>=19){word(*board,0x15406,2);word(*board,0x15408,0);word(*board,0x1540a,phase==20?0x4022:0x7f20);}
    if(phase>=7)continue;
    const unsigned vector=!phase?90:phase<3?32:phase<6?28:89;
    board->cpu().exr=0;board->cpu().interruptPriority[vector]=phase>0&&phase<3?6:1;
@@ -154,6 +157,11 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    case 9:target=r->serialForeground.at(ks::SerialForegroundService::Kind::ResetRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::RetainWord)&&b->cpu().exr==7;break;
    case 10:target=r->stateResetForeground.at(ks::StateResetService::Component::Buttons)&&b->cpu().exr==0;break;
    case 11:target=r->stateResetForeground.at(ks::StateResetService::Component::Controls)&&b->cpu().exr==0;break;
+   case 17:target=r->stateEventsForeground.at(ks::StateEventsService::Kind::ButtonPop)&&b->cpu().exr==0;break;
+   case 18:target=r->stateEventsForeground.at(ks::StateEventsService::Kind::KeyboardPop)&&b->cpu().exr==0;break;
+   case 19:target=r->stateEventsForeground.at(ks::StateEventsService::Kind::ControlPop)&&r->stateEventsForeground.at(ks::StateEventsService::Component::Convert)&&b->cpu().exr==0;break;
+   case 20:target=r->stateEventsForeground.at(ks::StateEventsService::Kind::ControlPop)&&r->stateEventsForeground.at(ks::StateEventsService::Component::Scale)&&b->cpu().exr==0;break;
+   case 21:target=r->stateEventsForeground.at(ks::StateEventsService::Kind::ControlPop)&&r->stateEventsForeground.at(ks::StateEventsService::Component::Square)&&b->cpu().exr==0;break;
    case 14:target=r->panelControlsForeground.at(ks::PanelControlsService::Component::Encoder)&&b->cpu().exr==0;break;
    case 15:target=r->panelControlsForeground.at(ks::PanelControlsService::Component::Pedal)&&b->cpu().exr==0;break;
    case 16:target=r->panelControlsForeground.at(ks::PanelControlsService::Component::AdcMux)&&b->cpu().exr==0;break;
@@ -168,7 +176,8 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   if(phase>=7&&phase<10){const unsigned expected=phase==7?0x1020:phase==8?0x113c:0xfec;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same foreground critical boundary");}
   if(phase>=10&&phase<13){const unsigned expected=phase==10?0x13fe:phase==11?0x1578:0x1efe;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same State reset child");}
   if(phase==13)check(unsigned(a->cpu().getPC())==0x14e4,"H8 did not reach the same matrix event publication");
-  if(phase>=14){const unsigned expected=phase==14?0x188a:phase==15?0x13c2:0x1646;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same panel controls child");}
+  if(phase>=14&&phase<17){const unsigned expected=phase==14?0x188a:phase==15?0x13c2:0x1646;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same panel controls child");}
+  if(phase>=17){const unsigned expected=phase==17?0x1416:phase==18?0x1f16:phase==19?0x20fc:phase==20?0x2144:0x218c;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same State event child");}
   const auto*selectedRuntime=b->nativeController();
   const auto cycle=b->controllerCycles(),interpreted=b->h8InterpretedSteps();
   b->enableLiveMidiController(mode==1);
@@ -188,6 +197,6 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   const uint8_t off[]{0x80,uint8_t(phase>=14?36+(phase*3+mode)%72:60+phase*3+mode),0};check(a->enqueueMidi(off,3)&&b->enqueueMidi(off,3),"Release rejected");
  }
  check(peak>1000,"Handoff fixture was silent");
- std::cout<<"PASS: fifty-one H8/hybrid/cancel requests inside IRQ/serial/State reset and panel scan/controls; no added guest advance; "<<frames<<" exact audible 24-stream frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
+ std::cout<<"PASS: sixty-six H8/hybrid/cancel requests inside IRQ/serial/State reset, panel scan/controls and State event conversion; no added guest advance; "<<frames<<" exact audible 24-stream frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
  return 0;
  }catch(const std::exception&e){std::cerr<<"phase="<<phase<<", mode="<<mode<<": "<<e.what()<<'\n';return 1;}}

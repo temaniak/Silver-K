@@ -1543,6 +1543,21 @@ int main(int argc,char** argv){try{
         <<",\"native_panel_controls_adc_start\":"<<runtime->panelControlsForeground.kinds[4]
         <<",\"native_panel_controls_adc_mux\":"<<runtime->panelControlsForeground.kinds[5]
         <<",\"native_panel_controls_adc_reset_last\":"<<runtime->panelControlsForeground.kinds[6]
+        <<",\"native_state_events_calls\":"<<runtime->stateEventsForeground.started
+        <<",\"native_state_events_returns\":"<<runtime->stateEventsForeground.completed
+        <<",\"native_state_events_phases\":"<<runtime->stateEventsForeground.phases
+        <<",\"native_state_events_initial_active\":"<<runtime->stateEventsForeground.initial
+        <<",\"native_state_events_active\":"<<runtime->stateEventsForeground.active()
+        <<",\"native_state_events_components\":"<<runtime->stateEventsForeground.components
+        <<",\"native_state_events_button_pop\":"<<runtime->stateEventsForeground.kinds[0]
+        <<",\"native_state_events_control_pop\":"<<runtime->stateEventsForeground.kinds[1]
+        <<",\"native_state_events_control_peek\":"<<runtime->stateEventsForeground.kinds[2]
+        <<",\"native_state_events_keyboard_pop\":"<<runtime->stateEventsForeground.kinds[3]
+        <<",\"native_state_events_convert\":"<<runtime->stateEventsForeground.kinds[4]
+        <<",\"native_state_events_scale\":"<<runtime->stateEventsForeground.kinds[5]
+        <<",\"native_state_events_square\":"<<runtime->stateEventsForeground.kinds[6]
+        <<",\"native_state_events_coefficients\":"<<runtime->stateEventsForeground.kinds[7]
+        <<",\"native_state_events_range\":"<<runtime->stateEventsForeground.kinds[8]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases

@@ -2615,3 +2615,13 @@ add_executable(ksPanelControlsTask_test "${ROOT}/source/novation/ks/ksLib/ksPane
 target_compile_features(ksPanelControlsTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_panel_controls_task COMMAND ksPanelControlsTask_test)
 set_tests_properties(ks_panel_controls_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksStateEventsService_test "${ROOT}/source/novation/ks/ksLib/ksStateEventsService_test.cpp")
+target_include_directories(ksStateEventsService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksStateEventsService_test PRIVATE ksLib)
+add_test(NAME ks_state_events_service COMMAND ksStateEventsService_test)
+set_tests_properties(ks_state_events_service PROPERTIES TIMEOUT 240 SKIP_RETURN_CODE 77)
+add_executable(ksStateEventsTask_test "${ROOT}/source/novation/ks/ksLib/ksStateEventsTask_test.cpp")
+target_compile_features(ksStateEventsTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_state_events_task COMMAND ksStateEventsTask_test)
+set_tests_properties(ks_state_events_task PROPERTIES TIMEOUT 240)

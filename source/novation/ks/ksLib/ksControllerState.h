@@ -124,6 +124,7 @@ public:
 private:
     friend class ControllerReference;
     friend class RuntimeController;
+    friend class StateEventsForeground;
     friend class PanelControlsForeground;
     friend class PanelScanForeground;
     friend class SerialForeground;
