@@ -7,7 +7,8 @@ uint8_t nz8(uint8_t v){return uint8_t((v&0x80?8:0)|(!v?4:0));}
 uint8_t nz16(uint16_t v){return uint8_t((v&0x8000?8:0)|(!v?4:0));}
 uint8_t nz32(uint32_t v){return uint8_t((v&0x80000000?8:0)|(!v?4:0));}
 int history(uint32_t a){return a<0x400000||(a>=0xfffd10&&a<0xffffa0)?int(a):-1;}
-bool dataPair(uint32_t a){a&=0xffffff;return(a>=0xb8e8&&a<0x1fffff)||(a>=0xa0b8e8&&a<0xbfffff)||(a>=0xffdc00&&a<0xfff3ff);}
+// Both bytes must precede the reserved compatibility CPU scratch region.
+bool dataPair(uint32_t a){a&=0xffffff;return(a>=0xb8e8&&a<0x1fffff)||(a>=0xa0b8e8&&a<0xbfffff)||(a>=0xffdc00&&a<0xffefff);}
 }
 bool StateEventsForeground::step(ControllerCpu&h){
  using K=StateEventsService::Kind;using P=PanelInputTask::Stage;using B=KeyboardEventsTask::Stage;using A=PanelAnalogTask::Stage;

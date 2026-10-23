@@ -147,6 +147,10 @@ int main(int argc,char**argv){try{
  // All initial flags, preserved caller values and saved signed projections.
  for(unsigned kind=0;kind<9;++kind)for(unsigned flags=0;flags<256;++flags)for(int32_t saved:{0,1,-1,int32_t(0x80000000u),int32_t(0x7fffffffu)}){cfg=Config{};cfg.kind=K(kind);cfg.flags=flags;cfg.r0=saved;cfg.negativeR2=flags&1;cfg.value=uint8_t(saved);cfg.selector=uint8_t(flags);run();}
  for(auto kind:{K::Coefficients,K::Range,K::Scale})for(auto base:{0x158f0u,0x158f1u,0xa158f0u,0xa158f1u,0xffef00u,0xffef01u})for(unsigned edge:{0u,1u,127u,128u,255u}){cfg=Config{};cfg.kind=kind;cfg.history=base;cfg.coefficients=base+4;cfg.minimum=edge;cfg.maximum=255-edge;cfg.value=edge;cfg.bias=edge*257;run();}
+ // The last complete peripheral pair stays admitted below the CPU scratch
+ // boundary, for each independent history/coefficient descriptor role.
+ for(unsigned role=0;role<4;++role){cfg=Config{};cfg.kind=role==0?K::Scale:role==3?K::Range:K::Coefficients;
+  cfg.history=role==1||role==3?0xffeffe:0xffefe0;cfg.coefficients=role==0||role==2?0xffeffe:0xffefe4;run();}
  // Interrupt each original phase of each root, including every child variant.
  for(unsigned kind=0;kind<9;++kind)for(unsigned selector:kind==1||kind==4?std::initializer_list<unsigned>{0x20,0x22,0x23,0x7f}:std::initializer_list<unsigned>{0x22}){cfg=Config{};cfg.kind=K(kind);cfg.selector=selector;const auto count=run();for(unsigned vector:{28u,32u,88u,89u,90u,91u})for(unsigned at=0;at<count;++at)run(at,vector);}
  cfg=Config{};cfg.live=true;run();cfg=Config{};cfg.liveCaller=true;run();
@@ -166,6 +170,24 @@ int main(int argc,char**argv){try{
   check(b->pc==pc&&b->indent==depth&&b->cycles==1000&&b->ccr==0xf5&&b->exr==0xa0&&b->lastread==0x12345&&b->lastwrite==0x23456&&b->pending_irqs==0x123&&b->pending_irqs_high==0x456&&y.events.empty(),"Rejected event changed caller/resource state");
   for(unsigned n=0;n<8;++n)check(b->regs[n].er==saved[n],"Rejected event changed registers");++guards;
  }
- check(components==255&&kinds==511&&guards==108&&!allocations&&!b->interpretedSteps,"Event graph coverage/allocation/interpreter checks failed");
+ // With the lowest admitted SP, the original Scale pushL would overwrite
+ // fff3fc..fff3ff. No descriptor pair may intersect any reserved CPU scratch
+ // byte, including an odd pair starting one byte below fff000. Check every
+ // start and each descriptor role without claiming or modifying the caller.
+ for(unsigned role=0;role<4;++role)for(uint32_t pointer=0xffefff;pointer<0xfffc00;++pointer){
+  const auto kind=role==0?K::Scale:role==3?K::Range:K::Coefficients;foreground.resetMetrics();
+  b->pc=roots[unsigned(kind)];b->setSP(0xfff400);b->indent=1;b->cycles=1000;b->ccr=0xf5;b->exr=0xa0;b->lastread=0x12345;b->lastwrite=0x23456;
+  b->nativeFetchClocksOnly=true;b->nativeLowBase=b->memory;b->interruptMode2=true;b->nativeLowSize=0x200000;b->pending_irqs=0x123;b->pending_irqs_high=0x456;
+  b->regs[1].er=int32_t(role==1||role==3?pointer:0x158f0);b->regs[2].er=int32_t(role==0||role==2?pointer:0x158f4);
+  std::array<int32_t,8>saved{};for(unsigned n=0;n<8;++n)saved[n]=b->regs[n].er;
+  std::array<uint8_t,0xc00>scratchBefore{};std::copy_n(b->memory+0xfff000,scratchBefore.size(),scratchBefore.begin());
+  y.events.clear();track=true;const auto handled=foreground.step(*b);track=false;
+  check(!handled&&!foreground.active()&&!foreground.started&&!foreground.completed&&!foreground.phases&&!foreground.components&&!foreground.initial,"CPU scratch alias guard claimed event graph");
+  check(std::all_of(foreground.kinds.begin(),foreground.kinds.end(),[](uint64_t count){return !count;}),"CPU scratch alias guard changed kind metrics");
+  check(b->pc==roots[unsigned(kind)]&&b->indent==1&&b->cycles==1000&&b->ccr==0xf5&&b->exr==0xa0&&b->lastread==0x12345&&b->lastwrite==0x23456&&b->pending_irqs==0x123&&b->pending_irqs_high==0x456&&y.events.empty(),"Rejected CPU scratch alias changed caller/resources");
+  for(unsigned n=0;n<8;++n)check(b->regs[n].er==saved[n],"Rejected CPU scratch alias changed registers");
+  check(std::equal(scratchBefore.begin(),scratchBefore.end(),b->memory+0xfff000),"Rejected CPU scratch alias changed scratch RAM");++guards;
+ }
+ check(components==255&&kinds==511&&guards==12400&&!allocations&&!b->interpretedSteps,"Event graph coverage/allocation/interpreter checks failed");
  std::cout<<"PASS: "<<cases<<" CPU-free State event calls; "<<boundaries<<" independent H8 phases; "<<nested<<" native IRQ preemptions; "<<resets<<" metric resets; "<<mutations<<" live resource changes; "<<guards<<" diagnostic guards; all nine kinds/eight components, exact bytes/clocks/resources and final caller ABI; zero allocations/interpreter/internal CPU stack writes\n";return 0;
 }catch(const std::exception&e){track=false;std::cerr<<e.what()<<'\n';return 1;}}
