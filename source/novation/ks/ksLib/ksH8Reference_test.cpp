@@ -67,6 +67,10 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksPanelAdcSamplesCalls.h"
+#include "ksPanelEncoderCalls.h"
+#include "ksPedalSenseCalls.h"
+#include "ksPanelMatrixCalls.h"
 #include "ksStateStoreUiCalls.h"
 #include "ksStateEditAddressCalls.h"
 #include "ksSysExFrameCalls.h"
@@ -10942,6 +10946,174 @@ bool partialStateStoreUi(ControllerCpu& h){using namespace controllerDetail;auto
  }
 #undef N
 }
-struct Install {Install(){setStateStoreUiPartialForTests(partialStateStoreUi);setStateEditAddressPartialForTests(partialStateEditAddress);setPanelInputPartialForTests(partialPanelInput);setStateChannelPartialForTests(partialStateChannel);setTimerServicePartialForTests(partialTimerService);setFlashPagePartialForTests(partialFlashPage);setControllerReferenceFactoryForTests(&create);setKeySearchPartialForTests(&partialKeys);setParameterScalePartialForTests(&partialScale);setControlJobsPartialForTests(&historicalControl::service);setDspWordPartialForTests(&partialWord);setDspTransportPartialBatchForTests(&historicalTransport::service);setDspAddressPartialForTests(&partialAddress);setDspFaultPartialForTests(&partialFault);setDspBootStreamPartialForTests(&partialBootStream);setDspBootSetupPartialForTests(&partialBootSetup);setDspStartupPartialForTests(&partialStartup);setDspRoutingPartialForTests(&partialRouting);setPartControlPartialForTests(&partialPartControl);setVelocityCurvePartialForTests(&partialVelocityCurve);setVoiceSelectionPartialForTests(&partialVoiceSelection);setVoicePopulationPartialForTests(&partialVoicePopulation);setKeyResetPartialForTests(&partialKeyReset);setKeyActivityPartialForTests(partialKeyActivity);setNoteOnStatePartialForTests(partialNoteOnState);setVoiceReleasePartialForTests(&partialVoiceRelease);setUnisonPartialForTests(&partialUnison);setVoiceTrackingPartialForTests(&partialVoiceTracking);setVelocityModulationPartialForTests(&partialVelocityModulation);setGlidePartialForTests(&partialGlide);setVoiceStartPartialForTests(&partialVoiceStart);setEditDecisionPartialForTests(partialEditDecision);setEditScenePartialForTests(partialEditScene);setEditAddressPartialForTests(partialEditAddress);setMidiFileTransportPartialForTests(partialMidiFileTransport);setMonoArpPartialForTests(partialMonoArp);setMidiFileEventPartialForTests(partialMidiFileEvent);setTimingTablesPartialForTests(partialTimingTables);setStateDspFactoryUploadPartialForTests(partialStateDspFactoryUpload);setStateDspFactoryResetPartialForTests(partialStateDspFactoryReset);setStateDspFactoryTransferPartialForTests(partialStateDspFactoryTransfer);setStateBankDisplayPartialForTests(partialStateBankDisplay);setStateNameEditorPartialForTests(partialStateNameEditor);setStateProgramChangePartialForTests(partialStateProgramChange);setMidiFileTimePartialForTests(partialMidiFileTime);setSysExDumpPartialForTests(partialSysExDump);setFirmwareLayoutCheckPartialForTests(partialFirmwareLayoutCheck);setPanelDetectPartialForTests(partialPanelDetect);setPanelInitializePartialForTests(partialPanelInitialize);setPanelMasksPartialForTests(partialPanelMasks);setPanelPublishPartialForTests(partialPanelPublish);setStateAuditionPartialForTests(partialStateAudition);setStatePanelRefreshPartialForTests(partialStatePanelRefresh);setStateDeferredPartsPartialForTests(partialStateDeferredParts);setStateNameCodecPartialForTests(partialStateNameCodec);setStateMultiSavePartialForTests(partialStateMultiSave);setLegacySysExPartialForTests(partialLegacySysEx);setSysExActionPartialForTests(partialSysExAction);setPatchExpandPartialForTests(partialPatchExpand);setPanelVersionPartialForTests(partialPanelVersion);setPanelPercentPartialForTests(partialPanelPercent);setPanelHexPartialForTests(partialPanelHex);setPanelFormatPartialForTests(partialPanelFormat);setStateFactoryServicesPartialForTests(partialStateFactoryServices);setStateGlobalSavePartialForTests(partialStateGlobalSave);setStatePresetSavePartialForTests(partialStatePresetSave);setStatePresetFormatPartialForTests(partialStatePresetFormat);setStateStoreServicesPartialForTests(partialStateStoreServices);setStateFlashCommitPartialForTests(partialStateFlashCommit);setSysExFramePartialForTests(partialSysExFrame);setInternalNotePartialForTests(partialInternalNote);setInternalMidiPartialForTests(partialInternalMidi);setPanelTextPartialForTests(partialPanelText);setPanelDecimalPartialForTests(partialPanelDecimal);setPanelTogglePartialForTests(partialPanelToggle);setPanelControlPartialForTests(partialPanelControl);setStatePostEditPartialForTests(partialStatePostEdit);setStateManualEditPartialForTests(partialStateManualEdit);setResetImagePartialForTests(&partialResetImage);setArpSelectPartialForTests(partialArpSelect);setArpEventPartialForTests(partialArpEvent);setSerialDirectPartialForTests(partialSerialDirect);setSerialIrqPartialForTests(partialSerialIrq);setSerialTransmitPartialForTests(partialSerialTransmit);setSerialSetupPartialForTests(partialSerialSetup);setSerialReceivePartialForTests(partialSerialReceive);setSerialQueuePartialForTests(partialSerialQueue);setStateSingleLoadPartialForTests(partialStateSingleLoad);setStatePresetAddressPartialForTests(partialStatePresetAddress);setStateMultiLoadPartialForTests(partialStateMultiLoad);setStateProgramPartialForTests(partialStateProgram);setStatePatchLoadPartialForTests(partialStatePatchLoad);setStateMultiSerializePartialForTests(partialStateMultiSerialize);setArpMainPartialForTests(partialArpMain);setArpSchedulePartialForTests(partialArpSchedule);setArpPrimitivePartialForTests(partialArpPrimitive);setPanelActionPartialForTests(partialPanelAction);setPanelPollPartialForTests(partialPanelPoll);setPanelBytePartialForTests(partialPanelByte);setPartRefreshPartialForTests(partialPartRefresh);setSyncValuePartialForTests(partialSyncValue);setPeriodicPartialForTests(partialPeriodic);setStateGlobalsPartialForTests(partialStateGlobals);setStatePackRefreshPartialForTests(partialStatePackRefresh);setStatePackFieldsPartialForTests(partialStatePackFields);setStateParameterExpandPartialForTests(partialStateParameterExpand);setStateModePartialForTests(partialStateMode);setPanelDecayPartialForTests(partialPanelDecay);setPartSignalPartialForTests(partialPartSignal);setPartEnablePartialForTests(partialPartEnable);setStateStoragePartialForTests(partialStateStorage);setStatePatchNamePartialForTests(partialStatePatchName);setStateParameterEditPartialForTests(partialStateParameterEdit);setVoiceTableInitPartialForTests(partialVoiceTableInit);setVoiceFeedbackPartialForTests(partialVoiceFeedback);setPartRoutePartialForTests(partialPartRoute);setPartModulationPartialForTests(partialPartModulation);setGlobalEffectPartialForTests(partialGlobalEffect);setStateFieldMapPartialForTests(partialStateFieldMap);setMidiRoutePartialForTests(partialMidiRoute);setMidiPartInitPartialForTests(partialMidiPartInit);setHardwareSetupPartialForTests(partialHardwareSetup);setMidiAuxPartialForTests(partialMidiAux);setMidiControlPartialForTests(partialMidiControl);setMidiDecodePartialForTests(partialMidiDecode);setGlobalFinalPartialForTests(partialGlobalFinal);setGlobalFinishScalarPartialForTests(partialGlobalFinishScalar);setGlobalTimeTailPartialForTests(partialGlobalTimeTail);setGlobalTailScalarPartialForTests(partialGlobalTailScalar);setGlobalPairPartialForTests(partialGlobalPair);setGlobalClampedTimePartialForTests(partialGlobalClampedTime);setGlobalMatrixPartialForTests(partialGlobalMatrix);setSquareRootPartialForTests(partialSquareRoot);setGlobalTablePartialForTests(partialGlobalTable);setGlobalMixPartialForTests(partialGlobalMix);setParameterLfoPartialForTests(partialParameterLfo);setParameterSupportPartialForTests(partialParameterSupport);setParameterGatePartialForTests(partialParameterGate);setParameterVolumePartialForTests(partialParameterVolume);setParameterFilterPartialForTests(partialParameterFilter);setParameterSignedSquarePartialForTests(partialParameterSignedSquare);setParameterHeaderPartialForTests(partialParameterHeader);setNoteProgramPartialForTests(partialNoteProgram);setPedalPartialForTests(partialPedal);setPartNotePartialForTests(partialPartNote);setGlobalRangePartialForTests(partialGlobalRange);setGlobalShapePartialForTests(partialGlobalShape);setParameterVoiceScalePartialForTests(partialParameterVoiceScale);setParameterCurvePartialForTests(partialParameterCurve);setParameterTimePartialForTests(partialParameterTime);setGlobalTimePartialForTests(partialGlobalTime);setGlobalScalarPartialForTests(partialGlobalScalar);setParameterScalarPartialForTests(partialParameterScalar);setNoteOffStatePartialForTests(partialNoteOffState);setGlobalSetupPartialForTests(partialGlobalSetup);setVoiceRefreshPartialForTests(partialVoiceRefresh);setParameterModulationPartialForTests(partialParameterModulation);setParameterPitchPartialForTests(partialParameterPitch);setOscillatorPitchPartialForTests(partialOscillatorPitch);setScheduledTimerPartialForTests(partialScheduledTimer);setServiceCyclePartialForTests(partialServiceCycle);setStateInitPartialForTests(partialStateInit);setKeyPriorityPartialForTests(partialKeyPriority);setVoiceSweepPartialForTests(partialVoiceSweep);setGlobalModulationPartialForTests(partialGlobalModulation);setOscillatorModulationPartialForTests(partialOscillatorModulation);}} install;
+bool partialPanelMatrix(ControllerCpu& h){using namespace controllerDetail;auto& r=h.regs;
+#define N(P,L,...) case P:{RuntimeBoundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
+ switch(unsigned(h.getPC())){
+    N(0x13f8,2,f.call(0x1456))
+    N(0x13fa,2,f.call(0x13fe))
+    N(0x13fc,2,f.ret())
+    N(0x1456,4,f.push(r[0].er))
+    N(0x145a,4,f.push(r[2].er))
+    N(0x145e,4,f.push(r[3].er))
+    N(0x1462,4,f.push(r[4].er))
+    N(0x1466,4,f.push(r[5].er))
+    N(0x146a,4,f.push(r[6].er))
+    N(0x146e,2,f.move(r[0].rl,0x0))
+    N(0x1470,4,f.store8(0xfffffeb1,r[0].rl))
+    N(0x1474,6,f.move(r[0].er,0x15400))
+    N(0x147a,2,f.move(r[6].rl,0x0))
+    N(0x147c,2,f.move(r[2].rl,0x20))
+    N(0x147e,2,f.move(r[2].rh,0x6))
+    N(0x1480,2,f.store8(0xffff62,r[2].rl))
+    N(0x1482,2,f.push(r[0].r))
+    N(0x1484,4,f.move(r[0].r,0xc))
+    N(0x1488,2,f.inc(r[0].r,-1))
+    N(0x148a,2,f.branch(!(h.ccr&4),0x1488))
+    N(0x148c,2,f.pop(r[0].r))
+    N(0x148e,2,f.move(r[3].rl,h.read8(r[0].er)))
+    N(0x1490,2,f.move(r[3].rh,h.read8(0xffff51)))
+    N(0x1492,2,r[3].rl^=r[3].rh;value(h,r[3].rl))
+    N(0x1494,2,f.branch(bool(h.ccr&4),0x14b6))
+    N(0x1496,2,f.store8(r[0].er,r[3].rh))
+    N(0x1498,4,f.move(r[3].e,0x8))
+    N(0x149c,2,f.shift(r[3].r,1,false))
+    N(0x149e,2,f.branch(!(h.ccr&1),0x14ae))
+    N(0x14a0,2,f.move(r[6].rh,0x0))
+    N(0x14a2,2,flag(h,4,(uint8_t(r[3].rl)&(1u<<0x7))==0))
+    N(0x14a4,2,f.branch(!(h.ccr&4),0x14a8))
+    N(0x14a6,2,f.move(r[6].rh,0x1))
+    N(0x14a8,2,f.move(r[6].e,r[6].r))
+    N(0x14aa,2,f.call(0x14e4))
+    N(0x14ac,2,f.move(r[6].r,r[6].e))
+    N(0x14ae,2,f.inc(r[6].rl,1))
+    N(0x14b0,2,f.inc(r[3].e,-1))
+    N(0x14b2,2,f.branch(!(h.ccr&4),0x149c))
+    N(0x14b4,2,f.branch(true,0x14b8))
+    N(0x14b6,2,r[6].rl=h.add8(r[6].rl,0x8))
+    N(0x14b8,2,f.inc(r[2].rl,1))
+    N(0x14ba,2,f.inc(r[0].er,1))
+    N(0x14bc,2,f.inc(r[2].rh,-1))
+    N(0x14be,2,f.branch(!(h.ccr&4),0x1480))
+    N(0x14c0,2,f.move(r[0].rl,0x30))
+    N(0x14c2,2,f.store8(0xffff62,r[0].rl))
+    N(0x14c4,2,f.move(r[0].rl,0xffffffff))
+    N(0x14c6,4,f.store8(0xfffffeb1,r[0].rl))
+    N(0x14ca,4,f.pop(r[6].er))
+    N(0x14ce,4,f.pop(r[5].er))
+    N(0x14d2,4,f.pop(r[4].er))
+    N(0x14d6,4,f.pop(r[3].er))
+    N(0x14da,4,f.pop(r[2].er))
+    N(0x14de,4,f.pop(r[0].er))
+    N(0x14e2,2,f.ret())
+ default:return false;
+ }
+#undef N
+}
+bool partialPedalSense(ControllerCpu& h){using namespace controllerDetail;auto& r=h.regs;
+#define N(P,L,...) case P:{RuntimeBoundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
+ switch(unsigned(h.getPC())){
+    N(0x13ae,2,f.move(r[6].rl,h.read8(0xffff53)))
+    N(0x13b0,2,r[6].rl&=0x30;value(h,r[6].rl))
+    N(0x13b2,2,f.ret())
+    N(0x13b4,2,f.move(r[0].rl,0xffffffff))
+    N(0x13b6,6,f.store8(0x1537a,r[0].rl))
+    N(0x13bc,2,f.ret())
+    N(0x13be,4,f.push(r[0].er))
+    N(0x13c2,6,f.move(r[0].er,0x168fc))
+    N(0x13c8,8,f.move(r[0].rh,h.read8(r[0].er+254)))
+    N(0x13d0,2,f.move(r[0].rl,h.read8(0xffff50)))
+    N(0x13d2,2,f.rotate(r[0].rh,2,false,false))
+    N(0x13d4,2,r[0].rl^=r[0].rh;value(h,r[0].rl))
+    N(0x13d6,6,f.move(r[0].rh,h.read8(0x1537a)))
+    N(0x13dc,6,f.store8(0x1537a,r[0].rl))
+    N(0x13e2,2,r[0].rh^=r[0].rl;value(h,r[0].rh))
+    N(0x13e4,2,f.move(r[6].rh,0xffffff80))
+    N(0x13e6,2,flag(h,4,(uint8_t(r[0].rh)&(1u<<0x6))==0))
+    N(0x13e8,2,f.branch(bool(h.ccr&4),0x13f2))
+    N(0x13ea,2,f.move(r[6].rh,0x0))
+    N(0x13ec,2,flag(h,4,(uint8_t(r[0].rl)&(1u<<0x6))==0))
+    N(0x13ee,2,f.branch(!(h.ccr&4),0x13f2))
+    N(0x13f0,2,f.move(r[6].rh,0x7f))
+    N(0x13f2,4,f.pop(r[0].er))
+    N(0x13f6,2,f.ret())
+ default:return false;
+ }
+#undef N
+}
+bool partialPanelEncoder(ControllerCpu& h){using namespace controllerDetail;auto& r=h.regs;
+#define N(P,L,...) case P:{RuntimeBoundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
+ switch(unsigned(h.getPC())){
+    N(0x1886,4,f.move(r[6].r,h.read16(0xfffff6)))
+    N(0x188a,2,f.shift(r[6].r,1,false))
+    N(0x188c,6,f.move(r[5].rl,h.read8(0xffee73)))
+    N(0x1892,6,f.store8(0xffee73,r[6].rl))
+    N(0x1898,2,r[5].rl=h.sub8(r[5].rl,r[6].rl))
+    N(0x189a,2,f.branch(!(h.ccr&8),0x189e))
+    N(0x189c,2,r[5].rl=h.sub8(0,r[5].rl))
+    N(0x189e,6,f.move(r[5].rh,h.read8(0xffee74)))
+    N(0x18a4,2,r[5].rl=h.add8(r[5].rl,r[5].rh))
+    N(0x18a6,2,f.branch(bool(h.ccr&4),0x18b0))
+    N(0x18a8,2,f.inc(r[5].rl,-1))
+    N(0x18aa,2,h.sub8(r[5].rl,0xd))
+    N(0x18ac,2,f.branch(bool(h.ccr&5),0x18b0))
+    N(0x18ae,2,f.move(r[5].rl,0xd))
+    N(0x18b0,6,f.store8(0xffee74,r[5].rl))
+    N(0x18b6,2,f.move(r[5].rh,0x4))
+    N(0x18b8,2,r[5].rl=h.sub8(r[5].rl,r[5].rh))
+    N(0x18ba,2,f.branch(!(h.ccr&8),0x18be))
+    N(0x18bc,2,f.move(r[5].rl,0x0))
+    N(0x18be,2,f.inc(r[5].rl,1))
+    N(0x18c0,2,f.shift(r[6].r,1,false))
+    N(0x18c2,2,f.move(r[6].rh,r[6].rl))
+    N(0x18c4,6,f.move(r[6].rl,h.read8(0xffee72)))
+    N(0x18ca,6,f.store8(0xffee72,r[6].rh))
+    N(0x18d0,2,r[6].rl=h.sub8(r[6].rl,r[6].rh))
+    N(0x18d2,2,f.branch(bool(h.ccr&4),0x18f6))
+    N(0x18d4,6,f.move(r[6].rh,h.read8(0xffee75)))
+    N(0x18da,6,f.store8(0xffee75,r[6].rl))
+    N(0x18e0,2,r[6].rh^=r[6].rl;value(h,r[6].rh))
+    N(0x18e2,2,f.branch(!(h.ccr&8),0x18ee))
+    N(0x18e4,2,f.move(r[5].rl,0x0))
+    N(0x18e6,6,f.store8(0xffee74,r[5].rl))
+    N(0x18ec,2,f.inc(r[5].rl,1))
+    N(0x18ee,2,f.move(r[6].rl,r[6].rl))
+    N(0x18f0,2,f.branch(bool(h.ccr&8),0x18f4))
+    N(0x18f2,2,r[5].rl=h.sub8(0,r[5].rl))
+    N(0x18f4,2,f.move(r[6].rl,r[5].rl))
+    N(0x18f6,2,f.ret())
+ default:return false;
+ }
+#undef N
+}
+bool partialPanelAdcSamples(ControllerCpu& h){using namespace controllerDetail;auto& r=h.regs;
+#define N(P,L,...) case P:{RuntimeBoundary f(h,P,L); __VA_ARGS__;h.pc=h.makepc(f.next);return true;}
+ switch(unsigned(h.getPC())){
+    N(0x16a6,2,r[0].er=h.sub32(r[0].er,r[0].er))
+    N(0x16a8,6,f.move(r[0].rl,h.read8(0x156e2)))
+    N(0x16ae,2,f.shift(r[0].rl,1,true))
+    N(0x16b0,6,r[0].er=h.add32(r[0].er,0x15652))
+    N(0x16b6,6,f.move(r[2].er,0xffffff90))
+    N(0x16bc,2,f.move(r[3].rh,0x4))
+    N(0x16be,2,f.move(r[1].rh,h.read8(r[2].er));r[2].er+=1;h.clockI(2))
+    N(0x16c0,2,f.move(r[1].rl,h.read8(r[2].er));r[2].er+=1;h.clockI(2))
+    N(0x16c2,2,f.move(r[1].e,h.read16(r[0].er)))
+    N(0x16c4,4,f.move(r[4].r,0x8000))
+    N(0x16c8,2,r[4].er=uint16_t(r[4].er)*uint32_t(uint16_t(r[1].r));h.clockI(20))
+    N(0x16ca,2,f.move(r[1].r,r[4].e))
+    N(0x16cc,4,f.move(r[4].r,0x8000))
+    N(0x16d0,2,r[4].er=uint16_t(r[4].er)*uint32_t(uint16_t(r[1].e));h.clockI(20))
+    N(0x16d2,2,r[1].r=h.add16(r[1].r,r[4].e))
+    N(0x16d4,2,f.branch(!(h.ccr&1),0x16da))
+    N(0x16d6,4,f.move(r[1].r,0xffff))
+    N(0x16da,2,f.store16(r[0].er,r[1].r))
+    N(0x16dc,2,f.inc(r[0].er,2))
+    N(0x16de,2,f.inc(r[3].rh,-1))
+    N(0x16e0,2,f.branch(!(h.ccr&4),0x16be))
+    N(0x16e2,2,f.ret())
+ default:return false;
+ }
+#undef N
+}
+struct Install {Install(){setPanelAdcSamplesPartialForTests(partialPanelAdcSamples);setPanelEncoderPartialForTests(partialPanelEncoder);setPedalSensePartialForTests(partialPedalSense);setPanelMatrixPartialForTests(partialPanelMatrix);setStateStoreUiPartialForTests(partialStateStoreUi);setStateEditAddressPartialForTests(partialStateEditAddress);setPanelInputPartialForTests(partialPanelInput);setStateChannelPartialForTests(partialStateChannel);setTimerServicePartialForTests(partialTimerService);setFlashPagePartialForTests(partialFlashPage);setControllerReferenceFactoryForTests(&create);setKeySearchPartialForTests(&partialKeys);setParameterScalePartialForTests(&partialScale);setControlJobsPartialForTests(&historicalControl::service);setDspWordPartialForTests(&partialWord);setDspTransportPartialBatchForTests(&historicalTransport::service);setDspAddressPartialForTests(&partialAddress);setDspFaultPartialForTests(&partialFault);setDspBootStreamPartialForTests(&partialBootStream);setDspBootSetupPartialForTests(&partialBootSetup);setDspStartupPartialForTests(&partialStartup);setDspRoutingPartialForTests(&partialRouting);setPartControlPartialForTests(&partialPartControl);setVelocityCurvePartialForTests(&partialVelocityCurve);setVoiceSelectionPartialForTests(&partialVoiceSelection);setVoicePopulationPartialForTests(&partialVoicePopulation);setKeyResetPartialForTests(&partialKeyReset);setKeyActivityPartialForTests(partialKeyActivity);setNoteOnStatePartialForTests(partialNoteOnState);setVoiceReleasePartialForTests(&partialVoiceRelease);setUnisonPartialForTests(&partialUnison);setVoiceTrackingPartialForTests(&partialVoiceTracking);setVelocityModulationPartialForTests(&partialVelocityModulation);setGlidePartialForTests(&partialGlide);setVoiceStartPartialForTests(&partialVoiceStart);setEditDecisionPartialForTests(partialEditDecision);setEditScenePartialForTests(partialEditScene);setEditAddressPartialForTests(partialEditAddress);setMidiFileTransportPartialForTests(partialMidiFileTransport);setMonoArpPartialForTests(partialMonoArp);setMidiFileEventPartialForTests(partialMidiFileEvent);setTimingTablesPartialForTests(partialTimingTables);setStateDspFactoryUploadPartialForTests(partialStateDspFactoryUpload);setStateDspFactoryResetPartialForTests(partialStateDspFactoryReset);setStateDspFactoryTransferPartialForTests(partialStateDspFactoryTransfer);setStateBankDisplayPartialForTests(partialStateBankDisplay);setStateNameEditorPartialForTests(partialStateNameEditor);setStateProgramChangePartialForTests(partialStateProgramChange);setMidiFileTimePartialForTests(partialMidiFileTime);setSysExDumpPartialForTests(partialSysExDump);setFirmwareLayoutCheckPartialForTests(partialFirmwareLayoutCheck);setPanelDetectPartialForTests(partialPanelDetect);setPanelInitializePartialForTests(partialPanelInitialize);setPanelMasksPartialForTests(partialPanelMasks);setPanelPublishPartialForTests(partialPanelPublish);setStateAuditionPartialForTests(partialStateAudition);setStatePanelRefreshPartialForTests(partialStatePanelRefresh);setStateDeferredPartsPartialForTests(partialStateDeferredParts);setStateNameCodecPartialForTests(partialStateNameCodec);setStateMultiSavePartialForTests(partialStateMultiSave);setLegacySysExPartialForTests(partialLegacySysEx);setSysExActionPartialForTests(partialSysExAction);setPatchExpandPartialForTests(partialPatchExpand);setPanelVersionPartialForTests(partialPanelVersion);setPanelPercentPartialForTests(partialPanelPercent);setPanelHexPartialForTests(partialPanelHex);setPanelFormatPartialForTests(partialPanelFormat);setStateFactoryServicesPartialForTests(partialStateFactoryServices);setStateGlobalSavePartialForTests(partialStateGlobalSave);setStatePresetSavePartialForTests(partialStatePresetSave);setStatePresetFormatPartialForTests(partialStatePresetFormat);setStateStoreServicesPartialForTests(partialStateStoreServices);setStateFlashCommitPartialForTests(partialStateFlashCommit);setSysExFramePartialForTests(partialSysExFrame);setInternalNotePartialForTests(partialInternalNote);setInternalMidiPartialForTests(partialInternalMidi);setPanelTextPartialForTests(partialPanelText);setPanelDecimalPartialForTests(partialPanelDecimal);setPanelTogglePartialForTests(partialPanelToggle);setPanelControlPartialForTests(partialPanelControl);setStatePostEditPartialForTests(partialStatePostEdit);setStateManualEditPartialForTests(partialStateManualEdit);setResetImagePartialForTests(&partialResetImage);setArpSelectPartialForTests(partialArpSelect);setArpEventPartialForTests(partialArpEvent);setSerialDirectPartialForTests(partialSerialDirect);setSerialIrqPartialForTests(partialSerialIrq);setSerialTransmitPartialForTests(partialSerialTransmit);setSerialSetupPartialForTests(partialSerialSetup);setSerialReceivePartialForTests(partialSerialReceive);setSerialQueuePartialForTests(partialSerialQueue);setStateSingleLoadPartialForTests(partialStateSingleLoad);setStatePresetAddressPartialForTests(partialStatePresetAddress);setStateMultiLoadPartialForTests(partialStateMultiLoad);setStateProgramPartialForTests(partialStateProgram);setStatePatchLoadPartialForTests(partialStatePatchLoad);setStateMultiSerializePartialForTests(partialStateMultiSerialize);setArpMainPartialForTests(partialArpMain);setArpSchedulePartialForTests(partialArpSchedule);setArpPrimitivePartialForTests(partialArpPrimitive);setPanelActionPartialForTests(partialPanelAction);setPanelPollPartialForTests(partialPanelPoll);setPanelBytePartialForTests(partialPanelByte);setPartRefreshPartialForTests(partialPartRefresh);setSyncValuePartialForTests(partialSyncValue);setPeriodicPartialForTests(partialPeriodic);setStateGlobalsPartialForTests(partialStateGlobals);setStatePackRefreshPartialForTests(partialStatePackRefresh);setStatePackFieldsPartialForTests(partialStatePackFields);setStateParameterExpandPartialForTests(partialStateParameterExpand);setStateModePartialForTests(partialStateMode);setPanelDecayPartialForTests(partialPanelDecay);setPartSignalPartialForTests(partialPartSignal);setPartEnablePartialForTests(partialPartEnable);setStateStoragePartialForTests(partialStateStorage);setStatePatchNamePartialForTests(partialStatePatchName);setStateParameterEditPartialForTests(partialStateParameterEdit);setVoiceTableInitPartialForTests(partialVoiceTableInit);setVoiceFeedbackPartialForTests(partialVoiceFeedback);setPartRoutePartialForTests(partialPartRoute);setPartModulationPartialForTests(partialPartModulation);setGlobalEffectPartialForTests(partialGlobalEffect);setStateFieldMapPartialForTests(partialStateFieldMap);setMidiRoutePartialForTests(partialMidiRoute);setMidiPartInitPartialForTests(partialMidiPartInit);setHardwareSetupPartialForTests(partialHardwareSetup);setMidiAuxPartialForTests(partialMidiAux);setMidiControlPartialForTests(partialMidiControl);setMidiDecodePartialForTests(partialMidiDecode);setGlobalFinalPartialForTests(partialGlobalFinal);setGlobalFinishScalarPartialForTests(partialGlobalFinishScalar);setGlobalTimeTailPartialForTests(partialGlobalTimeTail);setGlobalTailScalarPartialForTests(partialGlobalTailScalar);setGlobalPairPartialForTests(partialGlobalPair);setGlobalClampedTimePartialForTests(partialGlobalClampedTime);setGlobalMatrixPartialForTests(partialGlobalMatrix);setSquareRootPartialForTests(partialSquareRoot);setGlobalTablePartialForTests(partialGlobalTable);setGlobalMixPartialForTests(partialGlobalMix);setParameterLfoPartialForTests(partialParameterLfo);setParameterSupportPartialForTests(partialParameterSupport);setParameterGatePartialForTests(partialParameterGate);setParameterVolumePartialForTests(partialParameterVolume);setParameterFilterPartialForTests(partialParameterFilter);setParameterSignedSquarePartialForTests(partialParameterSignedSquare);setParameterHeaderPartialForTests(partialParameterHeader);setNoteProgramPartialForTests(partialNoteProgram);setPedalPartialForTests(partialPedal);setPartNotePartialForTests(partialPartNote);setGlobalRangePartialForTests(partialGlobalRange);setGlobalShapePartialForTests(partialGlobalShape);setParameterVoiceScalePartialForTests(partialParameterVoiceScale);setParameterCurvePartialForTests(partialParameterCurve);setParameterTimePartialForTests(partialParameterTime);setGlobalTimePartialForTests(partialGlobalTime);setGlobalScalarPartialForTests(partialGlobalScalar);setParameterScalarPartialForTests(partialParameterScalar);setNoteOffStatePartialForTests(partialNoteOffState);setGlobalSetupPartialForTests(partialGlobalSetup);setVoiceRefreshPartialForTests(partialVoiceRefresh);setParameterModulationPartialForTests(partialParameterModulation);setParameterPitchPartialForTests(partialParameterPitch);setOscillatorPitchPartialForTests(partialOscillatorPitch);setScheduledTimerPartialForTests(partialScheduledTimer);setServiceCyclePartialForTests(partialServiceCycle);setStateInitPartialForTests(partialStateInit);setKeyPriorityPartialForTests(partialKeyPriority);setVoiceSweepPartialForTests(partialVoiceSweep);setGlobalModulationPartialForTests(partialGlobalModulation);setOscillatorModulationPartialForTests(partialOscillatorModulation);}} install;
 }
 }

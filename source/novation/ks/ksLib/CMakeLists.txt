@@ -376,3 +376,11 @@ target_sources(ksLib PRIVATE ksPanelInputCalls.cpp ksPanelInputCalls.h ksPanelIn
 target_sources(ksLib PRIVATE ksStateEditAddressCalls.cpp ksStateEditAddressCalls.h ksStateEditAddressTask.h)
 
 target_sources(ksLib PRIVATE ksStateStoreUiCalls.cpp ksStateStoreUiCalls.h ksStateStoreUiTask.h)
+
+target_sources(ksLib PRIVATE ksPanelMatrixCalls.cpp ksPanelMatrixCalls.h ksPanelMatrixTask.h)
+
+target_sources(ksLib PRIVATE ksPedalSenseCalls.cpp ksPedalSenseCalls.h ksPedalSenseTask.h)
+
+target_sources(ksLib PRIVATE ksPanelEncoderCalls.cpp ksPanelEncoderCalls.h ksPanelEncoderTask.h)
+
+target_sources(ksLib PRIVATE ksPanelAdcSamplesCalls.cpp ksPanelAdcSamplesCalls.h ksPanelAdcSamplesTask.h)

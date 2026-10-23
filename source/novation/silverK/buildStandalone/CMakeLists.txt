@@ -429,3 +429,11 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelInputCalls
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateEditAddressCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateStoreUiCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelMatrixCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPedalSenseCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelEncoderCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelAdcSamplesCalls.cpp")

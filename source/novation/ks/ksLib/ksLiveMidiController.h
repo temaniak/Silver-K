@@ -53,6 +53,10 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksPanelAdcSamplesCalls.h"
+#include "ksPanelEncoderCalls.h"
+#include "ksPedalSenseCalls.h"
+#include "ksPanelMatrixCalls.h"
 #include "ksStateStoreUiCalls.h"
 #include "ksStateEditAddressCalls.h"
 #include "ksStateStoreServicesCalls.h"
@@ -178,6 +182,10 @@ public:
     TimerServiceCalls timerServiceCalls;
     StateChannelCalls stateChannelCalls;
     PanelInputCalls panelInputCalls;
+    PanelAdcSamplesCalls panelAdcSamplesCalls;
+    PanelEncoderCalls panelEncoderCalls;
+    PedalSenseCalls pedalSenseCalls;
+    PanelMatrixCalls panelMatrixCalls;
     StateStoreUiCalls stateStoreUiCalls;
     StateEditAddressCalls stateEditAddressCalls;
     StateStoreServicesCalls stateStoreServicesCalls;
@@ -285,6 +293,10 @@ public:
         timerServiceCalls.resetMetrics();
         stateChannelCalls.resetMetrics();
         panelInputCalls.resetMetrics();
+        panelAdcSamplesCalls.resetMetrics();
+        panelEncoderCalls.resetMetrics();
+        pedalSenseCalls.resetMetrics();
+        panelMatrixCalls.resetMetrics();
         stateStoreUiCalls.resetMetrics();
         stateEditAddressCalls.resetMetrics();
         stateStoreServicesCalls.resetMetrics();

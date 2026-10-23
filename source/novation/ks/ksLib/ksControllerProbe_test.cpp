@@ -1,4 +1,5 @@
 #include "ksBoard.h"
+#include "ksPanelIoFixture_test.h"
 #include "ksRom.h"
 #include "dsp56kBase/threadtools.h"
 #include <chrono>
@@ -47,7 +48,7 @@ struct Stats {
 };
 }
 int main(int argc,char** argv){try{
-    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal|controls|state|clock|steal|fx|panel-store-single|panel-store-multi, trace path, optional seconds (up to 30) required\n";return 77;}
+    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal|controls|state|clock|steal|fx|panel-store-single|panel-store-multi|panel-io-single|panel-io-multi, trace path, optional seconds (up to 30) required\n";return 77;}
     const double duration=argc==9?std::stod(argv[8]):2.;
     check(std::isfinite(duration)&&duration>=2.&&duration<=30.,"Controller probe duration must be 2..30 seconds");
     const std::string mode=argv[5],scenario=argv[6];
@@ -56,11 +57,14 @@ int main(int argc,char** argv){try{
     const bool recording=mode=="native-record" || mode=="native-toggle-record" || mode=="record" || mode=="live-record" || mode=="live-toggle-record";
     const bool toggling=mode=="native-toggle" || mode=="native-toggle-record" || mode=="live-toggle" || mode=="live-toggle-record";
     check(mode=="h8" || mode=="record" || mode=="replay" || mode=="boot" || liveMode,"Unknown controller probe mode");
-    const bool panelStore=scenario=="panel-store-single" || scenario=="panel-store-multi";
+    const bool panelIo=scenario=="panel-io-single" || scenario=="panel-io-multi";
+    if(panelIo)check(duration>=4.,"Physical panel scenario requires at least four seconds");
+    const bool panelStore=panelIo || scenario=="panel-store-single" || scenario=="panel-store-multi";
     check(scenario=="single" || scenario=="multi" || scenario=="midi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || panelStore,"Unknown controller probe scenario");
-    const bool multi=scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || scenario=="panel-store-multi";
+    const bool multi=scenario=="panel-io-multi" || scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || scenario=="panel-store-multi";
     const auto* threads=std::getenv("SILVER_KS_DSP_THREADS");const bool parallel=threads&&std::string(threads)=="2";
     const auto setup=Clock::now();ks::Rom os(argv[1]);check(os.isValid(),"Invalid KS OS");
+    std::unique_ptr<ks::test::PanelIoFixture> ioFixture;
     auto board=std::make_unique<ks::Board>(os.data(),bytes(argv[3]),bytes(argv[2]),true,nativeMode);
     if(mode=="boot")board->startControllerTrace();
     const auto bootBegin=Clock::now();const double bootCpu=cpu();check(board->boot(),"KS boot failed");
@@ -79,6 +83,7 @@ int main(int argc,char** argv){try{
     auto discard=[&](unsigned n){for(unsigned i=0;i<n;++i)board->renderSample();};
     std::shared_ptr<const ks::ControllerTape> tape;
     uint64_t panelEvents=0;std::array<uint8_t,8> panelPages{};
+    std::array<uint8_t,16> ioPages{};unsigned ioPageCount=1;unsigned physicalStore=0;
     uint64_t frames=0,hash=14695981039346656037ull;int64_t peak=0;double cost=bootCost,wall=bootWall;
     uint64_t h8Start=board->cpu().cycles;
     if(mode=="boot"){
@@ -209,9 +214,9 @@ int main(int argc,char** argv){try{
             add(.12,four({0xb0,64,127}));add(.16,four({0x80,60,0}));
             add(1.6,four({0xb0,64,0}));add(1.7,four({0x90,67,99}));add(2.,four({0x80,67,0}));
         }
-        // Fixture-only controller-queue injection, between rendered samples.
-        // Derive the Store key from authenticated descriptor data, rather than
-        // bypassing UI dispatch or jumping the controller into a save routine.
+        // Derive the Store key from authenticated descriptors. The physical
+        // fixture supplies external pins; the older fixture supplies queue
+        // events. Both retain normal UI dispatch and Flash save handling.
         unsigned storeKey=0,storeKeys=0;
         if(panelStore){
             check(!toggling&&mode!="replay","Panel store requires a live reference/native controller");
@@ -225,6 +230,14 @@ int main(int argc,char** argv){try{
             check(matches==1,"Store dispatch descriptor is ambiguous");
             for(unsigned key=0;key<32;++key)if((memory[0xfcc4+key*3]&127)==1&&memory[0xfcc4+key*3+1]==dispatch){storeKey=key;++storeKeys;}
             check(storeKeys==1,"Store key descriptor is ambiguous");
+            if(panelIo){
+                unsigned matches=0;
+                for(unsigned key=0;key<48;++key)if(memory[0xb8e8+key]==storeKey){physicalStore=key;++matches;}
+                check(matches==1,"Physical Store button mapping is ambiguous");
+                ioFixture=std::make_unique<ks::test::PanelIoFixture>(*board);
+                board->cpu().memmap(ioFixture.get(),0,1<<24);
+                ioPages[0]=board->read(0x16790);
+            }
             board->write(0x168fc+239,1); // Explicit synthetic fixture: writes allowed.
         }
         auto queueStore=[&](bool pressed){
@@ -258,12 +271,15 @@ int main(int argc,char** argv){try{
                 board->enableLiveMidiController(false);
             }
             if(toggling && n==native(.95)){if(nativeMode)board->enableNativeController();else board->enableLiveMidiController();if(recording)board->enableControllerDelegationProfile();}
-            if(panelStore)for(unsigned press=0;press<(multi?3u:4u);++press){
+            if(panelIo)ioFixture->apply(n,ks::DSP::SampleRate,physicalStore,multi);
+            if(panelStore&&!panelIo)for(unsigned press=0;press<(multi?3u:4u);++press){
                 if(n==native(.2+press*.35))queueStore(true);
                 if(n==native(.24+press*.35))queueStore(false);
             }
             if(mode!="replay")while(next<events.size() && events[next].frame==n)send(events[next++].bytes);
-            const auto a=board->renderSample();if(!captured.empty())captured[n]=a;for(auto v:a){hash^=uint32_t(v);hash*=1099511628211ull;peak=std::max(peak,std::abs(int64_t(v)));}
+            const auto a=board->renderSample();
+            if(panelIo){const auto page=board->read(0x16790);if(page!=ioPages[ioPageCount-1]){check(ioPageCount<ioPages.size(),"Too many physical panel page transitions");ioPages[ioPageCount++]=page;}}
+            if(!captured.empty())captured[n]=a;for(auto v:a){hash^=uint32_t(v);hash*=1099511628211ull;peak=std::max(peak,std::abs(int64_t(v)));}
         }
         cost=cpu()-before;wall=std::chrono::duration<double>(Clock::now()-begin).count();
         if(!captured.empty()){
@@ -308,8 +324,18 @@ int main(int argc,char** argv){try{
     if(nativeMode && !toggling)check(board->liveMidiController()->voiceActions.addressCalls.partialEntries==0,"Native playback used partial DSP-address recovery");
     if(nativeMode && !toggling)check(board->liveMidiController()->voiceActions.wordCalls.partialEntries==0,"Native playback used partial DSP-word recovery");
     if(nativeMode && !toggling)check(board->liveMidiController()->parameterScaleCalls.partialEntries==0,"Native playback used partial coefficient recovery");
-    if(panelStore){check(panelEvents==(multi?6u:8u),"Missing panel store events");check(board->flashRevision>0,"Panel store did not write Flash");check(board->read(0x16790)==0,"Store page did not return to playback");}
+    if(nativeMode&&!toggling){
+        const auto& live=*board->liveMidiController();
+        const auto admitted=[](const auto& calls){
+            check(!calls.partialEntries,"Native panel used partial recovery");
+            check(calls.started+calls.initialActive==calls.completed+calls.activeCalls(),"Native panel call lifetime differs");
+        };
+        admitted(live.panelMatrixCalls);admitted(live.pedalSenseCalls);
+        admitted(live.panelEncoderCalls);admitted(live.panelAdcSamplesCalls);
+    }
+    if(panelStore){if(!panelIo)check(panelEvents==(multi?6u:8u),"Missing panel store events");check(board->flashRevision>0,"Panel store did not write Flash");check(board->read(0x16790)==0,"Store page did not return to playback");}
     if(scenario=="state")check(board->flashRevision>0,"State scenario did not complete a Flash page write");
+    if(panelIo){check(ioFixture->matrixReads&&ioFixture->pedalReads&&ioFixture->encoderReads&&ioFixture->adcReads,"Physical input source not observed");check(ioFixture->buttonTransitions==(multi?6u:8u),"Missing physical button transitions");check(ioFixture->pedalTransitions==4&&ioFixture->encoderTransitions&&ioFixture->adcTransitions,"Missing physical pedal/encoder/ADC transitions");}
     const auto depth=board->serialDepth();std::ostringstream report;report<<std::setprecision(12)
         <<"{\"schema\":\"silver-k.controller-probe.v1\",\"mode\":\""<<mode<<"\",\"scenario\":\""<<scenario<<"\",\"controller_backend\":\""<<board->controllerBackend()
         <<"\",\"dsp_threads\":"<<(parallel?2:1)<<",\"frames\":"<<frames<<",\"audio_hash\":\""<<hash<<"\",\"peak\":"<<peak
@@ -852,6 +878,26 @@ int main(int argc,char** argv){try{
         <<",\"native_state_store_ui_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateStoreUiCalls.initialActive:0)
         <<",\"native_state_store_ui_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateStoreUiCalls.activeCalls():0)
         <<",\"native_state_store_ui_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateStoreUiCalls.partialEntries:0)
+        <<",\"native_panel_matrix_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelMatrixCalls.started:0)
+        <<",\"native_panel_matrix_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelMatrixCalls.completed:0)
+        <<",\"native_panel_matrix_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelMatrixCalls.initialActive:0)
+        <<",\"native_panel_matrix_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelMatrixCalls.activeCalls():0)
+        <<",\"native_panel_matrix_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->panelMatrixCalls.partialEntries:0)
+        <<",\"native_pedal_sense_calls\":"<<(board->liveMidiController()?board->liveMidiController()->pedalSenseCalls.started:0)
+        <<",\"native_pedal_sense_returns\":"<<(board->liveMidiController()?board->liveMidiController()->pedalSenseCalls.completed:0)
+        <<",\"native_pedal_sense_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->pedalSenseCalls.initialActive:0)
+        <<",\"native_pedal_sense_active\":"<<(board->liveMidiController()?board->liveMidiController()->pedalSenseCalls.activeCalls():0)
+        <<",\"native_pedal_sense_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->pedalSenseCalls.partialEntries:0)
+        <<",\"native_panel_encoder_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelEncoderCalls.started:0)
+        <<",\"native_panel_encoder_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelEncoderCalls.completed:0)
+        <<",\"native_panel_encoder_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelEncoderCalls.initialActive:0)
+        <<",\"native_panel_encoder_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelEncoderCalls.activeCalls():0)
+        <<",\"native_panel_encoder_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->panelEncoderCalls.partialEntries:0)
+        <<",\"native_panel_adc_samples_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcSamplesCalls.started:0)
+        <<",\"native_panel_adc_samples_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcSamplesCalls.completed:0)
+        <<",\"native_panel_adc_samples_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcSamplesCalls.initialActive:0)
+        <<",\"native_panel_adc_samples_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcSamplesCalls.activeCalls():0)
+        <<",\"native_panel_adc_samples_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcSamplesCalls.partialEntries:0)
         <<",\"native_panel_input_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.started:0)
         <<",\"native_panel_input_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.completed:0)
         <<",\"native_panel_input_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.initialActive:0)
@@ -1140,6 +1186,12 @@ int main(int argc,char** argv){try{
     }
 #endif
     if(panelStore){report<<",\"panel_button_pages\":[";for(unsigned i=0;i<panelEvents;++i){if(i)report<<',';report<<unsigned(panelPages[i]);}report<<']';}
+    if(panelIo){
+        report<<",\"panel_io_reads\":["<<ioFixture->matrixReads<<','<<ioFixture->pedalReads<<','<<ioFixture->encoderReads<<','<<ioFixture->adcReads<<']'
+              <<",\"panel_io_transitions\":["<<ioFixture->buttonTransitions<<','<<ioFixture->pedalTransitions<<','<<ioFixture->encoderTransitions<<','<<ioFixture->adcTransitions<<']'
+              <<",\"panel_io_pages\":[";
+        for(unsigned i=0;i<ioPageCount;++i){if(i)report<<',';report<<unsigned(ioPages[i]);}report<<']';
+    }
     if(tape)report<<",\"trace_events\":"<<tape->events.size()<<",\"trace_slices\":"<<tape->slices.size()<<",\"trace_digest\":\""<<tape->digest()<<"\",\"bus\":"<<Stats(*tape).json();
     if(const auto* live=board->liveMidiController()){report<<",\"native_midi_steps\":"<<live->nativeSteps<<",\"native_midi_bytes\":"<<live->bytes
         <<",\"native_midi_messages\":"<<live->messages<<",\"native_note_on\":"<<live->noteOn<<",\"native_note_off\":"<<live->noteOff<<",\"native_cc\":"<<live->controls

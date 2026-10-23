@@ -13,6 +13,10 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksPanelAdcSamplesCalls.h"
+#include "ksPanelEncoderCalls.h"
+#include "ksPedalSenseCalls.h"
+#include "ksPanelMatrixCalls.h"
 #include "ksStateStoreUiCalls.h"
 #include "ksStateEditAddressCalls.h"
 #include <iostream>
@@ -104,6 +108,18 @@ int main(){try{
     ks::StateStoreUiCalls stateStoreUiCalls;
     for(unsigned entry:{0x47ccu,0x47dau,0x4834u}){state->pc=entry;
         if(stateStoreUiCalls.step(*state)||stateStoreUiCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateStoreUi recovery");}
+    ks::PanelMatrixCalls panelMatrixCalls;
+    for(unsigned entry:{0x13fau,0x145au}){state->pc=entry;
+        if(panelMatrixCalls.step(*state)||panelMatrixCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial PanelMatrix recovery");}
+    ks::PedalSenseCalls pedalSenseCalls;
+    for(unsigned entry:{0x13b0u}){state->pc=entry;
+        if(pedalSenseCalls.step(*state)||pedalSenseCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial PedalSense recovery");}
+    ks::PanelEncoderCalls panelEncoderCalls;
+    for(unsigned entry:{0x188au}){state->pc=entry;
+        if(panelEncoderCalls.step(*state)||panelEncoderCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial PanelEncoder recovery");}
+    ks::PanelAdcSamplesCalls panelAdcSamplesCalls;
+    for(unsigned entry:{0x16a8u}){state->pc=entry;
+        if(panelAdcSamplesCalls.step(*state)||panelAdcSamplesCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial PanelAdcSamples recovery");}
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");
