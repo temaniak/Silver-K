@@ -1530,6 +1530,19 @@ int main(int argc,char** argv){try{
         <<",\"native_panel_scan_initialize\":"<<runtime->panelScanForeground.kinds[0]
         <<",\"native_panel_scan_scan\":"<<runtime->panelScanForeground.kinds[1]
         <<",\"native_panel_scan_button_push\":"<<runtime->panelScanForeground.kinds[2]
+        <<",\"native_panel_controls_calls\":"<<runtime->panelControlsForeground.started
+        <<",\"native_panel_controls_returns\":"<<runtime->panelControlsForeground.completed
+        <<",\"native_panel_controls_phases\":"<<runtime->panelControlsForeground.phases
+        <<",\"native_panel_controls_initial_active\":"<<runtime->panelControlsForeground.initialActive
+        <<",\"native_panel_controls_active\":"<<runtime->panelControlsForeground.active()
+        <<",\"native_panel_controls_components\":"<<runtime->panelControlsForeground.components
+        <<",\"native_panel_controls_switches\":"<<runtime->panelControlsForeground.kinds[0]
+        <<",\"native_panel_controls_pedal_reset\":"<<runtime->panelControlsForeground.kinds[1]
+        <<",\"native_panel_controls_pedal\":"<<runtime->panelControlsForeground.kinds[2]
+        <<",\"native_panel_controls_encoder\":"<<runtime->panelControlsForeground.kinds[3]
+        <<",\"native_panel_controls_adc_start\":"<<runtime->panelControlsForeground.kinds[4]
+        <<",\"native_panel_controls_adc_mux\":"<<runtime->panelControlsForeground.kinds[5]
+        <<",\"native_panel_controls_adc_reset_last\":"<<runtime->panelControlsForeground.kinds[6]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases

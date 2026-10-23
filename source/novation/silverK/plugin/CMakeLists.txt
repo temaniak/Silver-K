@@ -2605,3 +2605,13 @@ add_executable(ksPanelScanTask_test "${ROOT}/source/novation/ks/ksLib/ksPanelSca
 target_compile_features(ksPanelScanTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_panel_scan_task COMMAND ksPanelScanTask_test)
 set_tests_properties(ks_panel_scan_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksPanelControlsService_test "${ROOT}/source/novation/ks/ksLib/ksPanelControlsService_test.cpp")
+target_include_directories(ksPanelControlsService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksPanelControlsService_test PRIVATE ksLib)
+add_test(NAME ks_panel_controls_service COMMAND ksPanelControlsService_test)
+set_tests_properties(ks_panel_controls_service PROPERTIES TIMEOUT 240 SKIP_RETURN_CODE 77)
+add_executable(ksPanelControlsTask_test "${ROOT}/source/novation/ks/ksLib/ksPanelControlsTask_test.cpp")
+target_compile_features(ksPanelControlsTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_panel_controls_task COMMAND ksPanelControlsTask_test)
+set_tests_properties(ks_panel_controls_task PROPERTIES TIMEOUT 240)

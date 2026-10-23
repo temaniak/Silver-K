@@ -482,3 +482,5 @@ target_sources(ksLib PRIVATE ksSerialForegroundService.h ksSerialForeground.h ks
 target_sources(ksLib PRIVATE ksStateResetService.h ksStateResetForeground.h ksStateResetForeground.cpp)
 
 target_sources(ksLib PRIVATE ksPanelScanService.h ksPanelScanForeground.h ksPanelScanForeground.cpp)
+
+target_sources(ksLib PRIVATE ksPanelControlsService.h ksPanelControlsForeground.h ksPanelControlsForeground.cpp)
