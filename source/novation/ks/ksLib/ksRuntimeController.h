@@ -23,7 +23,7 @@ public:
     static void verifyImage(const ControllerCpu&);
     void step(ControllerCpu&);
     void stepStartup(ControllerCpu&);
-    void resetMetrics(){steps=interruptEntries=0;nativeInterruptStarts=nativeInterruptReturns=nativeInterruptPhases=0;nativeInterruptInitial=activeNativeInterrupts();nativeInterruptKinds.fill(0);nativeTpuComponents=0;
+    void resetMetrics(){steps=interruptEntries=0;nativeInterruptStarts=nativeInterruptReturns=nativeInterruptPhases=0;nativeInterruptInitial=activeNativeInterrupts();nativeInterruptKinds.fill(0);nativeTpuComponents=nativeAdcComponents=nativeSerialReceiveComponents=0;
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
         std::fill(boundaryProfile.begin(),boundaryProfile.end(),0);
 #endif
@@ -33,8 +33,8 @@ public:
     static void arbitrate(ControllerCpu&);
     uint64_t steps=0,interruptEntries=0;
     uint64_t nativeInterruptStarts=0,nativeInterruptReturns=0,nativeInterruptPhases=0,nativeInterruptInitial=0;
-    std::array<uint64_t,4> nativeInterruptKinds{};
-    uint32_t nativeTpuComponents=0;
+    std::array<uint64_t,6> nativeInterruptKinds{};
+    uint32_t nativeTpuComponents=0,nativeAdcComponents=0,nativeSerialReceiveComponents=0;
     unsigned activeNativeInterrupts() const { return interruptCount; }
     // Const diagnostic of the current typed continuation, separate from the
     // cumulative component-coverage mask and any saved compatibility CPU PC.
@@ -43,6 +43,8 @@ public:
         const auto&service=interrupts[interruptCount-1]->service;
         return service.timerAt(component)&&(!requireCritical||service.critical());
     }
+    bool nativeAdcAt(AdcService::Component component) const { return interruptCount&&interrupts[interruptCount-1]->service.adcAt(component); }
+    bool nativeSerialReceiveAt(SerialReceiveService::Component component) const { return interruptCount&&interrupts[interruptCount-1]->service.serialReceiveAt(component); }
     // Diagnostic only; allocated before playback when explicitly enabled.
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
     std::vector<uint64_t> boundaryProfile;

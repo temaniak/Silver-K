@@ -64,7 +64,7 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksDspTransport.cp
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLiveMidiController.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLiveNoteController.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLiveVoiceController.cpp")
-target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeInterrupts.cpp" "${ROOT}/source/novation/ks/ksLib/ksInterruptService.h" "${ROOT}/source/novation/ks/ksLib/ksTpu0Service.h" "${ROOT}/source/novation/ks/ksLib/ksRuntimeController.cpp" "${ROOT}/source/novation/ks/ksLib/ksRuntimeStartup.cpp")
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeInterrupts.cpp" "${ROOT}/source/novation/ks/ksLib/ksInterruptService.h" "${ROOT}/source/novation/ks/ksLib/ksTpu0Service.h" "${ROOT}/source/novation/ks/ksLib/ksAdcService.h" "${ROOT}/source/novation/ks/ksLib/ksSerialReceiveService.h" "${ROOT}/source/novation/ks/ksLib/ksRuntimeController.cpp" "${ROOT}/source/novation/ks/ksLib/ksRuntimeStartup.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeIo.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeMidi.cpp")
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeState.cpp")

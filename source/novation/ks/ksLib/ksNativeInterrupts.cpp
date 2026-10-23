@@ -28,7 +28,9 @@ bool RuntimeController::serviceInterrupt(ControllerCpu& h) {
         target&=0xffffff;
         using K=InterruptService::Kind;
         K kind;
-        if (selected==32 && target==0x12b0) kind=K::Tpu0;
+        if (selected==28 && target==0x165c) kind=K::Adc;
+        else if (selected==89 && target==0x1072) kind=K::SerialReceive;
+        else if (selected==32 && target==0x12b0) kind=K::Tpu0;
         else if (selected==88 && target==0x105e) kind=K::SerialError;
         else if (selected==90 && target==0x114e) kind=K::SerialTransmit;
         else if ((selected==42 || selected==91) && target==0x170) kind=K::Unused;
@@ -38,6 +40,7 @@ bool RuntimeController::serviceInterrupt(ControllerCpu& h) {
         // consumer is published modulo 256 by its sole interrupt owner.
         if(kind==K::SerialTransmit && h.memory[0xffed6e])return false;
         if(kind==K::Tpu0 && h.memory[0xffed6c])return false;
+        if(kind==K::SerialReceive && h.memory[0xffec64])return false;
         // The remaining compatibility stack must be in ordinary internal RAM
         // for its old entry/return clock credits to apply. No bytes are pushed.
         if ((h.getSP()&1) || h.getSP()<0xfff400 || h.getSP()>0xfffc00) return false;
@@ -70,6 +73,8 @@ bool RuntimeController::serviceInterrupt(ControllerCpu& h) {
     h.cycles=start+cost; ++nativeInterruptPhases;
     h.exr=service.critical()?7:frame.priority;
     nativeTpuComponents|=service.timerComponents();
+    nativeAdcComponents|=service.adcComponents();
+    nativeSerialReceiveComponents|=service.serialReceiveComponents();
     if (service.complete()) {
         h.exr=frame.previousPriority; --h.indent;
         // Only bus history crosses back into the migration ABI. No register,

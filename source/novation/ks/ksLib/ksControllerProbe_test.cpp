@@ -1510,7 +1510,11 @@ int main(int argc,char** argv){try{
         <<",\"native_interrupt_serial_transmit\":"<<runtime->nativeInterruptKinds[1]
         <<",\"native_interrupt_unused\":"<<runtime->nativeInterruptKinds[2]
         <<",\"native_interrupt_tpu0\":"<<runtime->nativeInterruptKinds[3]
-        <<",\"native_interrupt_tpu0_components\":"<<runtime->nativeTpuComponents;
+        <<",\"native_interrupt_tpu0_components\":"<<runtime->nativeTpuComponents
+        <<",\"native_interrupt_adc\":"<<runtime->nativeInterruptKinds[4]
+        <<",\"native_interrupt_adc_components\":"<<runtime->nativeAdcComponents
+        <<",\"native_interrupt_serial_receive\":"<<runtime->nativeInterruptKinds[5]
+        <<",\"native_interrupt_serial_receive_components\":"<<runtime->nativeSerialReceiveComponents;
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
     if(const auto* runtime=board->nativeController();runtime && !runtime->boundaryProfile.empty()){
         report<<",\"native_boundary_profile\":[";bool first=true;

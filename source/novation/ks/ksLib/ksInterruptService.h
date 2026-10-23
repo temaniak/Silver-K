@@ -1,6 +1,8 @@
 #pragma once
 #include "ksSerialIrqTask.h"
 #include "ksTpu0Service.h"
+#include "ksAdcService.h"
+#include "ksSerialReceiveService.h"
 #include <cstdint>
 
 namespace ks {
@@ -10,10 +12,10 @@ namespace ks {
 // when the old register saves and instruction fetches no longer take place.
 class InterruptService final {
 public:
-    enum class Kind { SerialError, SerialTransmit, Unused, Tpu0 };
+    enum class Kind { SerialError, SerialTransmit, Unused, Tpu0, Adc, SerialReceive };
     explicit InterruptService(Kind kind)
         : kind_(kind), serial_(kind == Kind::SerialError
-              ? SerialIrqTask::Kind::Error : SerialIrqTask::Kind::Transmit) {if(kind==Kind::Tpu0)timer_.emplace();}
+              ? SerialIrqTask::Kind::Error : SerialIrqTask::Kind::Transmit) {if(kind==Kind::Tpu0)timer_.emplace();if(kind==Kind::Adc)adc_.emplace();if(kind==Kind::SerialReceive)receive_.emplace();}
     Kind kind() const { return kind_; }
     bool complete() const { return complete_; }
     bool critical() const { return timer_&&timer_->critical(); }
@@ -21,9 +23,15 @@ public:
     bool timerAt(Tpu0Service::Component component) const {
         return timer_&&!complete_&&timer_->component()==component;
     }
+    uint32_t adcComponents() const { return adc_?adc_->components():0; }
+    uint32_t serialReceiveComponents() const { return receive_?receive_->components():0; }
+    bool adcAt(AdcService::Component component) const { return adc_&&!complete_&&adc_->component()==component; }
+    bool serialReceiveAt(SerialReceiveService::Component component) const { return receive_&&!complete_&&receive_->component()==component; }
     unsigned nextClocks() const {
         if (complete_) return 0;
         if (timer_) return timer_->nextClocks();
+        if (adc_) return adc_->nextClocks();
+        if (receive_) return receive_->nextClocks();
         if (kind_ == Kind::Unused) return 23;
         return serial_.nextClocks([&](SerialIrqTask::Clock clock) {
             return clockCost(clock);
@@ -36,6 +44,8 @@ public:
         const auto cost = nextClocks();
         if (!cost || cost > available) return 0;
         if (timer_) {const auto used=timer_->advanceBefore(available,read,write);complete_=timer_->complete();return used;}
+        if (adc_) {const auto used=adc_->advanceBefore(available,read,write);complete_=adc_->complete();return used;}
+        if (receive_) {const auto used=receive_->advanceBefore(available,read,write);complete_=receive_->complete();return used;}
         if (kind_ == Kind::Unused) { complete_ = true; return cost; }
         const auto readWord = [&](uint32_t address) {
             const auto high = uint8_t(read(address, 12));
@@ -48,7 +58,7 @@ public:
                 case SerialIrqTask::Read::Producer: return readWord(0xffed6c);
                 case SerialIrqTask::Read::Consumer: return readWord(0xffed6e);
                 case SerialIrqTask::Read::Data: return read(serial_.dataAddress(), cost);
-                default: return 0; // Receive is a separate, still-migrating lifecycle.
+                default: return 0; // Receive owns its separate complete logical graph.
                 }
             },
             [&](SerialIrqTask::Write field, uint16_t value) {
@@ -79,6 +89,8 @@ private:
     Kind kind_;
     SerialIrqTask serial_;
     std::optional<Tpu0Service> timer_;
+    std::optional<AdcService> adc_;
+    std::optional<SerialReceiveService> receive_;
     bool complete_ = false;
 };
 }

@@ -25,8 +25,45 @@ void fullTimer(ks::Board& b){
  for(unsigned n=0;n<4;++n){b.write(0xffec16+n,uint8_t(1u<<n));b.write(0xffec24+n,uint8_t(128u>>n));}
  b.write(0xffec23,1);
 }
+void sameInterrupts(ks::Board&a,ks::Board&b){
+ const auto&x=a.cpu();const auto&y=b.cpu();
+ check(x.pending_irqs==y.pending_irqs&&x.pending_irqs_high==y.pending_irqs_high&&x.exr==y.exr,"Interrupt pending masks/priority differ");
+ for(unsigned n=0;n<128;++n)check(x.interruptPriority[n]==y.interruptPriority[n],"Interrupt priority table differs");
+}
+void advanceBoth(ks::Board&a,ks::Board&b){
+ a.advance(1);b.advance(1);check(a.controllerCycles()==b.controllerCycles(),"IRQ phase clock differs");sameInterrupts(a,b);
+}
+void drain(ks::Board&a,ks::Board&b){
+ unsigned phases=0;
+ while(b.nativeController()->activeNativeInterrupts()||(b.cpu().exr&7)){
+  check(++phases<=65536,"Previous IRQ did not drain");advanceBoth(a,b);
+ }
+}
+void adc(ks::Board&b,unsigned group,unsigned remaining=0){
+ // Board ADC returns 0x8000. Both ordinary curves and the preview/accepted
+ // pair receive a real threshold crossing; one empty ring wraps at its end.
+ b.write(0x156e2,uint8_t(group));b.write(0x156e3,uint8_t(remaining));b.write(0x156e4,255);
+ word(b,0x15406,0x1fe);word(b,0x15408,0x1fe);
+ for(unsigned n=0;n<4;++n){
+  const unsigned channel=group+n,offset=2*channel;
+  word(b,0x15652+offset,0x8000);word(b,0x1560a+offset,0);b.write(0x1569a+offset,0);
+  b.write(0xb93c+channel,uint8_t(n&1));b.write(0xb918+channel,uint8_t(32+n));
+ }
+ b.write(0xffff98,0xd3);
+}
+void receive(ks::Board&b,unsigned variant){
+ word(b,0xffec64,variant==1?255:0);word(b,0xffec66,0);b.write(0xffed68,0);
+ if(variant==1)for(unsigned n=0;n<256;++n)b.write(0xffec68+n,0xfe);
+ // Start the real TPU0 counter at a defined phase. Its clock and priority
+ // remain enabled while the independently clocked UART and TPU1 run.
+ word(b,0xffffd6,0);word(b,0xffffe6,20000);
+ b.write(0xffee96,variant==2?0:1);b.write(0xffee9a,variant==3?255:1);
+ b.write(0xffee97,0);word(b,0xffee9c,variant==2||variant==3?0x400:0);word(b,0xffee9e,variant==4?19000:1000);
+ word(b,0xffeea8,0);longword(b,0xffee78,0x18000);longword(b,0xffeeaa,variant==2||variant==3?0x12345678:0);
+ longword(b,0xffeea0,0x04000000);word(b,0xffeea4,0x800);word(b,0xffeea6,0x100);
+}
 void same(ks::Board&a,ks::Board&b){
- check(a.controllerCycles()==b.controllerCycles(),"Handoff moved controller time");
+ check(a.controllerCycles()==b.controllerCycles(),"Handoff moved controller time");sameInterrupts(a,b);
  check(ks::stateMessage(a.state())==ks::stateMessage(b.state()),"Handoff changed musical state");
  check(a.saveUserFlash()==b.saveUserFlash(),"Handoff changed Flash");
  const auto&x=a.cpu();const auto&y=b.cpu();
@@ -36,50 +73,59 @@ void same(ks::Board&a,ks::Board&b){
  uint8_t v,w;while(a.popMidiOut(v))check(b.popMidiOut(w)&&v==w,"Handoff changed outgoing MIDI");check(!b.popMidiOut(w),"Handoff added outgoing MIDI");
 }
 }
-int main(int argc,char**argv){try{
+int main(int argc,char**argv){unsigned phase=0,mode=0;try{
  if(argc!=4){std::cout<<"SKIP: private KS OS/Flash/Wave required\n";return 77;}
  ks::Rom rom(argv[1]);check(rom.isValid(),"Invalid ROM");auto flash=bytes(argv[2]),wave=bytes(argv[3]);
  auto a=std::make_unique<ks::Board>(rom.data(),wave,flash,true),b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
  check(a->boot()&&b->boot(),"Reference boot failed");same(*a,*b);
  uint64_t frames=0,peak=0;
- for(unsigned phase=0;phase<3;++phase)for(unsigned mode=0;mode<3;++mode){
+ for(phase=0;phase<7;++phase)for(mode=0;mode<3;++mode){
   b->enableNativeController();check(b->nativeController(),"Native handoff failed");
-  for(unsigned n=0;(b->nativeController()->activeNativeInterrupts()||(b->cpu().exr&7))&&n<8192;++n){
-   a->advance(1);b->advance(1);check(a->controllerCycles()==b->controllerCycles(),"Pre-scenario IRQ drain clock differs");
-  }
-  check(!b->nativeController()->activeNativeInterrupts()&&!(b->cpu().exr&7),"Previous IRQ did not drain before handoff scenario");
+  drain(*a,*b);
   b->resetControllerMetrics();
-  // Exercise selection at a leaf IRQ entry, inside the timer's velocity
-  // child, and while its MIDI publication temporarily masks priority seven.
+  // Select inside typed children, including ordinary/special ADC tails,
+  // the ADC event queue and a received F8's live counter read.
   for(auto*board:{a.get(),b.get()}){
    if(!phase){word(*board,0xffed6c,1);word(*board,0xffed6e,0);board->write(0xffed70,0xf8);}
-   else fullTimer(*board);
-   const unsigned vector=phase?32:90;
-   board->cpu().exr=0;board->cpu().interruptPriority[vector]=phase?6:1;board->cpu().interrupt(vector);
+   else if(phase<3)fullTimer(*board);
+   else if(phase<6)adc(*board,phase==4?32:28);
+   else receive(*board,5);
+   const unsigned vector=!phase?90:phase<3?32:phase<6?28:89;
+   board->cpu().exr=0;board->cpu().interruptPriority[vector]=phase>0&&phase<3?6:1;
+   if(phase!=6)board->cpu().interrupt(vector);
+  }
+  if(phase==6){const uint8_t clock=0xf8;check(a->enqueueMidi(&clock,1)&&b->enqueueMidi(&clock,1),"Handoff F8 rejected");
   }
   bool landed=false;
-  for(unsigned n=0;n<8192&&!landed;++n){
-   a->advance(1);b->advance(1);check(a->controllerCycles()==b->controllerCycles(),"Timer child clock differs before handoff");
-   const auto*r=b->nativeController();
-   landed=r->activeNativeInterrupts()==1&&(!phase || (phase==1?
-    r->nativeTpu0At(ks::Tpu0Service::Component::Velocity)&&b->cpu().exr==6:
-    r->nativeTpu0At(ks::Tpu0Service::Component::Midi,true)&&b->cpu().exr==7));
+  for(unsigned n=0;n<65536&&!landed;++n){
+   advanceBoth(*a,*b);const auto*r=b->nativeController();bool target=false;
+   switch(phase){
+   case 0:target=true;break;
+   case 1:target=r->nativeTpu0At(ks::Tpu0Service::Component::Velocity)&&b->cpu().exr==6;break;
+   case 2:target=r->nativeTpu0At(ks::Tpu0Service::Component::Midi,true)&&b->cpu().exr==7;break;
+   case 3:target=r->nativeAdcAt(ks::AdcService::Component::OrdinaryScale)&&b->cpu().exr==1;break;
+   case 4:target=r->nativeAdcAt(ks::AdcService::Component::SpecialScale)&&b->cpu().exr==1;break;
+   case 5:target=r->nativeAdcAt(ks::AdcService::Component::ControlPush)&&b->cpu().exr==1;break;
+   case 6:target=r->nativeSerialReceiveAt(ks::SerialReceiveService::Component::Counter)&&b->cpu().exr==1;break;
+   }
+   landed=r->activeNativeInterrupts()==1&&target;
   }
   check(landed,"Switch did not land at requested native IRQ phase");
   if(phase==2)check(a->cpu().getPC()==0x113c&&a->cpu().exr==7,"H8 did not reach the same MIDI masking boundary");
+  if(phase>=3){const unsigned expected=phase==3?0x17a8:phase==4?0x176e:phase==5?0x1848:0x25fe;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same ADC/RX child entry");}
   const auto cycle=b->controllerCycles(),interpreted=b->h8InterpretedSteps();
   b->enableLiveMidiController(mode==1);
   check(!b->nativeController()&&std::string(b->controllerBackend())==(mode==1?"live-cpp-midi-hybrid":"original-h8"),"Requested tail mode not published");
   check(b->controllerCycles()==cycle,"Controller request added guest time");
   if(mode==2){b->enableNativeController();check(b->nativeController(),"Pending reference selection not cancelled");}
   const uint8_t on[]{0x90,uint8_t(60+phase*3+mode),100};check(a->enqueueMidi(on,3)&&b->enqueueMidi(on,3),"MIDI after switch rejected");
-  for(unsigned n=0;n<4096;++n){auto x=a->renderSample(),y=b->renderSample();check(x==y,"IRQ handoff changed audio");for(auto v:x)peak=std::max(peak,uint64_t(std::abs(int64_t(v))));++frames;}
+  for(unsigned n=0;n<4096;++n){auto x=a->renderSample(),y=b->renderSample();check(x==y,"IRQ handoff changed audio");check(a->controllerCycles()==b->controllerCycles(),"Handoff render clock differs");sameInterrupts(*a,*b);for(auto v:x)peak=std::max(peak,uint64_t(std::abs(int64_t(v))));++frames;}
   same(*a,*b);
   if(mode==2)check(b->h8InterpretedSteps()==interpreted,"Cancelled switch executed H8");
   else check(b->h8InterpretedSteps()>interpreted,"Requested reference did not resume");
   const uint8_t off[]{0x80,uint8_t(60+phase*3+mode),0};check(a->enqueueMidi(off,3)&&b->enqueueMidi(off,3),"Release rejected");
  }
  check(peak>1000,"Handoff fixture was silent");
- std::cout<<"PASS: nine H8/hybrid/cancel requests at leaf entry, TPU0 velocity child and TPU0 MIDI critical phase; no added guest advance; "<<frames<<" exact audible 24-stream frames, persistent RAM/hardware/state/Flash/cycles/serial/MIDI exact\n";
+ std::cout<<"PASS: twenty-one H8/hybrid/cancel requests inside leaf/TPU0/ADC scaling+queue/F8 counter children; no added guest advance; "<<frames<<" exact audible 24-stream frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
  return 0;
- }catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}}
+ }catch(const std::exception&e){std::cerr<<"phase="<<phase<<", mode="<<mode<<": "<<e.what()<<'\n';return 1;}}

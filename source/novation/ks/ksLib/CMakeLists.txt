@@ -24,7 +24,7 @@ if(BUILD_TESTING)
  add_test(NAME ksPlaceholderMidi COMMAND ksPlaceholderMidi_test)
 endif()
 
-target_sources(ksLib PRIVATE ksInterruptService.h ksTpu0Service.h ksNativeInterrupts.cpp ksRuntimeStartup.cpp ksRuntimeController.cpp ksRuntimeIo.cpp ksRuntimeMidi.cpp ksRuntimeState.cpp ksRuntimeParameters.cpp ksRuntimeVoices.cpp ksRuntimeExtended.cpp ksRuntimeController.h ksRuntimeBoundary.h)
+target_sources(ksLib PRIVATE ksInterruptService.h ksTpu0Service.h ksAdcService.h ksSerialReceiveService.h ksNativeInterrupts.cpp ksRuntimeStartup.cpp ksRuntimeController.cpp ksRuntimeIo.cpp ksRuntimeMidi.cpp ksRuntimeState.cpp ksRuntimeParameters.cpp ksRuntimeVoices.cpp ksRuntimeExtended.cpp ksRuntimeController.h ksRuntimeBoundary.h)
 
 target_sources(ksLib PRIVATE ksDspWordCalls.cpp ksDspWordCalls.h ksDspWordTask.h)
 
