@@ -543,3 +543,5 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateEventsServ
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStatePanelService.h" "${ROOT}/source/novation/ks/ksLib/ksStatePanelForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStatePanelForeground.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateMenuService.h" "${ROOT}/source/novation/ks/ksLib/ksStateMenuForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateMenuForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateStoreService.h" "${ROOT}/source/novation/ks/ksLib/ksStateStoreForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateStoreForeground.cpp")

@@ -1585,6 +1585,29 @@ int main(int argc,char** argv){try{
         <<",\"native_state_menu_indexed_address\":"<<runtime->stateMenuForeground.kinds[11]
         <<",\"native_state_menu_direct_address\":"<<runtime->stateMenuForeground.kinds[12]
         <<",\"native_state_menu_global_address\":"<<runtime->stateMenuForeground.kinds[13]
+        <<",\"native_state_store_calls\":"<<runtime->stateStoreForeground.started
+        <<",\"native_state_store_returns\":"<<runtime->stateStoreForeground.completed
+        <<",\"native_state_store_phases\":"<<runtime->stateStoreForeground.phases
+        <<",\"native_state_store_initial_active\":"<<runtime->stateStoreForeground.initial
+        <<",\"native_state_store_active\":"<<runtime->stateStoreForeground.active()
+        <<",\"native_state_store_components\":"<<runtime->stateStoreForeground.components
+        <<",\"native_state_store_multi_serialize\":"<<runtime->stateStoreForeground.kinds[0]
+        <<",\"native_state_store_pack_all\":"<<runtime->stateStoreForeground.kinds[1]
+        <<",\"native_state_store_pack_one\":"<<runtime->stateStoreForeground.kinds[2]
+        <<",\"native_state_store_oscillators\":"<<runtime->stateStoreForeground.kinds[3]
+        <<",\"native_state_store_unison\":"<<runtime->stateStoreForeground.kinds[4]
+        <<",\"native_state_store_lfo\":"<<runtime->stateStoreForeground.kinds[5]
+        <<",\"native_state_store_filter\":"<<runtime->stateStoreForeground.kinds[6]
+        <<",\"native_state_store_envelope\":"<<runtime->stateStoreForeground.kinds[7]
+        <<",\"native_state_store_program_mode\":"<<runtime->stateStoreForeground.kinds[8]
+        <<",\"native_state_store_read_patch_name\":"<<runtime->stateStoreForeground.kinds[9]
+        <<",\"native_state_store_read_multi_name\":"<<runtime->stateStoreForeground.kinds[10]
+        <<",\"native_state_store_read_provided_name\":"<<runtime->stateStoreForeground.kinds[11]
+        <<",\"native_state_store_write_patch_name\":"<<runtime->stateStoreForeground.kinds[12]
+        <<",\"native_state_store_write_multi_name\":"<<runtime->stateStoreForeground.kinds[13]
+        <<",\"native_state_store_write_provided_name\":"<<runtime->stateStoreForeground.kinds[14]
+        <<",\"native_state_store_write_selected_name\":"<<runtime->stateStoreForeground.kinds[15]
+        <<",\"native_state_store_read_selected_name\":"<<runtime->stateStoreForeground.kinds[16]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases
