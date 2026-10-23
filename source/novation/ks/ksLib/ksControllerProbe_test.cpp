@@ -1565,6 +1565,26 @@ int main(int argc,char** argv){try{
         <<",\"native_state_panel_active\":"<<runtime->statePanelForeground.active()
         <<",\"native_state_panel_components\":"<<runtime->statePanelForeground.components
         <<",\"native_state_panel_controls\":"<<runtime->statePanelForeground.kinds[0]
+        <<",\"native_state_menu_calls\":"<<runtime->stateMenuForeground.started
+        <<",\"native_state_menu_returns\":"<<runtime->stateMenuForeground.completed
+        <<",\"native_state_menu_phases\":"<<runtime->stateMenuForeground.phases
+        <<",\"native_state_menu_initial_active\":"<<runtime->stateMenuForeground.initial
+        <<",\"native_state_menu_active\":"<<runtime->stateMenuForeground.active()
+        <<",\"native_state_menu_components\":"<<runtime->stateMenuForeground.components
+        <<",\"native_state_menu_toggle\":"<<runtime->stateMenuForeground.kinds[0]
+        <<",\"native_state_menu_auxiliary\":"<<runtime->stateMenuForeground.kinds[1]
+        <<",\"native_state_menu_previous\":"<<runtime->stateMenuForeground.kinds[2]
+        <<",\"native_state_menu_repeat_previous\":"<<runtime->stateMenuForeground.kinds[3]
+        <<",\"native_state_menu_next\":"<<runtime->stateMenuForeground.kinds[4]
+        <<",\"native_state_menu_repeat_next\":"<<runtime->stateMenuForeground.kinds[5]
+        <<",\"native_state_menu_edit_active\":"<<runtime->stateMenuForeground.kinds[6]
+        <<",\"native_state_menu_repeat_arm\":"<<runtime->stateMenuForeground.kinds[7]
+        <<",\"native_state_menu_clock\":"<<runtime->stateMenuForeground.kinds[8]
+        <<",\"native_state_menu_bind_context\":"<<runtime->stateMenuForeground.kinds[9]
+        <<",\"native_state_menu_clear_context\":"<<runtime->stateMenuForeground.kinds[10]
+        <<",\"native_state_menu_indexed_address\":"<<runtime->stateMenuForeground.kinds[11]
+        <<",\"native_state_menu_direct_address\":"<<runtime->stateMenuForeground.kinds[12]
+        <<",\"native_state_menu_global_address\":"<<runtime->stateMenuForeground.kinds[13]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases

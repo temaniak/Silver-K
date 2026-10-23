@@ -14,6 +14,15 @@ void check(bool v,const char*why){if(!v)throw std::runtime_error(why);}
 std::vector<uint8_t> bytes(const std::filesystem::path&p){std::ifstream f(p,std::ios::binary);check(bool(f),"Missing fixture");return{std::istreambuf_iterator<char>(f),{}};}
 void word(ks::Board& b,uint32_t a,uint16_t v){b.write(a,uint8_t(v>>8));b.write(a+1,uint8_t(v));}
 void longword(ks::Board& b,uint32_t a,uint32_t v){word(b,a,uint16_t(v>>16));word(b,a+2,uint16_t(v));}
+void menuInput(ks::Board& b,unsigned item){
+ b.write(0x16790,0);b.write(0x1679e,0);b.write(0x16784,item==2?0:1);
+ if(item==2){word(b,0x15406,2);word(b,0x15408,0);word(b,0x1540a,0x4000);return;}
+ const unsigned handler=item?0x46ec:0x46ac;unsigned logical=0,matches=0;
+ for(unsigned key=0;key<32;++key){const unsigned descriptor=0xfcc4+key*3,action=b.read(descriptor)&127,index=b.read(descriptor+1),at=0xfd1e +4*index;
+  uint32_t target=0;for(unsigned n=0;n<4;++n)target=(target<<8)|b.read(at+n);
+  if(action==1&&(target&0xffffff)==handler){logical=key;++matches;}}
+ check(matches==1,"Menu action descriptor is ambiguous");word(b,0x1537c,2);word(b,0x1537e,0);word(b,0x15380,uint16_t(0x100|logical));
+}
 void fullTimer(ks::Board& b){
  // Released GPIO contacts plus one changed two-contact key exercise the
  // velocity child without overflowing the firmware's keyboard event ring.
@@ -111,20 +120,23 @@ int main(int argc,char**argv){unsigned item=0;try{
  check(b->nativeController()->stateResetForeground.kinds[0]==1&&b->nativeController()->stateResetForeground.components==0xf,"Natural initial State reset missed its complete child graph");
  check(a->boot()&&b->boot(),"Normal musical warmup failed after initial State reset");
  uint64_t frames=0,peak=0;
- for(item=0;item<22;++item){
+ for(item=0;item<25;++item){
   drain(*a,*b);
   const bool foreground=item>=16;
   const bool panelScan=item==17;
   const bool stateEvents=item>=18&&item<20;
-  const bool statePanel=item>=20;
+  const bool statePanel=item>=20&&item<22;
+  const bool stateMenu=item>=22;
   const unsigned vector=foreground?128:item==0?88:item<=2?90:item==3?42:item==4?91:item==5?32:item<10?28:89;
   const unsigned kind=vector==88?0:vector==90?1:(vector==42||vector==91)?2:vector==32?3:vector==28?4:5;
   const auto kindCalls=foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind],received=b->midiReceived;
   const auto calls=b->nativeController()->nativeInterruptStarts;
   const auto panelCalls=b->nativeController()->statePanelForeground.started;
+  const unsigned menuKind=item==22?2:item==23?4:11;const auto menuCalls=b->nativeController()->stateMenuForeground.kinds[menuKind];
   for(auto*board:{a.get(),b.get()}){
    if(foreground)pedalOutput(*board);
    if(panelScan)board->write(0x15400,0xfe);
+   if(stateMenu)menuInput(*board,item-22);
    if(statePanel){word(*board,0x156e8,2);word(*board,0x156ea,0);word(*board,0x156ec,item==20?0x643c:0xe43c);board->write(0x169ed,255);board->write(0x16798,0);for(unsigned part=0;part<5;++part)board->write(0x160d2+24*part+327,0);}
    if(stateEvents){word(*board,0x15406,2);word(*board,0x15408,0);word(*board,0x1540a,item==18?0x4022:0x7f20);}
    if(vector==32)fullTimer(*board);
@@ -140,7 +152,7 @@ int main(int argc,char**argv){unsigned item=0;try{
   if(vector==89&&item!=11){const uint8_t byte=item==10?0xfe:0xf8;check(a->enqueueMidi(&byte,1)&&b->enqueueMidi(&byte,1),"Test UART byte rejected");}
   if(item>=6){
    unsigned phases=0;
-   while((foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind])==kindCalls||b->nativeController()->activeNativeWork()||(b->cpu().exr&7)||(stateEvents&&(b->read(0x15408)||b->read(0x15409)!=2))||(statePanel&&(b->read(0x156ea)||b->read(0x156eb)!=2))){
+   while((foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind])==kindCalls||b->nativeController()->activeNativeWork()||(b->cpu().exr&7)||(stateEvents&&(b->read(0x15408)||b->read(0x15409)!=2))||(statePanel&&(b->read(0x156ea)||b->read(0x156eb)!=2))||(stateMenu&&b->nativeController()->stateMenuForeground.kinds[menuKind]==menuCalls)){
     check(++phases<=65536,"Forced ADC/RX lifecycle did not finish");advanceBoth(*a,*b);
    }
    if(vector==89&&item!=11)check(a->midiReceived==b->midiReceived&&b->midiReceived>received,"RX case did not consume the actual UART byte");
@@ -149,6 +161,7 @@ int main(int argc,char**argv){unsigned item=0;try{
    if(item>=12&&item<=14)check(b->read(0xffeea0)==4&&!b->read(0xffeea1)&&!b->read(0xffeea2)&&!b->read(0xffeea3),"F8 reset/short feedback unexpectedly changed its estimate");
    if(item==15)check(b->read(0xffeea0)!=4||b->read(0xffeea1)||b->read(0xffeea2)||b->read(0xffeea3),"F8 feedback did not update its estimate");
   }
+  if(stateMenu)check(b->nativeController()->stateMenuForeground.kinds[menuKind]>menuCalls,"Natural menu/edit event did not execute its new native root");
   if(statePanel)check(b->nativeController()->statePanelForeground.started>panelCalls&&(b->nativeController()->statePanelForeground.components&0x180)==0x180,"Natural upper State event missed MIDI queue/UART publication");
   if(stateEvents)check((b->nativeController()->stateEventsForeground.components&(item==18?0x10u:0x20u))!=0,"Natural State event did not run its nested scale/square");
   if(panelScan)check(b->nativeController()->panelScanForeground.kinds[1]>0&&b->nativeController()->panelScanForeground.components&2,"Natural State scan did not execute the matrix graph");
@@ -182,6 +195,6 @@ int main(int argc,char**argv){unsigned item=0;try{
  check(r->serialForeground.started+r->serialForeground.initial==r->serialForeground.completed+r->serialForeground.active(),"Native foreground accounting differs");
  check(r->stateResetForeground.started+r->stateResetForeground.initialActive==r->stateResetForeground.completed+r->stateResetForeground.active(),"Native State reset accounting differs");
  check(peak>1000&&b->h8StepsSinceNativeHandoff()==0,"Silent fixture or native interpreter fallback");
- std::cout<<"PASS: twenty-two IRQ/foreground/panel scan/State event timelines including TPU0/ADC/RX/F8 and a real pedal UART publication, "<<frames<<" exact audible 24-stream frames, "<<x->events.size()<<" exact DSP events; native error/TX/unused="<<r->nativeInterruptKinds[0]<<'/'<<r->nativeInterruptKinds[1]<<'/'<<r->nativeInterruptKinds[2]<<"; TPU0="<<r->nativeInterruptKinds[3]<<"; ADC="<<r->nativeInterruptKinds[4]<<", RX="<<r->nativeInterruptKinds[5]<<", components=0x"<<std::hex<<r->nativeTpuComponents<<'/'<<r->nativeAdcComponents<<'/'<<r->nativeSerialReceiveComponents<<"; private checkpoints="<<x->checkpoint<<'/'<<y->checkpoint<<std::dec<<"; foreground reset/pop/transmit="<<r->serialForeground.kinds[0]<<'/'<<r->serialForeground.kinds[1]<<'/'<<r->serialForeground.kinds[4]<<"; natural State resets="<<r->stateResetForeground.kinds[0]<<", components=0x"<<std::hex<<r->stateResetForeground.components<<std::dec<<"; cycles/pending/priorities/hardware/resource RAM/state/Flash/MIDI exact, no post-handoff H8\n";
+ std::cout<<"PASS: twenty-five IRQ/foreground/panel scan/State event/menu timelines including TPU0/ADC/RX/F8 and a real pedal UART publication, "<<frames<<" exact audible 24-stream frames, "<<x->events.size()<<" exact DSP events; native error/TX/unused="<<r->nativeInterruptKinds[0]<<'/'<<r->nativeInterruptKinds[1]<<'/'<<r->nativeInterruptKinds[2]<<"; TPU0="<<r->nativeInterruptKinds[3]<<"; ADC="<<r->nativeInterruptKinds[4]<<", RX="<<r->nativeInterruptKinds[5]<<", components=0x"<<std::hex<<r->nativeTpuComponents<<'/'<<r->nativeAdcComponents<<'/'<<r->nativeSerialReceiveComponents<<"; private checkpoints="<<x->checkpoint<<'/'<<y->checkpoint<<std::dec<<"; foreground reset/pop/transmit="<<r->serialForeground.kinds[0]<<'/'<<r->serialForeground.kinds[1]<<'/'<<r->serialForeground.kinds[4]<<"; natural State resets="<<r->stateResetForeground.kinds[0]<<", components=0x"<<std::hex<<r->stateResetForeground.components<<std::dec<<"; cycles/pending/priorities/hardware/resource RAM/state/Flash/MIDI exact, no post-handoff H8\n";
  return 0;
  }catch(const std::exception&e){std::cerr<<"scenario="<<item<<": "<<e.what()<<'\n';return 1;}}

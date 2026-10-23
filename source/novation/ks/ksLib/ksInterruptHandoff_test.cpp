@@ -44,6 +44,15 @@ void emptyResetRings(ks::Board&b){
  for(const auto address:std::array<uint32_t,6>{{0x1537c,0x1537e,0x15406,0x15408,0x156e8,0x156ea}})
   check(!b.read(address)&&!b.read(address+1),"Initial State reset did not clear all three event rings");
 }
+void menuInput(ks::Board& b,unsigned item){
+ b.write(0x16790,0);b.write(0x1679e,0);b.write(0x16784,item==2?0:1);
+ if(item==2){word(b,0x15406,2);word(b,0x15408,0);word(b,0x1540a,0x4000);return;}
+ const unsigned handler=item?0x46ec:0x46ac;unsigned logical=0,matches=0;
+ for(unsigned key=0;key<32;++key){const unsigned descriptor=0xfcc4+key*3,action=b.read(descriptor)&127,index=b.read(descriptor+1),at=0xfd1e +4*index;
+  uint32_t target=0;for(unsigned n=0;n<4;++n)target=(target<<8)|b.read(at+n);
+  if(action==1&&(target&0xffffff)==handler){logical=key;++matches;}}
+ check(matches==1,"Menu action descriptor is ambiguous");word(b,0x1537c,2);word(b,0x1537e,0);word(b,0x15380,uint16_t(0x100|logical));
+}
 void sameInterrupts(ks::Board&a,ks::Board&b){
  const auto&x=a.cpu();const auto&y=b.cpu();
  check(x.pending_irqs==y.pending_irqs&&x.pending_irqs_high==y.pending_irqs_high&&x.exr==y.exr,"Interrupt pending masks/priority differ");
@@ -108,7 +117,7 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
  auto a=std::make_unique<ks::Board>(rom.data(),wave,flash,true),b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
  check(a->boot()&&b->boot(),"Reference boot failed");same(*a,*b);
  uint64_t frames=0,peak=0;
- for(phase=0;phase<25;++phase)for(mode=0;mode<3;++mode){
+ for(phase=0;phase<30;++phase)for(mode=0;mode<3;++mode){
   if(phase>=10&&phase<13){
    a=std::make_unique<ks::Board>(rom.data(),wave,flash,true);b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
    initialMainBoundary(*a);initialMainBoundary(*b);dirtyResetRings(*a);dirtyResetRings(*b);
@@ -134,11 +143,13 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    if(phase==17){word(*board,0x1537c,2);word(*board,0x1537e,0);word(*board,0x15380,0x0121);}
    if(phase==18){word(*board,0x156e8,2);word(*board,0x156ea,0);word(*board,0x156ec,0x643c);}
    if(phase>=19&&phase<22){word(*board,0x15406,2);word(*board,0x15408,0);word(*board,0x1540a,phase==20?0x4022:0x7f20);}
-   if(phase>=22){
+   if(phase>=22&&phase<25){
     word(*board,0x156e8,2);word(*board,0x156ea,0);word(*board,0x156ec,0x643c);
     board->write(0x169ed,255);board->write(0x16798,0);
     for(unsigned part=0;part<5;++part)board->write(0x160d2+24*part+327,0);
    }
+   if(phase>=26&&phase<29)menuInput(*board,0);
+   if(phase==29)menuInput(*board,2);
    if(phase>=7)continue;
    const unsigned vector=!phase?90:phase<3?32:phase<6?28:89;
    board->cpu().exr=0;board->cpu().interruptPriority[vector]=phase>0&&phase<3?6:1;
@@ -162,6 +173,11 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    case 9:target=r->serialForeground.at(ks::SerialForegroundService::Kind::ResetRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::RetainWord)&&b->cpu().exr==7;break;
    case 10:target=r->stateResetForeground.at(ks::StateResetService::Component::Buttons)&&b->cpu().exr==0;break;
    case 11:target=r->stateResetForeground.at(ks::StateResetService::Component::Controls)&&b->cpu().exr==0;break;
+   case 25:target=r->stateMenuForeground.at(ks::StateMenuService::Kind::Clock)&&b->cpu().exr==0;break;
+   case 26:target=r->stateMenuForeground.at(ks::StateMenuService::Kind::Previous)&&r->stateMenuForeground.at(ks::StateMenuService::Component::EditGate)&&b->cpu().exr==0;break;
+   case 27:target=r->stateMenuForeground.at(ks::StateMenuService::Kind::Previous)&&r->stateMenuForeground.at(ks::StateMenuService::Component::RepeatTimer)&&b->cpu().exr==0;break;
+   case 28:target=r->stateMenuForeground.at(ks::StateMenuService::Kind::BindContext)&&b->cpu().exr==0;break;
+   case 29:target=r->stateMenuForeground.at(ks::StateMenuService::Kind::IndexedAddress)&&b->cpu().exr==0;break;
    case 22:target=r->statePanelForeground.atRoute(ks::MidiOutputTask::Stage::SaveOnContext)&&b->cpu().exr==0;break;
    case 23:target=r->statePanelForeground.atQueue(ks::InternalMidiQueueTask::Stage::SavePush)&&b->cpu().exr==0;break;
    case 24:target=r->statePanelForeground.atSerial(ks::SerialTransmitTask::Stage::RetainFirst)&&b->cpu().exr==0;break;
@@ -186,7 +202,8 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   if(phase==13)check(unsigned(a->cpu().getPC())==0x14e4,"H8 did not reach the same matrix event publication");
   if(phase>=14&&phase<17){const unsigned expected=phase==14?0x188a:phase==15?0x13c2:0x1646;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same panel controls child");}
   if(phase>=17&&phase<22){const unsigned expected=phase==17?0x1416:phase==18?0x1f16:phase==19?0x20fc:phase==20?0x2144:0x218c;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same State event child");}
-  if(phase>=22){const unsigned expected=phase==22?0x2b38:phase==23?0x2c88:0x1104;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same upper State MIDI child");}
+  if(phase>=22&&phase<25){const unsigned expected=phase==22?0x2b38:phase==23?0x2c88:0x1104;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same upper State MIDI child");}
+  if(phase>=25){const unsigned expected=phase==25?0x1300:phase==26?0x4efe:phase==27?0x4134:phase==28?0x5a4a:0x52ae;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same menu/context child");}
   const auto*selectedRuntime=b->nativeController();
   const auto cycle=b->controllerCycles(),interpreted=b->h8InterpretedSteps();
   b->enableLiveMidiController(mode==1);
@@ -206,6 +223,6 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   const uint8_t off[]{0x80,uint8_t(phase>=14?36+(phase*3+mode)%72:60+phase*3+mode),0};check(a->enqueueMidi(off,3)&&b->enqueueMidi(off,3),"Release rejected");
  }
  check(peak>1000,"Handoff fixture was silent");
- std::cout<<"PASS: seventy-five H8/hybrid/cancel requests inside IRQ/serial/State reset, panel scan/controls State event conversion and upper State MIDI/UART; no added guest advance; "<<frames<<" exact audible 24-stream frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
+ std::cout<<"PASS: ninety H8/hybrid/cancel requests inside IRQ/serial/State reset, panel scan/controls State event conversion and upper State MIDI/UART and menu/context; no added guest advance; "<<frames<<" exact audible 24-stream frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
  return 0;
  }catch(const std::exception&e){std::cerr<<"phase="<<phase<<", mode="<<mode<<": "<<e.what()<<'\n';return 1;}}

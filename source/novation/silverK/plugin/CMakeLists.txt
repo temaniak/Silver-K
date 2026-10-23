@@ -2635,3 +2635,13 @@ add_executable(ksStatePanelTask_test "${ROOT}/source/novation/ks/ksLib/ksStatePa
 target_compile_features(ksStatePanelTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_state_panel_task COMMAND ksStatePanelTask_test)
 set_tests_properties(ks_state_panel_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksStateMenuService_test "${ROOT}/source/novation/ks/ksLib/ksStateMenuService_test.cpp")
+target_include_directories(ksStateMenuService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksStateMenuService_test PRIVATE ksLib)
+add_test(NAME ks_state_menu_service COMMAND ksStateMenuService_test)
+set_tests_properties(ks_state_menu_service PROPERTIES TIMEOUT 240 SKIP_RETURN_CODE 77)
+add_executable(ksStateMenuTask_test "${ROOT}/source/novation/ks/ksLib/ksStateMenuTask_test.cpp")
+target_compile_features(ksStateMenuTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_state_menu_task COMMAND ksStateMenuTask_test)
+set_tests_properties(ks_state_menu_task PROPERTIES TIMEOUT 240)
