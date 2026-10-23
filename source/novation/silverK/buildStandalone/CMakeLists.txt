@@ -423,3 +423,9 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksFlashPageCalls.
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksTimerServiceCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateChannelCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelInputCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateEditAddressCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateStoreUiCalls.cpp")

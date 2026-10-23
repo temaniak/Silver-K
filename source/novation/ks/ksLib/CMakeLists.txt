@@ -370,3 +370,9 @@ target_sources(ksLib PRIVATE ksFlashPageCalls.cpp ksFlashPageCalls.h ksFlashPage
 target_sources(ksLib PRIVATE ksTimerServiceCalls.cpp ksTimerServiceCalls.h ksTimerServiceTask.h)
 
 target_sources(ksLib PRIVATE ksStateChannelCalls.cpp ksStateChannelCalls.h ksStateChannelTask.h)
+
+target_sources(ksLib PRIVATE ksPanelInputCalls.cpp ksPanelInputCalls.h ksPanelInputTask.h)
+
+target_sources(ksLib PRIVATE ksStateEditAddressCalls.cpp ksStateEditAddressCalls.h ksStateEditAddressTask.h)
+
+target_sources(ksLib PRIVATE ksStateStoreUiCalls.cpp ksStateStoreUiCalls.h ksStateStoreUiTask.h)

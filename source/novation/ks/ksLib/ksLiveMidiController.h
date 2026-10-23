@@ -52,6 +52,9 @@
 #include "ksFlashPageCalls.h"
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
+#include "ksPanelInputCalls.h"
+#include "ksStateStoreUiCalls.h"
+#include "ksStateEditAddressCalls.h"
 #include "ksStateStoreServicesCalls.h"
 #include "ksStatePresetFormatCalls.h"
 #include "ksStatePresetSaveCalls.h"
@@ -174,6 +177,9 @@ public:
     FlashPageCalls flashPageCalls;
     TimerServiceCalls timerServiceCalls;
     StateChannelCalls stateChannelCalls;
+    PanelInputCalls panelInputCalls;
+    StateStoreUiCalls stateStoreUiCalls;
+    StateEditAddressCalls stateEditAddressCalls;
     StateStoreServicesCalls stateStoreServicesCalls;
     StatePresetFormatCalls statePresetFormatCalls;
     StatePresetSaveCalls statePresetSaveCalls;
@@ -278,6 +284,9 @@ public:
         flashPageCalls.resetMetrics();
         timerServiceCalls.resetMetrics();
         stateChannelCalls.resetMetrics();
+        panelInputCalls.resetMetrics();
+        stateStoreUiCalls.resetMetrics();
+        stateEditAddressCalls.resetMetrics();
         stateStoreServicesCalls.resetMetrics();
         statePresetFormatCalls.resetMetrics();
         statePresetSaveCalls.resetMetrics();
