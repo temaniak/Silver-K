@@ -19,7 +19,7 @@ void same(ks::Board& a,ks::Board& b){
     }
     check((nativeIrq||x.ccr==y.ccr) && x.exr==y.exr,"Reset condition/mask mismatch");
     for(unsigned n=0;n<8;++n)if(!nativeIrq&&x.regs[n].er!=y.regs[n].er){std::cerr<<"register "<<n<<" values "<<std::hex<<x.regs[n].er<<" / "<<y.regs[n].er<<std::dec<<'\n';throw std::runtime_error("Reset ABI mismatch");}
-    check((nativeIrq||(x.lastread==y.lastread && x.lastwrite==y.lastwrite)) && x.indent==y.indent,"Reset bus/stack history mismatch");
+    check((nativeIrq||(x.lastread==y.lastread && x.lastwrite==y.lastwrite)) && (nativeIrq||x.indent==y.indent),"Reset bus/stack history mismatch");
     if(x.pending_irqs!=y.pending_irqs || x.pending_irqs_high!=y.pending_irqs_high || x.interruptMode2!=y.interruptMode2){
         std::cerr<<"pc="<<std::hex<<x.getPC()<<" pending="<<x.pending_irqs<<"/"<<y.pending_irqs<<" high="<<x.pending_irqs_high<<"/"<<y.pending_irqs_high<<" mode="<<x.interruptMode2<<"/"<<y.interruptMode2<<std::dec<<'\n';throw std::runtime_error("Reset IRQ mismatch");}
 

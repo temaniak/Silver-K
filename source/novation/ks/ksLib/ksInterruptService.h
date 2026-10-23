@@ -1,22 +1,29 @@
 #pragma once
 #include "ksSerialIrqTask.h"
+#include "ksTpu0Service.h"
 #include <cstdint>
 
 namespace ks {
-// Closed interrupt lifecycles. State consists only of UART data and a typed
-// task continuation: no register file, condition flags, return address or stack.
+// Closed interrupt lifecycles. State consists only of peripheral data and
+// typed task continuations: no register file, condition flags, return address or stack.
 // The clock credits preserve the original preemption/observation cadence even
 // when the old register saves and instruction fetches no longer take place.
 class InterruptService final {
 public:
-    enum class Kind { SerialError, SerialTransmit, Unused };
+    enum class Kind { SerialError, SerialTransmit, Unused, Tpu0 };
     explicit InterruptService(Kind kind)
         : kind_(kind), serial_(kind == Kind::SerialError
-              ? SerialIrqTask::Kind::Error : SerialIrqTask::Kind::Transmit) {}
+              ? SerialIrqTask::Kind::Error : SerialIrqTask::Kind::Transmit) {if(kind==Kind::Tpu0)timer_.emplace();}
     Kind kind() const { return kind_; }
     bool complete() const { return complete_; }
+    bool critical() const { return timer_&&timer_->critical(); }
+    uint32_t timerComponents() const { return timer_?timer_->components():0; }
+    bool timerAt(Tpu0Service::Component component) const {
+        return timer_&&!complete_&&timer_->component()==component;
+    }
     unsigned nextClocks() const {
         if (complete_) return 0;
+        if (timer_) return timer_->nextClocks();
         if (kind_ == Kind::Unused) return 23;
         return serial_.nextClocks([&](SerialIrqTask::Clock clock) {
             return clockCost(clock);
@@ -28,6 +35,7 @@ public:
     unsigned advanceBefore(unsigned available, Reader&& read, Writer&& write) {
         const auto cost = nextClocks();
         if (!cost || cost > available) return 0;
+        if (timer_) {const auto used=timer_->advanceBefore(available,read,write);complete_=timer_->complete();return used;}
         if (kind_ == Kind::Unused) { complete_ = true; return cost; }
         const auto readWord = [&](uint32_t address) {
             const auto high = uint8_t(read(address, 12));
@@ -70,6 +78,7 @@ private:
     }
     Kind kind_;
     SerialIrqTask serial_;
+    std::optional<Tpu0Service> timer_;
     bool complete_ = false;
 };
 }

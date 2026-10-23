@@ -87,22 +87,14 @@ int main(int argc,char**argv){try{
    }
    if(mutate&&count==5){for(auto*m:{a->memory,b->memory}){m[0xffff8c]^=0xff;m[0xffed6d]=uint8_t(producer+17);m[0xffed6f]=uint8_t(consumer+37);}++mutations;}
    if(count==3){runtime.resetMetrics();++metricResets;}
-   const bool compatibilityChild=injectedVector==32&&(b->indent>1||count==injectAt);
    x.events.clear();y.events.clear();track=true;runtime.step(*b);track=false;a->step();
    if(a->cycles!=b->cycles){std::cerr<<"vector="<<vector<<" boundary="<<count<<" clocks="<<a->cycles<<'/'<<b->cycles<<'\n';throw std::runtime_error("IRQ phase clocks differ");}
    auto expected=resources(x.events,decoder.get()),actual=resources(y.events,nullptr);
-   if(compatibilityChild){
-    // Existing compatibility children use the admitted direct-RAM fast path;
-    // their MMIO/timestamps and all persistent bytes are still checked here.
-    expected.erase(std::remove_if(expected.begin(),expected.end(),[](const Transfer&e){auto a=std::get<1>(e);const bool writing=std::get<0>(e);
-     return (!writing&&(a<0x200000||(a>=0xa00000&&a<0xc00000)))
-         ||(writing&&a>=0xa0b8e8&&a<0xc00000)||(a>=0xffdc00&&a<0xfffc00);}),expected.end());
-   }
    check(std::equal(a->memory+0xffdc00,a->memory+0xfff700,b->memory+0xffdc00),"IRQ evolving resource memory differs");
    if(expected!=actual){std::cerr<<"vector="<<vector<<" boundary="<<count<<" producer="<<producer<<" consumer="<<consumer<<" old/new transfers="<<expected.size()<<'/'<<actual.size()<<'\n';for(const auto& rows:{expected,actual}){for(const auto& e:rows)std::cerr<<std::get<0>(e)<<':'<<std::hex<<std::get<1>(e)<<':'<<unsigned(std::get<2>(e))<<':'<<std::get<3>(e)<<std::dec<<' ' ;std::cerr<<'\n';}std::cerr<<" inject="<<injectAt<<" old/new pc="<<std::hex<<a->getPC()<<'/'<<b->getPC()<<std::dec<<'\n';throw std::runtime_error("IRQ observable transfer/value/order/time differs");}
    check(a->pending_irqs==b->pending_irqs&&a->pending_irqs_high==b->pending_irqs_high&&a->exr==b->exr,"IRQ admission/priority differs");
    // With no compatibility child, these fields and bytes never move at all.
-   if(!injected||injectedVector!=32){check(b->pc==0x4338&&b->getSP()==0xfff800&&b->ccr==uint8_t(flags),"Native IRQ used a CPU continuation");for(unsigned n=0;n<8;++n)check(b->regs[n].er==saved[n],"Native IRQ used CPU registers");for(unsigned at=0xfff700;at<0xfff800;++at)check(b->memory[at]==0x5a,"Native IRQ wrote CPU stack");}
+   {check(b->pc==0x4338&&b->getSP()==0xfff800&&b->ccr==uint8_t(flags),"Native IRQ used a CPU continuation");for(unsigned n=0;n<8;++n)check(b->regs[n].er==saved[n],"Native IRQ used CPU registers");for(unsigned at=0xfff700;at<0xfff800;++at)check(b->memory[at]==0x5a,"Native IRQ wrote CPU stack");}
    check(++count<8192,"IRQ did not finish");++boundaries;
   }while(a->getPC()!=0x4338||a->indent!=0);
   check(!runtime.activeNativeInterrupts(),"Native IRQ left an active continuation");

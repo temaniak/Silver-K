@@ -2539,3 +2539,13 @@ target_include_directories(ksInterruptTimeline_test PRIVATE "${ROOT}/source/cpu"
 target_link_libraries(ksInterruptTimeline_test PRIVATE ksLib)
 add_test(NAME ks_interrupt_timeline COMMAND ksInterruptTimeline_test)
 set_tests_properties(ks_interrupt_timeline PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+add_executable(ksTpu0Service_test "${ROOT}/source/novation/ks/ksLib/ksTpu0Service_test.cpp")
+target_include_directories(ksTpu0Service_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksTpu0Service_test PRIVATE ksLib)
+add_test(NAME ks_tpu0_service COMMAND ksTpu0Service_test)
+set_tests_properties(ks_tpu0_service PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
+
+add_executable(ksTpu0Task_test "${ROOT}/source/novation/ks/ksLib/ksTpu0Task_test.cpp")
+target_compile_features(ksTpu0Task_test PRIVATE cxx_std_17)
+add_test(NAME ks_tpu0_task COMMAND ksTpu0Task_test)

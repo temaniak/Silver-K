@@ -72,7 +72,19 @@ int main(int argc,char** argv){try{
     const auto setup=Clock::now();ks::Rom os(argv[1]);check(os.isValid(),"Invalid KS OS");
     std::unique_ptr<ks::test::PanelIoFixture> ioFixture;
     auto board=std::make_unique<ks::Board>(os.data(),bytes(argv[3]),bytes(argv[2]),true,nativeMode);
-    if(mode=="boot")board->startControllerTrace();
+    // Private comparison metadata: CPU scratch bytes cease to be resources
+    // when a native interrupt owns its continuation. Keep both digests so a
+    // discarded stack cannot hide a difference in any other address.
+    const auto memoryDigests=[&]{
+        std::array<uint64_t,2> digests{{14695981039346656037ull,14695981039346656037ull}};
+        for(unsigned address=0;address<(1u<<24);++address){
+            auto& digest=digests[address>=0xfff000&&address<0xfffc00?1:0];
+            digest^=board->cpu().memory[address];digest*=1099511628211ull;
+        }
+        return digests;
+    };
+    std::array<uint64_t,2> memoryStart{};
+    if(mode=="boot"){memoryStart=memoryDigests();board->startControllerTrace();}
     const auto bootBegin=Clock::now();const double bootCpu=cpu();check(board->boot(),"KS boot failed");
     if(nativeMode)check(board->h8InterpretedSteps()==0,"Native startup used H8 interpreter");
     const double bootCost=cpu()-bootCpu,bootWall=std::chrono::duration<double>(Clock::now()-bootBegin).count();
@@ -316,6 +328,7 @@ int main(int argc,char** argv){try{
         };
         std::stable_sort(events.begin(),events.end(),[](const auto& a,const auto& b){return a.frame<b.frame;});
         if(liveMode){if(!nativeMode)board->enableLiveMidiController();board->resetControllerMetrics();if(recording)board->enableControllerDelegationProfile();}
+        memoryStart=memoryDigests();
         if(recording)board->startControllerTrace();
         if(mode=="replay"){tape=ks::ControllerTape::load(argv[7]);board->startRecordedController(tape);}
         h8Start=board->cpu().cycles;size_t next=0;
@@ -405,11 +418,14 @@ int main(int argc,char** argv){try{
     if(panelParts&&nativeMode)check(board->liveMidiController()->statePartSelectionCalls.started>0,"Part handlers were not observed");
     if(panelEdit)check(ioFixture->encoderTransitions>0,"Active screen edit did not move encoder");
     if(panelIo){check(ioFixture->matrixReads&&ioFixture->pedalReads&&ioFixture->encoderReads&&ioFixture->adcReads,"Physical input source not observed");check(ioFixture->buttonTransitions==(panelScreen?18u:(multi?6u:8u)),"Missing physical button transitions");check(ioFixture->pedalTransitions==4&&(panelScreen||(ioFixture->encoderTransitions&&ioFixture->adcTransitions)),"Missing physical pedal/encoder/ADC transitions");}
+    const auto memoryEnd=memoryDigests();
     const auto depth=board->serialDepth();std::ostringstream report;report<<std::setprecision(12)
         <<"{\"schema\":\"silver-k.controller-probe.v1\",\"mode\":\""<<mode<<"\",\"scenario\":\""<<scenario<<"\",\"controller_backend\":\""<<board->controllerBackend()
         <<"\",\"dsp_threads\":"<<(parallel?2:1)<<",\"frames\":"<<frames<<",\"audio_hash\":\""<<hash<<"\",\"peak\":"<<peak
         <<",\"cpu_seconds\":"<<cost<<",\"wall_seconds\":"<<wall<<",\"setup_wall_seconds\":"<<std::chrono::duration<double>(Clock::now()-setup).count()-wall
         <<",\"h8_start_cycles\":"<<h8Start<<",\"h8_end_cycles\":"<<board->cpu().cycles<<",\"controller_end_cycles\":"<<board->controllerCycles()
+        <<",\"resource_start_digest\":\""<<memoryStart[0]<<"\",\"resource_end_digest\":\""<<memoryEnd[0]<<"\""
+        <<",\"cpu_scratch_start_digest\":\""<<memoryStart[1]<<"\",\"cpu_scratch_end_digest\":\""<<memoryEnd[1]<<"\""
         <<",\"dsp_a_cycles\":"<<board->dsp(0).cycles()<<",\"dsp_b_cycles\":"<<board->dsp(1).cycles()
         <<",\"dsp_a_instructions\":"<<board->dsp(0).instructions()<<",\"dsp_b_instructions\":"<<board->dsp(1).instructions()
         <<",\"serial_depth\":["<<depth[0]<<','<<depth[1]<<"],\"serial_underruns\":["<<board->serialUnderruns[0]<<','<<board->serialUnderruns[1]
@@ -1492,7 +1508,9 @@ int main(int argc,char** argv){try{
         <<",\"native_interrupt_service_active\":"<<runtime->activeNativeInterrupts()
         <<",\"native_interrupt_serial_error\":"<<runtime->nativeInterruptKinds[0]
         <<",\"native_interrupt_serial_transmit\":"<<runtime->nativeInterruptKinds[1]
-        <<",\"native_interrupt_unused\":"<<runtime->nativeInterruptKinds[2];
+        <<",\"native_interrupt_unused\":"<<runtime->nativeInterruptKinds[2]
+        <<",\"native_interrupt_tpu0\":"<<runtime->nativeInterruptKinds[3]
+        <<",\"native_interrupt_tpu0_components\":"<<runtime->nativeTpuComponents;
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
     if(const auto* runtime=board->nativeController();runtime && !runtime->boundaryProfile.empty()){
         report<<",\"native_boundary_profile\":[";bool first=true;

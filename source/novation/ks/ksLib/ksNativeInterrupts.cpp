@@ -28,7 +28,8 @@ bool RuntimeController::serviceInterrupt(ControllerCpu& h) {
         target&=0xffffff;
         using K=InterruptService::Kind;
         K kind;
-        if (selected==88 && target==0x105e) kind=K::SerialError;
+        if (selected==32 && target==0x12b0) kind=K::Tpu0;
+        else if (selected==88 && target==0x105e) kind=K::SerialError;
         else if (selected==90 && target==0x114e) kind=K::SerialTransmit;
         else if ((selected==42 || selected==91) && target==0x170) kind=K::Unused;
         else return false; // Other lifecycles still use their semantic Calls bridge.
@@ -36,12 +37,13 @@ bool RuntimeController::serviceInterrupt(ControllerCpu& h) {
         // diagnostic case in its explicit compatibility bridge; a valid UART
         // consumer is published modulo 256 by its sole interrupt owner.
         if(kind==K::SerialTransmit && h.memory[0xffed6e])return false;
+        if(kind==K::Tpu0 && h.memory[0xffed6c])return false;
         // The remaining compatibility stack must be in ordinary internal RAM
         // for its old entry/return clock credits to apply. No bytes are pushed.
         if ((h.getSP()&1) || h.getSP()<0xfff400 || h.getSP()>0xfffc00) return false;
         if (interruptCount==interrupts.size()) throw std::logic_error("Native interrupt capacity exceeded");
         auto& slot=interrupts[interruptCount];
-        slot.emplace(kind,h.exr,h.indent+1); ++interruptCount;
+        slot.emplace(kind,h.exr,uint8_t(priority),h.indent+1); ++interruptCount;
         if (selected<64) h.pending_irqs&=~(1ull<<selected);
         else h.pending_irqs_high&=~(1ull<<(selected-64));
         h.exr=uint8_t(priority); ++h.indent;
@@ -66,6 +68,8 @@ bool RuntimeController::serviceInterrupt(ControllerCpu& h) {
     });
     if (used!=cost || !cost) throw std::logic_error("Native interrupt admission differs");
     h.cycles=start+cost; ++nativeInterruptPhases;
+    h.exr=service.critical()?7:frame.priority;
+    nativeTpuComponents|=service.timerComponents();
     if (service.complete()) {
         h.exr=frame.previousPriority; --h.indent;
         // Only bus history crosses back into the migration ABI. No register,
