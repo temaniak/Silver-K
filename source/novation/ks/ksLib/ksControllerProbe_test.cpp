@@ -48,7 +48,7 @@ struct Stats {
 };
 }
 int main(int argc,char** argv){try{
-    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal|controls|state|clock|steal|fx|panel-store-single|panel-store-multi|panel-io-single|panel-io-multi|panel-screen-single|panel-screen-multi|panel-edit-single|panel-edit-multi, trace path, optional seconds (up to 30) required\n";return 77;}
+    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal|controls|state|clock|steal|fx|panel-store-single|panel-store-multi|panel-io-single|panel-io-multi|panel-screen-single|panel-screen-multi|panel-edit-single|panel-edit-multi|panel-parts-single|panel-parts-multi, trace path, optional seconds (up to 30) required\n";return 77;}
     const double duration=argc==9?std::stod(argv[8]):2.;
     check(std::isfinite(duration)&&duration>=2.&&duration<=30.,"Controller probe duration must be 2..30 seconds");
     const std::string mode=argv[5],scenario=argv[6];
@@ -57,13 +57,14 @@ int main(int argc,char** argv){try{
     const bool recording=mode=="native-record" || mode=="native-toggle-record" || mode=="record" || mode=="live-record" || mode=="live-toggle-record";
     const bool toggling=mode=="native-toggle" || mode=="native-toggle-record" || mode=="live-toggle" || mode=="live-toggle-record";
     check(mode=="h8" || mode=="record" || mode=="replay" || mode=="boot" || liveMode,"Unknown controller probe mode");
+    const bool panelParts=scenario=="panel-parts-single" || scenario=="panel-parts-multi";
     const bool panelEdit=scenario=="panel-edit-single" || scenario=="panel-edit-multi";
-    const bool panelScreen=panelEdit || scenario=="panel-screen-single" || scenario=="panel-screen-multi";
+    const bool panelScreen=panelParts || panelEdit || scenario=="panel-screen-single" || scenario=="panel-screen-multi";
     const bool panelIo=panelScreen || scenario=="panel-io-single" || scenario=="panel-io-multi";
     if(panelIo)check(duration>=4.,"Physical panel scenario requires at least four seconds");
     const bool panelStore=panelIo || scenario=="panel-store-single" || scenario=="panel-store-multi";
     check(scenario=="single" || scenario=="multi" || scenario=="midi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || panelStore,"Unknown controller probe scenario");
-    const bool multi=scenario=="panel-edit-multi" || scenario=="panel-screen-multi" || scenario=="panel-io-multi" || scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || scenario=="panel-store-multi";
+    const bool multi=scenario=="panel-parts-multi" || scenario=="panel-edit-multi" || scenario=="panel-screen-multi" || scenario=="panel-io-multi" || scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || scenario=="panel-store-multi";
     const auto* threads=std::getenv("SILVER_KS_DSP_THREADS");const bool parallel=threads&&std::string(threads)=="2";
     const auto setup=Clock::now();ks::Rom os(argv[1]);check(os.isValid(),"Invalid KS OS");
     std::unique_ptr<ks::test::PanelIoFixture> ioFixture;
@@ -94,6 +95,10 @@ int main(int argc,char** argv){try{
     if(nativeMode)check(!bootLive->stateEditContextCalls.partialEntries,"Native startup used partial StateEditContext recovery before metric reset");
     if(nativeMode)check(!bootLive->stateScreenEditCalls.partialEntries,"Native startup used partial StateScreenEdit recovery before metric reset");
     if(nativeMode)check(!bootLive->stateMenuFormatCalls.partialEntries,"Native startup used partial StateMenuFormat recovery before metric reset");
+    if(nativeMode)check(!bootLive->systemServicesCalls.partialEntries,"Native startup used partial SystemServices recovery before metric reset");
+    if(nativeMode)check(!bootLive->keyboardEventsCalls.partialEntries,"Native startup used partial KeyboardEvents recovery before metric reset");
+    if(nativeMode)check(!bootLive->statePartSelectionCalls.partialEntries,"Native startup used partial StatePartSelection recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateMenuActionsCalls.partialEntries,"Native startup used partial StateMenuActions recovery before metric reset");
     if(nativeMode)check(!bootLive->panelAdcScaleCalls.partialEntries&&!bootLive->panelAdcCalibrationCalls.partialEntries&&!bootLive->panelAdcIrqCalls.partialEntries&&!bootLive->panelAdcScanCalls.partialEntries,"Native startup used partial ADC recovery before metric reset");
     if(nativeMode)board->enableNativeController();
     auto send=[&](const std::vector<uint8_t>& m){check(board->enqueueMidi(m.data(),m.size()),"MIDI rejected");};
@@ -258,10 +263,13 @@ int main(int argc,char** argv){try{
                             const uint32_t target=(uint32_t(memory[at])<<24)|(uint32_t(memory[at+1])<<16)|(uint32_t(memory[at+2])<<8)|memory[at+3];if(action==1&&(target&0xffffff)==handler){logical=key;++found;}}
                         check(found==1,"Screen action descriptor ambiguous");unsigned physical=0;found=0;
                         for(unsigned key=0;key<48;++key)if(memory[0xb8e8+key]==logical){physical=key;++found;}check(found==1,"Screen physical key ambiguous");return physical;};
-                    ioFixture->configureScreens(physicalForHandler(0x49b0),physicalForHandler(0x46ec),physicalForHandler(0x46ac),panelEdit);
+                    if(panelParts){
+                        auto physicalPart=[&](unsigned logical){unsigned physical=0,found=0;for(unsigned key=0;key<48;++key)if(memory[0xb8e8+key]==logical){physical=key;++found;}check(found==1,"Part physical key ambiguous");return physical;};
+                        ioFixture->configureScreens(physicalPart(0x21),physicalPart(0x22),physicalPart(0x41));
+                    }else ioFixture->configureScreens(physicalForHandler(0x49b0),physicalForHandler(0x46ec),physicalForHandler(0x46ac),panelEdit);
                 }
                 board->cpu().memmap(ioFixture.get(),0,1<<24);
-                ioPages[0]=board->read(panelScreen?0x16787:0x16790);
+                ioPages[0]=board->read(panelParts?0x167b8:panelScreen?0x16787:0x16790);
             }
             if(!panelScreen)board->write(0x168fc+239,1); // Explicit synthetic fixture: writes allowed.
         }
@@ -303,7 +311,7 @@ int main(int argc,char** argv){try{
             }
             if(mode!="replay")while(next<events.size() && events[next].frame==n)send(events[next++].bytes);
             const auto a=board->renderSample();
-            if(panelIo){const auto page=board->read(panelScreen?0x16787:0x16790);if(page!=ioPages[ioPageCount-1]){check(ioPageCount<ioPages.size(),"Too many physical panel page transitions");ioPages[ioPageCount++]=page;}}
+            if(panelIo){const auto page=board->read(panelParts?0x167b8:panelScreen?0x16787:0x16790);if(page!=ioPages[ioPageCount-1]){check(ioPageCount<ioPages.size(),"Too many physical panel page transitions");ioPages[ioPageCount++]=page;}}
             if(!captured.empty())captured[n]=a;for(auto v:a){hash^=uint32_t(v);hash*=1099511628211ull;peak=std::max(peak,std::abs(int64_t(v)));}
         }
         cost=cpu()-before;wall=std::chrono::duration<double>(Clock::now()-begin).count();
@@ -362,6 +370,7 @@ int main(int argc,char** argv){try{
     }
     if(panelStore&&!panelScreen){if(!panelIo)check(panelEvents==(multi?6u:8u),"Missing panel store events");check(board->flashRevision>0,"Panel store did not write Flash");check(board->read(0x16790)==0,"Store page did not return to playback");}
     if(scenario=="state")check(board->flashRevision>0,"State scenario did not complete a Flash page write");
+    if(panelParts&&nativeMode)check(board->liveMidiController()->statePartSelectionCalls.started>0,"Part handlers were not observed");
     if(panelEdit)check(ioFixture->encoderTransitions>0,"Active screen edit did not move encoder");
     if(panelIo){check(ioFixture->matrixReads&&ioFixture->pedalReads&&ioFixture->encoderReads&&ioFixture->adcReads,"Physical input source not observed");check(ioFixture->buttonTransitions==(panelScreen?18u:(multi?6u:8u)),"Missing physical button transitions");check(ioFixture->pedalTransitions==4&&(panelScreen||(ioFixture->encoderTransitions&&ioFixture->adcTransitions)),"Missing physical pedal/encoder/ADC transitions");}
     const auto depth=board->serialDepth();std::ostringstream report;report<<std::setprecision(12)
@@ -1023,6 +1032,26 @@ int main(int argc,char** argv){try{
         <<",\"native_state_menu_format_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateMenuFormatCalls.initialActive:0)
         <<",\"native_state_menu_format_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateMenuFormatCalls.activeCalls():0)
         <<",\"native_state_menu_format_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateMenuFormatCalls.partialEntries:0)
+        <<",\"native_system_services_calls\":"<<(board->liveMidiController()?board->liveMidiController()->systemServicesCalls.started:0)
+        <<",\"native_system_services_returns\":"<<(board->liveMidiController()?board->liveMidiController()->systemServicesCalls.completed:0)
+        <<",\"native_system_services_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->systemServicesCalls.initialActive:0)
+        <<",\"native_system_services_active\":"<<(board->liveMidiController()?board->liveMidiController()->systemServicesCalls.activeCalls():0)
+        <<",\"native_system_services_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->systemServicesCalls.partialEntries:0)
+        <<",\"native_keyboard_events_calls\":"<<(board->liveMidiController()?board->liveMidiController()->keyboardEventsCalls.started:0)
+        <<",\"native_keyboard_events_returns\":"<<(board->liveMidiController()?board->liveMidiController()->keyboardEventsCalls.completed:0)
+        <<",\"native_keyboard_events_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->keyboardEventsCalls.initialActive:0)
+        <<",\"native_keyboard_events_active\":"<<(board->liveMidiController()?board->liveMidiController()->keyboardEventsCalls.activeCalls():0)
+        <<",\"native_keyboard_events_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->keyboardEventsCalls.partialEntries:0)
+        <<",\"native_state_part_selection_calls\":"<<(board->liveMidiController()?board->liveMidiController()->statePartSelectionCalls.started:0)
+        <<",\"native_state_part_selection_returns\":"<<(board->liveMidiController()?board->liveMidiController()->statePartSelectionCalls.completed:0)
+        <<",\"native_state_part_selection_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->statePartSelectionCalls.initialActive:0)
+        <<",\"native_state_part_selection_active\":"<<(board->liveMidiController()?board->liveMidiController()->statePartSelectionCalls.activeCalls():0)
+        <<",\"native_state_part_selection_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->statePartSelectionCalls.partialEntries:0)
+        <<",\"native_state_menu_actions_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateMenuActionsCalls.started:0)
+        <<",\"native_state_menu_actions_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateMenuActionsCalls.completed:0)
+        <<",\"native_state_menu_actions_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateMenuActionsCalls.initialActive:0)
+        <<",\"native_state_menu_actions_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateMenuActionsCalls.activeCalls():0)
+        <<",\"native_state_menu_actions_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateMenuActionsCalls.partialEntries:0)
         <<",\"native_panel_input_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.started:0)
         <<",\"native_panel_input_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.completed:0)
         <<",\"native_panel_input_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.initialActive:0)

@@ -60,6 +60,10 @@ void same(ks::Board& a,ks::Board& b){
     check(!b.liveMidiController()->stateEditContextCalls.partialEntries,"Native reset used partial StateEditContext recovery");
     check(!b.liveMidiController()->stateScreenEditCalls.partialEntries,"Native reset used partial StateScreenEdit recovery");
     check(!b.liveMidiController()->stateMenuFormatCalls.partialEntries,"Native reset used partial StateMenuFormat recovery");
+    check(!b.liveMidiController()->systemServicesCalls.partialEntries,"Native reset used partial SystemServices recovery");
+    check(!b.liveMidiController()->keyboardEventsCalls.partialEntries,"Native reset used partial KeyboardEvents recovery");
+    check(!b.liveMidiController()->statePartSelectionCalls.partialEntries,"Native reset used partial StatePartSelection recovery");
+    check(!b.liveMidiController()->stateMenuActionsCalls.partialEntries,"Native reset used partial StateMenuActions recovery");
     for(unsigned n=0xfffe00;n<=0xffffff;++n)check(a.read(n)==b.read(n),"Reset IO mismatch");
     check(a.waveReads==b.waveReads && a.hostWrites[0]==b.hostWrites[0] && a.hostWrites[1]==b.hostWrites[1],"Reset hardware counters mismatch");
 }

@@ -53,6 +53,10 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksStateMenuActionsCalls.h"
+#include "ksStatePartSelectionCalls.h"
+#include "ksKeyboardEventsCalls.h"
+#include "ksSystemServicesCalls.h"
 #include "ksStateMenuFormatCalls.h"
 #include "ksStateScreenEditCalls.h"
 #include "ksStateEditContextCalls.h"
@@ -200,6 +204,10 @@ public:
     TimerServiceCalls timerServiceCalls;
     StateChannelCalls stateChannelCalls;
     PanelInputCalls panelInputCalls;
+    StateMenuActionsCalls stateMenuActionsCalls;
+    StatePartSelectionCalls statePartSelectionCalls;
+    KeyboardEventsCalls keyboardEventsCalls;
+    SystemServicesCalls systemServicesCalls;
     StateMenuFormatCalls stateMenuFormatCalls;
     StateScreenEditCalls stateScreenEditCalls;
     StateEditContextCalls stateEditContextCalls;
@@ -329,6 +337,10 @@ public:
         timerServiceCalls.resetMetrics();
         stateChannelCalls.resetMetrics();
         panelInputCalls.resetMetrics();
+        stateMenuActionsCalls.resetMetrics();
+        statePartSelectionCalls.resetMetrics();
+        keyboardEventsCalls.resetMetrics();
+        systemServicesCalls.resetMetrics();
         stateMenuFormatCalls.resetMetrics();
         stateScreenEditCalls.resetMetrics();
         stateEditContextCalls.resetMetrics();

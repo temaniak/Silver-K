@@ -13,6 +13,10 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksStateMenuActionsCalls.h"
+#include "ksStatePartSelectionCalls.h"
+#include "ksKeyboardEventsCalls.h"
+#include "ksSystemServicesCalls.h"
 #include "ksStateMenuFormatCalls.h"
 #include "ksStateScreenEditCalls.h"
 #include "ksStateEditContextCalls.h"
@@ -192,6 +196,18 @@ int main(){try{
     ks::StateMenuFormatCalls stateMenuFormatCalls;
     for(unsigned entry:{0x5ae4u}){state->pc=entry;
         if(stateMenuFormatCalls.step(*state)||stateMenuFormatCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateMenuFormat recovery");}
+    ks::SystemServicesCalls systemServicesCalls;
+    for(unsigned entry:{0x130au,0x1b76u,0x222au}){state->pc=entry;
+        if(systemServicesCalls.step(*state)||systemServicesCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial SystemServices recovery");}
+    ks::KeyboardEventsCalls keyboardEventsCalls;
+    for(unsigned entry:{0x1e38u}){state->pc=entry;
+        if(keyboardEventsCalls.step(*state)||keyboardEventsCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial KeyboardEvents recovery");}
+    ks::StatePartSelectionCalls statePartSelectionCalls;
+    for(unsigned entry:{0x4544u}){state->pc=entry;
+        if(statePartSelectionCalls.step(*state)||statePartSelectionCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StatePartSelection recovery");}
+    ks::StateMenuActionsCalls stateMenuActionsCalls;
+    for(unsigned entry:{0x452cu,0x469au}){state->pc=entry;
+        if(stateMenuActionsCalls.step(*state)||stateMenuActionsCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateMenuActions recovery");}
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

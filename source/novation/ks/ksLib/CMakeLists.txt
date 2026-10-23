@@ -420,3 +420,11 @@ target_sources(ksLib PRIVATE ksStateEditContextCalls.cpp ksStateEditContextCalls
 target_sources(ksLib PRIVATE ksStateScreenEditCalls.cpp ksStateScreenEditCalls.h ksStateScreenEditTask.h)
 
 target_sources(ksLib PRIVATE ksStateMenuFormatCalls.cpp ksStateMenuFormatCalls.h ksStateMenuFormatTask.h)
+
+target_sources(ksLib PRIVATE ksSystemServicesCalls.cpp ksSystemServicesCalls.h ksSystemServicesTask.h)
+
+target_sources(ksLib PRIVATE ksKeyboardEventsCalls.cpp ksKeyboardEventsCalls.h ksKeyboardEventsTask.h)
+
+target_sources(ksLib PRIVATE ksStatePartSelectionCalls.cpp ksStatePartSelectionCalls.h ksStatePartSelectionTask.h)
+
+target_sources(ksLib PRIVATE ksStateMenuActionsCalls.cpp ksStateMenuActionsCalls.h ksStateMenuActionsTask.h)

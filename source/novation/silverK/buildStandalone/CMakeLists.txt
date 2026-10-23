@@ -473,3 +473,11 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateEditContex
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateScreenEditCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateMenuFormatCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksSystemServicesCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksKeyboardEventsCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStatePartSelectionCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateMenuActionsCalls.cpp")
