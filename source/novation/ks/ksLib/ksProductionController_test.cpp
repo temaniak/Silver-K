@@ -9,6 +9,7 @@
 #include "ksDspBootStreamCalls.h"
 #include "ksDspBootSetupCalls.h"
 #include "ksDspTransport.h"
+#include "ksFlashPageCalls.h"
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -80,6 +81,9 @@ int main(){try{
     if(selection.step(*state)||selection.partialEntries||state->cycles!=123||state->pc!=0x8fc6)throw std::runtime_error("Production exposed partial gate recovery");
     ks::VoicePopulationCalls population;state->pc=0xa5e2;
     if(population.step(*state)||population.partialEntries||state->cycles!=123||state->pc!=0xa5e2)throw std::runtime_error("Production exposed partial population recovery");
+    ks::FlashPageCalls flash;
+    for(unsigned entry:{0x11b2u,0x1276u}){state->pc=entry;
+        if(flash.step(*state)||flash.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial Flash page recovery");}
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

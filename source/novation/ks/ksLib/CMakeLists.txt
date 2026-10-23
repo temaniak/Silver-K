@@ -363,3 +363,6 @@ target_sources(ksLib PRIVATE ksEditAddressCalls.cpp)
 target_sources(ksLib PRIVATE ksEditSceneCalls.cpp)
 
 target_sources(ksLib PRIVATE ksEditDecisionCalls.cpp)
+
+# Native Flash page comparison/programming; original bodies are test-only.
+target_sources(ksLib PRIVATE ksFlashPageCalls.cpp ksFlashPageCalls.h ksFlashPageTask.h)

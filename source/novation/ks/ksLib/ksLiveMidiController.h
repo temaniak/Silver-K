@@ -49,6 +49,7 @@
 #include "ksSysExFrameCalls.h"
 #include "ksExceptionReturnCalls.h"
 #include "ksStateFlashCommitCalls.h"
+#include "ksFlashPageCalls.h"
 #include "ksStateStoreServicesCalls.h"
 #include "ksStatePresetFormatCalls.h"
 #include "ksStatePresetSaveCalls.h"
@@ -168,6 +169,7 @@ public:
     SysExFrameCalls sysExFrameCalls;
     ExceptionReturnCalls exceptionReturnCalls;
     StateFlashCommitCalls stateFlashCommitCalls;
+    FlashPageCalls flashPageCalls;
     StateStoreServicesCalls stateStoreServicesCalls;
     StatePresetFormatCalls statePresetFormatCalls;
     StatePresetSaveCalls statePresetSaveCalls;
@@ -269,6 +271,7 @@ public:
         sysExFrameCalls.resetMetrics();
         exceptionReturnCalls.resetMetrics();
         stateFlashCommitCalls.resetMetrics();
+        flashPageCalls.resetMetrics();
         stateStoreServicesCalls.resetMetrics();
         statePresetFormatCalls.resetMetrics();
         statePresetSaveCalls.resetMetrics();

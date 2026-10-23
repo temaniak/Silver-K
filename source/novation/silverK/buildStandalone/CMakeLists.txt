@@ -416,3 +416,6 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksEditAddressCall
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksEditSceneCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksEditDecisionCalls.cpp")
+
+# Native Flash page comparison/programming; original bodies are test-only.
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksFlashPageCalls.cpp")

@@ -1954,3 +1954,13 @@ add_executable(ksEditDecisionTask_test "${ROOT}/source/novation/ks/ksLib/ksEditD
 target_include_directories(ksEditDecisionTask_test PRIVATE "${ROOT}/source/cpu")
 target_link_libraries(ksEditDecisionTask_test PRIVATE ksLib)
 add_test(NAME ks_edit_decision_properties COMMAND ksEditDecisionTask_test)
+
+add_executable(ksFlashPageTask_test "${ROOT}/source/novation/ks/ksLib/ksFlashPageTask_test.cpp")
+target_compile_features(ksFlashPageTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_flash_page_properties COMMAND ksFlashPageTask_test)
+set_tests_properties(ks_flash_page_properties PROPERTIES TIMEOUT 90)
+add_executable(ksFlashPageCalls_test "${ROOT}/source/novation/ks/ksLib/ksFlashPageCalls_test.cpp")
+target_include_directories(ksFlashPageCalls_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksFlashPageCalls_test PRIVATE ksLib)
+add_test(NAME ks_flash_page_calls COMMAND ksFlashPageCalls_test)
+set_tests_properties(ks_flash_page_calls PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77)
