@@ -125,6 +125,7 @@ private:
     friend class ControllerReference;
     friend class RuntimeController;
     friend class SerialForeground;
+    friend class StateResetForeground;
     // Temporary edge to the remaining compatibility controller. Native jobs
     // supply transfer timestamps themselves; these accesses do not clock a CPU.
     uint8_t readResource(uint32_t a) { a &= 0xffffff; return bus ? bus->read(a) : memory[a]; }

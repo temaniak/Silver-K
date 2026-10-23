@@ -1511,6 +1511,16 @@ int main(int argc,char** argv){try{
         <<",\"native_serial_foreground_receive\":"<<runtime->serialForeground.kinds[2]
         <<",\"native_serial_foreground_reset_tx\":"<<runtime->serialForeground.kinds[3]
         <<",\"native_serial_foreground_transmit\":"<<runtime->serialForeground.kinds[4]
+        <<",\"native_state_reset_calls\":"<<runtime->stateResetForeground.started
+        <<",\"native_state_reset_returns\":"<<runtime->stateResetForeground.completed
+        <<",\"native_state_reset_phases\":"<<runtime->stateResetForeground.phases
+        <<",\"native_state_reset_initial_active\":"<<runtime->stateResetForeground.initialActive
+        <<",\"native_state_reset_active\":"<<runtime->stateResetForeground.active()
+        <<",\"native_state_reset_components\":"<<runtime->stateResetForeground.components
+        <<",\"native_state_reset_state\":"<<runtime->stateResetForeground.kinds[0]
+        <<",\"native_state_reset_buttons\":"<<runtime->stateResetForeground.kinds[1]
+        <<",\"native_state_reset_controls\":"<<runtime->stateResetForeground.kinds[2]
+        <<",\"native_state_reset_keyboard\":"<<runtime->stateResetForeground.kinds[3]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases

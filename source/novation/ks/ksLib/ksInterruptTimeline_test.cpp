@@ -1,6 +1,7 @@
 #include "ksBoard.h"
 #include "ksRom.h"
 #include <algorithm>
+#include <array>
 #include <filesystem>
 #include <fstream>
 #include <cstdlib>
@@ -27,6 +28,24 @@ void fullTimer(ks::Board& b){
  word(b,0xffed6c,0);word(b,0xffed6e,0);
  for(unsigned n=0;n<4;++n){b.write(0xffec16+n,uint8_t(1u<<n));b.write(0xffec24+n,uint8_t(128u>>n));}
  b.write(0xffec23,1);
+}
+void initialMainBoundary(ks::Board&b){
+ // boot() includes a musical warmup after ready. Stop before that warmup,
+ // exactly where the real main program is about to call its initial reset.
+ const uint64_t deadline=uint64_t(ks::Board::ControllerClockHz)*10;
+ while(!b.mainEntered&&b.controllerCycles()<deadline){b.advance();b.discardAudio();}
+ check(!b.ready,"Coarse boot passed the initial main reset boundary");
+ while(!b.ready&&b.controllerCycles()<deadline){b.advance(1);b.discardAudio();}
+ check(b.ready&&b.cpu().getPC()==0x4334,"Initial main reset boundary missing");
+}
+void dirtyResetRings(ks::Board&b){
+ word(b,0x1537c,0x7e);word(b,0x1537e,0x42);
+ word(b,0x15406,0x1fe);word(b,0x15408,0x80);
+ word(b,0x156e8,0x1fe);word(b,0x156ea,0x100);
+}
+void emptyResetRings(ks::Board&b){
+ for(const auto address:std::array<uint32_t,6>{{0x1537c,0x1537e,0x15406,0x15408,0x156e8,0x156ea}})
+  check(!b.read(address)&&!b.read(address+1),"Initial State reset did not clear all three event rings");
 }
 void sameInterrupts(ks::Board&a,ks::Board&b){
  const auto&x=a.cpu();const auto&y=b.cpu();
@@ -81,8 +100,16 @@ int main(int argc,char**argv){unsigned item=0;try{
  const std::filesystem::path out(argv[4]);check(!std::filesystem::exists(out),"Output directory already exists");std::filesystem::create_directories(out);
  ks::Rom rom(argv[1]);check(rom.isValid(),"Invalid ROM");auto flash=bytes(argv[2]),wave=bytes(argv[3]);
  auto a=std::make_unique<ks::Board>(rom.data(),wave,flash,true),b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
- check(a->boot()&&b->boot(),"Original boot failed");b->enableNativeController();b->resetControllerMetrics();
+ initialMainBoundary(*a);initialMainBoundary(*b);b->enableNativeController();b->resetControllerMetrics();
+ dirtyResetRings(*a);dirtyResetRings(*b);
  a->startControllerTrace();b->startControllerTrace();std::ofstream pcmA(out/"h8.pcm",std::ios::binary),pcmB(out/"cpp.pcm",std::ios::binary);
+ unsigned resetPhases=0;
+ while(!b->nativeController()->stateResetForeground.completed||b->nativeController()->activeNativeWork()){
+  check(++resetPhases<=65536,"Natural initial State reset did not finish");advanceBoth(*a,*b);
+ }
+ emptyResetRings(*a);emptyResetRings(*b);
+ check(b->nativeController()->stateResetForeground.kinds[0]==1&&b->nativeController()->stateResetForeground.components==0xf,"Natural initial State reset missed its complete child graph");
+ check(a->boot()&&b->boot(),"Normal musical warmup failed after initial State reset");
  uint64_t frames=0,peak=0;
  for(item=0;item<17;++item){
   drain(*a,*b);
@@ -143,7 +170,8 @@ int main(int argc,char**argv){unsigned item=0;try{
  check(r->nativeInterruptStarts+r->nativeInterruptInitial==r->nativeInterruptReturns+r->activeNativeInterrupts(),"Native IRQ accounting differs");
  check(r->serialForeground.kinds[0]&&r->serialForeground.kinds[1]&&r->serialForeground.kinds[4],"Missing native foreground reset/pop/transmit coverage");
  check(r->serialForeground.started+r->serialForeground.initial==r->serialForeground.completed+r->serialForeground.active(),"Native foreground accounting differs");
+ check(r->stateResetForeground.started+r->stateResetForeground.initialActive==r->stateResetForeground.completed+r->stateResetForeground.active(),"Native State reset accounting differs");
  check(peak>1000&&b->h8StepsSinceNativeHandoff()==0,"Silent fixture or native interpreter fallback");
- std::cout<<"PASS: seventeen IRQ/foreground timelines including TPU0/ADC/RX/F8 and a real pedal UART publication, "<<frames<<" exact audible 24-stream frames, "<<x->events.size()<<" exact DSP events; native error/TX/unused="<<r->nativeInterruptKinds[0]<<'/'<<r->nativeInterruptKinds[1]<<'/'<<r->nativeInterruptKinds[2]<<"; TPU0="<<r->nativeInterruptKinds[3]<<"; ADC="<<r->nativeInterruptKinds[4]<<", RX="<<r->nativeInterruptKinds[5]<<", components=0x"<<std::hex<<r->nativeTpuComponents<<'/'<<r->nativeAdcComponents<<'/'<<r->nativeSerialReceiveComponents<<"; private checkpoints="<<x->checkpoint<<'/'<<y->checkpoint<<std::dec<<"; foreground reset/pop/transmit="<<r->serialForeground.kinds[0]<<'/'<<r->serialForeground.kinds[1]<<'/'<<r->serialForeground.kinds[4]<<"; cycles/pending/priorities/hardware/resource RAM/state/Flash/MIDI exact, no post-handoff H8\n";
+ std::cout<<"PASS: seventeen IRQ/foreground timelines including TPU0/ADC/RX/F8 and a real pedal UART publication, "<<frames<<" exact audible 24-stream frames, "<<x->events.size()<<" exact DSP events; native error/TX/unused="<<r->nativeInterruptKinds[0]<<'/'<<r->nativeInterruptKinds[1]<<'/'<<r->nativeInterruptKinds[2]<<"; TPU0="<<r->nativeInterruptKinds[3]<<"; ADC="<<r->nativeInterruptKinds[4]<<", RX="<<r->nativeInterruptKinds[5]<<", components=0x"<<std::hex<<r->nativeTpuComponents<<'/'<<r->nativeAdcComponents<<'/'<<r->nativeSerialReceiveComponents<<"; private checkpoints="<<x->checkpoint<<'/'<<y->checkpoint<<std::dec<<"; foreground reset/pop/transmit="<<r->serialForeground.kinds[0]<<'/'<<r->serialForeground.kinds[1]<<'/'<<r->serialForeground.kinds[4]<<"; natural State resets="<<r->stateResetForeground.kinds[0]<<", components=0x"<<std::hex<<r->stateResetForeground.components<<std::dec<<"; cycles/pending/priorities/hardware/resource RAM/state/Flash/MIDI exact, no post-handoff H8\n";
  return 0;
  }catch(const std::exception&e){std::cerr<<"scenario="<<item<<": "<<e.what()<<'\n';return 1;}}

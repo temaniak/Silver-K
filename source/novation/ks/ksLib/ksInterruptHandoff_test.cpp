@@ -1,6 +1,7 @@
 #include "ksBoard.h"
 #include "ksRom.h"
 #include <algorithm>
+#include <array>
 #include <fstream>
 #include <cstdlib>
 #include <iostream>
@@ -24,6 +25,24 @@ void fullTimer(ks::Board& b){
  word(b,0xffed6c,0);word(b,0xffed6e,0);
  for(unsigned n=0;n<4;++n){b.write(0xffec16+n,uint8_t(1u<<n));b.write(0xffec24+n,uint8_t(128u>>n));}
  b.write(0xffec23,1);
+}
+void initialMainBoundary(ks::Board&b){
+ // boot() includes a musical warmup after ready. Stop before that warmup,
+ // exactly where the real main program is about to call its initial reset.
+ const uint64_t deadline=uint64_t(ks::Board::ControllerClockHz)*10;
+ while(!b.mainEntered&&b.controllerCycles()<deadline){b.advance();b.discardAudio();}
+ check(!b.ready,"Coarse boot passed the initial main reset boundary");
+ while(!b.ready&&b.controllerCycles()<deadline){b.advance(1);b.discardAudio();}
+ check(b.ready&&b.cpu().getPC()==0x4334,"Initial main reset boundary missing");
+}
+void dirtyResetRings(ks::Board&b){
+ word(b,0x1537c,0x7e);word(b,0x1537e,0x42);
+ word(b,0x15406,0x1fe);word(b,0x15408,0x80);
+ word(b,0x156e8,0x1fe);word(b,0x156ea,0x100);
+}
+void emptyResetRings(ks::Board&b){
+ for(const auto address:std::array<uint32_t,6>{{0x1537c,0x1537e,0x15406,0x15408,0x156e8,0x156ea}})
+  check(!b.read(address)&&!b.read(address+1),"Initial State reset did not clear all three event rings");
 }
 void sameInterrupts(ks::Board&a,ks::Board&b){
  const auto&x=a.cpu();const auto&y=b.cpu();
@@ -89,7 +108,11 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
  auto a=std::make_unique<ks::Board>(rom.data(),wave,flash,true),b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
  check(a->boot()&&b->boot(),"Reference boot failed");same(*a,*b);
  uint64_t frames=0,peak=0;
- for(phase=0;phase<10;++phase)for(mode=0;mode<3;++mode){
+ for(phase=0;phase<13;++phase)for(mode=0;mode<3;++mode){
+  if(phase>=10){
+   a=std::make_unique<ks::Board>(rom.data(),wave,flash,true);b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
+   initialMainBoundary(*a);initialMainBoundary(*b);dirtyResetRings(*a);dirtyResetRings(*b);
+  }
   b->enableNativeController();check(b->nativeController(),"Native handoff failed");
   drain(*a,*b);
   b->resetControllerMetrics();
@@ -123,18 +146,28 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    case 7:target=r->serialForeground.at(ks::SerialForegroundService::Kind::PopRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::ReadStatus)&&b->cpu().exr==7;break;
    case 8:target=r->serialForeground.at(ks::SerialForegroundService::Kind::Transmit,true)&&r->serialForeground.atTransmit(ks::SerialTransmitTask::Stage::Enable)&&b->cpu().exr==7;break;
    case 9:target=r->serialForeground.at(ks::SerialForegroundService::Kind::ResetRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::RetainWord)&&b->cpu().exr==7;break;
+   case 10:target=r->stateResetForeground.at(ks::StateResetService::Component::Buttons)&&b->cpu().exr==0;break;
+   case 11:target=r->stateResetForeground.at(ks::StateResetService::Component::Controls)&&b->cpu().exr==0;break;
+   case 12:target=r->stateResetForeground.at(ks::StateResetService::Component::Keyboard)&&b->cpu().exr==0;break;
    }
    landed=r->activeNativeInterrupts()==unsigned(phase<7)&&target;
   }
   check(landed,"Switch did not land at requested native IRQ phase");
   if(phase==2)check(a->cpu().getPC()==0x113c&&a->cpu().exr==7,"H8 did not reach the same MIDI masking boundary");
   if(phase>=3&&phase<7){const unsigned expected=phase==3?0x17a8:phase==4?0x176e:phase==5?0x1848:0x25fe;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same ADC/RX child entry");}
-  if(phase>=7){const unsigned expected=phase==7?0x1020:phase==8?0x113c:0xfec;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same foreground critical boundary");}
+  if(phase>=7&&phase<10){const unsigned expected=phase==7?0x1020:phase==8?0x113c:0xfec;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same foreground critical boundary");}
+  if(phase>=10){const unsigned expected=phase==10?0x13fe:phase==11?0x1578:0x1efe;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same State reset child");}
+  const auto*selectedRuntime=b->nativeController();
   const auto cycle=b->controllerCycles(),interpreted=b->h8InterpretedSteps();
   b->enableLiveMidiController(mode==1);
   check(!b->nativeController()&&std::string(b->controllerBackend())==(mode==1?"live-cpp-midi-hybrid":"original-h8"),"Requested tail mode not published");
   check(b->controllerCycles()==cycle,"Controller request added guest time");
   if(mode==2){b->enableNativeController();check(b->nativeController(),"Pending reference selection not cancelled");}
+  if(phase>=10){
+   check(a->boot()&&b->boot(),"Normal musical warmup failed after State reset handoff");
+   check(selectedRuntime->stateResetForeground.completed==1&&selectedRuntime->stateResetForeground.components==0xf,"State reset tail did not finish every logical child");
+   same(*a,*b);
+  }
   const uint8_t on[]{0x90,uint8_t(60+phase*3+mode),100};check(a->enqueueMidi(on,3)&&b->enqueueMidi(on,3),"MIDI after switch rejected");
   for(unsigned n=0;n<4096;++n){auto x=a->renderSample(),y=b->renderSample();check(x==y,"IRQ handoff changed audio");check(a->controllerCycles()==b->controllerCycles(),"Handoff render clock differs");sameInterrupts(*a,*b);for(auto v:x)peak=std::max(peak,uint64_t(std::abs(int64_t(v))));++frames;}
   same(*a,*b);
@@ -143,6 +176,6 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   const uint8_t off[]{0x80,uint8_t(60+phase*3+mode),0};check(a->enqueueMidi(off,3)&&b->enqueueMidi(off,3),"Release rejected");
  }
  check(peak>1000,"Handoff fixture was silent");
- std::cout<<"PASS: thirty H8/hybrid/cancel requests inside IRQ children and foreground RX/pop/TX critical sections; no added guest advance; "<<frames<<" exact audible 24-stream frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
+ std::cout<<"PASS: thirty-nine H8/hybrid/cancel requests inside IRQ/serial critical and three State reset children; no added guest advance; "<<frames<<" exact audible 24-stream frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
  return 0;
  }catch(const std::exception&e){std::cerr<<"phase="<<phase<<", mode="<<mode<<": "<<e.what()<<'\n';return 1;}}

@@ -2585,3 +2585,13 @@ add_executable(ksSerialForegroundTask_test "${ROOT}/source/novation/ks/ksLib/ksS
 target_compile_features(ksSerialForegroundTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_serial_foreground_task COMMAND ksSerialForegroundTask_test)
 set_tests_properties(ks_serial_foreground_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksStateResetService_test "${ROOT}/source/novation/ks/ksLib/ksStateResetService_test.cpp")
+target_include_directories(ksStateResetService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksStateResetService_test PRIVATE ksLib)
+add_test(NAME ks_state_reset_service COMMAND ksStateResetService_test)
+set_tests_properties(ks_state_reset_service PROPERTIES TIMEOUT 240 SKIP_RETURN_CODE 77)
+add_executable(ksStateResetTask_test "${ROOT}/source/novation/ks/ksLib/ksStateResetTask_test.cpp")
+target_compile_features(ksStateResetTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_state_reset_task COMMAND ksStateResetTask_test)
+set_tests_properties(ks_state_reset_task PROPERTIES TIMEOUT 240)

@@ -478,3 +478,5 @@ target_sources(ksLib PRIVATE ksStateProgramDisplayCalls.cpp ksStateProgramDispla
 target_sources(ksLib PRIVATE ksStateProgramEventCalls.cpp ksStateProgramEventCalls.h ksStateProgramEventTask.h)
 
 target_sources(ksLib PRIVATE ksSerialForegroundService.h ksSerialForeground.h ksSerialForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStateResetService.h ksStateResetForeground.h ksStateResetForeground.cpp)
