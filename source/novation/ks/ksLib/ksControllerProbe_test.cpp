@@ -78,6 +78,7 @@ int main(int argc,char** argv){try{
     if(nativeMode)check(startupStarts==1 && startupReturns==1 && resetReturns==1 && !bootLive->startupCalls.partialEntries && !bootLive->voiceActions.selectCalls.partialEntries,"Native start used incomplete reset/startup or partial recovery");
     if(nativeMode)check(bootSetupStarts==2 && bootSetupReturns==2 && !bootSetupPartial,"Native startup did not complete both DSP setup jobs without recovery");
     if(nativeMode)check(bootStreamStarts==2 && bootStreamReturns==2 && !bootStreamPartial,"Native startup did not complete both DSP firmware streams without recovery");
+    if(nativeMode)check(!bootLive->panelAdcScaleCalls.partialEntries&&!bootLive->panelAdcCalibrationCalls.partialEntries&&!bootLive->panelAdcIrqCalls.partialEntries&&!bootLive->panelAdcScanCalls.partialEntries,"Native startup used partial ADC recovery before metric reset");
     if(nativeMode)board->enableNativeController();
     auto send=[&](const std::vector<uint8_t>& m){check(board->enqueueMidi(m.data(),m.size()),"MIDI rejected");};
     auto discard=[&](unsigned n){for(unsigned i=0;i<n;++i)board->renderSample();};
@@ -332,6 +333,8 @@ int main(int argc,char** argv){try{
         };
         admitted(live.panelMatrixCalls);admitted(live.pedalSenseCalls);
         admitted(live.panelEncoderCalls);admitted(live.panelAdcSamplesCalls);
+        admitted(live.panelAdcScaleCalls);admitted(live.panelAdcCalibrationCalls);
+        admitted(live.panelAdcIrqCalls);admitted(live.panelAdcScanCalls);
     }
     if(panelStore){if(!panelIo)check(panelEvents==(multi?6u:8u),"Missing panel store events");check(board->flashRevision>0,"Panel store did not write Flash");check(board->read(0x16790)==0,"Store page did not return to playback");}
     if(scenario=="state")check(board->flashRevision>0,"State scenario did not complete a Flash page write");
@@ -898,6 +901,33 @@ int main(int argc,char** argv){try{
         <<",\"native_panel_adc_samples_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcSamplesCalls.initialActive:0)
         <<",\"native_panel_adc_samples_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcSamplesCalls.activeCalls():0)
         <<",\"native_panel_adc_samples_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcSamplesCalls.partialEntries:0)
+        <<",\"native_panel_adc_scale_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcScaleCalls.started:0)
+        <<",\"native_panel_adc_scale_handoffs\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcScaleCalls.completed:0)
+        <<",\"native_panel_adc_scale_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcScaleCalls.initialActive:0)
+        <<",\"native_panel_adc_scale_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcScaleCalls.activeCalls():0)
+        <<",\"native_panel_adc_scale_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcScaleCalls.partialEntries:0)
+        <<",\"native_panel_adc_calibration_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcCalibrationCalls.started:0)
+        <<",\"native_panel_adc_calibration_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcCalibrationCalls.completed:0)
+        <<",\"native_panel_adc_calibration_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcCalibrationCalls.initialActive:0)
+        <<",\"native_panel_adc_calibration_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcCalibrationCalls.activeCalls():0)
+        <<",\"native_panel_adc_calibration_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcCalibrationCalls.partialEntries:0)
+        <<",\"native_panel_adc_irq_quick_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcIrqCalls.quickReturns:0)
+        <<",\"native_panel_adc_irq_settle_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcIrqCalls.settleReturns:0)
+        <<",\"native_panel_adc_irq_scan_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcIrqCalls.scanReturns:0)
+        <<",\"native_panel_adc_irq_accepted_channels\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcIrqCalls.acceptedChannels:0)
+        <<",\"native_panel_adc_irq_preview_handoffs\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcIrqCalls.previewHandoffs:0)
+        <<",\"native_panel_adc_irq_special_handoffs\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcIrqCalls.specialHandoffs:0)
+        <<",\"native_panel_adc_irq_conversion_restarts\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcIrqCalls.conversionRestarts:0)
+        <<",\"native_panel_adc_irq_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcIrqCalls.started:0)
+        <<",\"native_panel_adc_irq_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcIrqCalls.completed:0)
+        <<",\"native_panel_adc_irq_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcIrqCalls.initialActive:0)
+        <<",\"native_panel_adc_irq_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcIrqCalls.activeCalls():0)
+        <<",\"native_panel_adc_irq_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcIrqCalls.partialEntries:0)
+        <<",\"native_panel_adc_scan_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcScanCalls.started:0)
+        <<",\"native_panel_adc_scan_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcScanCalls.completed:0)
+        <<",\"native_panel_adc_scan_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcScanCalls.initialActive:0)
+        <<",\"native_panel_adc_scan_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcScanCalls.activeCalls():0)
+        <<",\"native_panel_adc_scan_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcScanCalls.partialEntries:0)
         <<",\"native_panel_input_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.started:0)
         <<",\"native_panel_input_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.completed:0)
         <<",\"native_panel_input_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.initialActive:0)

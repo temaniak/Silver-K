@@ -13,6 +13,10 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksPanelAdcScanCalls.h"
+#include "ksPanelAdcIrqCalls.h"
+#include "ksPanelAdcCalibrationCalls.h"
+#include "ksPanelAdcScaleCalls.h"
 #include "ksPanelAdcSamplesCalls.h"
 #include "ksPanelEncoderCalls.h"
 #include "ksPedalSenseCalls.h"
@@ -120,6 +124,18 @@ int main(){try{
     ks::PanelAdcSamplesCalls panelAdcSamplesCalls;
     for(unsigned entry:{0x16a8u}){state->pc=entry;
         if(panelAdcSamplesCalls.step(*state)||panelAdcSamplesCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial PanelAdcSamples recovery");}
+    ks::PanelAdcScaleCalls panelAdcScaleCalls;
+    for(unsigned entry:{0x1772u,0x17aau}){state->pc=entry;
+        if(panelAdcScaleCalls.step(*state)||panelAdcScaleCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial PanelAdcScale recovery");}
+    ks::PanelAdcCalibrationCalls panelAdcCalibrationCalls;
+    for(unsigned entry:{0x1590u}){state->pc=entry;
+        if(panelAdcCalibrationCalls.step(*state)||panelAdcCalibrationCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial PanelAdcCalibration recovery");}
+    ks::PanelAdcIrqCalls panelAdcIrqCalls;
+    for(unsigned entry:{0x165eu,0x16e6u,0x1798u,0x180eu}){state->pc=entry;
+        if(panelAdcIrqCalls.step(*state)||panelAdcIrqCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial PanelAdcIrq recovery");}
+    ks::PanelAdcScanCalls panelAdcScanCalls;
+    for(unsigned entry:{0x1530u,0x1570u,0x1626u,0x164cu}){state->pc=entry;
+        if(panelAdcScanCalls.step(*state)||panelAdcScanCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial PanelAdcScan recovery");}
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

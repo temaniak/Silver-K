@@ -384,3 +384,11 @@ target_sources(ksLib PRIVATE ksPedalSenseCalls.cpp ksPedalSenseCalls.h ksPedalSe
 target_sources(ksLib PRIVATE ksPanelEncoderCalls.cpp ksPanelEncoderCalls.h ksPanelEncoderTask.h)
 
 target_sources(ksLib PRIVATE ksPanelAdcSamplesCalls.cpp ksPanelAdcSamplesCalls.h ksPanelAdcSamplesTask.h)
+
+target_sources(ksLib PRIVATE ksPanelAdcScaleCalls.cpp ksPanelAdcScaleCalls.h ksPanelAdcScaleTask.h)
+
+target_sources(ksLib PRIVATE ksPanelAdcCalibrationCalls.cpp ksPanelAdcCalibrationCalls.h ksPanelAdcCalibrationTask.h)
+
+target_sources(ksLib PRIVATE ksPanelAdcIrqCalls.cpp ksPanelAdcIrqCalls.h ksPanelAdcIrqTask.h)
+
+target_sources(ksLib PRIVATE ksPanelAdcScanCalls.cpp ksPanelAdcScanCalls.h ksPanelAdcScanTask.h)

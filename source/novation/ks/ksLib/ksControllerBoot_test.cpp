@@ -42,6 +42,10 @@ void same(ks::Board& a,ks::Board& b){
     check(!b.liveMidiController()->pedalSenseCalls.partialEntries,"Native reset used partial pedal recovery");
     check(!b.liveMidiController()->panelEncoderCalls.partialEntries,"Native reset used partial encoder recovery");
     check(!b.liveMidiController()->panelAdcSamplesCalls.partialEntries,"Native reset used partial ADC-samples recovery");
+    check(!b.liveMidiController()->panelAdcScaleCalls.partialEntries,"Native reset used partial ADC-scale recovery");
+    check(!b.liveMidiController()->panelAdcCalibrationCalls.partialEntries,"Native reset used partial ADC-calibration recovery");
+    check(!b.liveMidiController()->panelAdcIrqCalls.partialEntries,"Native reset used partial ADC-IRQ recovery");
+    check(!b.liveMidiController()->panelAdcScanCalls.partialEntries,"Native reset used partial ADC-scan recovery");
     for(unsigned n=0xfffe00;n<=0xffffff;++n)check(a.read(n)==b.read(n),"Reset IO mismatch");
     check(a.waveReads==b.waveReads && a.hostWrites[0]==b.hostWrites[0] && a.hostWrites[1]==b.hostWrites[1],"Reset hardware counters mismatch");
 }
@@ -70,6 +74,8 @@ int main(int argc,char** argv){try{
     check(b->liveMidiController()->startupCalls.startupStarted==1 && b->liveMidiController()->startupCalls.startupCompleted==1 && b->liveMidiController()->startupCalls.resetStarted==1 && b->liveMidiController()->startupCalls.resetCompleted==1,"Cold start did not complete native outer startup/reset");
     check(b->liveMidiController()->bootSetupCalls.started==2 && b->liveMidiController()->bootSetupCalls.completed==2,"Cold startup did not complete both native DSP setup jobs");
     check(b->liveMidiController()->bootStreamCalls.started==2 && b->liveMidiController()->bootStreamCalls.completed==2,"Cold startup did not complete both native DSP firmware streams");
+    check(b->liveMidiController()->panelAdcCalibrationCalls.started>0&&b->liveMidiController()->panelAdcCalibrationCalls.completed>0,"Cold start did not exercise native ADC calibration");
+    check(b->liveMidiController()->panelAdcScanCalls.started>0&&b->liveMidiController()->panelAdcIrqCalls.started>0,"Cold start did not exercise native ADC scan/IRQ");
     check(std::equal(std::begin(a->cpu().memory),std::end(a->cpu().memory),std::begin(b->cpu().memory)),"Complete boot memory mismatch");
     if(variant=="multi")check(a->state().performance && b->state().performance,"Performance startup not exercised");
     if(variant=="mapped")check(!a->zeroBank() && !b->zeroBank(),"Mapped wave bank adaptation not disabled");

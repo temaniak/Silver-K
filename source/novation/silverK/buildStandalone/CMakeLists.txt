@@ -437,3 +437,11 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPedalSenseCalls
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelEncoderCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelAdcSamplesCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelAdcScaleCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelAdcCalibrationCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelAdcIrqCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelAdcScanCalls.cpp")

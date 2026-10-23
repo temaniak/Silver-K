@@ -53,6 +53,10 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksPanelAdcScanCalls.h"
+#include "ksPanelAdcIrqCalls.h"
+#include "ksPanelAdcCalibrationCalls.h"
+#include "ksPanelAdcScaleCalls.h"
 #include "ksPanelAdcSamplesCalls.h"
 #include "ksPanelEncoderCalls.h"
 #include "ksPedalSenseCalls.h"
@@ -182,6 +186,10 @@ public:
     TimerServiceCalls timerServiceCalls;
     StateChannelCalls stateChannelCalls;
     PanelInputCalls panelInputCalls;
+    PanelAdcScanCalls panelAdcScanCalls;
+    PanelAdcIrqCalls panelAdcIrqCalls;
+    PanelAdcCalibrationCalls panelAdcCalibrationCalls;
+    PanelAdcScaleCalls panelAdcScaleCalls;
     PanelAdcSamplesCalls panelAdcSamplesCalls;
     PanelEncoderCalls panelEncoderCalls;
     PedalSenseCalls pedalSenseCalls;
@@ -293,6 +301,10 @@ public:
         timerServiceCalls.resetMetrics();
         stateChannelCalls.resetMetrics();
         panelInputCalls.resetMetrics();
+        panelAdcScanCalls.resetMetrics();
+        panelAdcIrqCalls.resetMetrics();
+        panelAdcCalibrationCalls.resetMetrics();
+        panelAdcScaleCalls.resetMetrics();
         panelAdcSamplesCalls.resetMetrics();
         panelEncoderCalls.resetMetrics();
         pedalSenseCalls.resetMetrics();
