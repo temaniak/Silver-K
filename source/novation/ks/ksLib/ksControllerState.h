@@ -124,6 +124,7 @@ public:
 private:
     friend class ControllerReference;
     friend class RuntimeController;
+    friend class PanelScanForeground;
     friend class SerialForeground;
     friend class StateResetForeground;
     // Temporary edge to the remaining compatibility controller. Native jobs

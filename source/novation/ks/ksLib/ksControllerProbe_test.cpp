@@ -1521,6 +1521,15 @@ int main(int argc,char** argv){try{
         <<",\"native_state_reset_buttons\":"<<runtime->stateResetForeground.kinds[1]
         <<",\"native_state_reset_controls\":"<<runtime->stateResetForeground.kinds[2]
         <<",\"native_state_reset_keyboard\":"<<runtime->stateResetForeground.kinds[3]
+        <<",\"native_panel_scan_calls\":"<<runtime->panelScanForeground.started
+        <<",\"native_panel_scan_returns\":"<<runtime->panelScanForeground.completed
+        <<",\"native_panel_scan_phases\":"<<runtime->panelScanForeground.phases
+        <<",\"native_panel_scan_initial_active\":"<<runtime->panelScanForeground.initial
+        <<",\"native_panel_scan_active\":"<<runtime->panelScanForeground.active()
+        <<",\"native_panel_scan_components\":"<<runtime->panelScanForeground.components
+        <<",\"native_panel_scan_initialize\":"<<runtime->panelScanForeground.kinds[0]
+        <<",\"native_panel_scan_scan\":"<<runtime->panelScanForeground.kinds[1]
+        <<",\"native_panel_scan_button_push\":"<<runtime->panelScanForeground.kinds[2]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases

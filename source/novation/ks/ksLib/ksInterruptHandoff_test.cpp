@@ -108,8 +108,8 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
  auto a=std::make_unique<ks::Board>(rom.data(),wave,flash,true),b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
  check(a->boot()&&b->boot(),"Reference boot failed");same(*a,*b);
  uint64_t frames=0,peak=0;
- for(phase=0;phase<13;++phase)for(mode=0;mode<3;++mode){
-  if(phase>=10){
+ for(phase=0;phase<14;++phase)for(mode=0;mode<3;++mode){
+  if(phase>=10&&phase<13){
    a=std::make_unique<ks::Board>(rom.data(),wave,flash,true);b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
    initialMainBoundary(*a);initialMainBoundary(*b);dirtyResetRings(*a);dirtyResetRings(*b);
   }
@@ -125,6 +125,7 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    else if(phase==6)receive(*board,5);
    else if(phase==8)pedalOutput(*board);
    else if(phase==9)board->write(0xffed68,2);
+   else if(phase==13){board->write(0x15400,0xfe);const auto tick=uint16_t((unsigned(board->read(0xffec12))<<8)|board->read(0xffec13));word(*board,0x16780,uint16_t(tick-25));}
    if(phase>=7)continue;
    const unsigned vector=!phase?90:phase<3?32:phase<6?28:89;
    board->cpu().exr=0;board->cpu().interruptPriority[vector]=phase>0&&phase<3?6:1;
@@ -148,6 +149,7 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    case 9:target=r->serialForeground.at(ks::SerialForegroundService::Kind::ResetRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::RetainWord)&&b->cpu().exr==7;break;
    case 10:target=r->stateResetForeground.at(ks::StateResetService::Component::Buttons)&&b->cpu().exr==0;break;
    case 11:target=r->stateResetForeground.at(ks::StateResetService::Component::Controls)&&b->cpu().exr==0;break;
+   case 13:target=r->panelScanForeground.at(ks::PanelScanService::Component::Push)&&b->cpu().exr==0;break;
    case 12:target=r->stateResetForeground.at(ks::StateResetService::Component::Keyboard)&&b->cpu().exr==0;break;
    }
    landed=r->activeNativeInterrupts()==unsigned(phase<7)&&target;
@@ -156,14 +158,15 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   if(phase==2)check(a->cpu().getPC()==0x113c&&a->cpu().exr==7,"H8 did not reach the same MIDI masking boundary");
   if(phase>=3&&phase<7){const unsigned expected=phase==3?0x17a8:phase==4?0x176e:phase==5?0x1848:0x25fe;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same ADC/RX child entry");}
   if(phase>=7&&phase<10){const unsigned expected=phase==7?0x1020:phase==8?0x113c:0xfec;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same foreground critical boundary");}
-  if(phase>=10){const unsigned expected=phase==10?0x13fe:phase==11?0x1578:0x1efe;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same State reset child");}
+  if(phase>=10&&phase<13){const unsigned expected=phase==10?0x13fe:phase==11?0x1578:0x1efe;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same State reset child");}
+  if(phase==13)check(unsigned(a->cpu().getPC())==0x14e4,"H8 did not reach the same matrix event publication");
   const auto*selectedRuntime=b->nativeController();
   const auto cycle=b->controllerCycles(),interpreted=b->h8InterpretedSteps();
   b->enableLiveMidiController(mode==1);
   check(!b->nativeController()&&std::string(b->controllerBackend())==(mode==1?"live-cpp-midi-hybrid":"original-h8"),"Requested tail mode not published");
   check(b->controllerCycles()==cycle,"Controller request added guest time");
   if(mode==2){b->enableNativeController();check(b->nativeController(),"Pending reference selection not cancelled");}
-  if(phase>=10){
+  if(phase>=10&&phase<13){
    check(a->boot()&&b->boot(),"Normal musical warmup failed after State reset handoff");
    check(selectedRuntime->stateResetForeground.completed==1&&selectedRuntime->stateResetForeground.components==0xf,"State reset tail did not finish every logical child");
    same(*a,*b);
@@ -176,6 +179,6 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   const uint8_t off[]{0x80,uint8_t(60+phase*3+mode),0};check(a->enqueueMidi(off,3)&&b->enqueueMidi(off,3),"Release rejected");
  }
  check(peak>1000,"Handoff fixture was silent");
- std::cout<<"PASS: thirty-nine H8/hybrid/cancel requests inside IRQ/serial critical and three State reset children; no added guest advance; "<<frames<<" exact audible 24-stream frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
+ std::cout<<"PASS: forty-two H8/hybrid/cancel requests inside IRQ/serial/State reset and matrix event publication; no added guest advance; "<<frames<<" exact audible 24-stream frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
  return 0;
  }catch(const std::exception&e){std::cerr<<"phase="<<phase<<", mode="<<mode<<": "<<e.what()<<'\n';return 1;}}

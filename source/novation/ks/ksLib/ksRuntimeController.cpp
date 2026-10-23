@@ -87,6 +87,7 @@ void RuntimeController::stepStartup(ControllerCpu& h){
     const int depth=h.indent;arbitrate(h);if(h.indent!=depth)++interruptEntries;
     if(serialForeground.step(h)){++steps;return;}
     if(stateResetForeground.step(h)){++steps;return;}
+    if(panelScanForeground.step(h)){++steps;return;}
     if(startup(h)){++steps;return;}
     if(stepCode(h))return;
     throw std::runtime_error("Unsupported native KS reset state (no H8 fallback)");
@@ -96,6 +97,7 @@ void RuntimeController::step(ControllerCpu& h){
     const int depth=h.indent;arbitrate(h);if(h.indent!=depth)++interruptEntries;
     if(serialForeground.step(h)){++steps;return;}
     if(stateResetForeground.step(h)){++steps;return;}
+    if(panelScanForeground.step(h)){++steps;return;}
     if(stepCode(h))return;
     std::ostringstream message;message<<"Unsupported native KS controller state 0x"<<std::hex<<h.getPC()
         <<" (no H8 fallback; disable the experiment)";

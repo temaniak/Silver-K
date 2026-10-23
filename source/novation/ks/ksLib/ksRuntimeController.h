@@ -5,6 +5,7 @@
 #include "ksInterruptScheduler.h"
 #include "ksSerialForeground.h"
 #include "ksStateResetForeground.h"
+#include "ksPanelScanForeground.h"
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
 #include <vector>
 #include <algorithm>
@@ -25,7 +26,7 @@ public:
     static void verifyImage(const ControllerCpu&);
     void step(ControllerCpu&);
     void stepStartup(ControllerCpu&);
-    void resetMetrics(){stateResetForeground.resetMetrics();serialForeground.resetMetrics();steps=interruptEntries=0;nativeInterruptStarts=nativeInterruptReturns=nativeInterruptPhases=0;nativeInterruptInitial=activeNativeInterrupts();nativeInterruptKinds.fill(0);nativeTpuComponents=nativeAdcComponents=nativeSerialReceiveComponents=0;
+    void resetMetrics(){panelScanForeground.resetMetrics();stateResetForeground.resetMetrics();serialForeground.resetMetrics();steps=interruptEntries=0;nativeInterruptStarts=nativeInterruptReturns=nativeInterruptPhases=0;nativeInterruptInitial=activeNativeInterrupts();nativeInterruptKinds.fill(0);nativeTpuComponents=nativeAdcComponents=nativeSerialReceiveComponents=0;
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
         std::fill(boundaryProfile.begin(),boundaryProfile.end(),0);
 #endif
@@ -37,9 +38,10 @@ public:
     uint64_t nativeInterruptStarts=0,nativeInterruptReturns=0,nativeInterruptPhases=0,nativeInterruptInitial=0;
     std::array<uint64_t,6> nativeInterruptKinds{};
     uint32_t nativeTpuComponents=0,nativeAdcComponents=0,nativeSerialReceiveComponents=0;
+    PanelScanForeground panelScanForeground;
     StateResetForeground stateResetForeground;
     SerialForeground serialForeground;
-    bool activeNativeWork() const {return activeNativeInterrupts()||serialForeground.active()||stateResetForeground.active();}
+    bool activeNativeWork() const {return activeNativeInterrupts()||serialForeground.active()||stateResetForeground.active()||panelScanForeground.active();}
     unsigned activeNativeInterrupts() const { return interruptScheduler.depth(); }
     // Const diagnostic of the current typed continuation, separate from the
     // cumulative component-coverage mask and any saved compatibility CPU PC.
