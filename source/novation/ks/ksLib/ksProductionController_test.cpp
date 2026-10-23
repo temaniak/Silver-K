@@ -10,6 +10,8 @@
 #include "ksDspBootSetupCalls.h"
 #include "ksDspTransport.h"
 #include "ksFlashPageCalls.h"
+#include "ksTimerServiceCalls.h"
+#include "ksStateChannelCalls.h"
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -84,6 +86,12 @@ int main(){try{
     ks::FlashPageCalls flash;
     for(unsigned entry:{0x11b2u,0x1276u}){state->pc=entry;
         if(flash.step(*state)||flash.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial Flash page recovery");}
+    ks::TimerServiceCalls timers;
+    for(unsigned entry:{0x12ccu,0x1300u,0x27c6u}){state->pc=entry;
+        if(timers.step(*state)||timers.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial timer recovery");}
+    ks::StateChannelCalls channels;
+    for(unsigned entry:{0x43b0u,0x43c8u,0x43f8u}){state->pc=entry;
+        if(channels.step(*state)||channels.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial state channel recovery");}
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

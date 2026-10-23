@@ -50,6 +50,8 @@
 #include "ksExceptionReturnCalls.h"
 #include "ksStateFlashCommitCalls.h"
 #include "ksFlashPageCalls.h"
+#include "ksTimerServiceCalls.h"
+#include "ksStateChannelCalls.h"
 #include "ksStateStoreServicesCalls.h"
 #include "ksStatePresetFormatCalls.h"
 #include "ksStatePresetSaveCalls.h"
@@ -170,6 +172,8 @@ public:
     ExceptionReturnCalls exceptionReturnCalls;
     StateFlashCommitCalls stateFlashCommitCalls;
     FlashPageCalls flashPageCalls;
+    TimerServiceCalls timerServiceCalls;
+    StateChannelCalls stateChannelCalls;
     StateStoreServicesCalls stateStoreServicesCalls;
     StatePresetFormatCalls statePresetFormatCalls;
     StatePresetSaveCalls statePresetSaveCalls;
@@ -272,6 +276,8 @@ public:
         exceptionReturnCalls.resetMetrics();
         stateFlashCommitCalls.resetMetrics();
         flashPageCalls.resetMetrics();
+        timerServiceCalls.resetMetrics();
+        stateChannelCalls.resetMetrics();
         stateStoreServicesCalls.resetMetrics();
         statePresetFormatCalls.resetMetrics();
         statePresetSaveCalls.resetMetrics();
