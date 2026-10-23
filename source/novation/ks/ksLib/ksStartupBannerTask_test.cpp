@@ -1,0 +1,7 @@
+#include "ksStartupBannerTask.h"
+#include <iostream>
+#include <stdexcept>
+#include <vector>
+using T=ks::StartupBannerTask;using S=T::Stage;
+void check(bool v){if(!v)throw std::runtime_error("Startup banner property differs");}
+int main(){try{uint64_t cases=0,intervals=0;for(unsigned hardware:{0u,1u})for(unsigned keys:{0u,64u,255u}){T t(T::Kind::Banner);unsigned reads=0,debounce=0,startup=0,notices=0;std::vector<unsigned> values;auto read=[&](T::Read f)->uint8_t{++reads;return f==T::Read::Hardware?hardware:keys;};auto write=[&](T::Write,uint8_t value){values.push_back(value);};while(!t.complete()){auto stage=t.stage();auto cost=t.nextClocks(),n=reads+unsigned(values.size());check(cost&&!t.advanceBefore(cost-1,read,write)&&stage==t.stage()&&n==reads+values.size());check(t.advanceBefore(cost,read,write)==cost);++intervals;if(stage==S::DecrementDebounceInner)++debounce;if(stage==S::DecrementStartupInner)++startup;if(t.awaitingChild()){if(stage==S::InitializeBannerNotice)++notices;check(t.resumeChild());}}check(reads==2&&debounce==2663&&startup==500*2663&&notices==unsigned(!(keys&64))&&values==std::vector<unsigned>({0,37,48,255}));++cases;}std::cout<<"PASS: "<<cases<<" startup banner policies / "<<intervals<<" intervals; both hardware/key routes, full nested wait counts and deferred publication deadlines\n";return 0;}catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}}

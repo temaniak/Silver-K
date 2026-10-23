@@ -53,6 +53,15 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksStateEditWorkflowCalls.h"
+#include "ksStateFunctionKeysCalls.h"
+#include "ksStatePanelModesCalls.h"
+#include "ksStateScreenActionsCalls.h"
+#include "ksStartupBannerCalls.h"
+#include "ksMemoryDiagnosticsCalls.h"
+#include "ksDiagnosticTransferCalls.h"
+#include "ksDiagnosticCodecCalls.h"
+#include "ksKeyboardScanCalls.h"
 #include "ksStateMenuActionsCalls.h"
 #include "ksStatePartSelectionCalls.h"
 #include "ksKeyboardEventsCalls.h"
@@ -204,6 +213,15 @@ public:
     TimerServiceCalls timerServiceCalls;
     StateChannelCalls stateChannelCalls;
     PanelInputCalls panelInputCalls;
+    StateEditWorkflowCalls stateEditWorkflowCalls;
+    StateFunctionKeysCalls stateFunctionKeysCalls;
+    StatePanelModesCalls statePanelModesCalls;
+    StateScreenActionsCalls stateScreenActionsCalls;
+    StartupBannerCalls startupBannerCalls;
+    MemoryDiagnosticsCalls memoryDiagnosticsCalls;
+    DiagnosticTransferCalls diagnosticTransferCalls;
+    DiagnosticCodecCalls diagnosticCodecCalls;
+    KeyboardScanCalls keyboardScanCalls;
     StateMenuActionsCalls stateMenuActionsCalls;
     StatePartSelectionCalls statePartSelectionCalls;
     KeyboardEventsCalls keyboardEventsCalls;
@@ -337,6 +355,15 @@ public:
         timerServiceCalls.resetMetrics();
         stateChannelCalls.resetMetrics();
         panelInputCalls.resetMetrics();
+        stateEditWorkflowCalls.resetMetrics();
+        stateFunctionKeysCalls.resetMetrics();
+        statePanelModesCalls.resetMetrics();
+        stateScreenActionsCalls.resetMetrics();
+        startupBannerCalls.resetMetrics();
+        memoryDiagnosticsCalls.resetMetrics();
+        diagnosticTransferCalls.resetMetrics();
+        diagnosticCodecCalls.resetMetrics();
+        keyboardScanCalls.resetMetrics();
         stateMenuActionsCalls.resetMetrics();
         statePartSelectionCalls.resetMetrics();
         keyboardEventsCalls.resetMetrics();

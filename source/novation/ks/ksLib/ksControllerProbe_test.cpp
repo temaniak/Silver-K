@@ -48,7 +48,7 @@ struct Stats {
 };
 }
 int main(int argc,char** argv){try{
-    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal|controls|state|clock|steal|fx|panel-store-single|panel-store-multi|panel-io-single|panel-io-multi|panel-screen-single|panel-screen-multi|panel-edit-single|panel-edit-multi|panel-parts-single|panel-parts-multi, trace path, optional seconds (up to 30) required\n";return 77;}
+    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal|controls|state|clock|steal|fx|panel-store-single|panel-store-multi|panel-io-single|panel-io-multi|panel-screen-single|panel-screen-multi|panel-edit-single|panel-edit-multi|panel-parts-single|panel-parts-multi|panel-actions-single|panel-actions-multi|panel-functions-single|panel-functions-multi|panel-keyboard-single|panel-keyboard-multi, trace path, optional seconds (up to 30) required\n";return 77;}
     const double duration=argc==9?std::stod(argv[8]):2.;
     check(std::isfinite(duration)&&duration>=2.&&duration<=30.,"Controller probe duration must be 2..30 seconds");
     const std::string mode=argv[5],scenario=argv[6];
@@ -57,14 +57,17 @@ int main(int argc,char** argv){try{
     const bool recording=mode=="native-record" || mode=="native-toggle-record" || mode=="record" || mode=="live-record" || mode=="live-toggle-record";
     const bool toggling=mode=="native-toggle" || mode=="native-toggle-record" || mode=="live-toggle" || mode=="live-toggle-record";
     check(mode=="h8" || mode=="record" || mode=="replay" || mode=="boot" || liveMode,"Unknown controller probe mode");
+    const bool panelActions=scenario=="panel-actions-single"||scenario=="panel-actions-multi";
+    const bool panelFunctions=scenario=="panel-functions-single"||scenario=="panel-functions-multi";
+    const bool panelKeyboard=scenario=="panel-keyboard-single"||scenario=="panel-keyboard-multi";
     const bool panelParts=scenario=="panel-parts-single" || scenario=="panel-parts-multi";
     const bool panelEdit=scenario=="panel-edit-single" || scenario=="panel-edit-multi";
-    const bool panelScreen=panelParts || panelEdit || scenario=="panel-screen-single" || scenario=="panel-screen-multi";
+    const bool panelScreen=panelActions || panelFunctions || panelKeyboard || panelParts || panelEdit || scenario=="panel-screen-single" || scenario=="panel-screen-multi";
     const bool panelIo=panelScreen || scenario=="panel-io-single" || scenario=="panel-io-multi";
     if(panelIo)check(duration>=4.,"Physical panel scenario requires at least four seconds");
     const bool panelStore=panelIo || scenario=="panel-store-single" || scenario=="panel-store-multi";
     check(scenario=="single" || scenario=="multi" || scenario=="midi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || panelStore,"Unknown controller probe scenario");
-    const bool multi=scenario=="panel-parts-multi" || scenario=="panel-edit-multi" || scenario=="panel-screen-multi" || scenario=="panel-io-multi" || scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || scenario=="panel-store-multi";
+    const bool multi=scenario=="panel-actions-multi"||scenario=="panel-functions-multi"||scenario=="panel-keyboard-multi"||scenario=="panel-parts-multi" || scenario=="panel-edit-multi" || scenario=="panel-screen-multi" || scenario=="panel-io-multi" || scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || scenario=="panel-store-multi";
     const auto* threads=std::getenv("SILVER_KS_DSP_THREADS");const bool parallel=threads&&std::string(threads)=="2";
     const auto setup=Clock::now();ks::Rom os(argv[1]);check(os.isValid(),"Invalid KS OS");
     std::unique_ptr<ks::test::PanelIoFixture> ioFixture;
@@ -99,6 +102,15 @@ int main(int argc,char** argv){try{
     if(nativeMode)check(!bootLive->keyboardEventsCalls.partialEntries,"Native startup used partial KeyboardEvents recovery before metric reset");
     if(nativeMode)check(!bootLive->statePartSelectionCalls.partialEntries,"Native startup used partial StatePartSelection recovery before metric reset");
     if(nativeMode)check(!bootLive->stateMenuActionsCalls.partialEntries,"Native startup used partial StateMenuActions recovery before metric reset");
+    if(nativeMode)check(!bootLive->keyboardScanCalls.partialEntries,"Native startup used partial KeyboardScan recovery before metric reset");
+    if(nativeMode)check(!bootLive->diagnosticCodecCalls.partialEntries,"Native startup used partial DiagnosticCodec recovery before metric reset");
+    if(nativeMode)check(!bootLive->diagnosticTransferCalls.partialEntries,"Native startup used partial DiagnosticTransfer recovery before metric reset");
+    if(nativeMode)check(!bootLive->memoryDiagnosticsCalls.partialEntries,"Native startup used partial MemoryDiagnostics recovery before metric reset");
+    if(nativeMode)check(!bootLive->startupBannerCalls.partialEntries,"Native startup used partial StartupBanner recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateScreenActionsCalls.partialEntries,"Native startup used partial StateScreenActions recovery before metric reset");
+    if(nativeMode)check(!bootLive->statePanelModesCalls.partialEntries,"Native startup used partial StatePanelModes recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateFunctionKeysCalls.partialEntries,"Native startup used partial StateFunctionKeys recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateEditWorkflowCalls.partialEntries,"Native startup used partial StateEditWorkflow recovery before metric reset");
     if(nativeMode)check(!bootLive->panelAdcScaleCalls.partialEntries&&!bootLive->panelAdcCalibrationCalls.partialEntries&&!bootLive->panelAdcIrqCalls.partialEntries&&!bootLive->panelAdcScanCalls.partialEntries,"Native startup used partial ADC recovery before metric reset");
     if(nativeMode)board->enableNativeController();
     auto send=[&](const std::vector<uint8_t>& m){check(board->enqueueMidi(m.data(),m.size()),"MIDI rejected");};
@@ -263,7 +275,11 @@ int main(int argc,char** argv){try{
                             const uint32_t target=(uint32_t(memory[at])<<24)|(uint32_t(memory[at+1])<<16)|(uint32_t(memory[at+2])<<8)|memory[at+3];if(action==1&&(target&0xffffff)==handler){logical=key;++found;}}
                         check(found==1,"Screen action descriptor ambiguous");unsigned physical=0;found=0;
                         for(unsigned key=0;key<48;++key)if(memory[0xb8e8+key]==logical){physical=key;++found;}check(found==1,"Screen physical key ambiguous");return physical;};
-                    if(panelParts){
+                    auto physicalLogical=[&](unsigned logical){unsigned physical=0,found=0;for(unsigned key=0;key<48;++key)if(memory[0xb8e8+key]==logical){physical=key;++found;}check(found==1,"Logical physical key ambiguous");return physical;};
+                    if(panelActions)ioFixture->configureSequence({physicalForHandler(0x4a76),physicalForHandler(0x4ab8),physicalForHandler(0x4b08),physicalForHandler(0x4b50),physicalForHandler(0x4a32),physicalForHandler(0x4a4c),physicalForHandler(0x4a66),physicalForHandler(0x496c),physicalForHandler(0x4974)},true);
+                    else if(panelFunctions)ioFixture->configureSequence({physicalForHandler(0x49b0),physicalLogical(0x61),physicalLogical(0x62),physicalLogical(0x63),physicalLogical(0x64),physicalLogical(0x65),physicalLogical(0x69),physicalLogical(0x60),physicalForHandler(0x49b0)},true);
+                    else if(panelKeyboard){const auto key=physicalLogical(0x21);ioFixture->configureSequence({key,key,key,key,key,key,key,key,key});ioFixture->configureKeyboard();}
+                    else if(panelParts){
                         auto physicalPart=[&](unsigned logical){unsigned physical=0,found=0;for(unsigned key=0;key<48;++key)if(memory[0xb8e8+key]==logical){physical=key;++found;}check(found==1,"Part physical key ambiguous");return physical;};
                         ioFixture->configureScreens(physicalPart(0x21),physicalPart(0x22),physicalPart(0x41));
                     }else ioFixture->configureScreens(physicalForHandler(0x49b0),physicalForHandler(0x46ec),physicalForHandler(0x46ac),panelEdit);
@@ -370,6 +386,7 @@ int main(int argc,char** argv){try{
     }
     if(panelStore&&!panelScreen){if(!panelIo)check(panelEvents==(multi?6u:8u),"Missing panel store events");check(board->flashRevision>0,"Panel store did not write Flash");check(board->read(0x16790)==0,"Store page did not return to playback");}
     if(scenario=="state")check(board->flashRevision>0,"State scenario did not complete a Flash page write");
+    if(panelKeyboard)check(ioFixture->keyboardReads>0&&ioFixture->keyboardTransitions==12,"Keyboard contact source not observed");
     if(panelParts&&nativeMode)check(board->liveMidiController()->statePartSelectionCalls.started>0,"Part handlers were not observed");
     if(panelEdit)check(ioFixture->encoderTransitions>0,"Active screen edit did not move encoder");
     if(panelIo){check(ioFixture->matrixReads&&ioFixture->pedalReads&&ioFixture->encoderReads&&ioFixture->adcReads,"Physical input source not observed");check(ioFixture->buttonTransitions==(panelScreen?18u:(multi?6u:8u)),"Missing physical button transitions");check(ioFixture->pedalTransitions==4&&(panelScreen||(ioFixture->encoderTransitions&&ioFixture->adcTransitions)),"Missing physical pedal/encoder/ADC transitions");}
@@ -1052,6 +1069,53 @@ int main(int argc,char** argv){try{
         <<",\"native_state_menu_actions_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateMenuActionsCalls.initialActive:0)
         <<",\"native_state_menu_actions_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateMenuActionsCalls.activeCalls():0)
         <<",\"native_state_menu_actions_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateMenuActionsCalls.partialEntries:0)
+        <<",\"keyboard_io_reads\":"<<(ioFixture?ioFixture->keyboardReads:0)
+        <<",\"keyboard_io_transitions\":"<<(ioFixture?ioFixture->keyboardTransitions:0)
+        <<",\"native_keyboard_scan_calls\":"<<(board->liveMidiController()?board->liveMidiController()->keyboardScanCalls.started:0)
+        <<",\"native_keyboard_scan_returns\":"<<(board->liveMidiController()?board->liveMidiController()->keyboardScanCalls.completed:0)
+        <<",\"native_keyboard_scan_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->keyboardScanCalls.initialActive:0)
+        <<",\"native_keyboard_scan_active\":"<<(board->liveMidiController()?board->liveMidiController()->keyboardScanCalls.activeCalls():0)
+        <<",\"native_keyboard_scan_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->keyboardScanCalls.partialEntries:0)
+        <<",\"native_diagnostic_codec_calls\":"<<(board->liveMidiController()?board->liveMidiController()->diagnosticCodecCalls.started:0)
+        <<",\"native_diagnostic_codec_returns\":"<<(board->liveMidiController()?board->liveMidiController()->diagnosticCodecCalls.completed:0)
+        <<",\"native_diagnostic_codec_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->diagnosticCodecCalls.initialActive:0)
+        <<",\"native_diagnostic_codec_active\":"<<(board->liveMidiController()?board->liveMidiController()->diagnosticCodecCalls.activeCalls():0)
+        <<",\"native_diagnostic_codec_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->diagnosticCodecCalls.partialEntries:0)
+        <<",\"native_diagnostic_transfer_calls\":"<<(board->liveMidiController()?board->liveMidiController()->diagnosticTransferCalls.started:0)
+        <<",\"native_diagnostic_transfer_returns\":"<<(board->liveMidiController()?board->liveMidiController()->diagnosticTransferCalls.completed:0)
+        <<",\"native_diagnostic_transfer_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->diagnosticTransferCalls.initialActive:0)
+        <<",\"native_diagnostic_transfer_active\":"<<(board->liveMidiController()?board->liveMidiController()->diagnosticTransferCalls.activeCalls():0)
+        <<",\"native_diagnostic_transfer_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->diagnosticTransferCalls.partialEntries:0)
+        <<",\"native_memory_diagnostics_calls\":"<<(board->liveMidiController()?board->liveMidiController()->memoryDiagnosticsCalls.started:0)
+        <<",\"native_memory_diagnostics_returns\":"<<(board->liveMidiController()?board->liveMidiController()->memoryDiagnosticsCalls.completed:0)
+        <<",\"native_memory_diagnostics_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->memoryDiagnosticsCalls.initialActive:0)
+        <<",\"native_memory_diagnostics_active\":"<<(board->liveMidiController()?board->liveMidiController()->memoryDiagnosticsCalls.activeCalls():0)
+        <<",\"native_memory_diagnostics_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->memoryDiagnosticsCalls.partialEntries:0)
+        <<",\"native_startup_banner_calls\":"<<(board->liveMidiController()?board->liveMidiController()->startupBannerCalls.started:0)
+        <<",\"native_startup_banner_returns\":"<<(board->liveMidiController()?board->liveMidiController()->startupBannerCalls.completed:0)
+        <<",\"native_startup_banner_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->startupBannerCalls.initialActive:0)
+        <<",\"native_startup_banner_active\":"<<(board->liveMidiController()?board->liveMidiController()->startupBannerCalls.activeCalls():0)
+        <<",\"native_startup_banner_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->startupBannerCalls.partialEntries:0)
+        <<",\"native_state_screen_actions_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateScreenActionsCalls.started:0)
+        <<",\"native_state_screen_actions_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateScreenActionsCalls.completed:0)
+        <<",\"native_state_screen_actions_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateScreenActionsCalls.initialActive:0)
+        <<",\"native_state_screen_actions_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateScreenActionsCalls.activeCalls():0)
+        <<",\"native_state_screen_actions_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateScreenActionsCalls.partialEntries:0)
+        <<",\"native_state_panel_modes_calls\":"<<(board->liveMidiController()?board->liveMidiController()->statePanelModesCalls.started:0)
+        <<",\"native_state_panel_modes_returns\":"<<(board->liveMidiController()?board->liveMidiController()->statePanelModesCalls.completed:0)
+        <<",\"native_state_panel_modes_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->statePanelModesCalls.initialActive:0)
+        <<",\"native_state_panel_modes_active\":"<<(board->liveMidiController()?board->liveMidiController()->statePanelModesCalls.activeCalls():0)
+        <<",\"native_state_panel_modes_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->statePanelModesCalls.partialEntries:0)
+        <<",\"native_state_function_keys_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateFunctionKeysCalls.started:0)
+        <<",\"native_state_function_keys_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateFunctionKeysCalls.completed:0)
+        <<",\"native_state_function_keys_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateFunctionKeysCalls.initialActive:0)
+        <<",\"native_state_function_keys_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateFunctionKeysCalls.activeCalls():0)
+        <<",\"native_state_function_keys_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateFunctionKeysCalls.partialEntries:0)
+        <<",\"native_state_edit_workflow_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateEditWorkflowCalls.started:0)
+        <<",\"native_state_edit_workflow_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateEditWorkflowCalls.completed:0)
+        <<",\"native_state_edit_workflow_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateEditWorkflowCalls.initialActive:0)
+        <<",\"native_state_edit_workflow_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateEditWorkflowCalls.activeCalls():0)
+        <<",\"native_state_edit_workflow_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateEditWorkflowCalls.partialEntries:0)
         <<",\"native_panel_input_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.started:0)
         <<",\"native_panel_input_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.completed:0)
         <<",\"native_panel_input_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.initialActive:0)

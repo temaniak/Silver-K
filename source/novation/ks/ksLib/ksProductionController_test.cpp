@@ -13,6 +13,15 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksStateEditWorkflowCalls.h"
+#include "ksStateFunctionKeysCalls.h"
+#include "ksStatePanelModesCalls.h"
+#include "ksStateScreenActionsCalls.h"
+#include "ksStartupBannerCalls.h"
+#include "ksMemoryDiagnosticsCalls.h"
+#include "ksDiagnosticTransferCalls.h"
+#include "ksDiagnosticCodecCalls.h"
+#include "ksKeyboardScanCalls.h"
 #include "ksStateMenuActionsCalls.h"
 #include "ksStatePartSelectionCalls.h"
 #include "ksKeyboardEventsCalls.h"
@@ -208,6 +217,33 @@ int main(){try{
     ks::StateMenuActionsCalls stateMenuActionsCalls;
     for(unsigned entry:{0x452cu,0x469au}){state->pc=entry;
         if(stateMenuActionsCalls.step(*state)||stateMenuActionsCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateMenuActions recovery");}
+    ks::KeyboardScanCalls keyboardScanCalls;
+    for(unsigned entry:{0x1b82u}){state->pc=entry;
+        if(keyboardScanCalls.step(*state)||keyboardScanCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial KeyboardScan recovery");}
+    ks::DiagnosticCodecCalls diagnosticCodecCalls;
+    for(unsigned entry:{0x1a2eu}){state->pc=entry;
+        if(diagnosticCodecCalls.step(*state)||diagnosticCodecCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial DiagnosticCodec recovery");}
+    ks::DiagnosticTransferCalls diagnosticTransferCalls;
+    for(unsigned entry:{0x18feu}){state->pc=entry;
+        if(diagnosticTransferCalls.step(*state)||diagnosticTransferCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial DiagnosticTransfer recovery");}
+    ks::MemoryDiagnosticsCalls memoryDiagnosticsCalls;
+    for(unsigned entry:{0x1ad4u}){state->pc=entry;
+        if(memoryDiagnosticsCalls.step(*state)||memoryDiagnosticsCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial MemoryDiagnostics recovery");}
+    ks::StartupBannerCalls startupBannerCalls;
+    for(unsigned entry:{0xb72u}){state->pc=entry;
+        if(startupBannerCalls.step(*state)||startupBannerCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StartupBanner recovery");}
+    ks::StateScreenActionsCalls stateScreenActionsCalls;
+    for(unsigned entry:{0x486cu}){state->pc=entry;
+        if(stateScreenActionsCalls.step(*state)||stateScreenActionsCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateScreenActions recovery");}
+    ks::StatePanelModesCalls statePanelModesCalls;
+    for(unsigned entry:{0x4a68u}){state->pc=entry;
+        if(statePanelModesCalls.step(*state)||statePanelModesCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StatePanelModes recovery");}
+    ks::StateFunctionKeysCalls stateFunctionKeysCalls;
+    for(unsigned entry:{0x4c5au}){state->pc=entry;
+        if(stateFunctionKeysCalls.step(*state)||stateFunctionKeysCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateFunctionKeys recovery");}
+    ks::StateEditWorkflowCalls stateEditWorkflowCalls;
+    for(unsigned entry:{0x4d32u}){state->pc=entry;
+        if(stateEditWorkflowCalls.step(*state)||stateEditWorkflowCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateEditWorkflow recovery");}
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

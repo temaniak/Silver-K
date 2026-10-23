@@ -64,6 +64,15 @@ void same(ks::Board& a,ks::Board& b){
     check(!b.liveMidiController()->keyboardEventsCalls.partialEntries,"Native reset used partial KeyboardEvents recovery");
     check(!b.liveMidiController()->statePartSelectionCalls.partialEntries,"Native reset used partial StatePartSelection recovery");
     check(!b.liveMidiController()->stateMenuActionsCalls.partialEntries,"Native reset used partial StateMenuActions recovery");
+    check(!b.liveMidiController()->keyboardScanCalls.partialEntries,"Native reset used partial KeyboardScan recovery");
+    check(!b.liveMidiController()->diagnosticCodecCalls.partialEntries,"Native reset used partial DiagnosticCodec recovery");
+    check(!b.liveMidiController()->diagnosticTransferCalls.partialEntries,"Native reset used partial DiagnosticTransfer recovery");
+    check(!b.liveMidiController()->memoryDiagnosticsCalls.partialEntries,"Native reset used partial MemoryDiagnostics recovery");
+    check(!b.liveMidiController()->startupBannerCalls.partialEntries,"Native reset used partial StartupBanner recovery");
+    check(!b.liveMidiController()->stateScreenActionsCalls.partialEntries,"Native reset used partial StateScreenActions recovery");
+    check(!b.liveMidiController()->statePanelModesCalls.partialEntries,"Native reset used partial StatePanelModes recovery");
+    check(!b.liveMidiController()->stateFunctionKeysCalls.partialEntries,"Native reset used partial StateFunctionKeys recovery");
+    check(!b.liveMidiController()->stateEditWorkflowCalls.partialEntries,"Native reset used partial StateEditWorkflow recovery");
     for(unsigned n=0xfffe00;n<=0xffffff;++n)check(a.read(n)==b.read(n),"Reset IO mismatch");
     check(a.waveReads==b.waveReads && a.hostWrites[0]==b.hostWrites[0] && a.hostWrites[1]==b.hostWrites[1],"Reset hardware counters mismatch");
 }

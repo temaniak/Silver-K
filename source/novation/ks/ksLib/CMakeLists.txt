@@ -428,3 +428,21 @@ target_sources(ksLib PRIVATE ksKeyboardEventsCalls.cpp ksKeyboardEventsCalls.h k
 target_sources(ksLib PRIVATE ksStatePartSelectionCalls.cpp ksStatePartSelectionCalls.h ksStatePartSelectionTask.h)
 
 target_sources(ksLib PRIVATE ksStateMenuActionsCalls.cpp ksStateMenuActionsCalls.h ksStateMenuActionsTask.h)
+
+target_sources(ksLib PRIVATE ksKeyboardScanCalls.cpp ksKeyboardScanCalls.h ksKeyboardScanTask.h)
+
+target_sources(ksLib PRIVATE ksDiagnosticCodecCalls.cpp ksDiagnosticCodecCalls.h ksDiagnosticCodecTask.h)
+
+target_sources(ksLib PRIVATE ksDiagnosticTransferCalls.cpp ksDiagnosticTransferCalls.h ksDiagnosticTransferTask.h)
+
+target_sources(ksLib PRIVATE ksMemoryDiagnosticsCalls.cpp ksMemoryDiagnosticsCalls.h ksMemoryDiagnosticsTask.h)
+
+target_sources(ksLib PRIVATE ksStartupBannerCalls.cpp ksStartupBannerCalls.h ksStartupBannerTask.h)
+
+target_sources(ksLib PRIVATE ksStateScreenActionsCalls.cpp ksStateScreenActionsCalls.h ksStateScreenActionsTask.h)
+
+target_sources(ksLib PRIVATE ksStatePanelModesCalls.cpp ksStatePanelModesCalls.h ksStatePanelModesTask.h)
+
+target_sources(ksLib PRIVATE ksStateFunctionKeysCalls.cpp ksStateFunctionKeysCalls.h ksStateFunctionKeysTask.h)
+
+target_sources(ksLib PRIVATE ksStateEditWorkflowCalls.cpp ksStateEditWorkflowCalls.h ksStateEditWorkflowTask.h)
