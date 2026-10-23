@@ -13,6 +13,11 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksStateButtonDispatchCalls.h"
+#include "ksStateForegroundCalls.h"
+#include "ksInternalMidiServiceCalls.h"
+#include "ksMidiOutputCalls.h"
+#include "ksInternalMidiQueueCalls.h"
 #include "ksPanelAdcScanCalls.h"
 #include "ksPanelAdcIrqCalls.h"
 #include "ksPanelAdcCalibrationCalls.h"
@@ -136,6 +141,21 @@ int main(){try{
     ks::PanelAdcScanCalls panelAdcScanCalls;
     for(unsigned entry:{0x1530u,0x1570u,0x1626u,0x164cu}){state->pc=entry;
         if(panelAdcScanCalls.step(*state)||panelAdcScanCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial PanelAdcScan recovery");}
+    ks::InternalMidiQueueCalls internalMidiQueueCalls;
+    for(unsigned entry:{0x2c32u}){state->pc=entry;
+        if(internalMidiQueueCalls.step(*state)||internalMidiQueueCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial InternalMidiQueue recovery");}
+    ks::MidiOutputCalls midiOutputCalls;
+    for(unsigned entry:{0x2a5cu}){state->pc=entry;
+        if(midiOutputCalls.step(*state)||midiOutputCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial MidiOutput recovery");}
+    ks::InternalMidiServiceCalls internalMidiServiceCalls;
+    for(unsigned entry:{0x2a1cu,0x2cceu}){state->pc=entry;
+        if(internalMidiServiceCalls.step(*state)||internalMidiServiceCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial InternalMidiService recovery");}
+    ks::StateForegroundCalls stateForegroundCalls;
+    for(unsigned entry:{0x437cu,0x440au}){state->pc=entry;
+        if(stateForegroundCalls.step(*state)||stateForegroundCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateForeground recovery");}
+    ks::StateButtonDispatchCalls stateButtonDispatchCalls;
+    for(unsigned entry:{0x44d0u}){state->pc=entry;
+        if(stateButtonDispatchCalls.step(*state)||stateButtonDispatchCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateButtonDispatch recovery");}
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

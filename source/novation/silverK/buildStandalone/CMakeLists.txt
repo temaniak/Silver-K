@@ -445,3 +445,13 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelAdcCalibra
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelAdcIrqCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelAdcScanCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksInternalMidiQueueCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksMidiOutputCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksInternalMidiServiceCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateForegroundCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateButtonDispatchCalls.cpp")

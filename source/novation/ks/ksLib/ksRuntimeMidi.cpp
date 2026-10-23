@@ -6,6 +6,7 @@ namespace ks {
 // Fixed native control flow for the verified KS revision. Private ROM data
 // remains external; instruction fetch reads account for original bus clocks.
 bool RuntimeController::midi(ControllerCpu& h){
+    if(InternalMidiServiceCalls::candidate(unsigned(h.getPC()))&&shared.internalMidiServiceCalls.step(h))return true;
     if(MidiDecodeCalls::candidate(unsigned(h.getPC()))&&shared.midiDecodeCalls.step(h))return true;
     if(MidiControlCalls::candidate(unsigned(h.getPC()))&&shared.midiControlCalls.step(h))return true;
     if(MidiAuxCalls::candidate(unsigned(h.getPC()))&&shared.midiAuxCalls.step(h))return true;

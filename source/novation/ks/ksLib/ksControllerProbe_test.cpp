@@ -78,6 +78,11 @@ int main(int argc,char** argv){try{
     if(nativeMode)check(startupStarts==1 && startupReturns==1 && resetReturns==1 && !bootLive->startupCalls.partialEntries && !bootLive->voiceActions.selectCalls.partialEntries,"Native start used incomplete reset/startup or partial recovery");
     if(nativeMode)check(bootSetupStarts==2 && bootSetupReturns==2 && !bootSetupPartial,"Native startup did not complete both DSP setup jobs without recovery");
     if(nativeMode)check(bootStreamStarts==2 && bootStreamReturns==2 && !bootStreamPartial,"Native startup did not complete both DSP firmware streams without recovery");
+    if(nativeMode)check(!bootLive->internalMidiQueueCalls.partialEntries,"Native startup used partial InternalMidiQueue recovery before metric reset");
+    if(nativeMode)check(!bootLive->midiOutputCalls.partialEntries,"Native startup used partial MidiOutput recovery before metric reset");
+    if(nativeMode)check(!bootLive->internalMidiServiceCalls.partialEntries,"Native startup used partial InternalMidiService recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateForegroundCalls.partialEntries,"Native startup used partial StateForeground recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateButtonDispatchCalls.partialEntries,"Native startup used partial StateButtonDispatch recovery before metric reset");
     if(nativeMode)check(!bootLive->panelAdcScaleCalls.partialEntries&&!bootLive->panelAdcCalibrationCalls.partialEntries&&!bootLive->panelAdcIrqCalls.partialEntries&&!bootLive->panelAdcScanCalls.partialEntries,"Native startup used partial ADC recovery before metric reset");
     if(nativeMode)board->enableNativeController();
     auto send=[&](const std::vector<uint8_t>& m){check(board->enqueueMidi(m.data(),m.size()),"MIDI rejected");};
@@ -928,6 +933,31 @@ int main(int argc,char** argv){try{
         <<",\"native_panel_adc_scan_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcScanCalls.initialActive:0)
         <<",\"native_panel_adc_scan_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcScanCalls.activeCalls():0)
         <<",\"native_panel_adc_scan_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->panelAdcScanCalls.partialEntries:0)
+        <<",\"native_internal_midi_queue_calls\":"<<(board->liveMidiController()?board->liveMidiController()->internalMidiQueueCalls.started:0)
+        <<",\"native_internal_midi_queue_returns\":"<<(board->liveMidiController()?board->liveMidiController()->internalMidiQueueCalls.completed:0)
+        <<",\"native_internal_midi_queue_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->internalMidiQueueCalls.initialActive:0)
+        <<",\"native_internal_midi_queue_active\":"<<(board->liveMidiController()?board->liveMidiController()->internalMidiQueueCalls.activeCalls():0)
+        <<",\"native_internal_midi_queue_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->internalMidiQueueCalls.partialEntries:0)
+        <<",\"native_midi_output_calls\":"<<(board->liveMidiController()?board->liveMidiController()->midiOutputCalls.started:0)
+        <<",\"native_midi_output_returns\":"<<(board->liveMidiController()?board->liveMidiController()->midiOutputCalls.completed:0)
+        <<",\"native_midi_output_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->midiOutputCalls.initialActive:0)
+        <<",\"native_midi_output_active\":"<<(board->liveMidiController()?board->liveMidiController()->midiOutputCalls.activeCalls():0)
+        <<",\"native_midi_output_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->midiOutputCalls.partialEntries:0)
+        <<",\"native_internal_midi_service_calls\":"<<(board->liveMidiController()?board->liveMidiController()->internalMidiServiceCalls.started:0)
+        <<",\"native_internal_midi_service_returns\":"<<(board->liveMidiController()?board->liveMidiController()->internalMidiServiceCalls.completed:0)
+        <<",\"native_internal_midi_service_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->internalMidiServiceCalls.initialActive:0)
+        <<",\"native_internal_midi_service_active\":"<<(board->liveMidiController()?board->liveMidiController()->internalMidiServiceCalls.activeCalls():0)
+        <<",\"native_internal_midi_service_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->internalMidiServiceCalls.partialEntries:0)
+        <<",\"native_state_foreground_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateForegroundCalls.started:0)
+        <<",\"native_state_foreground_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateForegroundCalls.completed:0)
+        <<",\"native_state_foreground_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateForegroundCalls.initialActive:0)
+        <<",\"native_state_foreground_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateForegroundCalls.activeCalls():0)
+        <<",\"native_state_foreground_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateForegroundCalls.partialEntries:0)
+        <<",\"native_state_button_dispatch_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateButtonDispatchCalls.started:0)
+        <<",\"native_state_button_dispatch_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateButtonDispatchCalls.completed:0)
+        <<",\"native_state_button_dispatch_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateButtonDispatchCalls.initialActive:0)
+        <<",\"native_state_button_dispatch_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateButtonDispatchCalls.activeCalls():0)
+        <<",\"native_state_button_dispatch_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateButtonDispatchCalls.partialEntries:0)
         <<",\"native_panel_input_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.started:0)
         <<",\"native_panel_input_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.completed:0)
         <<",\"native_panel_input_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.initialActive:0)

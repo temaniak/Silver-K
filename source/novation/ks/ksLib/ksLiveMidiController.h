@@ -53,6 +53,11 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksStateButtonDispatchCalls.h"
+#include "ksStateForegroundCalls.h"
+#include "ksInternalMidiServiceCalls.h"
+#include "ksMidiOutputCalls.h"
+#include "ksInternalMidiQueueCalls.h"
 #include "ksPanelAdcScanCalls.h"
 #include "ksPanelAdcIrqCalls.h"
 #include "ksPanelAdcCalibrationCalls.h"
@@ -186,6 +191,11 @@ public:
     TimerServiceCalls timerServiceCalls;
     StateChannelCalls stateChannelCalls;
     PanelInputCalls panelInputCalls;
+    StateButtonDispatchCalls stateButtonDispatchCalls;
+    StateForegroundCalls stateForegroundCalls;
+    InternalMidiServiceCalls internalMidiServiceCalls;
+    MidiOutputCalls midiOutputCalls;
+    InternalMidiQueueCalls internalMidiQueueCalls;
     PanelAdcScanCalls panelAdcScanCalls;
     PanelAdcIrqCalls panelAdcIrqCalls;
     PanelAdcCalibrationCalls panelAdcCalibrationCalls;
@@ -301,6 +311,11 @@ public:
         timerServiceCalls.resetMetrics();
         stateChannelCalls.resetMetrics();
         panelInputCalls.resetMetrics();
+        stateButtonDispatchCalls.resetMetrics();
+        stateForegroundCalls.resetMetrics();
+        internalMidiServiceCalls.resetMetrics();
+        midiOutputCalls.resetMetrics();
+        internalMidiQueueCalls.resetMetrics();
         panelAdcScanCalls.resetMetrics();
         panelAdcIrqCalls.resetMetrics();
         panelAdcCalibrationCalls.resetMetrics();

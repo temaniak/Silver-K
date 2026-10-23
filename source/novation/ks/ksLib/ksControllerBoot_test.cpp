@@ -46,6 +46,11 @@ void same(ks::Board& a,ks::Board& b){
     check(!b.liveMidiController()->panelAdcCalibrationCalls.partialEntries,"Native reset used partial ADC-calibration recovery");
     check(!b.liveMidiController()->panelAdcIrqCalls.partialEntries,"Native reset used partial ADC-IRQ recovery");
     check(!b.liveMidiController()->panelAdcScanCalls.partialEntries,"Native reset used partial ADC-scan recovery");
+    check(!b.liveMidiController()->internalMidiQueueCalls.partialEntries,"Native reset used partial InternalMidiQueue recovery");
+    check(!b.liveMidiController()->midiOutputCalls.partialEntries,"Native reset used partial MidiOutput recovery");
+    check(!b.liveMidiController()->internalMidiServiceCalls.partialEntries,"Native reset used partial InternalMidiService recovery");
+    check(!b.liveMidiController()->stateForegroundCalls.partialEntries,"Native reset used partial StateForeground recovery");
+    check(!b.liveMidiController()->stateButtonDispatchCalls.partialEntries,"Native reset used partial StateButtonDispatch recovery");
     for(unsigned n=0xfffe00;n<=0xffffff;++n)check(a.read(n)==b.read(n),"Reset IO mismatch");
     check(a.waveReads==b.waveReads && a.hostWrites[0]==b.hostWrites[0] && a.hostWrites[1]==b.hostWrites[1],"Reset hardware counters mismatch");
 }

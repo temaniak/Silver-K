@@ -392,3 +392,13 @@ target_sources(ksLib PRIVATE ksPanelAdcCalibrationCalls.cpp ksPanelAdcCalibratio
 target_sources(ksLib PRIVATE ksPanelAdcIrqCalls.cpp ksPanelAdcIrqCalls.h ksPanelAdcIrqTask.h)
 
 target_sources(ksLib PRIVATE ksPanelAdcScanCalls.cpp ksPanelAdcScanCalls.h ksPanelAdcScanTask.h)
+
+target_sources(ksLib PRIVATE ksInternalMidiQueueCalls.cpp ksInternalMidiQueueCalls.h ksInternalMidiQueueTask.h)
+
+target_sources(ksLib PRIVATE ksMidiOutputCalls.cpp ksMidiOutputCalls.h ksMidiOutputTask.h)
+
+target_sources(ksLib PRIVATE ksInternalMidiServiceCalls.cpp ksInternalMidiServiceCalls.h ksInternalMidiServiceTask.h)
+
+target_sources(ksLib PRIVATE ksStateForegroundCalls.cpp ksStateForegroundCalls.h ksStateForegroundTask.h)
+
+target_sources(ksLib PRIVATE ksStateButtonDispatchCalls.cpp ksStateButtonDispatchCalls.h ksStateButtonDispatchTask.h)
