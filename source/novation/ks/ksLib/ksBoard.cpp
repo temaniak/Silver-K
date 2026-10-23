@@ -309,7 +309,7 @@ void Board::nativeStartupBoundary(){
     if(!nativeCodeSealed && overlay){RuntimeController::verifyImage(*h8);nativeCodeSealed=true;}
 }
 void Board::nativeReadyBoundary(){
-    if(nativeRuntime->activeNativeInterrupts())return;
+    if(nativeRuntime->activeNativeWork())return;
     if(h8->getPC()==0x41e2)mainEntered=true;
     if(mainEntered && h8->getPC()==0x4334)ready=true;
 }
@@ -326,9 +326,9 @@ void Board::advance(uint32_t budget){
             nativeQueuedMidi=uint32_t(midiIn.size());
             while(h8->cycles-begin<budget){
                 const auto before=h8->cycles;
-                if(nativeRuntime->activeNativeInterrupts()){
+                if(nativeRuntime->activeNativeWork()){
                     nativeRuntime->step(*h8);tickNative(before);
-                    if(!nativeRuntime->activeNativeInterrupts()){
+                    if(!nativeRuntime->activeNativeWork()){
                         h8->interpreterAllowed=true;h8->nativeFetchClocksOnly=false;h8->nativeLowBase=nullptr;
                     }
                 }else{
@@ -447,13 +447,13 @@ std::shared_ptr<const ControllerTape> Board::finishControllerTrace(){
     auto result=controllerRecorder->finish();controllerRecorder.reset();return result;
 }
 void Board::startRecordedController(std::shared_ptr<const ControllerTape> tape){
-    if(controllerRecorder || recordedController || liveMidiController() || (nativeRuntime&&nativeRuntime->activeNativeInterrupts()) || !ready || !started[0] || !started[1])throw std::logic_error("KS controller replay requires completed original boot");
+    if(controllerRecorder || recordedController || liveMidiController() || (nativeRuntime&&nativeRuntime->activeNativeWork()) || !ready || !started[0] || !started[1])throw std::logic_error("KS controller replay requires completed original boot");
     recordedController=std::make_unique<RecordedController>(std::move(tape),controllerCheckpoint(),h8->cycles);
 }
 void Board::enableLiveMidiController(bool enabled){
     if(!controllerReferenceAvailable())throw std::logic_error("KS hybrid controller is available only in comparison tests");
     if(recordedController || !ready)throw std::logic_error("Live KS MIDI requires completed original boot, without replay");
-    if(nativeRuntime && nativeRuntime->activeNativeInterrupts()){
+    if(nativeRuntime && nativeRuntime->activeNativeWork()){
         referenceTail=true;referenceTailHybrid=enabled;return;
     }
     referenceTail=false;
@@ -466,7 +466,7 @@ void Board::enableNativeController(bool enabled){
     if(!enabled){enableLiveMidiController(false);return;}
     if(recordedController || !ready || !started[0] || !started[1])throw std::logic_error("Native KS runtime requires completed original boot without replay");
     if(nativeRuntime && !referenceTail)return;
-    if(nativeRuntime && nativeRuntime->activeNativeInterrupts()){
+    if(nativeRuntime && nativeRuntime->activeNativeWork()){
         referenceTail=false;return; // Cancel a pending reference selection.
     }
     // Validate/allocate before changing ownership or disabling the interpreter.

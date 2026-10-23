@@ -12,14 +12,14 @@ void check(bool v,const char* why){if(!v)throw std::runtime_error(why);}
 std::vector<uint8_t> bytes(const std::filesystem::path& p){std::ifstream f(p,std::ios::binary);check(bool(f),"Cannot read fixture");return {std::istreambuf_iterator<char>(f),{}};}
 void same(ks::Board& a,ks::Board& b){
     auto& x=static_cast<ks::ControllerCpu&>(a.cpu());auto& y=static_cast<ks::ControllerCpu&>(b.cpu());
-    const bool nativeIrq=b.nativeController()&&b.nativeController()->activeNativeInterrupts();
-    if(x.cycles!=y.cycles || (!nativeIrq&&x.getPC()!=y.getPC())){
+    const bool nativeWork=b.nativeController()&&b.nativeController()->activeNativeWork();
+    if(x.cycles!=y.cycles || (!nativeWork&&x.getPC()!=y.getPC())){
         std::cerr<<"reference pc="<<std::hex<<x.getPC()<<" candidate pc="<<y.getPC()<<std::dec<<" cycles "<<x.cycles<<" / "<<y.cycles<<'\n';
         throw std::runtime_error("Reset cycle/PC mismatch");
     }
-    check((nativeIrq||x.ccr==y.ccr) && x.exr==y.exr,"Reset condition/mask mismatch");
-    for(unsigned n=0;n<8;++n)if(!nativeIrq&&x.regs[n].er!=y.regs[n].er){std::cerr<<"register "<<n<<" values "<<std::hex<<x.regs[n].er<<" / "<<y.regs[n].er<<std::dec<<'\n';throw std::runtime_error("Reset ABI mismatch");}
-    check((nativeIrq||(x.lastread==y.lastread && x.lastwrite==y.lastwrite)) && (nativeIrq||x.indent==y.indent),"Reset bus/stack history mismatch");
+    check((nativeWork||x.ccr==y.ccr) && x.exr==y.exr,"Reset condition/mask mismatch");
+    for(unsigned n=0;n<8;++n)if(!nativeWork&&x.regs[n].er!=y.regs[n].er){std::cerr<<"register "<<n<<" values "<<std::hex<<x.regs[n].er<<" / "<<y.regs[n].er<<std::dec<<'\n';throw std::runtime_error("Reset ABI mismatch");}
+    check((nativeWork||(x.lastread==y.lastread && x.lastwrite==y.lastwrite)) && (nativeWork||x.indent==y.indent),"Reset bus/stack history mismatch");
     if(x.pending_irqs!=y.pending_irqs || x.pending_irqs_high!=y.pending_irqs_high || x.interruptMode2!=y.interruptMode2){
         std::cerr<<"pc="<<std::hex<<x.getPC()<<" pending="<<x.pending_irqs<<"/"<<y.pending_irqs<<" high="<<x.pending_irqs_high<<"/"<<y.pending_irqs_high<<" mode="<<x.interruptMode2<<"/"<<y.interruptMode2<<std::dec<<'\n';throw std::runtime_error("Reset IRQ mismatch");}
 

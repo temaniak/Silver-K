@@ -35,9 +35,19 @@ void advanceBoth(ks::Board&a,ks::Board&b){
 }
 void drain(ks::Board&a,ks::Board&b){
  unsigned phases=0;
- while(b.nativeController()->activeNativeInterrupts()||(b.cpu().exr&7)){
+ while(b.nativeController()->activeNativeWork()||(b.cpu().exr&7)){
   check(++phases<=65536,"Previous IRQ did not drain");advanceBoth(a,b);
  }
+}
+void pedalOutput(ks::Board&b){
+ // Physical pedal pins are fixed by Board. Give the next real panel scan
+ // the opposite retained level so its normal CC64 publication uses UART TX.
+ const auto polarity=b.read(0x168fc+254);
+ const auto rotated=uint8_t((polarity>>2)|(polarity<<6));
+ const auto normalized=uint8_t(b.read(0xffff50)^rotated);
+ b.write(0x1537a,uint8_t(normalized^64));
+ const auto tick=uint16_t((unsigned(b.read(0xffec12))<<8)|b.read(0xffec13));
+ word(b,0x16780,uint16_t(tick-25));
 }
 void adc(ks::Board&b,unsigned group,unsigned remaining=0){
  // Board ADC returns 0x8000. Both ordinary curves and the preview/accepted
@@ -79,7 +89,7 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
  auto a=std::make_unique<ks::Board>(rom.data(),wave,flash,true),b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
  check(a->boot()&&b->boot(),"Reference boot failed");same(*a,*b);
  uint64_t frames=0,peak=0;
- for(phase=0;phase<7;++phase)for(mode=0;mode<3;++mode){
+ for(phase=0;phase<10;++phase)for(mode=0;mode<3;++mode){
   b->enableNativeController();check(b->nativeController(),"Native handoff failed");
   drain(*a,*b);
   b->resetControllerMetrics();
@@ -89,7 +99,10 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    if(!phase){word(*board,0xffed6c,1);word(*board,0xffed6e,0);board->write(0xffed70,0xf8);}
    else if(phase<3)fullTimer(*board);
    else if(phase<6)adc(*board,phase==4?32:28);
-   else receive(*board,5);
+   else if(phase==6)receive(*board,5);
+   else if(phase==8)pedalOutput(*board);
+   else if(phase==9)board->write(0xffed68,2);
+   if(phase>=7)continue;
    const unsigned vector=!phase?90:phase<3?32:phase<6?28:89;
    board->cpu().exr=0;board->cpu().interruptPriority[vector]=phase>0&&phase<3?6:1;
    if(phase!=6)board->cpu().interrupt(vector);
@@ -107,12 +120,16 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    case 4:target=r->nativeAdcAt(ks::AdcService::Component::SpecialScale)&&b->cpu().exr==1;break;
    case 5:target=r->nativeAdcAt(ks::AdcService::Component::ControlPush)&&b->cpu().exr==1;break;
    case 6:target=r->nativeSerialReceiveAt(ks::SerialReceiveService::Component::Counter)&&b->cpu().exr==1;break;
+   case 7:target=r->serialForeground.at(ks::SerialForegroundService::Kind::PopRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::ReadStatus)&&b->cpu().exr==7;break;
+   case 8:target=r->serialForeground.at(ks::SerialForegroundService::Kind::Transmit,true)&&r->serialForeground.atTransmit(ks::SerialTransmitTask::Stage::Enable)&&b->cpu().exr==7;break;
+   case 9:target=r->serialForeground.at(ks::SerialForegroundService::Kind::ResetRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::RetainWord)&&b->cpu().exr==7;break;
    }
-   landed=r->activeNativeInterrupts()==1&&target;
+   landed=r->activeNativeInterrupts()==unsigned(phase<7)&&target;
   }
   check(landed,"Switch did not land at requested native IRQ phase");
   if(phase==2)check(a->cpu().getPC()==0x113c&&a->cpu().exr==7,"H8 did not reach the same MIDI masking boundary");
-  if(phase>=3){const unsigned expected=phase==3?0x17a8:phase==4?0x176e:phase==5?0x1848:0x25fe;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same ADC/RX child entry");}
+  if(phase>=3&&phase<7){const unsigned expected=phase==3?0x17a8:phase==4?0x176e:phase==5?0x1848:0x25fe;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same ADC/RX child entry");}
+  if(phase>=7){const unsigned expected=phase==7?0x1020:phase==8?0x113c:0xfec;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same foreground critical boundary");}
   const auto cycle=b->controllerCycles(),interpreted=b->h8InterpretedSteps();
   b->enableLiveMidiController(mode==1);
   check(!b->nativeController()&&std::string(b->controllerBackend())==(mode==1?"live-cpp-midi-hybrid":"original-h8"),"Requested tail mode not published");
@@ -126,6 +143,6 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   const uint8_t off[]{0x80,uint8_t(60+phase*3+mode),0};check(a->enqueueMidi(off,3)&&b->enqueueMidi(off,3),"Release rejected");
  }
  check(peak>1000,"Handoff fixture was silent");
- std::cout<<"PASS: twenty-one H8/hybrid/cancel requests inside leaf/TPU0/ADC scaling+queue/F8 counter children; no added guest advance; "<<frames<<" exact audible 24-stream frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
+ std::cout<<"PASS: thirty H8/hybrid/cancel requests inside IRQ children and foreground RX/pop/TX critical sections; no added guest advance; "<<frames<<" exact audible 24-stream frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
  return 0;
  }catch(const std::exception&e){std::cerr<<"phase="<<phase<<", mode="<<mode<<": "<<e.what()<<'\n';return 1;}}

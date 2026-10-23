@@ -1501,6 +1501,16 @@ int main(int argc,char** argv){try{
         <<",\"h8_interpreted_steps_after_boot\":"<<(board->h8InterpretedSteps()-bootH8Steps)
         <<",\"h8_interpreted_steps_since_handoff\":"<<board->h8StepsSinceNativeHandoff();
     if(const auto* runtime=board->nativeController())report<<",\"native_runtime_steps\":"<<runtime->steps<<",\"native_interrupt_entries\":"<<runtime->interruptEntries
+        <<",\"native_serial_foreground_calls\":"<<runtime->serialForeground.started
+        <<",\"native_serial_foreground_returns\":"<<runtime->serialForeground.completed
+        <<",\"native_serial_foreground_phases\":"<<runtime->serialForeground.phases
+        <<",\"native_serial_foreground_initial_active\":"<<runtime->serialForeground.initial
+        <<",\"native_serial_foreground_active\":"<<runtime->serialForeground.active()
+        <<",\"native_serial_foreground_reset_rx\":"<<runtime->serialForeground.kinds[0]
+        <<",\"native_serial_foreground_pop_rx\":"<<runtime->serialForeground.kinds[1]
+        <<",\"native_serial_foreground_receive\":"<<runtime->serialForeground.kinds[2]
+        <<",\"native_serial_foreground_reset_tx\":"<<runtime->serialForeground.kinds[3]
+        <<",\"native_serial_foreground_transmit\":"<<runtime->serialForeground.kinds[4]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases

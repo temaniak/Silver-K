@@ -38,9 +38,19 @@ void advanceBoth(ks::Board&a,ks::Board&b){
 }
 void drain(ks::Board&a,ks::Board&b){
  unsigned phases=0;
- while(b.nativeController()->activeNativeInterrupts()||(b.cpu().exr&7)){
+ while(b.nativeController()->activeNativeWork()||(b.cpu().exr&7)){
   check(++phases<=65536,"Previous IRQ did not drain");advanceBoth(a,b);
  }
+}
+void pedalOutput(ks::Board&b){
+ // Physical pedal pins are fixed by Board. Give the next real panel scan
+ // the opposite retained level so its normal CC64 publication uses UART TX.
+ const auto polarity=b.read(0x168fc+254);
+ const auto rotated=uint8_t((polarity>>2)|(polarity<<6));
+ const auto normalized=uint8_t(b.read(0xffff50)^rotated);
+ b.write(0x1537a,uint8_t(normalized^64));
+ const auto tick=uint16_t((unsigned(b.read(0xffec12))<<8)|b.read(0xffec13));
+ word(b,0x16780,uint16_t(tick-25));
 }
 void adc(ks::Board&b,unsigned group,unsigned remaining=0){
  // Board ADC returns 0x8000. Both ordinary curves and the preview/accepted
@@ -74,17 +84,20 @@ int main(int argc,char**argv){unsigned item=0;try{
  check(a->boot()&&b->boot(),"Original boot failed");b->enableNativeController();b->resetControllerMetrics();
  a->startControllerTrace();b->startControllerTrace();std::ofstream pcmA(out/"h8.pcm",std::ios::binary),pcmB(out/"cpp.pcm",std::ios::binary);
  uint64_t frames=0,peak=0;
- for(item=0;item<16;++item){
+ for(item=0;item<17;++item){
   drain(*a,*b);
-  const unsigned vector=item==0?88:item<=2?90:item==3?42:item==4?91:item==5?32:item<10?28:89;
+  const bool foreground=item==16;
+  const unsigned vector=foreground?128:item==0?88:item<=2?90:item==3?42:item==4?91:item==5?32:item<10?28:89;
   const unsigned kind=vector==88?0:vector==90?1:(vector==42||vector==91)?2:vector==32?3:vector==28?4:5;
-  const auto kindCalls=b->nativeController()->nativeInterruptKinds[kind],received=b->midiReceived;
+  const auto kindCalls=foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind],received=b->midiReceived;
   const auto calls=b->nativeController()->nativeInterruptStarts;
   for(auto*board:{a.get(),b.get()}){
+   if(foreground)pedalOutput(*board);
    if(vector==32)fullTimer(*board);
    if(vector==28)adc(*board,item==9?32:28,item==6?2:item==7?1:0);
    if(vector==89)receive(*board,item-10);
    if(vector==90){board->write(0xffed6c,0);board->write(0xffed6d,0);board->write(0xffed6e,0);board->write(0xffed6f,item==1?255:0);board->write(0xffee6f,0xf8);}
+   if(foreground)continue;
    board->cpu().interruptPriority[vector]=vector==32?6:1;
    // The full-ring case admits an already-latched byte before main can
    // consume its deliberately full ring; all other RX cases use the UART.
@@ -93,7 +106,7 @@ int main(int argc,char**argv){unsigned item=0;try{
   if(vector==89&&item!=11){const uint8_t byte=item==10?0xfe:0xf8;check(a->enqueueMidi(&byte,1)&&b->enqueueMidi(&byte,1),"Test UART byte rejected");}
   if(item>=6){
    unsigned phases=0;
-   while(b->nativeController()->nativeInterruptKinds[kind]==kindCalls||b->nativeController()->activeNativeInterrupts()||(b->cpu().exr&7)){
+   while((foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind])==kindCalls||b->nativeController()->activeNativeWork()||(b->cpu().exr&7)){
     check(++phases<=65536,"Forced ADC/RX lifecycle did not finish");advanceBoth(*a,*b);
    }
    if(vector==89&&item!=11)check(a->midiReceived==b->midiReceived&&b->midiReceived>received,"RX case did not consume the actual UART byte");
@@ -102,14 +115,16 @@ int main(int argc,char**argv){unsigned item=0;try{
    if(item>=12&&item<=14)check(b->read(0xffeea0)==4&&!b->read(0xffeea1)&&!b->read(0xffeea2)&&!b->read(0xffeea3),"F8 reset/short feedback unexpectedly changed its estimate");
    if(item==15)check(b->read(0xffeea0)!=4||b->read(0xffeea1)||b->read(0xffeea2)||b->read(0xffeea3),"F8 feedback did not update its estimate");
   }
-  const uint8_t on[]{0x90,uint8_t(48+item*5),100};check(a->enqueueMidi(on,3)&&b->enqueueMidi(on,3),"Note rejected");
+  const uint8_t on[]{0x90,uint8_t(foreground?84:48+item*5),100};check(a->enqueueMidi(on,3)&&b->enqueueMidi(on,3),"Note rejected");
   for(unsigned n=0;n<4096;++n){
-   if(n==2048){const uint8_t off[]{0x80,uint8_t(48+item*5),0};check(a->enqueueMidi(off,3)&&b->enqueueMidi(off,3),"Release rejected");}
+   if(n==2048){const uint8_t off[]{0x80,uint8_t(foreground?84:48+item*5),0};check(a->enqueueMidi(off,3)&&b->enqueueMidi(off,3),"Release rejected");}
    auto x=a->renderSample(),y=b->renderSample();check(x==y,"Interrupt timeline audio differs");check(a->controllerCycles()==b->controllerCycles(),"Interrupt timeline clock differs");sameInterrupts(*a,*b);
    pcmA.write(reinterpret_cast<const char*>(x.data()),sizeof(x));pcmB.write(reinterpret_cast<const char*>(y.data()),sizeof(y));
    for(auto v:x)peak=std::max(peak,uint64_t(std::abs(int64_t(v))));++frames;
   }
-  check(b->nativeController()->nativeInterruptStarts>calls&&b->nativeController()->nativeInterruptKinds[kind]>kindCalls,"Scenario did not execute its native IRQ kind");
+  if(foreground)check(b->nativeController()->serialForeground.kinds[4]>=kindCalls+3,"Real pedal transition did not publish all three UART bytes");
+  else check(b->nativeController()->nativeInterruptStarts>calls&&b->nativeController()->nativeInterruptKinds[kind]>kindCalls,"Scenario did not execute its native IRQ kind");
+  if(item==11)check(b->nativeController()->serialForeground.kinds[0]>0,"RX overflow did not run the native foreground reset");
   if(vector==32)check(b->nativeController()->nativeTpuComponents==0x7ff,"Full timer did not visit all eleven semantic components");
   if(item==9)check(b->nativeController()->nativeAdcComponents==0x3f,"ADC cases did not visit all six semantic components");
   if(item==15)check(b->nativeController()->nativeSerialReceiveComponents==0xf,"F8 cases did not visit all four semantic components");
@@ -126,7 +141,9 @@ int main(int argc,char**argv){unsigned item=0;try{
  for(size_t n=0;n<x->slices.size();++n){const auto&p=x->slices[n];const auto&q=y->slices[n];check(p.begin==q.begin&&p.end==q.end&&p.first==q.first&&p.count==q.count,"Interrupt timeline DSP slice differs");}
  const auto*r=b->nativeController();check(r->nativeInterruptKinds[0]&&r->nativeInterruptKinds[1]&&r->nativeInterruptKinds[2]&&r->nativeInterruptKinds[3]&&r->nativeInterruptKinds[4]&&r->nativeInterruptKinds[5],"Missing native IRQ kind coverage");
  check(r->nativeInterruptStarts+r->nativeInterruptInitial==r->nativeInterruptReturns+r->activeNativeInterrupts(),"Native IRQ accounting differs");
+ check(r->serialForeground.kinds[0]&&r->serialForeground.kinds[1]&&r->serialForeground.kinds[4],"Missing native foreground reset/pop/transmit coverage");
+ check(r->serialForeground.started+r->serialForeground.initial==r->serialForeground.completed+r->serialForeground.active(),"Native foreground accounting differs");
  check(peak>1000&&b->h8StepsSinceNativeHandoff()==0,"Silent fixture or native interpreter fallback");
- std::cout<<"PASS: sixteen IRQ timelines including complete TPU0/ADC and UART byte/F8 reset/feedback graphs, "<<frames<<" exact audible 24-stream frames, "<<x->events.size()<<" exact DSP events; native error/TX/unused="<<r->nativeInterruptKinds[0]<<'/'<<r->nativeInterruptKinds[1]<<'/'<<r->nativeInterruptKinds[2]<<"; TPU0="<<r->nativeInterruptKinds[3]<<"; ADC="<<r->nativeInterruptKinds[4]<<", RX="<<r->nativeInterruptKinds[5]<<", components=0x"<<std::hex<<r->nativeTpuComponents<<'/'<<r->nativeAdcComponents<<'/'<<r->nativeSerialReceiveComponents<<"; private checkpoints="<<x->checkpoint<<'/'<<y->checkpoint<<std::dec<<"; cycles/pending/priorities/hardware/resource RAM/state/Flash/MIDI exact, no post-handoff H8\n";
+ std::cout<<"PASS: seventeen IRQ/foreground timelines including TPU0/ADC/RX/F8 and a real pedal UART publication, "<<frames<<" exact audible 24-stream frames, "<<x->events.size()<<" exact DSP events; native error/TX/unused="<<r->nativeInterruptKinds[0]<<'/'<<r->nativeInterruptKinds[1]<<'/'<<r->nativeInterruptKinds[2]<<"; TPU0="<<r->nativeInterruptKinds[3]<<"; ADC="<<r->nativeInterruptKinds[4]<<", RX="<<r->nativeInterruptKinds[5]<<", components=0x"<<std::hex<<r->nativeTpuComponents<<'/'<<r->nativeAdcComponents<<'/'<<r->nativeSerialReceiveComponents<<"; private checkpoints="<<x->checkpoint<<'/'<<y->checkpoint<<std::dec<<"; foreground reset/pop/transmit="<<r->serialForeground.kinds[0]<<'/'<<r->serialForeground.kinds[1]<<'/'<<r->serialForeground.kinds[4]<<"; cycles/pending/priorities/hardware/resource RAM/state/Flash/MIDI exact, no post-handoff H8\n";
  return 0;
  }catch(const std::exception&e){std::cerr<<"scenario="<<item<<": "<<e.what()<<'\n';return 1;}}

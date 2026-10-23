@@ -476,3 +476,5 @@ target_sources(ksLib PRIVATE ksStateProgramBrowseCalls.cpp ksStateProgramBrowseC
 target_sources(ksLib PRIVATE ksStateProgramDisplayCalls.cpp ksStateProgramDisplayCalls.h ksStateProgramDisplayTask.h)
 
 target_sources(ksLib PRIVATE ksStateProgramEventCalls.cpp ksStateProgramEventCalls.h ksStateProgramEventTask.h)
+
+target_sources(ksLib PRIVATE ksSerialForegroundService.h ksSerialForeground.h ksSerialForeground.cpp)

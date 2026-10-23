@@ -529,3 +529,5 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateProgramBro
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateProgramDisplayCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateProgramEventCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksSerialForegroundService.h" "${ROOT}/source/novation/ks/ksLib/ksSerialForeground.h" "${ROOT}/source/novation/ks/ksLib/ksSerialForeground.cpp")
