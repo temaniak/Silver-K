@@ -73,6 +73,11 @@ void same(ks::Board& a,ks::Board& b){
     check(!b.liveMidiController()->statePanelModesCalls.partialEntries,"Native reset used partial StatePanelModes recovery");
     check(!b.liveMidiController()->stateFunctionKeysCalls.partialEntries,"Native reset used partial StateFunctionKeys recovery");
     check(!b.liveMidiController()->stateEditWorkflowCalls.partialEntries,"Native reset used partial StateEditWorkflow recovery");
+    check(!b.liveMidiController()->loaderInputsCalls.partialEntries,"Native reset used partial LoaderInputs recovery");
+    check(!b.liveMidiController()->loaderCodecCalls.partialEntries,"Native reset used partial LoaderCodec recovery");
+    check(!b.liveMidiController()->loaderPacketsCalls.partialEntries,"Native reset used partial LoaderPackets recovery");
+    check(!b.liveMidiController()->loaderProgramCalls.partialEntries,"Native reset used partial LoaderProgram recovery");
+    check(!b.liveMidiController()->loaderSessionCalls.partialEntries,"Native reset used partial LoaderSession recovery");
     for(unsigned n=0xfffe00;n<=0xffffff;++n)check(a.read(n)==b.read(n),"Reset IO mismatch");
     check(a.waveReads==b.waveReads && a.hostWrites[0]==b.hostWrites[0] && a.hostWrites[1]==b.hostWrites[1],"Reset hardware counters mismatch");
 }

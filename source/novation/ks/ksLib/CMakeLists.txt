@@ -446,3 +446,13 @@ target_sources(ksLib PRIVATE ksStatePanelModesCalls.cpp ksStatePanelModesCalls.h
 target_sources(ksLib PRIVATE ksStateFunctionKeysCalls.cpp ksStateFunctionKeysCalls.h ksStateFunctionKeysTask.h)
 
 target_sources(ksLib PRIVATE ksStateEditWorkflowCalls.cpp ksStateEditWorkflowCalls.h ksStateEditWorkflowTask.h)
+
+target_sources(ksLib PRIVATE ksLoaderInputsCalls.cpp ksLoaderInputsCalls.h ksLoaderInputsTask.h)
+
+target_sources(ksLib PRIVATE ksLoaderCodecCalls.cpp ksLoaderCodecCalls.h ksLoaderCodecTask.h)
+
+target_sources(ksLib PRIVATE ksLoaderPacketsCalls.cpp ksLoaderPacketsCalls.h ksLoaderPacketsTask.h)
+
+target_sources(ksLib PRIVATE ksLoaderProgramCalls.cpp ksLoaderProgramCalls.h ksLoaderProgramTask.h)
+
+target_sources(ksLib PRIVATE ksLoaderSessionCalls.cpp ksLoaderSessionCalls.h ksLoaderSessionTask.h)

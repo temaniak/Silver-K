@@ -53,6 +53,11 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksLoaderSessionCalls.h"
+#include "ksLoaderProgramCalls.h"
+#include "ksLoaderPacketsCalls.h"
+#include "ksLoaderCodecCalls.h"
+#include "ksLoaderInputsCalls.h"
 #include "ksStateEditWorkflowCalls.h"
 #include "ksStateFunctionKeysCalls.h"
 #include "ksStatePanelModesCalls.h"
@@ -213,6 +218,11 @@ public:
     TimerServiceCalls timerServiceCalls;
     StateChannelCalls stateChannelCalls;
     PanelInputCalls panelInputCalls;
+    LoaderSessionCalls loaderSessionCalls;
+    LoaderProgramCalls loaderProgramCalls;
+    LoaderPacketsCalls loaderPacketsCalls;
+    LoaderCodecCalls loaderCodecCalls;
+    LoaderInputsCalls loaderInputsCalls;
     StateEditWorkflowCalls stateEditWorkflowCalls;
     StateFunctionKeysCalls stateFunctionKeysCalls;
     StatePanelModesCalls statePanelModesCalls;
@@ -355,6 +365,11 @@ public:
         timerServiceCalls.resetMetrics();
         stateChannelCalls.resetMetrics();
         panelInputCalls.resetMetrics();
+        loaderSessionCalls.resetMetrics();
+        loaderProgramCalls.resetMetrics();
+        loaderPacketsCalls.resetMetrics();
+        loaderCodecCalls.resetMetrics();
+        loaderInputsCalls.resetMetrics();
         stateEditWorkflowCalls.resetMetrics();
         stateFunctionKeysCalls.resetMetrics();
         statePanelModesCalls.resetMetrics();

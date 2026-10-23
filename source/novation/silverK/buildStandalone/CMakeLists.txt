@@ -499,3 +499,13 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStatePanelModes
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateFunctionKeysCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateEditWorkflowCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLoaderInputsCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLoaderCodecCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLoaderPacketsCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLoaderProgramCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksLoaderSessionCalls.cpp")

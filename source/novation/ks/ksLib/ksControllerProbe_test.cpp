@@ -111,6 +111,11 @@ int main(int argc,char** argv){try{
     if(nativeMode)check(!bootLive->statePanelModesCalls.partialEntries,"Native startup used partial StatePanelModes recovery before metric reset");
     if(nativeMode)check(!bootLive->stateFunctionKeysCalls.partialEntries,"Native startup used partial StateFunctionKeys recovery before metric reset");
     if(nativeMode)check(!bootLive->stateEditWorkflowCalls.partialEntries,"Native startup used partial StateEditWorkflow recovery before metric reset");
+    if(nativeMode)check(!bootLive->loaderInputsCalls.partialEntries,"Native startup used partial LoaderInputs recovery before metric reset");
+    if(nativeMode)check(!bootLive->loaderCodecCalls.partialEntries,"Native startup used partial LoaderCodec recovery before metric reset");
+    if(nativeMode)check(!bootLive->loaderPacketsCalls.partialEntries,"Native startup used partial LoaderPackets recovery before metric reset");
+    if(nativeMode)check(!bootLive->loaderProgramCalls.partialEntries,"Native startup used partial LoaderProgram recovery before metric reset");
+    if(nativeMode)check(!bootLive->loaderSessionCalls.partialEntries,"Native startup used partial LoaderSession recovery before metric reset");
     if(nativeMode)check(!bootLive->panelAdcScaleCalls.partialEntries&&!bootLive->panelAdcCalibrationCalls.partialEntries&&!bootLive->panelAdcIrqCalls.partialEntries&&!bootLive->panelAdcScanCalls.partialEntries,"Native startup used partial ADC recovery before metric reset");
     if(nativeMode)board->enableNativeController();
     auto send=[&](const std::vector<uint8_t>& m){check(board->enqueueMidi(m.data(),m.size()),"MIDI rejected");};
@@ -1116,6 +1121,31 @@ int main(int argc,char** argv){try{
         <<",\"native_state_edit_workflow_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateEditWorkflowCalls.initialActive:0)
         <<",\"native_state_edit_workflow_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateEditWorkflowCalls.activeCalls():0)
         <<",\"native_state_edit_workflow_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateEditWorkflowCalls.partialEntries:0)
+        <<",\"native_loader_inputs_calls\":"<<(board->liveMidiController()?board->liveMidiController()->loaderInputsCalls.started:0)
+        <<",\"native_loader_inputs_returns\":"<<(board->liveMidiController()?board->liveMidiController()->loaderInputsCalls.completed:0)
+        <<",\"native_loader_inputs_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->loaderInputsCalls.initialActive:0)
+        <<",\"native_loader_inputs_active\":"<<(board->liveMidiController()?board->liveMidiController()->loaderInputsCalls.activeCalls():0)
+        <<",\"native_loader_inputs_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->loaderInputsCalls.partialEntries:0)
+        <<",\"native_loader_codec_calls\":"<<(board->liveMidiController()?board->liveMidiController()->loaderCodecCalls.started:0)
+        <<",\"native_loader_codec_returns\":"<<(board->liveMidiController()?board->liveMidiController()->loaderCodecCalls.completed:0)
+        <<",\"native_loader_codec_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->loaderCodecCalls.initialActive:0)
+        <<",\"native_loader_codec_active\":"<<(board->liveMidiController()?board->liveMidiController()->loaderCodecCalls.activeCalls():0)
+        <<",\"native_loader_codec_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->loaderCodecCalls.partialEntries:0)
+        <<",\"native_loader_packets_calls\":"<<(board->liveMidiController()?board->liveMidiController()->loaderPacketsCalls.started:0)
+        <<",\"native_loader_packets_returns\":"<<(board->liveMidiController()?board->liveMidiController()->loaderPacketsCalls.completed:0)
+        <<",\"native_loader_packets_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->loaderPacketsCalls.initialActive:0)
+        <<",\"native_loader_packets_active\":"<<(board->liveMidiController()?board->liveMidiController()->loaderPacketsCalls.activeCalls():0)
+        <<",\"native_loader_packets_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->loaderPacketsCalls.partialEntries:0)
+        <<",\"native_loader_program_calls\":"<<(board->liveMidiController()?board->liveMidiController()->loaderProgramCalls.started:0)
+        <<",\"native_loader_program_returns\":"<<(board->liveMidiController()?board->liveMidiController()->loaderProgramCalls.completed:0)
+        <<",\"native_loader_program_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->loaderProgramCalls.initialActive:0)
+        <<",\"native_loader_program_active\":"<<(board->liveMidiController()?board->liveMidiController()->loaderProgramCalls.activeCalls():0)
+        <<",\"native_loader_program_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->loaderProgramCalls.partialEntries:0)
+        <<",\"native_loader_session_calls\":"<<(board->liveMidiController()?board->liveMidiController()->loaderSessionCalls.started:0)
+        <<",\"native_loader_session_returns\":"<<(board->liveMidiController()?board->liveMidiController()->loaderSessionCalls.completed:0)
+        <<",\"native_loader_session_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->loaderSessionCalls.initialActive:0)
+        <<",\"native_loader_session_active\":"<<(board->liveMidiController()?board->liveMidiController()->loaderSessionCalls.activeCalls():0)
+        <<",\"native_loader_session_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->loaderSessionCalls.partialEntries:0)
         <<",\"native_panel_input_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.started:0)
         <<",\"native_panel_input_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.completed:0)
         <<",\"native_panel_input_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.initialActive:0)

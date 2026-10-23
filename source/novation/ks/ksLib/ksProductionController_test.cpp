@@ -13,6 +13,11 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksLoaderSessionCalls.h"
+#include "ksLoaderProgramCalls.h"
+#include "ksLoaderPacketsCalls.h"
+#include "ksLoaderCodecCalls.h"
+#include "ksLoaderInputsCalls.h"
 #include "ksStateEditWorkflowCalls.h"
 #include "ksStateFunctionKeysCalls.h"
 #include "ksStatePanelModesCalls.h"
@@ -244,6 +249,21 @@ int main(){try{
     ks::StateEditWorkflowCalls stateEditWorkflowCalls;
     for(unsigned entry:{0x4d32u}){state->pc=entry;
         if(stateEditWorkflowCalls.step(*state)||stateEditWorkflowCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateEditWorkflow recovery");}
+    ks::LoaderInputsCalls loaderInputsCalls;
+    for(unsigned entry:{0xc10u}){state->pc=entry;
+        if(loaderInputsCalls.step(*state)||loaderInputsCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial LoaderInputs recovery");}
+    ks::LoaderCodecCalls loaderCodecCalls;
+    for(unsigned entry:{0xf3cu}){state->pc=entry;
+        if(loaderCodecCalls.step(*state)||loaderCodecCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial LoaderCodec recovery");}
+    ks::LoaderPacketsCalls loaderPacketsCalls;
+    for(unsigned entry:{0xe86u}){state->pc=entry;
+        if(loaderPacketsCalls.step(*state)||loaderPacketsCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial LoaderPackets recovery");}
+    ks::LoaderProgramCalls loaderProgramCalls;
+    for(unsigned entry:{0xe04u}){state->pc=entry;
+        if(loaderProgramCalls.step(*state)||loaderProgramCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial LoaderProgram recovery");}
+    ks::LoaderSessionCalls loaderSessionCalls;
+    for(unsigned entry:{0xd0eu}){state->pc=entry;
+        if(loaderSessionCalls.step(*state)||loaderSessionCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial LoaderSession recovery");}
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");
