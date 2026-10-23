@@ -53,6 +53,11 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksStateScreenCalls.h"
+#include "ksClockDisplayCalls.h"
+#include "ksClockPulseCalls.h"
+#include "ksClockSyncCalls.h"
+#include "ksPanelAnalogCalls.h"
 #include "ksStateButtonDispatchCalls.h"
 #include "ksStateForegroundCalls.h"
 #include "ksInternalMidiServiceCalls.h"
@@ -191,6 +196,11 @@ public:
     TimerServiceCalls timerServiceCalls;
     StateChannelCalls stateChannelCalls;
     PanelInputCalls panelInputCalls;
+    StateScreenCalls stateScreenCalls;
+    ClockDisplayCalls clockDisplayCalls;
+    ClockPulseCalls clockPulseCalls;
+    ClockSyncCalls clockSyncCalls;
+    PanelAnalogCalls panelAnalogCalls;
     StateButtonDispatchCalls stateButtonDispatchCalls;
     StateForegroundCalls stateForegroundCalls;
     InternalMidiServiceCalls internalMidiServiceCalls;
@@ -311,6 +321,11 @@ public:
         timerServiceCalls.resetMetrics();
         stateChannelCalls.resetMetrics();
         panelInputCalls.resetMetrics();
+        stateScreenCalls.resetMetrics();
+        clockDisplayCalls.resetMetrics();
+        clockPulseCalls.resetMetrics();
+        clockSyncCalls.resetMetrics();
+        panelAnalogCalls.resetMetrics();
         stateButtonDispatchCalls.resetMetrics();
         stateForegroundCalls.resetMetrics();
         internalMidiServiceCalls.resetMetrics();

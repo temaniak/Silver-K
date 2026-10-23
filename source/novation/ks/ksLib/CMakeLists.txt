@@ -402,3 +402,13 @@ target_sources(ksLib PRIVATE ksInternalMidiServiceCalls.cpp ksInternalMidiServic
 target_sources(ksLib PRIVATE ksStateForegroundCalls.cpp ksStateForegroundCalls.h ksStateForegroundTask.h)
 
 target_sources(ksLib PRIVATE ksStateButtonDispatchCalls.cpp ksStateButtonDispatchCalls.h ksStateButtonDispatchTask.h)
+
+target_sources(ksLib PRIVATE ksPanelAnalogCalls.cpp ksPanelAnalogCalls.h ksPanelAnalogTask.h)
+
+target_sources(ksLib PRIVATE ksClockSyncCalls.cpp ksClockSyncCalls.h ksClockSyncTask.h)
+
+target_sources(ksLib PRIVATE ksClockPulseCalls.cpp ksClockPulseCalls.h ksClockPulseTask.h)
+
+target_sources(ksLib PRIVATE ksClockDisplayCalls.cpp ksClockDisplayCalls.h ksClockDisplayTask.h)
+
+target_sources(ksLib PRIVATE ksStateScreenCalls.cpp ksStateScreenCalls.h ksStateScreenTask.h)

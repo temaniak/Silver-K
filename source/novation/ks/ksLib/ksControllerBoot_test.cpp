@@ -51,6 +51,11 @@ void same(ks::Board& a,ks::Board& b){
     check(!b.liveMidiController()->internalMidiServiceCalls.partialEntries,"Native reset used partial InternalMidiService recovery");
     check(!b.liveMidiController()->stateForegroundCalls.partialEntries,"Native reset used partial StateForeground recovery");
     check(!b.liveMidiController()->stateButtonDispatchCalls.partialEntries,"Native reset used partial StateButtonDispatch recovery");
+    check(!b.liveMidiController()->panelAnalogCalls.partialEntries,"Native reset used partial PanelAnalog recovery");
+    check(!b.liveMidiController()->clockSyncCalls.partialEntries,"Native reset used partial ClockSync recovery");
+    check(!b.liveMidiController()->clockPulseCalls.partialEntries,"Native reset used partial ClockPulse recovery");
+    check(!b.liveMidiController()->clockDisplayCalls.partialEntries,"Native reset used partial ClockDisplay recovery");
+    check(!b.liveMidiController()->stateScreenCalls.partialEntries,"Native reset used partial StateScreen recovery");
     for(unsigned n=0xfffe00;n<=0xffffff;++n)check(a.read(n)==b.read(n),"Reset IO mismatch");
     check(a.waveReads==b.waveReads && a.hostWrites[0]==b.hostWrites[0] && a.hostWrites[1]==b.hostWrites[1],"Reset hardware counters mismatch");
 }

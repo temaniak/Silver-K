@@ -13,6 +13,11 @@
 #include "ksTimerServiceCalls.h"
 #include "ksStateChannelCalls.h"
 #include "ksPanelInputCalls.h"
+#include "ksStateScreenCalls.h"
+#include "ksClockDisplayCalls.h"
+#include "ksClockPulseCalls.h"
+#include "ksClockSyncCalls.h"
+#include "ksPanelAnalogCalls.h"
 #include "ksStateButtonDispatchCalls.h"
 #include "ksStateForegroundCalls.h"
 #include "ksInternalMidiServiceCalls.h"
@@ -156,6 +161,21 @@ int main(){try{
     ks::StateButtonDispatchCalls stateButtonDispatchCalls;
     for(unsigned entry:{0x44d0u}){state->pc=entry;
         if(stateButtonDispatchCalls.step(*state)||stateButtonDispatchCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateButtonDispatch recovery");}
+    ks::PanelAnalogCalls panelAnalogCalls;
+    for(unsigned entry:{0x1512u,0x20cau}){state->pc=entry;
+        if(panelAnalogCalls.step(*state)||panelAnalogCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial PanelAnalog recovery");}
+    ks::ClockSyncCalls clockSyncCalls;
+    for(unsigned entry:{0x2680u}){state->pc=entry;
+        if(clockSyncCalls.step(*state)||clockSyncCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial ClockSync recovery");}
+    ks::ClockPulseCalls clockPulseCalls;
+    for(unsigned entry:{0x284au}){state->pc=entry;
+        if(clockPulseCalls.step(*state)||clockPulseCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial ClockPulse recovery");}
+    ks::ClockDisplayCalls clockDisplayCalls;
+    for(unsigned entry:{0x29aau}){state->pc=entry;
+        if(clockDisplayCalls.step(*state)||clockDisplayCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial ClockDisplay recovery");}
+    ks::StateScreenCalls stateScreenCalls;
+    for(unsigned entry:{0x582cu}){state->pc=entry;
+        if(stateScreenCalls.step(*state)||stateScreenCalls.partialEntries||state->cycles!=123||state->pc!=entry)throw std::runtime_error("Production exposed partial StateScreen recovery");}
     state->interpreterAllowed=false;rejected=false;
     try{state->step();}catch(const std::logic_error& e){rejected=std::string(e.what()).find("after native KS handoff")!=std::string::npos;}
     if(!rejected || state->interpretedSteps)throw std::runtime_error("Native interpreter lock failed");

@@ -48,7 +48,7 @@ struct Stats {
 };
 }
 int main(int argc,char** argv){try{
-    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal|controls|state|clock|steal|fx|panel-store-single|panel-store-multi|panel-io-single|panel-io-multi, trace path, optional seconds (up to 30) required\n";return 77;}
+    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal|controls|state|clock|steal|fx|panel-store-single|panel-store-multi|panel-io-single|panel-io-multi|panel-screen-single|panel-screen-multi, trace path, optional seconds (up to 30) required\n";return 77;}
     const double duration=argc==9?std::stod(argv[8]):2.;
     check(std::isfinite(duration)&&duration>=2.&&duration<=30.,"Controller probe duration must be 2..30 seconds");
     const std::string mode=argv[5],scenario=argv[6];
@@ -57,11 +57,12 @@ int main(int argc,char** argv){try{
     const bool recording=mode=="native-record" || mode=="native-toggle-record" || mode=="record" || mode=="live-record" || mode=="live-toggle-record";
     const bool toggling=mode=="native-toggle" || mode=="native-toggle-record" || mode=="live-toggle" || mode=="live-toggle-record";
     check(mode=="h8" || mode=="record" || mode=="replay" || mode=="boot" || liveMode,"Unknown controller probe mode");
-    const bool panelIo=scenario=="panel-io-single" || scenario=="panel-io-multi";
+    const bool panelScreen=scenario=="panel-screen-single" || scenario=="panel-screen-multi";
+    const bool panelIo=panelScreen || scenario=="panel-io-single" || scenario=="panel-io-multi";
     if(panelIo)check(duration>=4.,"Physical panel scenario requires at least four seconds");
     const bool panelStore=panelIo || scenario=="panel-store-single" || scenario=="panel-store-multi";
     check(scenario=="single" || scenario=="multi" || scenario=="midi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || panelStore,"Unknown controller probe scenario");
-    const bool multi=scenario=="panel-io-multi" || scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || scenario=="panel-store-multi";
+    const bool multi=scenario=="panel-screen-multi" || scenario=="panel-io-multi" || scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || scenario=="panel-store-multi";
     const auto* threads=std::getenv("SILVER_KS_DSP_THREADS");const bool parallel=threads&&std::string(threads)=="2";
     const auto setup=Clock::now();ks::Rom os(argv[1]);check(os.isValid(),"Invalid KS OS");
     std::unique_ptr<ks::test::PanelIoFixture> ioFixture;
@@ -83,6 +84,11 @@ int main(int argc,char** argv){try{
     if(nativeMode)check(!bootLive->internalMidiServiceCalls.partialEntries,"Native startup used partial InternalMidiService recovery before metric reset");
     if(nativeMode)check(!bootLive->stateForegroundCalls.partialEntries,"Native startup used partial StateForeground recovery before metric reset");
     if(nativeMode)check(!bootLive->stateButtonDispatchCalls.partialEntries,"Native startup used partial StateButtonDispatch recovery before metric reset");
+    if(nativeMode)check(!bootLive->panelAnalogCalls.partialEntries,"Native startup used partial PanelAnalog recovery before metric reset");
+    if(nativeMode)check(!bootLive->clockSyncCalls.partialEntries,"Native startup used partial ClockSync recovery before metric reset");
+    if(nativeMode)check(!bootLive->clockPulseCalls.partialEntries,"Native startup used partial ClockPulse recovery before metric reset");
+    if(nativeMode)check(!bootLive->clockDisplayCalls.partialEntries,"Native startup used partial ClockDisplay recovery before metric reset");
+    if(nativeMode)check(!bootLive->stateScreenCalls.partialEntries,"Native startup used partial StateScreen recovery before metric reset");
     if(nativeMode)check(!bootLive->panelAdcScaleCalls.partialEntries&&!bootLive->panelAdcCalibrationCalls.partialEntries&&!bootLive->panelAdcIrqCalls.partialEntries&&!bootLive->panelAdcScanCalls.partialEntries,"Native startup used partial ADC recovery before metric reset");
     if(nativeMode)board->enableNativeController();
     auto send=[&](const std::vector<uint8_t>& m){check(board->enqueueMidi(m.data(),m.size()),"MIDI rejected");};
@@ -241,10 +247,18 @@ int main(int argc,char** argv){try{
                 for(unsigned key=0;key<48;++key)if(memory[0xb8e8+key]==storeKey){physicalStore=key;++matches;}
                 check(matches==1,"Physical Store button mapping is ambiguous");
                 ioFixture=std::make_unique<ks::test::PanelIoFixture>(*board);
+                if(panelScreen){
+                    auto physicalForHandler=[&](unsigned handler){unsigned logical=0,found=0;
+                        for(unsigned key=0;key<32;++key){const unsigned descriptor=0xfcc4+key*3;const unsigned action=memory[descriptor]&127;const unsigned index=memory[descriptor+1];const unsigned at=0xfd1e + index*4;
+                            const uint32_t target=(uint32_t(memory[at])<<24)|(uint32_t(memory[at+1])<<16)|(uint32_t(memory[at+2])<<8)|memory[at+3];if(action==1&&(target&0xffffff)==handler){logical=key;++found;}}
+                        check(found==1,"Screen action descriptor ambiguous");unsigned physical=0;found=0;
+                        for(unsigned key=0;key<48;++key)if(memory[0xb8e8+key]==logical){physical=key;++found;}check(found==1,"Screen physical key ambiguous");return physical;};
+                    ioFixture->configureScreens(physicalForHandler(0x49b0),physicalForHandler(0x46ec),physicalForHandler(0x46ac));
+                }
                 board->cpu().memmap(ioFixture.get(),0,1<<24);
-                ioPages[0]=board->read(0x16790);
+                ioPages[0]=board->read(panelScreen?0x16787:0x16790);
             }
-            board->write(0x168fc+239,1); // Explicit synthetic fixture: writes allowed.
+            if(!panelScreen)board->write(0x168fc+239,1); // Explicit synthetic fixture: writes allowed.
         }
         auto queueStore=[&](bool pressed){
             auto* memory=board->cpu().memory+0xa00000;
@@ -284,7 +298,7 @@ int main(int argc,char** argv){try{
             }
             if(mode!="replay")while(next<events.size() && events[next].frame==n)send(events[next++].bytes);
             const auto a=board->renderSample();
-            if(panelIo){const auto page=board->read(0x16790);if(page!=ioPages[ioPageCount-1]){check(ioPageCount<ioPages.size(),"Too many physical panel page transitions");ioPages[ioPageCount++]=page;}}
+            if(panelIo){const auto page=board->read(panelScreen?0x16787:0x16790);if(page!=ioPages[ioPageCount-1]){check(ioPageCount<ioPages.size(),"Too many physical panel page transitions");ioPages[ioPageCount++]=page;}}
             if(!captured.empty())captured[n]=a;for(auto v:a){hash^=uint32_t(v);hash*=1099511628211ull;peak=std::max(peak,std::abs(int64_t(v)));}
         }
         cost=cpu()-before;wall=std::chrono::duration<double>(Clock::now()-begin).count();
@@ -341,9 +355,9 @@ int main(int argc,char** argv){try{
         admitted(live.panelAdcScaleCalls);admitted(live.panelAdcCalibrationCalls);
         admitted(live.panelAdcIrqCalls);admitted(live.panelAdcScanCalls);
     }
-    if(panelStore){if(!panelIo)check(panelEvents==(multi?6u:8u),"Missing panel store events");check(board->flashRevision>0,"Panel store did not write Flash");check(board->read(0x16790)==0,"Store page did not return to playback");}
+    if(panelStore&&!panelScreen){if(!panelIo)check(panelEvents==(multi?6u:8u),"Missing panel store events");check(board->flashRevision>0,"Panel store did not write Flash");check(board->read(0x16790)==0,"Store page did not return to playback");}
     if(scenario=="state")check(board->flashRevision>0,"State scenario did not complete a Flash page write");
-    if(panelIo){check(ioFixture->matrixReads&&ioFixture->pedalReads&&ioFixture->encoderReads&&ioFixture->adcReads,"Physical input source not observed");check(ioFixture->buttonTransitions==(multi?6u:8u),"Missing physical button transitions");check(ioFixture->pedalTransitions==4&&ioFixture->encoderTransitions&&ioFixture->adcTransitions,"Missing physical pedal/encoder/ADC transitions");}
+    if(panelIo){check(ioFixture->matrixReads&&ioFixture->pedalReads&&ioFixture->encoderReads&&ioFixture->adcReads,"Physical input source not observed");check(ioFixture->buttonTransitions==(panelScreen?18u:(multi?6u:8u)),"Missing physical button transitions");check(ioFixture->pedalTransitions==4&&(panelScreen||(ioFixture->encoderTransitions&&ioFixture->adcTransitions)),"Missing physical pedal/encoder/ADC transitions");}
     const auto depth=board->serialDepth();std::ostringstream report;report<<std::setprecision(12)
         <<"{\"schema\":\"silver-k.controller-probe.v1\",\"mode\":\""<<mode<<"\",\"scenario\":\""<<scenario<<"\",\"controller_backend\":\""<<board->controllerBackend()
         <<"\",\"dsp_threads\":"<<(parallel?2:1)<<",\"frames\":"<<frames<<",\"audio_hash\":\""<<hash<<"\",\"peak\":"<<peak
@@ -958,6 +972,31 @@ int main(int argc,char** argv){try{
         <<",\"native_state_button_dispatch_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateButtonDispatchCalls.initialActive:0)
         <<",\"native_state_button_dispatch_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateButtonDispatchCalls.activeCalls():0)
         <<",\"native_state_button_dispatch_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateButtonDispatchCalls.partialEntries:0)
+        <<",\"native_panel_analog_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelAnalogCalls.started:0)
+        <<",\"native_panel_analog_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelAnalogCalls.completed:0)
+        <<",\"native_panel_analog_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAnalogCalls.initialActive:0)
+        <<",\"native_panel_analog_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelAnalogCalls.activeCalls():0)
+        <<",\"native_panel_analog_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->panelAnalogCalls.partialEntries:0)
+        <<",\"native_clock_sync_calls\":"<<(board->liveMidiController()?board->liveMidiController()->clockSyncCalls.started:0)
+        <<",\"native_clock_sync_returns\":"<<(board->liveMidiController()?board->liveMidiController()->clockSyncCalls.completed:0)
+        <<",\"native_clock_sync_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->clockSyncCalls.initialActive:0)
+        <<",\"native_clock_sync_active\":"<<(board->liveMidiController()?board->liveMidiController()->clockSyncCalls.activeCalls():0)
+        <<",\"native_clock_sync_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->clockSyncCalls.partialEntries:0)
+        <<",\"native_clock_pulse_calls\":"<<(board->liveMidiController()?board->liveMidiController()->clockPulseCalls.started:0)
+        <<",\"native_clock_pulse_returns\":"<<(board->liveMidiController()?board->liveMidiController()->clockPulseCalls.completed:0)
+        <<",\"native_clock_pulse_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->clockPulseCalls.initialActive:0)
+        <<",\"native_clock_pulse_active\":"<<(board->liveMidiController()?board->liveMidiController()->clockPulseCalls.activeCalls():0)
+        <<",\"native_clock_pulse_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->clockPulseCalls.partialEntries:0)
+        <<",\"native_clock_display_calls\":"<<(board->liveMidiController()?board->liveMidiController()->clockDisplayCalls.started:0)
+        <<",\"native_clock_display_returns\":"<<(board->liveMidiController()?board->liveMidiController()->clockDisplayCalls.completed:0)
+        <<",\"native_clock_display_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->clockDisplayCalls.initialActive:0)
+        <<",\"native_clock_display_active\":"<<(board->liveMidiController()?board->liveMidiController()->clockDisplayCalls.activeCalls():0)
+        <<",\"native_clock_display_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->clockDisplayCalls.partialEntries:0)
+        <<",\"native_state_screen_calls\":"<<(board->liveMidiController()?board->liveMidiController()->stateScreenCalls.started:0)
+        <<",\"native_state_screen_returns\":"<<(board->liveMidiController()?board->liveMidiController()->stateScreenCalls.completed:0)
+        <<",\"native_state_screen_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateScreenCalls.initialActive:0)
+        <<",\"native_state_screen_active\":"<<(board->liveMidiController()?board->liveMidiController()->stateScreenCalls.activeCalls():0)
+        <<",\"native_state_screen_test_partial\":"<<(board->liveMidiController()?board->liveMidiController()->stateScreenCalls.partialEntries:0)
         <<",\"native_panel_input_calls\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.started:0)
         <<",\"native_panel_input_returns\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.completed:0)
         <<",\"native_panel_input_initial_active\":"<<(board->liveMidiController()?board->liveMidiController()->panelInputCalls.initialActive:0)

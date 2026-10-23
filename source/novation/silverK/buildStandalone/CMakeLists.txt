@@ -455,3 +455,13 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksInternalMidiSer
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateForegroundCalls.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateButtonDispatchCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelAnalogCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksClockSyncCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksClockPulseCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksClockDisplayCalls.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateScreenCalls.cpp")
