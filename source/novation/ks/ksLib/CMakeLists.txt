@@ -486,3 +486,5 @@ target_sources(ksLib PRIVATE ksPanelScanService.h ksPanelScanForeground.h ksPane
 target_sources(ksLib PRIVATE ksPanelControlsService.h ksPanelControlsForeground.h ksPanelControlsForeground.cpp)
 
 target_sources(ksLib PRIVATE ksStateEventsService.h ksStateEventsForeground.h ksStateEventsForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStatePanelService.h ksStatePanelForeground.h ksStatePanelForeground.cpp)

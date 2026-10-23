@@ -1558,6 +1558,13 @@ int main(int argc,char** argv){try{
         <<",\"native_state_events_square\":"<<runtime->stateEventsForeground.kinds[6]
         <<",\"native_state_events_coefficients\":"<<runtime->stateEventsForeground.kinds[7]
         <<",\"native_state_events_range\":"<<runtime->stateEventsForeground.kinds[8]
+        <<",\"native_state_panel_calls\":"<<runtime->statePanelForeground.started
+        <<",\"native_state_panel_returns\":"<<runtime->statePanelForeground.completed
+        <<",\"native_state_panel_phases\":"<<runtime->statePanelForeground.phases
+        <<",\"native_state_panel_initial_active\":"<<runtime->statePanelForeground.initial
+        <<",\"native_state_panel_active\":"<<runtime->statePanelForeground.active()
+        <<",\"native_state_panel_components\":"<<runtime->statePanelForeground.components
+        <<",\"native_state_panel_controls\":"<<runtime->statePanelForeground.kinds[0]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases
