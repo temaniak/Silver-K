@@ -60,8 +60,11 @@ void enqueueMulti(ks::Board& b){
  const uint8_t mode[]{0xb0,32,65,0xc0,0};check(b.enqueueMidi(mode,sizeof(mode)),"Store mode MIDI rejected");
  const auto message=ks::stateMessage(state);check(b.enqueueMidi(message.data(),message.size()),"Store host state rejected");
 }
-void storeInput(ks::Board& b,bool multi){
- b.write(0x16790,multi?2:3);b.write(0x16784,0);b.write(0x16785,0);b.write(0x167ba,multi?1:0);b.write(0x16799,0);b.write(0x168fc+239,1);
+void storeInput(ks::Board& b,bool multi,bool singleInMulti=false){
+ // Host-loaded Multi has no selected preset destination; choose bank1/program3 as the Store menu does.
+ if(singleInMulti)word(b,0x167ac,0x0103);
+ const char* name=singleInMulti?"CXX SAVE PART!!!":multi?"CXX SAVE MULTI!!":"CXX SAVE SINGLE!";for(unsigned n=0;n<16;++n)b.write(0x1733c+n,uint8_t(name[n]));
+ b.write(0x16790,multi?2:3);b.write(0x16784,0);b.write(0x16785,0);b.write(0x167ba,multi||singleInMulti?1:0);b.write(0x16799,0);b.write(0x168fc+239,1);
  unsigned logical=0,matches=0;
  for(unsigned key=0;key<32;++key){const unsigned descriptor=0xfcc4+3*key,index=b.read(descriptor+1),at=0xfd1e +4*index;uint32_t handler=0;for(unsigned n=0;n<4;++n)handler=(handler<<8)|b.read(at+n);
   if((b.read(descriptor)&127)==1&&(handler&0xffffff)==0x472c){logical=key;++matches;}}
@@ -137,7 +140,7 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
  auto a=std::make_unique<ks::Board>(rom.data(),wave,flash,true),b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
  check(a->boot()&&b->boot(),"Reference boot failed");same(*a,*b);
  uint64_t frames=0,peak=0,preparationFrames=0;
- for(phase=0;phase<41;++phase)for(mode=0;mode<3;++mode){
+ for(phase=0;phase<46;++phase)for(mode=0;mode<3;++mode){
   if(phase>=10&&phase<13){
    a=std::make_unique<ks::Board>(rom.data(),wave,flash,true);b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
    initialMainBoundary(*a);initialMainBoundary(*b);dirtyResetRings(*a);dirtyResetRings(*b);
@@ -145,7 +148,7 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   if(phase>=30){a=std::make_unique<ks::Board>(rom.data(),wave,flash,true);b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);check(a->boot()&&b->boot(),"Store handoff boot failed");same(*a,*b);}
   b->enableNativeController();check(b->nativeController(),"Native handoff failed");
   drain(*a,*b);
-  if(phase>=31&&phase<34){enqueueMulti(*a);enqueueMulti(*b);for(unsigned n=0;n<24000;++n){check(a->renderSample()==b->renderSample(),"Store mode preparation audio differs");check(a->controllerCycles()==b->controllerCycles(),"Store mode preparation clocks differ");sameInterrupts(*a,*b);++preparationFrames;}drain(*a,*b);same(*a,*b);}
+  if((phase>=31&&phase<34)||phase>=44){enqueueMulti(*a);enqueueMulti(*b);for(unsigned n=0;n<24000;++n){check(a->renderSample()==b->renderSample(),"Store mode preparation audio differs");check(a->controllerCycles()==b->controllerCycles(),"Store mode preparation clocks differ");sameInterrupts(*a,*b);++preparationFrames;}drain(*a,*b);same(*a,*b);}
   b->resetControllerMetrics();
   // Select inside typed children, including ordinary/special ADC tails,
   // the ADC event queue and a received F8's live counter read.
@@ -174,7 +177,8 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    if(phase==29)menuInput(*board,2);
    if(phase>=30&&phase<34)storeInput(*board,phase>=31);
    if(phase>=34&&phase<37)menuInput(*board,2);
-   if(phase>=37)applyInput(*board,phase==38);
+   if(phase>=41)storeInput(*board,false,phase>=44);
+   if(phase>=37&&phase<41)applyInput(*board,phase==38);
    if(phase>=7)continue;
    const unsigned vector=!phase?90:phase<3?32:phase<6?28:89;
    board->cpu().exr=0;board->cpu().interruptPriority[vector]=phase>0&&phase<3?6:1;
@@ -198,6 +202,11 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    case 9:target=r->serialForeground.at(ks::SerialForegroundService::Kind::ResetRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::RetainWord)&&b->cpu().exr==7;break;
    case 10:target=r->stateResetForeground.at(ks::StateResetService::Component::Buttons)&&b->cpu().exr==0;break;
    case 11:target=r->stateResetForeground.at(ks::StateResetService::Component::Controls)&&b->cpu().exr==0;break;
+   case 41:target=r->stateSaveForeground.atPage(ks::StateSavePageService::Component::Compare)&&r->stateSaveForeground.at(ks::FlashPageCompareTask::Stage::ReadTarget)&&b->cpu().exr==0;break;
+   case 42:target=r->stateSaveForeground.at(ks::FlashPageProgramTask::Stage::ReadSource)&&b->cpu().exr==6;break;
+   case 43:target=r->stateSaveForeground.atPage(ks::StateSavePageService::Component::Verify)&&r->stateSaveForeground.at(ks::FlashPageCompareTask::Stage::ReadTarget)&&b->cpu().exr==0;break;
+   case 44:target=r->stateSaveForeground.reload()&&r->stateSaveForeground.atReload(ks::StateReloadService::Component::Coordinator)&&r->stateSaveForeground.reload()->coordinator().multi().stage()==ks::StateMultiLoadTask::Stage::ResolveSource&&b->cpu().exr==0;break;
+   case 45:target=r->stateSaveForeground.atReload(ks::StateReloadService::Component::Panel)&&b->cpu().exr==0;break;
    case 37:target=r->stateApplyForeground.at(ks::StateApplyService::Kind::Apply)&&r->stateApplyForeground.at(ks::StateApplyService::Component::Apply)&&b->cpu().exr==0;break;
    case 38:target=r->stateApplyForeground.at(ks::StateApplyService::Kind::Apply)&&r->stateApplyForeground.at(ks::StateApplyService::Component::Packing)&&b->cpu().exr==0;break;
    case 39:target=r->stateApplyForeground.at(ks::StateApplyService::Kind::Apply)&&r->stateApplyForeground.at(ks::StateApplyService::Component::Midi)&&b->cpu().exr==0;break;
@@ -205,10 +214,10 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    case 34:target=r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atFormat(ks::StateMenuFormatTask::Stage::SetPosition)&&b->cpu().exr==0;break;
    case 35:target=r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atPoll(ks::PanelPollTask::Stage::TestReady)&&b->cpu().exr==0;break;
    case 36:target=r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atByte(ks::PanelByteTask::Kind::CommandWrite,ks::PanelByteTask::Stage::Transfer)&&b->cpu().exr==0;break;
-   case 30:target=r->stateStoreForeground.at(ks::StateStoreService::Kind::WritePatchName)&&b->cpu().exr==0;break;
-   case 31:target=r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::PartReference)&&b->cpu().exr==0;break;
-   case 32:target=r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::PackAll)&&b->cpu().exr==0;break;
-   case 33:target=r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::Oscillators)&&b->cpu().exr==0;break;
+   case 30:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::WritePatchName))||(r->stateSaveForeground.atPreparation(ks::StateStoreService::Kind::WritePatchName)&&r->stateSaveForeground.preparation()->nameTask()&&r->stateSaveForeground.preparation()->nameTask()->stage()==ks::StatePatchNameTask::Stage::AddWritePatch))&&b->cpu().exr==0;break;
+   case 31:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::PartReference))||(r->stateSaveForeground.atPreparation(ks::StateStoreService::Kind::MultiSerialize)&&r->stateSaveForeground.atPreparation(ks::StateStoreService::Component::PartReference)))&&b->cpu().exr==0;break;
+   case 32:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::PackAll))||(r->stateSaveForeground.atPreparation(ks::StateStoreService::Kind::MultiSerialize)&&r->stateSaveForeground.atPreparation(ks::StateStoreService::Component::PackAll)))&&b->cpu().exr==0;break;
+   case 33:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::Oscillators))||(r->stateSaveForeground.atPreparation(ks::StateStoreService::Kind::MultiSerialize)&&r->stateSaveForeground.atPreparation(ks::StateStoreService::Component::Oscillators)))&&b->cpu().exr==0;break;
    case 25:target=r->stateMenuForeground.at(ks::StateMenuService::Kind::Clock)&&b->cpu().exr==0;break;
    case 26:target=r->stateMenuForeground.at(ks::StateMenuService::Kind::Previous)&&r->stateMenuForeground.at(ks::StateMenuService::Component::EditGate)&&b->cpu().exr==0;break;
    case 27:target=r->stateMenuForeground.at(ks::StateMenuService::Kind::Previous)&&r->stateMenuForeground.at(ks::StateMenuService::Component::RepeatTimer)&&b->cpu().exr==0;break;
@@ -242,7 +251,8 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   if(phase>=25&&phase<30){const unsigned expected=phase==25?0x1300:phase==26?0x4efe:phase==27?0x4134:phase==28?0x5a4a:0x52ae;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same menu/context child");}
   if(phase>=30&&phase<34){const unsigned expected=phase==30?0x6e82:phase==31?0xa670:phase==32?0x687e:0x68b0;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same natural store preparation child");}
   if(phase>=34&&phase<37){const unsigned expected=phase==34?0x5ae4:phase==35?0x8ec:0x86c;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same menu/LCD child");}
-  if(phase>=37){const unsigned expected=phase==37?0x6aea:phase==38?0x688e:phase==39?0x2be8:0x6bf0;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same live edit/packing/MIDI/post child");}
+  if(phase>=37&&phase<41){const unsigned expected=phase==37?0x6aea:phase==38?0x688e:phase==39?0x2be8:0x6bf0;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same live edit/packing/MIDI/post child");}
+  if(phase>=41){const unsigned expected=phase==41||phase==43?0x128a:phase==42?0x122e:phase==44?0x6ff4:0x6c3c;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same Flash/verify/reload child");}
   const auto*selectedRuntime=b->nativeController();
   const auto cycle=b->controllerCycles(),interpreted=b->h8InterpretedSteps();
   b->enableLiveMidiController(mode==1);
@@ -262,6 +272,6 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   const uint8_t off[]{0x80,uint8_t(phase>=14?36+(phase*3+mode)%72:60+phase*3+mode),0};check(a->enqueueMidi(off,3)&&b->enqueueMidi(off,3),"Release rejected");
  }
  check(peak>1000,"Handoff fixture was silent");
- std::cout<<"PASS: one hundred twenty-three H8/hybrid/cancel requests inside IRQ/serial/State reset, panel scan/controls State event conversion and upper State MIDI/UART, menu/context, store preparation, LCD and live edit/packing/MIDI/post; no added guest advance; "<<frames<<" exact audible 24-stream frames plus "<<preparationFrames<<" exact host-mode preparation frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
+ std::cout<<"PASS: one hundred thirty-eight H8/hybrid/cancel requests inside IRQ/serial/State reset, panel scan/controls State event conversion and upper State MIDI/UART, menu/context, store preparation, LCD, live edit/packing/MIDI/post, Flash compare/write/verify and full multi reload; no added guest advance; "<<frames<<" exact audible 24-stream frames plus "<<preparationFrames<<" exact host-mode preparation frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
  return 0;
  }catch(const std::exception&e){std::cerr<<"phase="<<phase<<", mode="<<mode<<": "<<e.what()<<'\n';return 1;}}

@@ -48,7 +48,7 @@ struct Stats {
 };
 }
 int main(int argc,char** argv){try{
-    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal|controls|state|clock|steal|fx|panel-store-single|panel-store-multi|panel-io-single|panel-io-multi|panel-screen-single|panel-screen-multi|panel-edit-single|panel-edit-multi|panel-parts-single|panel-parts-multi|panel-actions-single|panel-actions-multi|panel-functions-single|panel-functions-multi|panel-keyboard-single|panel-keyboard-multi, trace path, optional seconds (up to 30) required\n";return 77;}
+    if(argc!=8 && argc!=9){std::cout<<"SKIP: KS OS, Flash, wave, report JSON, mode, single|multi|midi|pedal|controls|state|clock|steal|fx|panel-store-single|panel-store-multi|panel-save-part|panel-io-single|panel-io-multi|panel-screen-single|panel-screen-multi|panel-edit-single|panel-edit-multi|panel-parts-single|panel-parts-multi|panel-actions-single|panel-actions-multi|panel-functions-single|panel-functions-multi|panel-keyboard-single|panel-keyboard-multi, trace path, optional seconds (up to 30) required\n";return 77;}
     const double duration=argc==9?std::stod(argv[8]):2.;
     check(std::isfinite(duration)&&duration>=2.&&duration<=30.,"Controller probe duration must be 2..30 seconds");
     const std::string mode=argv[5],scenario=argv[6];
@@ -57,6 +57,7 @@ int main(int argc,char** argv){try{
     const bool recording=mode=="native-record" || mode=="native-toggle-record" || mode=="record" || mode=="live-record" || mode=="live-toggle-record";
     const bool toggling=mode=="native-toggle" || mode=="native-toggle-record" || mode=="live-toggle" || mode=="live-toggle-record";
     check(mode=="h8" || mode=="record" || mode=="replay" || mode=="boot" || liveMode,"Unknown controller probe mode");
+    const bool panelPartSave=scenario=="panel-save-part";
     const bool panelActions=scenario=="panel-actions-single"||scenario=="panel-actions-multi";
     const bool panelFunctions=scenario=="panel-functions-single"||scenario=="panel-functions-multi";
     const bool panelKeyboard=scenario=="panel-keyboard-single"||scenario=="panel-keyboard-multi";
@@ -65,9 +66,9 @@ int main(int argc,char** argv){try{
     const bool panelScreen=panelActions || panelFunctions || panelKeyboard || panelParts || panelEdit || scenario=="panel-screen-single" || scenario=="panel-screen-multi";
     const bool panelIo=panelScreen || scenario=="panel-io-single" || scenario=="panel-io-multi";
     if(panelIo)check(duration>=4.,"Physical panel scenario requires at least four seconds");
-    const bool panelStore=panelIo || scenario=="panel-store-single" || scenario=="panel-store-multi";
+    const bool panelStore=panelPartSave || panelIo || scenario=="panel-store-single" || scenario=="panel-store-multi";
     check(scenario=="single" || scenario=="multi" || scenario=="midi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || panelStore,"Unknown controller probe scenario");
-    const bool multi=scenario=="panel-actions-multi"||scenario=="panel-functions-multi"||scenario=="panel-keyboard-multi"||scenario=="panel-parts-multi" || scenario=="panel-edit-multi" || scenario=="panel-screen-multi" || scenario=="panel-io-multi" || scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || scenario=="panel-store-multi";
+    const bool multi=panelPartSave || scenario=="panel-actions-multi"||scenario=="panel-functions-multi"||scenario=="panel-keyboard-multi"||scenario=="panel-parts-multi" || scenario=="panel-edit-multi" || scenario=="panel-screen-multi" || scenario=="panel-io-multi" || scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || scenario=="panel-store-multi";
     const auto* threads=std::getenv("SILVER_KS_DSP_THREADS");const bool parallel=threads&&std::string(threads)=="2";
     const auto setup=Clock::now();ks::Rom os(argv[1]);check(os.isValid(),"Invalid KS OS");
     std::unique_ptr<ks::test::PanelIoFixture> ioFixture;
@@ -349,7 +350,8 @@ int main(int argc,char** argv){try{
             }
             if(toggling && n==native(.95)){if(nativeMode)board->enableNativeController();else board->enableLiveMidiController();if(recording)board->enableControllerDelegationProfile();}
             if(panelIo)ioFixture->apply(n,ks::DSP::SampleRate,physicalStore,multi);
-            if(panelStore&&!panelIo)for(unsigned press=0;press<(multi?3u:4u);++press){
+            if(panelPartSave){if(n==native(.2)){board->write(0x167ac,1);board->write(0x167ad,3);board->write(0x16790,3);queueStore(true);}if(n==native(.24))queueStore(false);}
+            if(panelStore&&!panelIo&&!panelPartSave)for(unsigned press=0;press<(multi?3u:4u);++press){
                 if(n==native(.2+press*.35))queueStore(true);
                 if(n==native(.24+press*.35))queueStore(false);
             }
@@ -412,7 +414,9 @@ int main(int argc,char** argv){try{
         admitted(live.panelAdcScaleCalls);admitted(live.panelAdcCalibrationCalls);
         admitted(live.panelAdcIrqCalls);admitted(live.panelAdcScanCalls);
     }
-    if(panelStore&&!panelScreen){if(!panelIo)check(panelEvents==(multi?6u:8u),"Missing panel store events");check(board->flashRevision>0,"Panel store did not write Flash");check(board->read(0x16790)==0,"Store page did not return to playback");}
+    if(panelPartSave&&!board->flashRevision)std::cerr<<"Part-save outcome page="<<unsigned(board->read(0x16790))<<" program="<<std::hex<<unsigned(board->read(0x167ac))<<':'<<unsigned(board->read(0x167ad))<<" bank="<<unsigned(board->read(0x167ab))<<" mode="<<unsigned(board->read(0x167ba))<<std::dec<<'\n';
+    if(panelStore&&!panelScreen){if(!panelIo)check(panelEvents==(panelPartSave?2u:multi?6u:8u),"Missing panel store events");check(board->flashRevision>0,"Panel store did not write Flash");check(board->read(0x16790)==0,"Store page did not return to playback");}
+    if(panelPartSave&&nativeMode)check(board->nativeController()->stateSaveForeground.kinds[1]&&(board->nativeController()->stateSaveForeground.components&(1u<<16)),"Part save did not run the full native reload");
     if(scenario=="state")check(board->flashRevision>0,"State scenario did not complete a Flash page write");
     if(panelKeyboard)check(ioFixture->keyboardReads>0&&ioFixture->keyboardTransitions==12,"Keyboard contact source not observed");
     if(panelParts&&nativeMode)check(board->liveMidiController()->statePartSelectionCalls.started>0,"Part handlers were not observed");
@@ -1632,6 +1636,26 @@ int main(int argc,char** argv){try{
         <<",\"native_state_apply_current_preset\":"<<runtime->stateApplyForeground.kinds[4]
         <<",\"native_state_apply_overlay_preset\":"<<runtime->stateApplyForeground.kinds[5]
         <<",\"native_state_apply_program_index\":"<<runtime->stateApplyForeground.kinds[6]
+        <<",\"native_state_save_calls\":"<<runtime->stateSaveForeground.started
+        <<",\"native_state_save_returns\":"<<runtime->stateSaveForeground.completed
+        <<",\"native_state_save_phases\":"<<runtime->stateSaveForeground.phases
+        <<",\"native_state_save_initial_active\":"<<runtime->stateSaveForeground.initial
+        <<",\"native_state_save_active\":"<<runtime->stateSaveForeground.active()
+        <<",\"native_state_save_components\":"<<runtime->stateSaveForeground.components
+        <<",\"native_state_save_commit_multi\":"<<runtime->stateSaveForeground.kinds[0]
+        <<",\"native_state_save_commit_single\":"<<runtime->stateSaveForeground.kinds[1]
+        <<",\"native_state_save_preset_save\":"<<runtime->stateSaveForeground.kinds[2]
+        <<",\"native_state_save_format_direct\":"<<runtime->stateSaveForeground.kinds[3]
+        <<",\"native_state_save_format_part\":"<<runtime->stateSaveForeground.kinds[4]
+        <<",\"native_state_save_offset\":"<<runtime->stateSaveForeground.kinds[5]
+        <<",\"native_state_save_check\":"<<runtime->stateSaveForeground.kinds[6]
+        <<",\"native_state_save_message\":"<<runtime->stateSaveForeground.kinds[7]
+        <<",\"native_state_save_flash_commit\":"<<runtime->stateSaveForeground.kinds[8]
+        <<",\"native_state_save_global_save\":"<<runtime->stateSaveForeground.kinds[9]
+        <<",\"native_state_save_multi_current\":"<<runtime->stateSaveForeground.kinds[10]
+        <<",\"native_state_save_multi_provided\":"<<runtime->stateSaveForeground.kinds[11]
+        <<",\"native_state_save_flash_program\":"<<runtime->stateSaveForeground.kinds[12]
+        <<",\"native_state_save_flash_compare\":"<<runtime->stateSaveForeground.kinds[13]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases

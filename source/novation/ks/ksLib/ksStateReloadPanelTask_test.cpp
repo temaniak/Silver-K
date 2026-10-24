@@ -1,0 +1,23 @@
+#include "ksStateReloadPanelService.h"
+#include <algorithm>
+#include <cstdlib>
+#include <iostream>
+#include <memory>
+#include <new>
+#include <stdexcept>
+namespace {bool tracking=false;uint64_t allocations=0;void check(bool v,const char*m){if(!v)throw std::runtime_error(m);}}
+void*operator new(std::size_t n){if(tracking)++allocations;if(auto*p=std::malloc(n?n:1))return p;throw std::bad_alloc();}void*operator new[](std::size_t n){return ::operator new(n);}void operator delete(void*p)noexcept{std::free(p);}void operator delete[](void*p)noexcept{std::free(p);}void operator delete(void*p,std::size_t)noexcept{std::free(p);}void operator delete[](void*p,std::size_t)noexcept{std::free(p);}
+int main(){try{using T=ks::StateReloadPanelService;auto m=std::make_unique<uint8_t[]>(1<<24);uint64_t calls=0,phases=0,rejects=0;uint32_t components=0;
+ const auto validate=[](uint8_t category,uint32_t raw){return raw==unsigned(category)+1;};
+ for(unsigned seed=0;seed<2048;++seed){std::fill(m.get(),m.get()+(1<<24),uint8_t(0));const uint32_t base=seed&1?0x24001:0x24000;
+  for(const auto&s:T::schema){for(unsigned n=0;n<8;++n)m[0xfd66 + 8*s.key+n]=s.bytes[n];m[0x10141 + 4*s.bytes[0]]=uint8_t(s.bytes[0]+1);}
+  for(unsigned key=0;key<256;++key){auto at=0x1c0 + 5*key;m[at]=uint8_t(key%8);m[at+1]=uint8_t(1u<<(key%8));m[at+2]=uint8_t(~m[at+1]);m[at+3]=uint8_t(1+seed%4);m[at+4]=uint8_t((seed+key)%4);}
+  for(unsigned n=0;n<1024;++n)m[base+n]=uint8_t(seed+17*n);for(unsigned n=0;n<4;++n)m[0x167bc + n]=uint8_t(base>>(24-8*n));m[0x600004]=7;m[0xffff62]=255;m[0xffec22]=7;for(unsigned at:{0x167d2u,0x167d3u,0x167bau,0x16784u,0x1679eu,0x167a1u,0x167a3u,0x16790u})m[at]=uint8_t(seed+at);
+  check(T::admittedSchema([&](uint32_t a){return m[a];},validate),"Pure panel schema admission");T service;int previous=-1;unsigned reads=0,writes=0,indicators=0,dspLow=0,statusReads=0;const unsigned busy=seed==2047?65538:seed%4;uint64_t now=0;tracking=true;
+  while(!service.complete()){const auto cost=service.nextClocks(previous);const auto oldReads=reads,oldWrites=writes;const auto component=service.component();const auto read=[&](uint32_t at,unsigned offset){check(offset<=cost,"Pure panel read time");++reads;if(at==0x600004&&statusReads++<busy)return uint8_t(0);return m[at];};const auto write=[&](uint32_t at,uint8_t v,unsigned offset){check(offset<=cost,"Pure panel write time");++writes;if(at==0xffff61)++indicators;if(at==0x60000e){if(++dspLow==2)check(v==service.auxiliaryValue(),"Auxiliary wire payload");}m[at]=v;previous=at<0x400000||(at>=0xfffd10&&at<0xffffa0)?int(at):-1;};
+   check(cost&&!service.advanceBefore(cost-1,read,write,validate,previous),"Pure panel insufficient budget admitted");check(reads==oldReads&&writes==oldWrites&&service.component()==component,"Pure panel early resource/continuation");++rejects;check(service.advanceBefore(cost,read,write,validate,previous)==cost,"Pure panel phase admission");if(service.effect().write)previous=-1;now+=cost;check(++phases<20000000,"Pure panel failed to finish");}
+  tracking=false;check(service.current()==base&&service.auxiliarySent()&&dspLow==2,"Pure panel full graph closure");check(indicators==(seed==2047?23u:22u),"Pure panel22 indicator batch plus fault pulse");check(now>964,"Pure panel omitted child time");components|=service.components();++calls;
+ }
+ unsigned pointerGuards=0;for(unsigned selected=1;selected<=22;++selected)for(uint32_t invalid:{0xffefffu,0xfff000u,0xfff700u,0xfffbffu,0xffffffu}){T rejected;unsigned observations=0;bool seen=false,failed=false;try{for(unsigned n=0;n<10000&&!rejected.complete();++n){const auto cost=rejected.nextClocks();rejected.advanceBefore(cost,[&](uint32_t at,unsigned){check(at<0xfff000||at>=0xfffc00,"Pure panel hidden scratch observation");if(at==0x167bc)++observations;if(at>=0x167bc&&at<0x167c0&&observations==selected){seen=true;return uint8_t(invalid>>(24-8*(at-0x167bc)));}return m[at];},[&](uint32_t at,uint8_t value,unsigned){check(at<0xfff000||at>=0xfffc00,"Pure panel hidden scratch publication");m[at]=value;},validate);}}catch(const std::logic_error&){failed=true;}check(seen&&failed,"Pure panel evolving pointer guard missing");++pointerGuards;}
+ check(components==0x7ff&&!allocations,"Pure panel component/heap contract");std::cout<<"PASS: "<<calls<<" complete pure PanelReload graphs; "<<phases<<" phases and "<<rejects<<" insufficient budgets; all11components/all11descriptor keys/22indicator writes plus Auxiliary DSPB ready,busy,timeout; zero allocations; "<<pointerGuards<<" evolving pointer guards\n";return 0;
+ }catch(const std::exception&e){tracking=false;std::cerr<<e.what()<<'\n';return 1;}}

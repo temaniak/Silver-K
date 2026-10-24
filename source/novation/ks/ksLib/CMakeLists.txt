@@ -496,3 +496,7 @@ target_sources(ksLib PRIVATE ksStateStoreService.h ksStateStoreForeground.h ksSt
 target_sources(ksLib PRIVATE ksStateDisplayService.h ksStateDisplayForeground.h ksStateDisplayForeground.cpp)
 
 target_sources(ksLib PRIVATE ksStateApplyService.h ksStateApplyForeground.h ksStateApplyForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStateSaveService.h ksStateSaveForeground.h ksStateSaveForeground.cpp)
+
+target_sources(ksLib PRIVATE "ksStateReloadVoiceService.h" "ksStateReloadPanelService.h" "ksStateReloadCoordinator.h" "ksStateReloadService.h")

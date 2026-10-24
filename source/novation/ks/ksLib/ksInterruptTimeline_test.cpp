@@ -30,8 +30,11 @@ void enqueueMulti(ks::Board& b){
  const uint8_t mode[]{0xb0,32,65,0xc0,0};check(b.enqueueMidi(mode,sizeof(mode)),"Store mode MIDI rejected");
  const auto message=ks::stateMessage(state);check(b.enqueueMidi(message.data(),message.size()),"Store host state rejected");
 }
-void storeInput(ks::Board& b,bool multi){
- b.write(0x16790,multi?2:3);b.write(0x16784,0);b.write(0x16785,0);b.write(0x167ba,multi?1:0);b.write(0x16799,0);b.write(0x168fc+239,1);
+void storeInput(ks::Board& b,bool multi,bool singleInMulti=false){
+ // Host-loaded Multi has no selected preset destination; choose bank1/program3 as the Store menu does.
+ if(singleInMulti)word(b,0x167ac,0x0103);
+ const char* name=singleInMulti?"CXX SAVE PART!!!":multi?"CXX SAVE MULTI!!":"CXX SAVE SINGLE!";for(unsigned n=0;n<16;++n)b.write(0x1733c+n,uint8_t(name[n]));
+ b.write(0x16790,multi?2:3);b.write(0x16784,0);b.write(0x16785,0);b.write(0x167ba,multi||singleInMulti?1:0);b.write(0x16799,0);b.write(0x168fc+239,1);
  unsigned logical=0,matches=0;
  for(unsigned key=0;key<32;++key){const unsigned descriptor=0xfcc4+3*key,index=b.read(descriptor+1),at=0xfd1e +4*index;uint32_t handler=0;for(unsigned n=0;n<4;++n)handler=(handler<<8)|b.read(at+n);
   if((b.read(descriptor)&127)==1&&(handler&0xffffff)==0x472c){logical=key;++matches;}}
@@ -140,16 +143,16 @@ int main(int argc,char**argv){unsigned item=0;try{
  check(b->nativeController()->stateResetForeground.kinds[0]==1&&b->nativeController()->stateResetForeground.components==0xf,"Natural initial State reset missed its complete child graph");
  check(a->boot()&&b->boot(),"Normal musical warmup failed after initial State reset");
  uint64_t frames=0,peak=0;
- for(item=0;item<30;++item){
+ for(item=0;item<31;++item){
   drain(*a,*b);
   const bool foreground=item>=16;
   const bool panelScan=item==17;
   const bool stateEvents=item>=18&&item<20;
   const bool statePanel=item>=20&&item<22;
   const bool stateMenu=item>=22&&item<25;
-  const bool stateStore=item>=25&&item<27;
+  const bool stateStore=(item>=25&&item<27)||item==30;
   const bool stateDisplay=item==27;
-  const bool stateApply=item>=28;
+  const bool stateApply=item>=28&&item<30;
   const unsigned vector=foreground?128:item==0?88:item<=2?90:item==3?42:item==4?91:item==5?32:item<10?28:89;
   const unsigned kind=vector==88?0:vector==90?1:(vector==42||vector==91)?2:vector==32?3:vector==28?4:5;
   const auto kindCalls=foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind],received=b->midiReceived;
@@ -158,10 +161,10 @@ int main(int argc,char**argv){unsigned item=0;try{
   const unsigned menuKind=item==22?2:item==23?4:11;const auto menuCalls=b->nativeController()->stateMenuForeground.kinds[menuKind];
   const auto applyCalls=b->nativeController()->stateApplyForeground.kinds[0];
   const auto displayCalls=b->nativeController()->stateDisplayForeground.kinds[0];
-  const unsigned storeKind=item==25?12:0;auto storeCalls=b->nativeController()->stateStoreForeground.kinds[storeKind];
-  if(item==26){enqueueMulti(*a);enqueueMulti(*b);for(unsigned n=0;n<24000;++n){check(a->renderSample()==b->renderSample(),"Timeline store preparation audio differs");check(a->controllerCycles()==b->controllerCycles(),"Timeline store preparation clocks differ");sameInterrupts(*a,*b);}drain(*a,*b);storeCalls=b->nativeController()->stateStoreForeground.kinds[storeKind];}
+  const unsigned storeKind=item==26?0:1;auto storeCalls=b->nativeController()->stateSaveForeground.kinds[storeKind];auto flashRevision=b->flashRevision;bool sawReload=false,sawVerify=false;
+  if(item==26){enqueueMulti(*a);enqueueMulti(*b);for(unsigned n=0;n<24000;++n){check(a->renderSample()==b->renderSample(),"Timeline store preparation audio differs");check(a->controllerCycles()==b->controllerCycles(),"Timeline store preparation clocks differ");sameInterrupts(*a,*b);}drain(*a,*b);storeCalls=b->nativeController()->stateSaveForeground.kinds[storeKind];flashRevision=b->flashRevision;}
   for(auto*board:{a.get(),b.get()}){
-   if(stateStore)storeInput(*board,item==26);
+   if(stateStore)storeInput(*board,item==26,item==30);
    if(stateDisplay)menuInput(*board,2);
    if(stateApply)applyInput(*board,item==29);
    if(foreground)pedalOutput(*board);
@@ -182,9 +185,11 @@ int main(int argc,char**argv){unsigned item=0;try{
   if(vector==89&&item!=11){const uint8_t byte=item==10?0xfe:0xf8;check(a->enqueueMidi(&byte,1)&&b->enqueueMidi(&byte,1),"Test UART byte rejected");}
   if(item>=6){
    unsigned phases=0;bool sawPacking=false;
-   while((foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind])==kindCalls||b->nativeController()->activeNativeWork()||(b->cpu().exr&7)||(stateEvents&&(b->read(0x15408)||b->read(0x15409)!=2))||(statePanel&&(b->read(0x156ea)||b->read(0x156eb)!=2))||(stateMenu&&b->nativeController()->stateMenuForeground.kinds[menuKind]==menuCalls)||(stateStore&&b->nativeController()->stateStoreForeground.kinds[storeKind]==storeCalls)||(stateDisplay&&b->nativeController()->stateDisplayForeground.kinds[0]==displayCalls)||(stateApply&&b->nativeController()->stateApplyForeground.kinds[0]==applyCalls)){
-    check(++phases<=65536,"Forced ADC/RX lifecycle did not finish");advanceBoth(*a,*b);
+   while((foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind])==kindCalls||b->nativeController()->activeNativeWork()||(b->cpu().exr&7)||(stateEvents&&(b->read(0x15408)||b->read(0x15409)!=2))||(statePanel&&(b->read(0x156ea)||b->read(0x156eb)!=2))||(stateMenu&&b->nativeController()->stateMenuForeground.kinds[menuKind]==menuCalls)||(stateStore&&b->nativeController()->stateSaveForeground.kinds[storeKind]==storeCalls)||(stateDisplay&&b->nativeController()->stateDisplayForeground.kinds[0]==displayCalls)||(stateApply&&b->nativeController()->stateApplyForeground.kinds[0]==applyCalls)){
+    check(++phases<=(stateStore?4000000u:65536u),"Forced ADC/RX/Store lifecycle did not finish");advanceBoth(*a,*b);
     if(stateApply&&b->nativeController()->stateApplyForeground.at(ks::StateApplyService::Component::Packing))sawPacking=true;
+    if(stateStore&&b->nativeController()->stateSaveForeground.at(ks::StateSaveService::Component::Reload))sawReload=true;
+    if(stateStore&&b->nativeController()->stateSaveForeground.atPage(ks::StateSavePageService::Component::Verify))sawVerify=true;
    }
    if(item==29)check(sawPacking,"Natural edit did not reach its current packing child");
    if(vector==89&&item!=11)check(a->midiReceived==b->midiReceived&&b->midiReceived>received,"RX case did not consume the actual UART byte");
@@ -195,7 +200,9 @@ int main(int argc,char**argv){unsigned item=0;try{
   }
   if(stateApply)check(b->nativeController()->stateApplyForeground.kinds[0]>applyCalls,"Natural control event missed actual edit application");
   if(stateDisplay)check(b->nativeController()->stateDisplayForeground.kinds[0]>displayCalls&&(b->nativeController()->stateDisplayForeground.components&0xf0)==0xf0,"Natural menu display missed LCD transport");
-  if(stateStore)check(b->nativeController()->stateStoreForeground.kinds[storeKind]>storeCalls,"Natural Store event missed its name/serialization graph");
+  if(stateStore&&(!sawVerify||b->flashRevision<=flashRevision||b->read(0x16790)!=0))std::cerr<<"Store outcome verify="<<sawVerify<<" reload="<<sawReload<<" flash="<<flashRevision<<'/'<<b->flashRevision<<" page="<<unsigned(b->read(0x16790))<<" program="<<std::hex<<unsigned(b->read(0x167ac))<<':'<<unsigned(b->read(0x167ad))<<" components="<<b->nativeController()->stateSaveForeground.components<<std::dec<<'\n';
+  if(stateStore){check(b->nativeController()->stateSaveForeground.kinds[storeKind]>storeCalls,"Natural Store event missed its complete save graph");check(sawVerify&&b->flashRevision>flashRevision&&b->read(0x16790)==0,"Natural Store did not finish Flash and return to playback");}
+  if(item==30)check(sawReload,"Single save in multi mode missed full native reload");
   if(stateMenu)check(b->nativeController()->stateMenuForeground.kinds[menuKind]>menuCalls,"Natural menu/edit event did not execute its new native root");
   if(statePanel)check(b->nativeController()->statePanelForeground.started>panelCalls&&(b->nativeController()->statePanelForeground.components&0x180)==0x180,"Natural upper State event missed MIDI queue/UART publication");
   if(stateEvents)check((b->nativeController()->stateEventsForeground.components&(item==18?0x10u:0x20u))!=0,"Natural State event did not run its nested scale/square");
@@ -222,7 +229,14 @@ int main(int argc,char**argv){unsigned item=0;try{
  // The private replay checkpoint also hashes discarded CPU scratch bytes.
  // Preserve both raw checkpoints and compare every observable tape field.
  check(x->beginCycle==y->beginCycle&&x->endCycle==y->endCycle&&x->events.size()==y->events.size()&&x->slices.size()==y->slices.size(),"Interrupt timeline tape bounds differ");
- for(size_t n=0;n<x->events.size();++n){const auto&p=x->events[n];const auto&q=y->events[n];check(p.cycle==q.cycle&&p.pc==q.pc&&p.dsp==q.dsp&&p.offset==q.offset&&p.value==q.value&&p.flags==q.flags,"Interrupt timeline DSP transfer differs");}
+ // Raw PCs describe the removed controller implementation, rather than a bus
+ // resource. Retain both original tapes; only the authenticated Save caller
+ // may replace these independently verified DSP transport locations.
+ constexpr std::array<unsigned,13> saveDspSites{{0x2417,0x2425,0x243d,0x2447,0x244f,0x2457,0x245f,0x246d,0x2485,0x24d9,0x24ff,0x2507,0x250f}};
+ uint64_t nativeCpuLocationChanges=0;
+ for(size_t n=0;n<x->events.size();++n){const auto&p=x->events[n];const auto&q=y->events[n];check(p.cycle==q.cycle&&p.dsp==q.dsp&&p.offset==q.offset&&p.value==q.value&&p.flags==q.flags,"Interrupt timeline DSP transfer differs");
+  if(p.pc!=q.pc){check(q.pc==0x47d6&&std::find(saveDspSites.begin(),saveDspSites.end(),p.pc)!=saveDspSites.end(),"Unexpected DSP trace CPU location change");++nativeCpuLocationChanges;}}
+
  for(size_t n=0;n<x->slices.size();++n){const auto&p=x->slices[n];const auto&q=y->slices[n];check(p.begin==q.begin&&p.end==q.end&&p.first==q.first&&p.count==q.count,"Interrupt timeline DSP slice differs");}
  const auto*r=b->nativeController();check(r->nativeInterruptKinds[0]&&r->nativeInterruptKinds[1]&&r->nativeInterruptKinds[2]&&r->nativeInterruptKinds[3]&&r->nativeInterruptKinds[4]&&r->nativeInterruptKinds[5],"Missing native IRQ kind coverage");
  check(r->nativeInterruptStarts+r->nativeInterruptInitial==r->nativeInterruptReturns+r->activeNativeInterrupts(),"Native IRQ accounting differs");
@@ -230,6 +244,6 @@ int main(int argc,char**argv){unsigned item=0;try{
  check(r->serialForeground.started+r->serialForeground.initial==r->serialForeground.completed+r->serialForeground.active(),"Native foreground accounting differs");
  check(r->stateResetForeground.started+r->stateResetForeground.initialActive==r->stateResetForeground.completed+r->stateResetForeground.active(),"Native State reset accounting differs");
  check(peak>1000&&b->h8StepsSinceNativeHandoff()==0,"Silent fixture or native interpreter fallback");
- std::cout<<"PASS: thirty IRQ/foreground/panel scan/State event/menu/store/display/apply timelines including TPU0/ADC/RX/F8 and a real pedal UART publication, "<<frames<<" exact audible 24-stream frames, "<<x->events.size()<<" exact DSP events; native error/TX/unused="<<r->nativeInterruptKinds[0]<<'/'<<r->nativeInterruptKinds[1]<<'/'<<r->nativeInterruptKinds[2]<<"; TPU0="<<r->nativeInterruptKinds[3]<<"; ADC="<<r->nativeInterruptKinds[4]<<", RX="<<r->nativeInterruptKinds[5]<<", components=0x"<<std::hex<<r->nativeTpuComponents<<'/'<<r->nativeAdcComponents<<'/'<<r->nativeSerialReceiveComponents<<"; private checkpoints="<<x->checkpoint<<'/'<<y->checkpoint<<std::dec<<"; foreground reset/pop/transmit="<<r->serialForeground.kinds[0]<<'/'<<r->serialForeground.kinds[1]<<'/'<<r->serialForeground.kinds[4]<<"; natural State resets="<<r->stateResetForeground.kinds[0]<<", components=0x"<<std::hex<<r->stateResetForeground.components<<std::dec<<"; cycles/pending/priorities/hardware/resource RAM/state/Flash/MIDI exact, no post-handoff H8\n";
+ std::cout<<"PASS: thirty-one IRQ/foreground/panel scan/State event/menu/store/display/apply/full Flash-reload timelines including TPU0/ADC/RX/F8 and a real pedal UART publication, "<<frames<<" exact audible 24-stream frames, "<<x->events.size()<<" exact timed DSP transfers; raw CPU location changes="<<nativeCpuLocationChanges<<" (both tapes retained); native error/TX/unused="<<r->nativeInterruptKinds[0]<<'/'<<r->nativeInterruptKinds[1]<<'/'<<r->nativeInterruptKinds[2]<<"; TPU0="<<r->nativeInterruptKinds[3]<<"; ADC="<<r->nativeInterruptKinds[4]<<", RX="<<r->nativeInterruptKinds[5]<<", components=0x"<<std::hex<<r->nativeTpuComponents<<'/'<<r->nativeAdcComponents<<'/'<<r->nativeSerialReceiveComponents<<"; private checkpoints="<<x->checkpoint<<'/'<<y->checkpoint<<std::dec<<"; foreground reset/pop/transmit="<<r->serialForeground.kinds[0]<<'/'<<r->serialForeground.kinds[1]<<'/'<<r->serialForeground.kinds[4]<<"; natural State resets="<<r->stateResetForeground.kinds[0]<<", components=0x"<<std::hex<<r->stateResetForeground.components<<std::dec<<"; cycles/pending/priorities/hardware/resource RAM/state/Flash/MIDI exact, no post-handoff H8\n";
  return 0;
  }catch(const std::exception&e){std::cerr<<"scenario="<<item<<": "<<e.what()<<'\n';return 1;}}
