@@ -1619,6 +1619,19 @@ int main(int argc,char** argv){try{
         <<",\"native_state_display_text\":"<<runtime->stateDisplayForeground.kinds[2]
         <<",\"native_state_display_character\":"<<runtime->stateDisplayForeground.kinds[3]
         <<",\"native_state_display_command\":"<<runtime->stateDisplayForeground.kinds[4]
+        <<",\"native_state_apply_calls\":"<<runtime->stateApplyForeground.started
+        <<",\"native_state_apply_returns\":"<<runtime->stateApplyForeground.completed
+        <<",\"native_state_apply_phases\":"<<runtime->stateApplyForeground.phases
+        <<",\"native_state_apply_initial_active\":"<<runtime->stateApplyForeground.initialActive
+        <<",\"native_state_apply_active\":"<<runtime->stateApplyForeground.active()
+        <<",\"native_state_apply_components\":"<<runtime->stateApplyForeground.components
+        <<",\"native_state_apply_apply\":"<<runtime->stateApplyForeground.kinds[0]
+        <<",\"native_state_apply_post\":"<<runtime->stateApplyForeground.kinds[1]
+        <<",\"native_state_apply_stored_value\":"<<runtime->stateApplyForeground.kinds[2]
+        <<",\"native_state_apply_classify_stored\":"<<runtime->stateApplyForeground.kinds[3]
+        <<",\"native_state_apply_current_preset\":"<<runtime->stateApplyForeground.kinds[4]
+        <<",\"native_state_apply_overlay_preset\":"<<runtime->stateApplyForeground.kinds[5]
+        <<",\"native_state_apply_program_index\":"<<runtime->stateApplyForeground.kinds[6]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases

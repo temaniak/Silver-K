@@ -2665,3 +2665,13 @@ add_executable(ksStateDisplayTask_test "${ROOT}/source/novation/ks/ksLib/ksState
 target_compile_features(ksStateDisplayTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_state_display_task COMMAND ksStateDisplayTask_test)
 set_tests_properties(ks_state_display_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksStateApplyService_test "${ROOT}/source/novation/ks/ksLib/ksStateApplyService_test.cpp")
+target_include_directories(ksStateApplyService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksStateApplyService_test PRIVATE ksLib)
+add_test(NAME ks_state_apply_service COMMAND ksStateApplyService_test)
+set_tests_properties(ks_state_apply_service PROPERTIES TIMEOUT 240 SKIP_RETURN_CODE 77)
+add_executable(ksStateApplyTask_test "${ROOT}/source/novation/ks/ksLib/ksStateApplyTask_test.cpp")
+target_compile_features(ksStateApplyTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_state_apply_task COMMAND ksStateApplyTask_test)
+set_tests_properties(ks_state_apply_task PROPERTIES TIMEOUT 240)

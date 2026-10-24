@@ -37,6 +37,12 @@ void storeInput(ks::Board& b,bool multi){
   if((b.read(descriptor)&127)==1&&(handler&0xffffff)==0x472c){logical=key;++matches;}}
  check(matches==1,"Store descriptor ambiguous");word(b,0x1537c,2);word(b,0x1537e,0);word(b,0x15380,uint16_t(0x100|logical));
 }
+void applyInput(ks::Board& b,bool packed){
+ b.write(0x16790,0);b.write(0x1679e,0);b.write(0x16784,0);b.write(0x169f9,0);b.write(0x169ed,127);
+ uint32_t live=0;for(unsigned n=0;n<4;++n)live=(live<<8)|b.read(0x167c0+n);
+ for(unsigned field:{3u,127u,222u})b.write((live+field)&0xffffff,255);
+ word(b,0x15406,2);word(b,0x15408,0);word(b,0x1540a,packed?0x0126:0x4000);
+}
 void fullTimer(ks::Board& b){
  // Released GPIO contacts plus one changed two-contact key exercise the
  // velocity child without overflowing the firmware's keyboard event ring.
@@ -134,7 +140,7 @@ int main(int argc,char**argv){unsigned item=0;try{
  check(b->nativeController()->stateResetForeground.kinds[0]==1&&b->nativeController()->stateResetForeground.components==0xf,"Natural initial State reset missed its complete child graph");
  check(a->boot()&&b->boot(),"Normal musical warmup failed after initial State reset");
  uint64_t frames=0,peak=0;
- for(item=0;item<28;++item){
+ for(item=0;item<30;++item){
   drain(*a,*b);
   const bool foreground=item>=16;
   const bool panelScan=item==17;
@@ -143,18 +149,21 @@ int main(int argc,char**argv){unsigned item=0;try{
   const bool stateMenu=item>=22&&item<25;
   const bool stateStore=item>=25&&item<27;
   const bool stateDisplay=item==27;
+  const bool stateApply=item>=28;
   const unsigned vector=foreground?128:item==0?88:item<=2?90:item==3?42:item==4?91:item==5?32:item<10?28:89;
   const unsigned kind=vector==88?0:vector==90?1:(vector==42||vector==91)?2:vector==32?3:vector==28?4:5;
   const auto kindCalls=foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind],received=b->midiReceived;
   const auto calls=b->nativeController()->nativeInterruptStarts;
   const auto panelCalls=b->nativeController()->statePanelForeground.started;
   const unsigned menuKind=item==22?2:item==23?4:11;const auto menuCalls=b->nativeController()->stateMenuForeground.kinds[menuKind];
+  const auto applyCalls=b->nativeController()->stateApplyForeground.kinds[0];
   const auto displayCalls=b->nativeController()->stateDisplayForeground.kinds[0];
   const unsigned storeKind=item==25?12:0;auto storeCalls=b->nativeController()->stateStoreForeground.kinds[storeKind];
   if(item==26){enqueueMulti(*a);enqueueMulti(*b);for(unsigned n=0;n<24000;++n){check(a->renderSample()==b->renderSample(),"Timeline store preparation audio differs");check(a->controllerCycles()==b->controllerCycles(),"Timeline store preparation clocks differ");sameInterrupts(*a,*b);}drain(*a,*b);storeCalls=b->nativeController()->stateStoreForeground.kinds[storeKind];}
   for(auto*board:{a.get(),b.get()}){
    if(stateStore)storeInput(*board,item==26);
    if(stateDisplay)menuInput(*board,2);
+   if(stateApply)applyInput(*board,item==29);
    if(foreground)pedalOutput(*board);
    if(panelScan)board->write(0x15400,0xfe);
    if(stateMenu)menuInput(*board,item-22);
@@ -172,16 +181,19 @@ int main(int argc,char**argv){unsigned item=0;try{
   }
   if(vector==89&&item!=11){const uint8_t byte=item==10?0xfe:0xf8;check(a->enqueueMidi(&byte,1)&&b->enqueueMidi(&byte,1),"Test UART byte rejected");}
   if(item>=6){
-   unsigned phases=0;
-   while((foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind])==kindCalls||b->nativeController()->activeNativeWork()||(b->cpu().exr&7)||(stateEvents&&(b->read(0x15408)||b->read(0x15409)!=2))||(statePanel&&(b->read(0x156ea)||b->read(0x156eb)!=2))||(stateMenu&&b->nativeController()->stateMenuForeground.kinds[menuKind]==menuCalls)||(stateStore&&b->nativeController()->stateStoreForeground.kinds[storeKind]==storeCalls)||(stateDisplay&&b->nativeController()->stateDisplayForeground.kinds[0]==displayCalls)){
+   unsigned phases=0;bool sawPacking=false;
+   while((foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind])==kindCalls||b->nativeController()->activeNativeWork()||(b->cpu().exr&7)||(stateEvents&&(b->read(0x15408)||b->read(0x15409)!=2))||(statePanel&&(b->read(0x156ea)||b->read(0x156eb)!=2))||(stateMenu&&b->nativeController()->stateMenuForeground.kinds[menuKind]==menuCalls)||(stateStore&&b->nativeController()->stateStoreForeground.kinds[storeKind]==storeCalls)||(stateDisplay&&b->nativeController()->stateDisplayForeground.kinds[0]==displayCalls)||(stateApply&&b->nativeController()->stateApplyForeground.kinds[0]==applyCalls)){
     check(++phases<=65536,"Forced ADC/RX lifecycle did not finish");advanceBoth(*a,*b);
+    if(stateApply&&b->nativeController()->stateApplyForeground.at(ks::StateApplyService::Component::Packing))sawPacking=true;
    }
+   if(item==29)check(sawPacking,"Natural edit did not reach its current packing child");
    if(vector==89&&item!=11)check(a->midiReceived==b->midiReceived&&b->midiReceived>received,"RX case did not consume the actual UART byte");
    if(item==11)check(b->read(0xffed68)==2&&b->read(0xffec65)==255,"Full RX ring did not retain producer/report overflow");
    if(item==12||item==13)check(!b->read(0xffee9c)&&!b->read(0xffee9d)&&!b->read(0xffeeaa)&&!b->read(0xffeeab)&&!b->read(0xffeeac)&&!b->read(0xffeead),"F8 reset did not clear samples/sum");
    if(item>=12&&item<=14)check(b->read(0xffeea0)==4&&!b->read(0xffeea1)&&!b->read(0xffeea2)&&!b->read(0xffeea3),"F8 reset/short feedback unexpectedly changed its estimate");
    if(item==15)check(b->read(0xffeea0)!=4||b->read(0xffeea1)||b->read(0xffeea2)||b->read(0xffeea3),"F8 feedback did not update its estimate");
   }
+  if(stateApply)check(b->nativeController()->stateApplyForeground.kinds[0]>applyCalls,"Natural control event missed actual edit application");
   if(stateDisplay)check(b->nativeController()->stateDisplayForeground.kinds[0]>displayCalls&&(b->nativeController()->stateDisplayForeground.components&0xf0)==0xf0,"Natural menu display missed LCD transport");
   if(stateStore)check(b->nativeController()->stateStoreForeground.kinds[storeKind]>storeCalls,"Natural Store event missed its name/serialization graph");
   if(stateMenu)check(b->nativeController()->stateMenuForeground.kinds[menuKind]>menuCalls,"Natural menu/edit event did not execute its new native root");
@@ -218,6 +230,6 @@ int main(int argc,char**argv){unsigned item=0;try{
  check(r->serialForeground.started+r->serialForeground.initial==r->serialForeground.completed+r->serialForeground.active(),"Native foreground accounting differs");
  check(r->stateResetForeground.started+r->stateResetForeground.initialActive==r->stateResetForeground.completed+r->stateResetForeground.active(),"Native State reset accounting differs");
  check(peak>1000&&b->h8StepsSinceNativeHandoff()==0,"Silent fixture or native interpreter fallback");
- std::cout<<"PASS: twenty-eight IRQ/foreground/panel scan/State event/menu/store/display timelines including TPU0/ADC/RX/F8 and a real pedal UART publication, "<<frames<<" exact audible 24-stream frames, "<<x->events.size()<<" exact DSP events; native error/TX/unused="<<r->nativeInterruptKinds[0]<<'/'<<r->nativeInterruptKinds[1]<<'/'<<r->nativeInterruptKinds[2]<<"; TPU0="<<r->nativeInterruptKinds[3]<<"; ADC="<<r->nativeInterruptKinds[4]<<", RX="<<r->nativeInterruptKinds[5]<<", components=0x"<<std::hex<<r->nativeTpuComponents<<'/'<<r->nativeAdcComponents<<'/'<<r->nativeSerialReceiveComponents<<"; private checkpoints="<<x->checkpoint<<'/'<<y->checkpoint<<std::dec<<"; foreground reset/pop/transmit="<<r->serialForeground.kinds[0]<<'/'<<r->serialForeground.kinds[1]<<'/'<<r->serialForeground.kinds[4]<<"; natural State resets="<<r->stateResetForeground.kinds[0]<<", components=0x"<<std::hex<<r->stateResetForeground.components<<std::dec<<"; cycles/pending/priorities/hardware/resource RAM/state/Flash/MIDI exact, no post-handoff H8\n";
+ std::cout<<"PASS: thirty IRQ/foreground/panel scan/State event/menu/store/display/apply timelines including TPU0/ADC/RX/F8 and a real pedal UART publication, "<<frames<<" exact audible 24-stream frames, "<<x->events.size()<<" exact DSP events; native error/TX/unused="<<r->nativeInterruptKinds[0]<<'/'<<r->nativeInterruptKinds[1]<<'/'<<r->nativeInterruptKinds[2]<<"; TPU0="<<r->nativeInterruptKinds[3]<<"; ADC="<<r->nativeInterruptKinds[4]<<", RX="<<r->nativeInterruptKinds[5]<<", components=0x"<<std::hex<<r->nativeTpuComponents<<'/'<<r->nativeAdcComponents<<'/'<<r->nativeSerialReceiveComponents<<"; private checkpoints="<<x->checkpoint<<'/'<<y->checkpoint<<std::dec<<"; foreground reset/pop/transmit="<<r->serialForeground.kinds[0]<<'/'<<r->serialForeground.kinds[1]<<'/'<<r->serialForeground.kinds[4]<<"; natural State resets="<<r->stateResetForeground.kinds[0]<<", components=0x"<<std::hex<<r->stateResetForeground.components<<std::dec<<"; cycles/pending/priorities/hardware/resource RAM/state/Flash/MIDI exact, no post-handoff H8\n";
  return 0;
  }catch(const std::exception&e){std::cerr<<"scenario="<<item<<": "<<e.what()<<'\n';return 1;}}
