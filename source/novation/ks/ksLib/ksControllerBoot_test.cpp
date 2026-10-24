@@ -118,7 +118,7 @@ int main(int argc,char** argv){try{
     check(b->liveMidiController()->bootSetupCalls.started==2 && b->liveMidiController()->bootSetupCalls.completed==2,"Cold startup did not complete both native DSP setup jobs");
     check(b->liveMidiController()->bootStreamCalls.started==2 && b->liveMidiController()->bootStreamCalls.completed==2,"Cold startup did not complete both native DSP firmware streams");
     check(b->liveMidiController()->panelAdcCalibrationCalls.started>0&&b->liveMidiController()->panelAdcCalibrationCalls.completed>0,"Cold start did not exercise native ADC calibration");
-    check(b->liveMidiController()->panelAdcScanCalls.started>0&&b->nativeController()->nativeInterruptKinds[4]>0,"Cold start did not exercise native ADC scan/IRQ");
+    check(b->nativeController()->panelSettingsForeground.kinds[unsigned(ks::PanelSettingsService::Kind::Warmup)]>0&&(b->nativeController()->panelSettingsForeground.components&(1u<<unsigned(ks::PanelSettingsService::Component::AdcStart)))&&b->nativeController()->nativeInterruptKinds[4]>0,"Cold start did not exercise CPU-free ADC warmup/start/IRQ");
     // Native IRQs no longer materialize temporary CPU frames. Only the
     // firmware's reserved scratch stack may differ; all other 16 MiB bytes
     // remain part of the independent cold-boot comparison.

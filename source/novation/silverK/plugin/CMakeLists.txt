@@ -2718,3 +2718,13 @@ add_executable(ksStateReloadTask_test "${ROOT}/source/novation/ks/ksLib/ksStateR
 target_compile_features(ksStateReloadTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_state_reload_task COMMAND ksStateReloadTask_test)
 set_tests_properties(ks_state_reload_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksPanelSettingsService_test "${ROOT}/source/novation/ks/ksLib/ksPanelSettingsService_test.cpp")
+target_include_directories(ksPanelSettingsService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksPanelSettingsService_test PRIVATE ksLib)
+add_test(NAME ks_panel_settings_service_service COMMAND ksPanelSettingsService_test)
+set_tests_properties(ks_panel_settings_service_service PROPERTIES TIMEOUT 240 SKIP_RETURN_CODE 77)
+add_executable(ksPanelSettingsServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksPanelSettingsServiceTask_test.cpp")
+target_compile_features(ksPanelSettingsServiceTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_panel_settings_service_task COMMAND ksPanelSettingsServiceTask_test)
+set_tests_properties(ks_panel_settings_service_task PROPERTIES TIMEOUT 240)

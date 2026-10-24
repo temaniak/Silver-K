@@ -1656,6 +1656,25 @@ int main(int argc,char** argv){try{
         <<",\"native_state_save_multi_provided\":"<<runtime->stateSaveForeground.kinds[11]
         <<",\"native_state_save_flash_program\":"<<runtime->stateSaveForeground.kinds[12]
         <<",\"native_state_save_flash_compare\":"<<runtime->stateSaveForeground.kinds[13]
+        <<",\"native_panel_settings_service_calls\":"<<runtime->panelSettingsForeground.started
+        <<",\"native_panel_settings_service_returns\":"<<runtime->panelSettingsForeground.completed
+        <<",\"native_panel_settings_service_phases\":"<<runtime->panelSettingsForeground.phases
+        <<",\"native_panel_settings_service_initial_active\":"<<runtime->panelSettingsForeground.initial
+        <<",\"native_panel_settings_service_active\":"<<runtime->panelSettingsForeground.active()
+        <<",\"native_panel_settings_service_components\":"<<runtime->panelSettingsForeground.components
+        <<",\"native_panel_settings_service_Reset\":"<<runtime->panelSettingsForeground.kinds[0]
+        <<",\"native_panel_settings_service_Select\":"<<runtime->panelSettingsForeground.kinds[1]
+        <<",\"native_panel_settings_service_Show\":"<<runtime->panelSettingsForeground.kinds[2]
+        <<",\"native_panel_settings_service_Poll\":"<<runtime->panelSettingsForeground.kinds[3]
+        <<",\"native_panel_settings_service_Coefficients\":"<<runtime->panelSettingsForeground.kinds[4]
+        <<",\"native_panel_settings_service_First\":"<<runtime->panelSettingsForeground.kinds[5]
+        <<",\"native_panel_settings_service_Second\":"<<runtime->panelSettingsForeground.kinds[6]
+        <<",\"native_panel_settings_service_Load\":"<<runtime->panelSettingsForeground.kinds[7]
+        <<",\"native_panel_settings_service_Save\":"<<runtime->panelSettingsForeground.kinds[8]
+        <<",\"native_panel_settings_service_Warmup\":"<<runtime->panelSettingsForeground.kinds[9]
+        <<",\"native_panel_settings_service_AnalogInitialize\":"<<runtime->panelSettingsForeground.kinds[10]
+        <<",\"native_panel_settings_service_AnalogDuty\":"<<runtime->panelSettingsForeground.kinds[11]
+        <<",\"native_panel_settings_service_AnalogLevel\":"<<runtime->panelSettingsForeground.kinds[12]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases
