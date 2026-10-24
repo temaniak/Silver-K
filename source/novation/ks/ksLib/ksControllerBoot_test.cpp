@@ -1,3 +1,4 @@
+#include "ksControllerTraceComparison_test.h"
 #include "ksBoard.h"
 #include "ksRom.h"
 #include <algorithm>
@@ -140,12 +141,11 @@ int main(int argc,char** argv){try{
     const auto x=a->finishControllerTrace(),y=b->finishControllerTrace();x->validate();y->validate();
     x->save((out/"h8.kst").string());y->save((out/"cpp.kst").string());
     // Keep both raw tapes and checkpoints. Removed internal CPU locations
-    // become the authenticated ManualEdit caller; resource transfers stay exact.
+    // become the verified native graph caller; resource transfers stay exact.
     check(x->checkpoint==y->checkpoint&&x->beginCycle==y->beginCycle&&x->endCycle==y->endCycle&&x->events.size()==y->events.size()&&x->slices.size()==y->slices.size(),"Reset tape checkpoint/bounds mismatch");
-    constexpr unsigned fieldDspSites[]{0x2417,0x2425,0x243d,0x2447,0x244f,0x2457,0x245f,0x246d,0x2485,0x24d9,0x24ff,0x2507,0x250f};
     uint64_t nativeCpuLocationChanges=0;
     for(size_t n=0;n<x->events.size();++n){const auto&p=x->events[n];const auto&q=y->events[n];check(p.cycle==q.cycle&&p.dsp==q.dsp&&p.offset==q.offset&&p.value==q.value&&p.flags==q.flags,"Reset DSP transfer mismatch");
-        if(p.pc!=q.pc){check(q.pc==0x4eb0&&std::find(std::begin(fieldDspSites),std::end(fieldDspSites),p.pc)!=std::end(fieldDspSites),"Unexpected reset DSP CPU location change");++nativeCpuLocationChanges;}}
+        if(p.pc!=q.pc){check(ks::tests::nativeDspTraceLocationMatches(p.pc,q.pc),"Unexpected reset DSP CPU location change");++nativeCpuLocationChanges;}}
     for(size_t n=0;n<x->slices.size();++n){const auto&p=x->slices[n];const auto&q=y->slices[n];check(p.begin==q.begin&&p.end==q.end&&p.first==q.first&&p.count==q.count,"Reset DSP slice mismatch");}
     std::cout<<"Reset diagnostic CPU locations changed="<<nativeCpuLocationChanges<<" (both raw tapes retained)\n";
     check(a->saveUserFlash()==b->saveUserFlash(),"Reset Flash mismatch");

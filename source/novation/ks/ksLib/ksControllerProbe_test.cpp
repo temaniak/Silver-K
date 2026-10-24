@@ -1739,6 +1739,25 @@ int main(int argc,char** argv){try{
         <<",\"native_state_scene_service_notify\":"<<runtime->stateSceneForeground.kinds[8]
         <<",\"native_state_scene_service_knob\":"<<runtime->stateSceneForeground.kinds[9]
         <<",\"native_state_scene_service_select_bank\":"<<runtime->stateSceneForeground.kinds[10]
+        <<",\"native_parameter_upload_calls\":"<<runtime->parameterUploadForeground.started
+        <<",\"native_parameter_upload_returns\":"<<runtime->parameterUploadForeground.completed
+        <<",\"native_parameter_upload_phases\":"<<runtime->parameterUploadForeground.phases
+        <<",\"native_parameter_upload_initial_active\":"<<runtime->parameterUploadForeground.initial
+        <<",\"native_parameter_upload_active\":"<<runtime->parameterUploadForeground.active()
+        <<",\"native_parameter_upload_components\":"<<runtime->parameterUploadForeground.components
+        <<",\"native_global_update_calls\":"<<runtime->globalUpdateForeground.started
+        <<",\"native_global_update_returns\":"<<runtime->globalUpdateForeground.completed
+        <<",\"native_global_update_phases\":"<<runtime->globalUpdateForeground.phases
+        <<",\"native_global_update_initial_active\":"<<runtime->globalUpdateForeground.initial
+        <<",\"native_global_update_active\":"<<runtime->globalUpdateForeground.active()
+        <<",\"native_global_update_components\":"<<runtime->globalUpdateForeground.components
+        <<",\"native_state_voice_refresh_calls\":"<<runtime->stateVoiceRefreshForeground.started
+        <<",\"native_state_voice_refresh_returns\":"<<runtime->stateVoiceRefreshForeground.completed
+        <<",\"native_state_voice_refresh_phases\":"<<runtime->stateVoiceRefreshForeground.phases
+        <<",\"native_state_voice_refresh_initial_active\":"<<runtime->stateVoiceRefreshForeground.initial
+        <<",\"native_state_voice_refresh_active\":"<<runtime->stateVoiceRefreshForeground.active()
+        <<",\"native_state_voice_refresh_components\":"<<runtime->stateVoiceRefreshForeground.components
+        <<",\"native_state_voice_refresh_all\":"<<runtime->stateVoiceRefreshForeground.kinds[0]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases

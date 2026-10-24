@@ -1,3 +1,4 @@
+#include "ksControllerTraceComparison_test.h"
 #include "ksCurrentNativeChildren_test.h"
 #include "ksBoard.h"
 #include "ksRom.h"
@@ -234,12 +235,11 @@ int main(int argc,char**argv){unsigned item=0;try{
  // Preserve both raw checkpoints and compare every observable tape field.
  check(x->beginCycle==y->beginCycle&&x->endCycle==y->endCycle&&x->events.size()==y->events.size()&&x->slices.size()==y->slices.size(),"Interrupt timeline tape bounds differ");
  // Raw PCs describe the removed controller implementation, rather than a bus
- // resource. Retain both original tapes; only the authenticated Save/ManualEdit caller
- // may replace these independently verified DSP transport locations.
- constexpr std::array<unsigned,13> saveDspSites{{0x2417,0x2425,0x243d,0x2447,0x244f,0x2457,0x245f,0x246d,0x2485,0x24d9,0x24ff,0x2507,0x250f}};
+ // resource. Retain both original tapes; only verified native graph callers
+ // may replace their independently verified DSP transport locations.
  uint64_t nativeCpuLocationChanges=0;
  for(size_t n=0;n<x->events.size();++n){const auto&p=x->events[n];const auto&q=y->events[n];check(p.cycle==q.cycle&&p.dsp==q.dsp&&p.offset==q.offset&&p.value==q.value&&p.flags==q.flags,"Interrupt timeline DSP transfer differs");
-  if(p.pc!=q.pc){check((q.pc==0x47d6||q.pc==0x4eb0)&&std::find(saveDspSites.begin(),saveDspSites.end(),p.pc)!=saveDspSites.end(),"Unexpected DSP trace CPU location change");++nativeCpuLocationChanges;}}
+  if(p.pc!=q.pc){check(ks::tests::nativeDspTraceLocationMatches(p.pc,q.pc),"Unexpected DSP trace CPU location change");++nativeCpuLocationChanges;}}
 
  for(size_t n=0;n<x->slices.size();++n){const auto&p=x->slices[n];const auto&q=y->slices[n];check(p.begin==q.begin&&p.end==q.end&&p.first==q.first&&p.count==q.count,"Interrupt timeline DSP slice differs");}
  const auto*r=b->nativeController();check(r->nativeInterruptKinds[0]&&r->nativeInterruptKinds[1]&&r->nativeInterruptKinds[2]&&r->nativeInterruptKinds[3]&&r->nativeInterruptKinds[4]&&r->nativeInterruptKinds[5],"Missing native IRQ kind coverage");
