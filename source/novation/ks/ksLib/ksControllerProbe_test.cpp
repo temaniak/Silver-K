@@ -1691,6 +1691,37 @@ int main(int argc,char** argv){try{
         <<",\"native_state_screen_service_Label\":"<<runtime->stateScreenForeground.kinds[7]
         <<",\"native_state_screen_service_Edit\":"<<runtime->stateScreenForeground.kinds[8]
         <<",\"native_state_screen_service_Value\":"<<runtime->stateScreenForeground.kinds[9]
+        <<",\"native_state_field_service_calls\":"<<runtime->stateFieldForeground.started
+        <<",\"native_state_field_service_returns\":"<<runtime->stateFieldForeground.completed
+        <<",\"native_state_field_service_phases\":"<<runtime->stateFieldForeground.phases
+        <<",\"native_state_field_service_initial_active\":"<<runtime->stateFieldForeground.initial
+        <<",\"native_state_field_service_active\":"<<runtime->stateFieldForeground.active()
+        <<",\"native_state_field_service_components\":"<<runtime->stateFieldForeground.components
+        <<",\"native_state_field_service_automatic_edit\":"<<runtime->stateFieldForeground.kinds[0]
+        <<",\"native_state_field_service_automatic_event\":"<<runtime->stateFieldForeground.kinds[1]
+        <<",\"native_state_field_service_manual_edit\":"<<runtime->stateFieldForeground.kinds[2]
+        <<",\"native_state_field_service_direct_edit\":"<<runtime->stateFieldForeground.kinds[3]
+        <<",\"native_state_field_service_publish\":"<<runtime->stateFieldForeground.kinds[4]
+        <<",\"native_state_field_service_global\":"<<runtime->stateFieldForeground.kinds[5]
+        <<",\"native_state_field_service_selector\":"<<runtime->stateFieldForeground.kinds[6]
+        <<",\"native_state_field_service_indexed\":"<<runtime->stateFieldForeground.kinds[7]
+        <<",\"native_state_field_service_clear\":"<<runtime->stateFieldForeground.kinds[8]
+        <<",\"native_state_field_service_direct_step\":"<<runtime->stateFieldForeground.kinds[9]
+        <<",\"native_state_field_service_indexed_step\":"<<runtime->stateFieldForeground.kinds[10]
+        <<",\"native_state_field_service_bit\":"<<runtime->stateFieldForeground.kinds[11]
+        <<",\"native_state_field_service_pair\":"<<runtime->stateFieldForeground.kinds[12]
+        <<",\"native_state_field_service_return\":"<<runtime->stateFieldForeground.kinds[13]
+        <<",\"native_state_field_service_current\":"<<runtime->stateFieldForeground.kinds[14]
+        <<",\"native_state_field_service_cycle\":"<<runtime->stateFieldForeground.kinds[15]
+        <<",\"native_state_field_service_control\":"<<runtime->stateFieldForeground.kinds[16]
+        <<",\"native_state_field_service_label\":"<<runtime->stateFieldForeground.kinds[17]
+        <<",\"native_state_field_service_bounds\":"<<runtime->stateFieldForeground.kinds[18]
+        <<",\"native_state_field_service_indexed_address\":"<<runtime->stateFieldForeground.kinds[19]
+        <<",\"native_state_field_service_direct_address\":"<<runtime->stateFieldForeground.kinds[20]
+        <<",\"native_state_field_service_global_address\":"<<runtime->stateFieldForeground.kinds[21]
+        <<",\"native_state_field_service_edit_active\":"<<runtime->stateFieldForeground.kinds[22]
+        <<",\"native_state_field_service_apply_velocity\":"<<runtime->stateFieldForeground.kinds[23]
+        <<",\"native_state_field_service_velocity\":"<<runtime->stateFieldForeground.kinds[24]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases

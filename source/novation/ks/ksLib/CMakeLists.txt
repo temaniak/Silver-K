@@ -504,3 +504,7 @@ target_sources(ksLib PRIVATE "ksStateReloadVoiceService.h" "ksStateReloadPanelSe
 target_sources(ksLib PRIVATE ksPanelSettingsService.h ksPanelSettingsForeground.h ksPanelSettingsForeground.cpp)
 
 target_sources(ksLib PRIVATE ksStateScreenService.h ksStateScreenForeground.h ksStateScreenForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStateFieldService.h ksStateFieldForeground.h ksStateFieldForeground.cpp)
+
+target_sources(ksLib PRIVATE "ksStateUiRefreshService.h" "ksStateUiRefreshAbi.h")

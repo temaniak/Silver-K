@@ -87,6 +87,7 @@ void RuntimeController::stepStartup(ControllerCpu& h){
     const int depth=h.indent;arbitrate(h);if(h.indent!=depth)++interruptEntries;
     if(serialForeground.step(h)){++steps;return;}
     if(stateResetForeground.step(h)){++steps;return;}
+    if(stateFieldForeground.step(h)){++steps;return;}
     if(stateScreenForeground.step(h)){++steps;return;}
     if(panelSettingsForeground.step(h)){++steps;return;}
     if(stateSaveForeground.step(h)){++steps;return;}
@@ -107,6 +108,7 @@ void RuntimeController::step(ControllerCpu& h){
     const int depth=h.indent;arbitrate(h);if(h.indent!=depth)++interruptEntries;
     if(serialForeground.step(h)){++steps;return;}
     if(stateResetForeground.step(h)){++steps;return;}
+    if(stateFieldForeground.step(h)){++steps;return;}
     if(stateScreenForeground.step(h)){++steps;return;}
     if(panelSettingsForeground.step(h)){++steps;return;}
     if(stateSaveForeground.step(h)){++steps;return;}
