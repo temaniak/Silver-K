@@ -1779,6 +1779,11 @@ int main(int argc,char** argv){try{
         <<",\"native_state_scene_edit_service_read_name\":"<<runtime->stateSceneEditForeground.kinds[12]
         <<",\"native_state_scene_edit_service_decode_name\":"<<runtime->stateSceneEditForeground.kinds[13]
         <<",\"native_state_scene_edit_service_encode_name\":"<<runtime->stateSceneEditForeground.kinds[14]
+        <<",\"native_state_scene_edit_service_category\":"<<runtime->stateSceneEditForeground.kinds[15]
+        <<",\"native_state_scene_edit_service_begin_name\":"<<runtime->stateSceneEditForeground.kinds[16]
+        <<",\"native_state_scene_edit_service_insert_digit\":"<<runtime->stateSceneEditForeground.kinds[17]
+        <<",\"native_state_scene_edit_service_insert_raw\":"<<runtime->stateSceneEditForeground.kinds[18]
+        <<",\"native_state_scene_edit_service_toggle_case\":"<<runtime->stateSceneEditForeground.kinds[19]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases
