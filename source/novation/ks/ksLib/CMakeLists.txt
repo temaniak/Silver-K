@@ -514,3 +514,5 @@ target_sources(ksLib PRIVATE ksControllerDspService.h ksControllerDspAbi.h ksCon
 target_sources(ksLib PRIVATE ksStateSceneService.h ksStateSceneForeground.h ksStateSceneForeground.cpp)
 
 target_sources(ksLib PRIVATE ksStateSceneEditService.h ksStateSceneEditForeground.h ksStateSceneEditForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStateSaveAbi.h ksStateSceneToggleService.h ksStateSceneToggleForeground.h ksStateSceneToggleForeground.cpp)

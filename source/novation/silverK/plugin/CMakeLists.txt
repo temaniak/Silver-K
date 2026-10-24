@@ -2798,3 +2798,11 @@ add_executable(ksStateSceneEditServiceTask_test "${ROOT}/source/novation/ks/ksLi
 target_compile_features(ksStateSceneEditServiceTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_state_scene_edit_service_task COMMAND ksStateSceneEditServiceTask_test)
 set_tests_properties(ks_state_scene_edit_service_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksStateSceneToggleService_test "${ROOT}/source/novation/ks/ksLib/ksStateSceneToggleService_test.cpp")
+target_include_directories(ksStateSceneToggleService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksStateSceneToggleService_test PRIVATE ksLib)
+add_test(NAME ks_state_scene_toggle_service COMMAND ksStateSceneToggleService_test)
+add_executable(ksStateSceneToggleServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksStateSceneToggleServiceTask_test.cpp")
+target_compile_features(ksStateSceneToggleServiceTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_state_scene_toggle_service_task COMMAND ksStateSceneToggleServiceTask_test)

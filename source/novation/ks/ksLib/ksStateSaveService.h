@@ -71,7 +71,7 @@ namespace ks {
 // observable; no guest execution frame is present in this graph.
 class StateSaveService final {
 public:
- enum class Kind {CommitMulti,CommitSingle,PresetSave,FormatDirect,FormatPart,Offset,Check,Message,FlashCommit,GlobalSave,MultiCurrent,MultiProvided,FlashProgram,FlashCompare};
+ enum class Kind {CommitMulti,CommitSingle,PresetSave,FormatDirect,FormatPart,Offset,Check,Message,FlashCommit,GlobalSave,MultiCurrent,MultiProvided,FlashProgram,FlashCompare,Notice};
  enum class LastDecision {Entry,Page,ProgramBank,ProgramAlias,FormatIndex,LcdReply,SourceAdvance};
  struct Summary {
   bool packed=false,named=false,formatted=false,formatCopied=false,preset=false,alias=false,multi=false,multiAccepted=false,global=false,notice=false,checked=false,offset=false,page=false,reloaded=false;
@@ -101,6 +101,7 @@ public:
  case Kind::MultiProvided:push(StateMultiSaveTask(StateMultiSaveTask::Entry::Provided),in);break;
  case Kind::FlashProgram:push(StateSavePageService(StateSavePageService::Kind::Program,{in.source,in.target}),in);break;
  case Kind::FlashCompare:push(StateSavePageService(StateSavePageService::Kind::Compare,{in.source,in.target}),in);break;
+ case Kind::Notice:if(!dataSpan(in.source,1))throw std::logic_error("Unsupported native notice source");push(StateBankNavigationTask(StateBankNavigationTask::Kind::Notice),in);break;
  }}
  Kind kind()const{return kind_;}Component component()const{return component_;}uint32_t components()const{return components_;}bool complete()const{return !depth_;}unsigned depth()const{return depth_;}
  const Effect& effect()const{return effect_;}unsigned writePriority()const{return writeWindow_?6:0;}
@@ -178,7 +179,7 @@ public:
     if(const auto*p=t.nameTask())effect_.read=p->stage()==StatePatchNameTask::Stage::ReturnRead||p->stage()==StatePatchNameTask::Stage::ReturnWrite;
     t.advanceBefore(cost,read,write,resolve,previousWrite);if(t.complete()){if(t.kind()<=StateStoreService::Kind::ProgramMode){summary_.packed=true;summary_.packingBase=t.base();summary_.packingOriginal=t.original();summary_.packingProgram=t.lastProgram();summary_.packingField=t.field();summary_.packingValue=t.value();summary_.packingContributor=t.contributor();}else{summary_.named=true;summary_.nameStorage=t.storage();}finish(f.input);}
    }else if constexpr(std::is_same_v<T,StateDisplayService>){
-    effect_.read=t.endsReadTransfer();effect_.write=t.endsWriteTransfer();t.advanceBefore(cost,read,write,previousWrite);if(t.complete()){if(t.kind()==StateDisplayService::Kind::Text&&t.lcdResult().observed){summary_.lcd=t.lcdResult();summary_.decision=LastDecision::LcdReply;}finish(f.input);}
+    effect_.read=t.endsReadTransfer();effect_.write=t.endsWriteTransfer();t.advanceBefore(cost,[&](uint32_t a,unsigned offset){if(kind_==Kind::Notice&&t.component()==StateDisplayService::Component::Text&&!dataSpan(a,1))throw std::logic_error("Unsupported evolving native notice source");return read(a,offset);},write,previousWrite);if(t.complete()){if(t.kind()==StateDisplayService::Kind::Text&&t.lcdResult().observed){summary_.lcd=t.lcdResult();summary_.decision=LastDecision::LcdReply;}finish(f.input);}
    }else if constexpr(std::is_same_v<T,StateReloadService>){
     summary_.reloaded=true;t.advanceBefore(cost,read,write,resolve,previousWrite);effect_.read=t.effect().read;effect_.write=t.effect().write;if(t.complete()){if(const auto*p=t.panel()){summary_.reloadCurrent=p->current();summary_.reloadResolvedBase=p->lastResolvedBase();summary_.reloadSelectorReference=p->lastBitSelectorReference();summary_.reloadBounds=p->bounds();}summary_.reloadExpandedBase=t.coordinator().expandedCurrentBase();finish(f.input);}
    }else if constexpr(std::is_same_v<T,PanelInitializeTask>){using S=typename T::Stage;const auto stage=t.stage();effect_.write=stage==S::Hold||stage==S::DispatchWake;effect_.read=stage==S::Restore||stage==S::Finish;

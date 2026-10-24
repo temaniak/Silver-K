@@ -78,6 +78,8 @@ template<class View>void projectField(A&a,const View&s,StateFieldService::Input 
 }
 }
 void StateFieldForeground::project(CallerAbi&a,const StateFieldService&s,StateFieldService::Input in,uint32_t handler,uint32_t recipe){projectField(a,s.projectionView(),in,handler,recipe);}
+void StateFieldForeground::projectUi(CallerAbi&a,const StateFieldService&s){projectUiView(a,s.projectionView());}
+void StateFieldForeground::projectApply(CallerAbi&a,const StateApplyService&s,uint32_t recipe){apply(a,s,recipe);}
 void StateFieldForeground::projectScene(CallerAbi&a,const StateFieldService&s){projectSceneView(a,s.projectionView());}
 void StateFieldForeground::projectSceneEdit(CallerAbi&a,const StateFieldService&s){projectSceneEditView(a,s.projectionView());}
 }

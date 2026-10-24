@@ -124,6 +124,7 @@ public:
  StateFieldService(Kind k,Input i):kind_(k),input_(i){push(StateFieldCoordinator(k,i));}
  StateFieldService(StateSceneCoordinator::Kind k,StateSceneCoordinator::Input in):kind_(Kind::Return){push(StateSceneCoordinator(k,in));}
  StateFieldService(StateSceneEditCoordinator::Kind k,StateSceneEditCoordinator::Input in):kind_(Kind::Return){push(StateSceneEditCoordinator(k,in));}
+ StateFieldService(StateUiRefreshService::Kind k,StateUiRefreshService::Input in):kind_(Kind::Return){input_.event=in.event;push(StateUiRefreshService(k,in));}
  const Input&input()const{return input_;}
  const StateSceneCoordinator::Summary*sceneRootSummary()const{return lastScene_?&*lastScene_:nullptr;}
  const StateSceneEditCoordinator::Summary*sceneEditRootSummary()const{return lastSceneEdit_?&*lastSceneEdit_:nullptr;}

@@ -1656,6 +1656,7 @@ int main(int argc,char** argv){try{
         <<",\"native_state_save_multi_provided\":"<<runtime->stateSaveForeground.kinds[11]
         <<",\"native_state_save_flash_program\":"<<runtime->stateSaveForeground.kinds[12]
         <<",\"native_state_save_flash_compare\":"<<runtime->stateSaveForeground.kinds[13]
+        <<",\"native_state_save_notice\":"<<runtime->stateSaveForeground.kinds[14]
         <<",\"native_panel_settings_service_calls\":"<<runtime->panelSettingsForeground.started
         <<",\"native_panel_settings_service_returns\":"<<runtime->panelSettingsForeground.completed
         <<",\"native_panel_settings_service_phases\":"<<runtime->panelSettingsForeground.phases
@@ -1722,6 +1723,14 @@ int main(int argc,char** argv){try{
         <<",\"native_state_field_service_edit_active\":"<<runtime->stateFieldForeground.kinds[22]
         <<",\"native_state_field_service_apply_velocity\":"<<runtime->stateFieldForeground.kinds[23]
         <<",\"native_state_field_service_velocity\":"<<runtime->stateFieldForeground.kinds[24]
+        <<",\"native_state_scene_toggle_service_calls\":"<<runtime->stateSceneToggleForeground.started
+        <<",\"native_state_scene_toggle_service_returns\":"<<runtime->stateSceneToggleForeground.completed
+        <<",\"native_state_scene_toggle_service_phases\":"<<runtime->stateSceneToggleForeground.phases
+        <<",\"native_state_scene_toggle_service_initial_active\":"<<runtime->stateSceneToggleForeground.initial
+        <<",\"native_state_scene_toggle_service_active\":"<<runtime->stateSceneToggleForeground.active()
+        <<",\"native_state_scene_toggle_service_components\":"<<runtime->stateSceneToggleForeground.components
+        <<",\"native_state_scene_toggle_service_toggle\":"<<runtime->stateSceneToggleForeground.kinds[0]
+        <<",\"native_state_scene_toggle_service_commit\":"<<runtime->stateSceneToggleForeground.kinds[1]
         <<",\"native_state_scene_service_calls\":"<<runtime->stateSceneForeground.started
         <<",\"native_state_scene_service_returns\":"<<runtime->stateSceneForeground.completed
         <<",\"native_state_scene_service_phases\":"<<runtime->stateSceneForeground.phases

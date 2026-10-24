@@ -12,6 +12,8 @@ public:
  bool at(StateFieldService::Kind k)const{return service()&&service()->kind()==k;}bool at(StateFieldService::Component c)const{return service()&&service()->component()==c;}
  template<class T>const T*task()const{return service()?service()->task<T>():nullptr;}
  void resetMetrics(){initial=active();started=completed=phases=components=0;kinds.fill(0);}
+ static void projectUi(CallerAbi&,const StateFieldService&);
+ static void projectApply(CallerAbi&,const StateApplyService&,uint32_t recipe=0);
  static void projectScene(CallerAbi&,const StateFieldService&);
  static void projectSceneEdit(CallerAbi&,const StateFieldService&);
  static void project(CallerAbi&,const StateFieldService&,StateFieldService::Input,uint32_t handler=0,uint32_t recipe=0);

@@ -49,7 +49,7 @@ struct StoreFixtureResolver {
  bool operator()(uint8_t category,uint32_t token)const{return token==(0x6b000000u|category);}
 };
 int runFullStores(){using S=ks::StateSaveService;using K=S::Kind;auto resource=std::make_unique<std::array<uint8_t,1<<24>>();uint64_t graphs=0,phases=0,rejected=0,flashBytes=0;uint32_t coverage=0;StoreFixtureResolver resolver;
- for(unsigned kind=0;kind<14;++kind)for(unsigned seed=0;seed<8;++seed){
+ for(unsigned kind=0;kind<15;++kind)for(unsigned seed=0;seed<8;++seed){
   resource->fill(0);auto byte=[&](uint32_t a,uint8_t v){(*resource)[a]=v;};auto word=[&](uint32_t a,uint16_t v){byte(a,uint8_t(v>>8));byte(a+1,uint8_t(v));};auto wide=[&](uint32_t a,uint32_t v){word(a,uint16_t(v>>16));word(a+2,uint16_t(v));};
   for(unsigned n=0;n<1024;++n){byte(0x30000 + n,uint8_t(seed*71+n*83));byte(0x169fc + n,uint8_t(seed*37+n*17));byte(0x840000 + n,uint8_t(seed*71+n*83+1));}for(unsigned n=0;n<256;++n)byte(0x168fc + n,uint8_t(seed+n*13));for(unsigned p=0;p<5;++p)for(unsigned n=0;n<20;++n)byte(0x174ae + 20*p+n,uint8_t(seed+p*3+n*5));for(unsigned n=0;n<17;++n)byte(0x1733c + n,uint8_t(65+n));
   for(unsigned p=0;p<4;++p)word(0x167b0 + 2*p,uint16_t(0x0100 + p));word(0x31000,uint16_t(seed<4?0x0103:0x0531));word(0x167ac,uint16_t(seed<4?0x0103:0x0530));word(0x167aa,0x0103);word(0x167ae,0x0103);wide(0x167bc,0x30000);wide(0x1748e,0x30000);byte(0x167d2,15);byte(0x167d3,15);byte(0x167ba,0);byte(0x16799,0);byte(0x16798,0);byte(0x167da,2);byte(0x169eb,seed&1);byte(0xffff51,0);wide(0xffec10,12345);word(0xffed6a,0);
@@ -84,4 +84,28 @@ int runFullStores(){using S=ks::StateSaveService;using K=S::Kind;auto resource=s
  check(!allocations&&coverage==0x1ffff,"Full save native coverage or allocation differs");std::cout<<"PASS: full native save pure graphs="<<graphs<<" phases="<<phases<<" budget_rejections="<<rejected<<" flash_bytes="<<flashBytes<<" components="<<coverage<<" allocations="<<allocations<<'\n';return 0;
 }
 }
-int main(){try{const auto rc=runPages();return rc?rc:runFullStores();}catch(const std::exception&e){tracking=false;std::cerr<<e.what()<<'\n';return 1;}}
+
+namespace {
+int runNoticeSources(){using S=ks::StateSaveService;auto memory=std::make_unique<std::array<uint8_t,1<<24>>();uint64_t graphs=0,phases=0,rejected=0;StoreFixtureResolver resolver;
+ for(uint32_t source:{0x30000u,0x30001u,0xa30001u,0xffdc01u,0x80030001u,0xffefffu})for(unsigned seed=0;seed<8;++seed){
+  memory->fill(0);const auto address=source&0xffffff;const auto count=address==0xffefff?0:seed;for(unsigned n=0;n<count;++n)(*memory)[address+n]=uint8_t('A'+n);(*memory)[0xffec12]=0x30;(*memory)[0xffec13]=0x39;
+  S::Input input;input.source=source;input.noticeAction.value=0x5a00f001;S service(S::Kind::Notice,input);unsigned steps=0;int previous=-1;tracking=true;
+  while(!service.complete()){
+   const auto cost=service.nextClocks(previous);unsigned accesses=0;const auto before=service;
+   auto read=[&](uint32_t a,unsigned offset){check(offset&&offset<=cost,"Notice read interval");check(a<0xfff000||a>=0xfffc00,"Notice read guest scratch");++accesses;return(*memory)[a];};
+   auto write=[&](uint32_t a,uint8_t v,unsigned offset){check(offset&&offset<=cost,"Notice write interval");check(a<0xfff000||a>=0xfffc00,"Notice write guest scratch");check(a<0x800000||a>=0x900000,"Notice wrote Flash");++accesses;(*memory)[a]=v;previous=a<0x400000||(a>=0xfffd10&&a<0xffffa0)?int(a):-1;};
+   check(!service.advanceBefore(cost-1,read,write,resolver,previous)&&!accesses,"Notice accepted short budget");check(service.nextClocks(previous)==before.nextClocks(previous)&&service.components()==before.components()&&service.depth()==before.depth(),"Rejected Notice changed continuation");++rejected;
+   check(service.advanceBefore(cost,read,write,resolver,previous)==cost,"Notice phase admission");if(service.effect().write)previous=-1;check(!service.writePriority(),"Notice acquired Flash priority window");++phases;check(++steps<4096,"Notice failed to finish");
+  }
+  tracking=false;check(service.summary().notice&&(*memory)[0x16791]==1,"Notice was not armed");check((*memory)[0x16762]==2&&(*memory)[0x16763]==0xee,"Notice timer delay differs");check((*memory)[0x16764]==0x5a&&(*memory)[0x16765]==0&&(*memory)[0x16766]==0xf0&&(*memory)[0x16767]==1,"Notice action changed");++graphs;
+ }
+ for(uint32_t bad:{0u,0x55b8u,0xffff51u,0xfff000u,0xfffbffu}){bool threw=false;try{S::Input input;input.source=bad;S service(S::Kind::Notice,input);}catch(const std::logic_error&){threw=true;}check(threw,"Notice constructor accepted unsupported source");}
+ {memory->fill(0);(*memory)[0xffeffe]='A';S::Input input;input.source=0xffeffe;S service(S::Kind::Notice,input);bool mutated=false,threw=false;unsigned steps=0,invalidReads=0;
+  try{while(!service.complete()){const auto*d=service.task<ks::StateDisplayService>();const auto*t=d?d->textTask():nullptr;if(t&&t->bound()&&t->pointer()==0xffefff){(*memory)[0xffefff]='B';mutated=true;}const auto cost=service.nextClocks();service.advanceBefore(cost,[&](uint32_t a,unsigned){if(a>=0xfff000&&a<0xfffc00)++invalidReads;return(*memory)[a];},[&](uint32_t a,uint8_t v,unsigned){(*memory)[a]=v;},resolver);check(++steps<4096,"Notice evolving guard landing missed");}}catch(const std::logic_error&){threw=true;}
+  check(mutated&&threw&&!invalidReads&&!service.complete(),"Notice actual source guard/fallback differs");
+ }
+ check(!allocations,"Notice allocated");std::cout<<"PASS native arbitrary-source Notice graphs="<<graphs<<" phases="<<phases<<" budget_rejections="<<rejected<<"; aliases/byte-boundary/evolving source guard exact; allocations="<<allocations<<'\n';return 0;
+}
+}
+
+int main(){try{const auto rc=runPages();if(rc)return rc;const auto full=runFullStores();return full?full:runNoticeSources();}catch(const std::exception&e){tracking=false;std::cerr<<e.what()<<'\n';return 1;}}
