@@ -15,7 +15,7 @@ inline bool nativeDspTraceLocationMatches(uint32_t original,uint32_t native){
  case 0x47d6:case 0x4eb0:case 0x7354:case 0x96d6:return transport;
  case 0xb554:case 0x9662:return transport||nonincrement;
  case 0x7de4:return nonincrement;
- case 0x62e6:case 0x633a:case 0x6382:return transport&&original!=0x2425;
+ case 0x48be:case 0x4864:case 0x4924:case 0x62e6:case 0x633a:case 0x6382:return transport&&original!=0x2425;
  default:return false;
  }
 }

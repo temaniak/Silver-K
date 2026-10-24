@@ -57,6 +57,13 @@ int main(int argc,char** argv){try{
     const bool recording=mode=="native-record" || mode=="native-toggle-record" || mode=="record" || mode=="live-record" || mode=="live-toggle-record";
     const bool toggling=mode=="native-toggle" || mode=="native-toggle-record" || mode=="live-toggle" || mode=="live-toggle-record";
     check(mode=="h8" || mode=="record" || mode=="replay" || mode=="boot" || liveMode,"Unknown controller probe mode");
+    // PROGRAM_MENU_FLAGS_BEGIN
+    const bool programMenuSingle=scenario=="panel-mode-single";
+    const bool programMenuToMulti=scenario=="panel-mode-multi";
+    const bool programPartNavigation=false;
+    const bool programMenuFixture=programMenuSingle||programMenuToMulti||programPartNavigation;
+    const bool programMenuMulti=programMenuSingle||programPartNavigation;
+    // PROGRAM_MENU_FLAGS_END
     const bool panelPartSave=scenario=="panel-save-part";
     const bool panelActions=scenario=="panel-actions-single"||scenario=="panel-actions-multi";
     const bool panelFunctions=scenario=="panel-functions-single"||scenario=="panel-functions-multi";
@@ -65,10 +72,10 @@ int main(int argc,char** argv){try{
     const bool panelEdit=scenario=="panel-edit-single" || scenario=="panel-edit-multi";
     const bool panelScreen=panelActions || panelFunctions || panelKeyboard || panelParts || panelEdit || scenario=="panel-screen-single" || scenario=="panel-screen-multi";
     const bool panelIo=panelScreen || scenario=="panel-io-single" || scenario=="panel-io-multi";
-    if(panelIo)check(duration>=4.,"Physical panel scenario requires at least four seconds");
+    if(panelIo||programMenuFixture)check(duration>=4.,"Physical panel scenario requires at least four seconds");
     const bool panelStore=panelPartSave || panelIo || scenario=="panel-store-single" || scenario=="panel-store-multi";
-    check(scenario=="single" || scenario=="multi" || scenario=="midi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || panelStore,"Unknown controller probe scenario");
-    const bool multi=panelPartSave || scenario=="panel-actions-multi"||scenario=="panel-functions-multi"||scenario=="panel-keyboard-multi"||scenario=="panel-parts-multi" || scenario=="panel-edit-multi" || scenario=="panel-screen-multi" || scenario=="panel-io-multi" || scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || scenario=="panel-store-multi";
+    check(scenario=="single" || scenario=="multi" || scenario=="midi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || panelStore || programMenuFixture,"Unknown controller probe scenario");
+    const bool multi=programMenuMulti || panelPartSave || scenario=="panel-actions-multi"||scenario=="panel-functions-multi"||scenario=="panel-keyboard-multi"||scenario=="panel-parts-multi" || scenario=="panel-edit-multi" || scenario=="panel-screen-multi" || scenario=="panel-io-multi" || scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || scenario=="panel-store-multi";
     const auto* threads=std::getenv("SILVER_KS_DSP_THREADS");const bool parallel=threads&&std::string(threads)=="2";
     const auto setup=Clock::now();ks::Rom os(argv[1]);check(os.isValid(),"Invalid KS OS");
     std::unique_ptr<ks::test::PanelIoFixture> ioFixture;
@@ -146,6 +153,15 @@ int main(int argc,char** argv){try{
     std::shared_ptr<const ks::ControllerTape> tape;
     uint64_t panelEvents=0;std::array<uint8_t,8> panelPages{};
     std::array<uint8_t,16> ioPages{};unsigned ioPageCount=1;unsigned physicalStore=0;
+    // PROGRAM_MENU_DECLARATIONS_BEGIN
+    struct ProgramMenuInput {uint64_t frame;unsigned handler,logical;bool pressed;};
+    struct ProgramMenuWrite {uint64_t frame;uint32_t address;uint8_t value;};
+    std::vector<ProgramMenuInput> programMenuInputs;
+    std::vector<ProgramMenuWrite> programMenuWrites;
+    size_t programMenuInputCount=0,programMenuWriteCount=0;
+    std::array<uint8_t,7> programMenuFinalUi{};
+    uint32_t programMenuSelectedSource=0;
+    // PROGRAM_MENU_DECLARATIONS_END
     uint64_t frames=0,hash=14695981039346656037ull;int64_t peak=0;double cost=bootCost,wall=bootWall;
     uint64_t h8Start=board->cpu().cycles;
     if(mode=="boot"){
@@ -271,7 +287,7 @@ int main(int argc,char** argv){try{
             add(.7,four({0xb0,64,127}));add(1.2,four({0xb0,93,48}));
             add(1.6,std::move(off));add(1.7,four({0xb0,64,0}));
         }
-        if(panelStore){
+        if(panelStore||programMenuFixture){
             events.clear();add(.05,four({0x90,60,101}));add(.07,four({0xb0,105,93}));
             add(.12,four({0xb0,64,127}));add(.16,four({0x80,60,0}));
             add(1.6,four({0xb0,64,0}));add(1.7,four({0x90,67,99}));add(2.,four({0x80,67,0}));
@@ -327,6 +343,38 @@ int main(int argc,char** argv){try{
             memory[0x15380+producer]=pressed?1:0;memory[0x15381+producer]=uint8_t(storeKey);
             memory[0x1537c]=uint8_t(nextProducer>>8);memory[0x1537d]=uint8_t(nextProducer);++panelEvents;
         };
+    // PROGRAM_MENU_PLAN_BEGIN
+        if(programMenuFixture){
+            check(!toggling&&mode!="replay","Program menu input requires live H8/native controller");
+            check(board->overlay,"Program menu fixture requires active SRAM overlay");
+            const auto* menuMemory=board->cpu().memory+0xa00000;
+            auto logicalForHandler=[&](unsigned handler){unsigned logical=0,matches=0;
+                for(unsigned key=0;key<32;++key){const auto descriptor=0xfcc4+key*3;const auto at=0xfd1e + unsigned(menuMemory[descriptor+1])*4;
+                    const auto target=(uint32_t(menuMemory[at])<<24)|(uint32_t(menuMemory[at+1])<<16)|(uint32_t(menuMemory[at+2])<<8)|menuMemory[at+3];
+                    if((menuMemory[descriptor]&127)==1&&(target&0xffffff)==handler){logical=key;++matches;}}
+                check(matches==1,"Program menu button descriptor ambiguous");return logical;};
+            auto menuWrite=[&](double at,uint32_t address,uint8_t value){programMenuWrites.push_back({native(at),address,value});};
+            auto menuButton=[&](double at,unsigned handler){const auto logical=logicalForHandler(handler);programMenuInputs.push_back({native(at),handler,logical,true});programMenuInputs.push_back({native(at+.04),handler,logical,false});};
+            auto context=[&](double at,uint8_t page,uint8_t special){
+                for(auto address:{0x16784u,0x16791u,0x16792u,0x167d5u})menuWrite(at,address,0);
+                menuWrite(at,0x16790,page);menuWrite(at,0x1679e,special);menuWrite(at,0x1679f,0);
+            };
+            if(programMenuSingle||programMenuToMulti){
+                context(.18,0,0);
+                // Normal user-selected stored destinations, independent of CPU fields.
+                menuWrite(.18,0x167ac,1);menuWrite(.18,0x167ad,3);menuWrite(.18,0x167ae,1);menuWrite(.18,0x167af,0);
+                const auto handler=programMenuSingle?0x4864u:0x4924u;menuButton(.2,handler);menuButton(.8,handler);
+            }
+            std::stable_sort(programMenuWrites.begin(),programMenuWrites.end(),[](const auto&x,const auto&y){return x.frame<y.frame;});
+        }
+        auto queueProgramMenu=[&](unsigned logical,bool pressed){
+            auto* menuMemory=board->cpu().memory+0xa00000;
+            const unsigned producer=(unsigned(menuMemory[0x1537c])<<8)|menuMemory[0x1537d],consumer=(unsigned(menuMemory[0x1537e])<<8)|menuMemory[0x1537f],nextProducer=(producer+2)&0x7e;
+            check(producer<=0x7e&&!(producer&1)&&nextProducer!=consumer,"Program menu button ring full/invalid");
+            menuMemory[0x15380+producer]=pressed?1:0;menuMemory[0x15381+producer]=uint8_t(logical);
+            menuMemory[0x1537c]=uint8_t(nextProducer>>8);menuMemory[0x1537d]=uint8_t(nextProducer);
+        };
+    // PROGRAM_MENU_PLAN_END
         std::stable_sort(events.begin(),events.end(),[](const auto& a,const auto& b){return a.frame<b.frame;});
         if(liveMode){if(!nativeMode)board->enableLiveMidiController();board->resetControllerMetrics();if(recording)board->enableControllerDelegationProfile();}
         memoryStart=memoryDigests();
@@ -349,6 +397,10 @@ int main(int argc,char** argv){try{
                 board->enableLiveMidiController(false);
             }
             if(toggling && n==native(.95)){if(nativeMode)board->enableNativeController();else board->enableLiveMidiController();if(recording)board->enableControllerDelegationProfile();}
+    // PROGRAM_MENU_APPLY_BEGIN
+            while(programMenuWriteCount<programMenuWrites.size()&&programMenuWrites[programMenuWriteCount].frame==n){const auto&w=programMenuWrites[programMenuWriteCount++];board->write(w.address,w.value);}
+            while(programMenuInputCount<programMenuInputs.size()&&programMenuInputs[programMenuInputCount].frame==n){const auto&e=programMenuInputs[programMenuInputCount++];queueProgramMenu(e.logical,e.pressed);}
+    // PROGRAM_MENU_APPLY_END
             if(panelIo)ioFixture->apply(n,ks::DSP::SampleRate,physicalStore,multi);
             if(panelPartSave){if(n==native(.2)){board->write(0x167ac,1);board->write(0x167ad,3);board->write(0x16790,3);queueStore(true);}if(n==native(.24))queueStore(false);}
             if(panelStore&&!panelIo&&!panelPartSave)for(unsigned press=0;press<(multi?3u:4u);++press){
@@ -369,8 +421,15 @@ int main(int argc,char** argv){try{
         if(recording){tape=board->finishControllerTrace();tape->validate();tape->save(argv[7]);}
         if(liveMode){const auto& live=*board->liveMidiController();
             const auto last=coverage(live);
-            for(unsigned i=0;i<last.size();++i)check(last[i]+beforeSwitch[i]>0,
-                i<4?"Live note/sustain handlers were not exercised":"Live voice/transport handlers were not exercised");
+            const auto* runtime=board->nativeController();
+            // Complete playback graphs own ordinary part release internally.
+            // Accept that recorded role only after the graph has returned;
+            // retain the raw legacy release counter and all other coverage gates.
+            const bool playbackReleaseCovered=nativeMode&&!toggling&&runtime
+                &&runtime->statePlaybackModeForeground.completed>0&&!runtime->statePlaybackModeForeground.active()
+                &&(runtime->statePlaybackModeForeground.components&(1u<<unsigned(ks::StatePlaybackModeService::Component::Voices)));
+            for(unsigned i=0;i<last.size();++i)if(!last[i]&&!beforeSwitch[i]&&!(i==6&&playbackReleaseCovered))
+                throw std::runtime_error("Live handler coverage absent at index "+std::to_string(i));
             uint64_t delegated=0;for(const auto count:live.originalPages)delegated+=count;
             if(recording)check(delegated==live.originalStepCalls && (nativeMode?delegated==0:delegated>0),"Original H8 delegation accounting differs");}
         if(nativeMode){
@@ -414,6 +473,16 @@ int main(int argc,char** argv){try{
         admitted(live.panelAdcScaleCalls);admitted(live.panelAdcCalibrationCalls);
         admitted(live.panelAdcIrqCalls);admitted(live.panelAdcScanCalls);
     }
+    // PROGRAM_MENU_FINAL_BEGIN
+    if(programMenuFixture){
+        check(programMenuInputCount==programMenuInputs.size()&&programMenuWriteCount==programMenuWrites.size(),"Missing explicit program menu input/mutation");
+        constexpr unsigned addresses[]{0x16790,0x16799,0x167ba,0x167d7,0x167da,0x1679e,0x17493};
+        for(unsigned i=0;i<7;++i)programMenuFinalUi[i]=uint8_t(board->read(addresses[i]));
+        if(programMenuSingle)check(programMenuFinalUi[2]==0,"Queued Single button did not enter Single");
+        if(programMenuToMulti)check(programMenuFinalUi[2]==1,"Queued Multi button did not enter Multi");
+        if(scenario=="panel-part-wrap-multi")check(programMenuFinalUi[1]==1,"Part wrap sequence did not return to part1");
+    }
+    // PROGRAM_MENU_FINAL_END
     if(panelPartSave&&!board->flashRevision)std::cerr<<"Part-save outcome page="<<unsigned(board->read(0x16790))<<" program="<<std::hex<<unsigned(board->read(0x167ac))<<':'<<unsigned(board->read(0x167ad))<<" bank="<<unsigned(board->read(0x167ab))<<" mode="<<unsigned(board->read(0x167ba))<<std::dec<<'\n';
     if(panelStore&&!panelScreen){if(!panelIo)check(panelEvents==(panelPartSave?2u:multi?6u:8u),"Missing panel store events");check(board->flashRevision>0,"Panel store did not write Flash");check(board->read(0x16790)==0,"Store page did not return to playback");}
     if(panelPartSave&&nativeMode)check(board->nativeController()->stateSaveForeground.kinds[1]&&(board->nativeController()->stateSaveForeground.components&(1u<<16)),"Part save did not run the full native reload");
@@ -1732,6 +1801,22 @@ int main(int argc,char** argv){try{
         <<",\"native_state_program_load_service_commit_single\":"<<runtime->stateProgramLoadForeground.kinds[0]
         <<",\"native_state_program_load_service_commit_multi\":"<<runtime->stateProgramLoadForeground.kinds[1]
         <<",\"native_state_program_load_service_load_single\":"<<runtime->stateProgramLoadForeground.kinds[2]
+        <<",\"native_state_playback_mode_service_calls\":"<<runtime->statePlaybackModeForeground.started
+        <<",\"native_state_playback_mode_service_returns\":"<<runtime->statePlaybackModeForeground.completed
+        <<",\"native_state_playback_mode_service_phases\":"<<runtime->statePlaybackModeForeground.phases
+        <<",\"native_state_playback_mode_service_initial_active\":"<<runtime->statePlaybackModeForeground.initial
+        <<",\"native_state_playback_mode_service_active\":"<<runtime->statePlaybackModeForeground.active()
+        <<",\"native_state_playback_mode_service_components\":"<<runtime->statePlaybackModeForeground.components
+        <<",\"native_state_playback_mode_service_single\":"<<runtime->statePlaybackModeForeground.kinds[0]
+        <<",\"native_state_playback_mode_service_multi\":"<<runtime->statePlaybackModeForeground.kinds[1]
+        <<",\"native_state_playback_mode_service_playback\":"<<runtime->statePlaybackModeForeground.kinds[2]
+        <<",\"native_state_playback_mode_service_reset_playback\":"<<runtime->statePlaybackModeForeground.kinds[3]
+        <<",\"native_state_playback_mode_service_clear_ui\":"<<runtime->statePlaybackModeForeground.kinds[4]
+        <<",\"native_state_playback_mode_service_reset_voices\":"<<runtime->statePlaybackModeForeground.kinds[5]
+        <<",\"native_state_playback_mode_service_routing\":"<<runtime->statePlaybackModeForeground.kinds[6]
+        <<",\"native_state_playback_mode_service_resolve_parts\":"<<runtime->statePlaybackModeForeground.kinds[7]
+        <<",\"native_state_playback_mode_service_bind_part\":"<<runtime->statePlaybackModeForeground.kinds[8]
+        <<",\"native_state_playback_mode_service_resolve_edit_part\":"<<runtime->statePlaybackModeForeground.kinds[9]
         <<",\"native_state_edit_action_service_calls\":"<<runtime->stateEditActionForeground.started
         <<",\"native_state_edit_action_service_returns\":"<<runtime->stateEditActionForeground.completed
         <<",\"native_state_edit_action_service_phases\":"<<runtime->stateEditActionForeground.phases
@@ -1837,6 +1922,16 @@ int main(int argc,char** argv){try{
         }report<<']';
     }
 #endif
+    // PROGRAM_MENU_REPORT_BEGIN
+    if(programMenuFixture){
+        report<<",\"program_menu_event_count\":"<<programMenuInputCount<<",\"program_menu_inputs\":[";
+        for(unsigned i=0;i<programMenuInputs.size();++i){if(i)report<<',';const auto&e=programMenuInputs[i];report<<'['<<e.frame<<','<<e.handler<<','<<e.logical<<','<<unsigned(e.pressed)<<']';}
+        report<<"],\"program_menu_ui_mutations\":[";
+        for(unsigned i=0;i<programMenuWrites.size();++i){if(i)report<<',';const auto&w=programMenuWrites[i];report<<'['<<w.frame<<','<<w.address<<','<<unsigned(w.value)<<']';}
+        report<<"],\"program_menu_selected_source\":"<<programMenuSelectedSource<<",\"program_menu_final_ui\":[";
+        for(unsigned i=0;i<programMenuFinalUi.size();++i){if(i)report<<',';report<<unsigned(programMenuFinalUi[i]);}report<<']';
+    }
+    // PROGRAM_MENU_REPORT_END
     if(panelStore){report<<",\"panel_button_pages\":[";for(unsigned i=0;i<panelEvents;++i){if(i)report<<',';report<<unsigned(panelPages[i]);}report<<']';}
     if(panelIo){
         report<<",\"panel_io_reads\":["<<ioFixture->matrixReads<<','<<ioFixture->pedalReads<<','<<ioFixture->encoderReads<<','<<ioFixture->adcReads<<']'

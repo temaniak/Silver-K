@@ -88,6 +88,9 @@ void RuntimeController::stepStartup(ControllerCpu& h){
     if(serialForeground.step(h)){++steps;return;}
     if(stateResetForeground.step(h)){++steps;return;}
     if(stateProgramLoadForeground.step(h)){++steps;return;}
+    // Close a legacy Store UI tail before native playback owns its target.
+    if(!statePlaybackModeForeground.active()&&h.getPC()==0x48be)shared.stateStoreUiCalls.retireReturns(h);
+    if(statePlaybackModeForeground.step(h)){++steps;return;}
     if(stateEditActionForeground.step(h)){++steps;return;}
     if(stateSceneToggleForeground.step(h)){++steps;return;}
     if(stateSceneEditForeground.step(h)){++steps;return;}
@@ -117,6 +120,9 @@ void RuntimeController::step(ControllerCpu& h){
     if(serialForeground.step(h)){++steps;return;}
     if(stateResetForeground.step(h)){++steps;return;}
     if(stateProgramLoadForeground.step(h)){++steps;return;}
+    // Close a legacy Store UI tail before native playback owns its target.
+    if(!statePlaybackModeForeground.active()&&h.getPC()==0x48be)shared.stateStoreUiCalls.retireReturns(h);
+    if(statePlaybackModeForeground.step(h)){++steps;return;}
     if(stateEditActionForeground.step(h)){++steps;return;}
     if(stateSceneToggleForeground.step(h)){++steps;return;}
     if(stateSceneEditForeground.step(h)){++steps;return;}
