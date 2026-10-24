@@ -1608,6 +1608,17 @@ int main(int argc,char** argv){try{
         <<",\"native_state_store_write_provided_name\":"<<runtime->stateStoreForeground.kinds[14]
         <<",\"native_state_store_write_selected_name\":"<<runtime->stateStoreForeground.kinds[15]
         <<",\"native_state_store_read_selected_name\":"<<runtime->stateStoreForeground.kinds[16]
+        <<",\"native_state_display_calls\":"<<runtime->stateDisplayForeground.started
+        <<",\"native_state_display_returns\":"<<runtime->stateDisplayForeground.completed
+        <<",\"native_state_display_phases\":"<<runtime->stateDisplayForeground.phases
+        <<",\"native_state_display_initial_active\":"<<runtime->stateDisplayForeground.initial
+        <<",\"native_state_display_active\":"<<runtime->stateDisplayForeground.active()
+        <<",\"native_state_display_components\":"<<runtime->stateDisplayForeground.components
+        <<",\"native_state_display_format\":"<<runtime->stateDisplayForeground.kinds[0]
+        <<",\"native_state_display_off\":"<<runtime->stateDisplayForeground.kinds[1]
+        <<",\"native_state_display_text\":"<<runtime->stateDisplayForeground.kinds[2]
+        <<",\"native_state_display_character\":"<<runtime->stateDisplayForeground.kinds[3]
+        <<",\"native_state_display_command\":"<<runtime->stateDisplayForeground.kinds[4]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases

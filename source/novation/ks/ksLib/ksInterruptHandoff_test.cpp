@@ -131,7 +131,7 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
  auto a=std::make_unique<ks::Board>(rom.data(),wave,flash,true),b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
  check(a->boot()&&b->boot(),"Reference boot failed");same(*a,*b);
  uint64_t frames=0,peak=0,preparationFrames=0;
- for(phase=0;phase<34;++phase)for(mode=0;mode<3;++mode){
+ for(phase=0;phase<37;++phase)for(mode=0;mode<3;++mode){
   if(phase>=10&&phase<13){
    a=std::make_unique<ks::Board>(rom.data(),wave,flash,true);b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
    initialMainBoundary(*a);initialMainBoundary(*b);dirtyResetRings(*a);dirtyResetRings(*b);
@@ -139,7 +139,7 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   if(phase>=30){a=std::make_unique<ks::Board>(rom.data(),wave,flash,true);b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);check(a->boot()&&b->boot(),"Store handoff boot failed");same(*a,*b);}
   b->enableNativeController();check(b->nativeController(),"Native handoff failed");
   drain(*a,*b);
-  if(phase>=31){enqueueMulti(*a);enqueueMulti(*b);for(unsigned n=0;n<24000;++n){check(a->renderSample()==b->renderSample(),"Store mode preparation audio differs");check(a->controllerCycles()==b->controllerCycles(),"Store mode preparation clocks differ");sameInterrupts(*a,*b);++preparationFrames;}drain(*a,*b);same(*a,*b);}
+  if(phase>=31&&phase<34){enqueueMulti(*a);enqueueMulti(*b);for(unsigned n=0;n<24000;++n){check(a->renderSample()==b->renderSample(),"Store mode preparation audio differs");check(a->controllerCycles()==b->controllerCycles(),"Store mode preparation clocks differ");sameInterrupts(*a,*b);++preparationFrames;}drain(*a,*b);same(*a,*b);}
   b->resetControllerMetrics();
   // Select inside typed children, including ordinary/special ADC tails,
   // the ADC event queue and a received F8's live counter read.
@@ -166,7 +166,8 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    }
    if(phase>=26&&phase<29)menuInput(*board,0);
    if(phase==29)menuInput(*board,2);
-   if(phase>=30)storeInput(*board,phase>=31);
+   if(phase>=30&&phase<34)storeInput(*board,phase>=31);
+   if(phase>=34)menuInput(*board,2);
    if(phase>=7)continue;
    const unsigned vector=!phase?90:phase<3?32:phase<6?28:89;
    board->cpu().exr=0;board->cpu().interruptPriority[vector]=phase>0&&phase<3?6:1;
@@ -190,6 +191,9 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    case 9:target=r->serialForeground.at(ks::SerialForegroundService::Kind::ResetRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::RetainWord)&&b->cpu().exr==7;break;
    case 10:target=r->stateResetForeground.at(ks::StateResetService::Component::Buttons)&&b->cpu().exr==0;break;
    case 11:target=r->stateResetForeground.at(ks::StateResetService::Component::Controls)&&b->cpu().exr==0;break;
+   case 34:target=r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atFormat(ks::StateMenuFormatTask::Stage::SetPosition)&&b->cpu().exr==0;break;
+   case 35:target=r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atPoll(ks::PanelPollTask::Stage::TestReady)&&b->cpu().exr==0;break;
+   case 36:target=r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atByte(ks::PanelByteTask::Kind::CommandWrite,ks::PanelByteTask::Stage::Transfer)&&b->cpu().exr==0;break;
    case 30:target=r->stateStoreForeground.at(ks::StateStoreService::Kind::WritePatchName)&&b->cpu().exr==0;break;
    case 31:target=r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::PartReference)&&b->cpu().exr==0;break;
    case 32:target=r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::PackAll)&&b->cpu().exr==0;break;
@@ -225,7 +229,8 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   if(phase>=17&&phase<22){const unsigned expected=phase==17?0x1416:phase==18?0x1f16:phase==19?0x20fc:phase==20?0x2144:0x218c;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same State event child");}
   if(phase>=22&&phase<25){const unsigned expected=phase==22?0x2b38:phase==23?0x2c88:0x1104;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same upper State MIDI child");}
   if(phase>=25&&phase<30){const unsigned expected=phase==25?0x1300:phase==26?0x4efe:phase==27?0x4134:phase==28?0x5a4a:0x52ae;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same menu/context child");}
-  if(phase>=30){const unsigned expected=phase==30?0x6e82:phase==31?0xa670:phase==32?0x687e:0x68b0;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same natural store preparation child");}
+  if(phase>=30&&phase<34){const unsigned expected=phase==30?0x6e82:phase==31?0xa670:phase==32?0x687e:0x68b0;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same natural store preparation child");}
+  if(phase>=34){const unsigned expected=phase==34?0x5ae4:phase==35?0x8ec:0x86c;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same menu/LCD child");}
   const auto*selectedRuntime=b->nativeController();
   const auto cycle=b->controllerCycles(),interpreted=b->h8InterpretedSteps();
   b->enableLiveMidiController(mode==1);
@@ -245,6 +250,6 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   const uint8_t off[]{0x80,uint8_t(phase>=14?36+(phase*3+mode)%72:60+phase*3+mode),0};check(a->enqueueMidi(off,3)&&b->enqueueMidi(off,3),"Release rejected");
  }
  check(peak>1000,"Handoff fixture was silent");
- std::cout<<"PASS: one hundred two H8/hybrid/cancel requests inside IRQ/serial/State reset, panel scan/controls State event conversion and upper State MIDI/UART, menu/context and store preparation; no added guest advance; "<<frames<<" exact audible 24-stream frames plus "<<preparationFrames<<" exact host-mode preparation frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
+ std::cout<<"PASS: one hundred eleven H8/hybrid/cancel requests inside IRQ/serial/State reset, panel scan/controls State event conversion and upper State MIDI/UART, menu/context, store preparation and LCD; no added guest advance; "<<frames<<" exact audible 24-stream frames plus "<<preparationFrames<<" exact host-mode preparation frames, persistent RAM/hardware/state/Flash/cycles/pending/priorities/serial/MIDI exact\n";
  return 0;
  }catch(const std::exception&e){std::cerr<<"phase="<<phase<<", mode="<<mode<<": "<<e.what()<<'\n';return 1;}}

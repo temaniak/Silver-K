@@ -492,3 +492,5 @@ target_sources(ksLib PRIVATE ksStatePanelService.h ksStatePanelForeground.h ksSt
 target_sources(ksLib PRIVATE ksStateMenuService.h ksStateMenuForeground.h ksStateMenuForeground.cpp)
 
 target_sources(ksLib PRIVATE ksStateStoreService.h ksStateStoreForeground.h ksStateStoreForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStateDisplayService.h ksStateDisplayForeground.h ksStateDisplayForeground.cpp)
