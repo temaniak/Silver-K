@@ -1758,6 +1758,27 @@ int main(int argc,char** argv){try{
         <<",\"native_state_voice_refresh_active\":"<<runtime->stateVoiceRefreshForeground.active()
         <<",\"native_state_voice_refresh_components\":"<<runtime->stateVoiceRefreshForeground.components
         <<",\"native_state_voice_refresh_all\":"<<runtime->stateVoiceRefreshForeground.kinds[0]
+        <<",\"native_state_scene_edit_service_calls\":"<<runtime->stateSceneEditForeground.started
+        <<",\"native_state_scene_edit_service_returns\":"<<runtime->stateSceneEditForeground.completed
+        <<",\"native_state_scene_edit_service_phases\":"<<runtime->stateSceneEditForeground.phases
+        <<",\"native_state_scene_edit_service_initial_active\":"<<runtime->stateSceneEditForeground.initial
+        <<",\"native_state_scene_edit_service_active\":"<<runtime->stateSceneEditForeground.active()
+        <<",\"native_state_scene_edit_service_components\":"<<runtime->stateSceneEditForeground.components
+        <<",\"native_state_scene_edit_service_increment\":"<<runtime->stateSceneEditForeground.kinds[0]
+        <<",\"native_state_scene_edit_service_decrement\":"<<runtime->stateSceneEditForeground.kinds[1]
+        <<",\"native_state_scene_edit_service_sub\":"<<runtime->stateSceneEditForeground.kinds[2]
+        <<",\"native_state_scene_edit_service_adjust\":"<<runtime->stateSceneEditForeground.kinds[3]
+        <<",\"native_state_scene_edit_service_record\":"<<runtime->stateSceneEditForeground.kinds[4]
+        <<",\"native_state_scene_edit_service_field\":"<<runtime->stateSceneEditForeground.kinds[5]
+        <<",\"native_state_scene_edit_service_clamp\":"<<runtime->stateSceneEditForeground.kinds[6]
+        <<",\"native_state_scene_edit_service_clear_suffix\":"<<runtime->stateSceneEditForeground.kinds[7]
+        <<",\"native_state_scene_edit_service_move_name\":"<<runtime->stateSceneEditForeground.kinds[8]
+        <<",\"native_state_scene_edit_service_insert_space\":"<<runtime->stateSceneEditForeground.kinds[9]
+        <<",\"native_state_scene_edit_service_adjust_name\":"<<runtime->stateSceneEditForeground.kinds[10]
+        <<",\"native_state_scene_edit_service_commit_name\":"<<runtime->stateSceneEditForeground.kinds[11]
+        <<",\"native_state_scene_edit_service_read_name\":"<<runtime->stateSceneEditForeground.kinds[12]
+        <<",\"native_state_scene_edit_service_decode_name\":"<<runtime->stateSceneEditForeground.kinds[13]
+        <<",\"native_state_scene_edit_service_encode_name\":"<<runtime->stateSceneEditForeground.kinds[14]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases

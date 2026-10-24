@@ -1,0 +1,20 @@
+#include "ksStateSceneEditForeground.h"
+#include "ksStateFieldForeground.h"
+#include "ksControllerState.h"
+#include <stdexcept>
+namespace ks {namespace {
+int history(uint32_t a){a&=0xffffff;return a<0x400000||(a>=0xfffd10&&a<0xffffa0)?int(a):-1;}
+bool endpoint(uint32_t a){return StateSceneCoordinator::dataSpan(a,1)||(a>=0x1c0&&a<0x300)||(a>=0x400000&&a<0x400010)||(a>=0x600000&&a<0x600010)||a==0xffffa5||a==0xfffeb1||a==0xffff51||a==0xffff61||a==0xffff62||(a>=0xffff80&&a<0xffffa0);}
+struct Resolver{StateFieldCoordinator::Handler field(uint8_t category,uint32_t raw){constexpr unsigned targets[]{0x4f4a,0x4f06,0x51d8,0x51f4,0x5252,0x4f22,0x51fe,0x4f0c,0xb554};if(category>=9||raw!=targets[category])throw std::logic_error("Unsupported evolving scene field handler");return StateFieldCoordinator::Handler(category);}StatePackFieldsTask::Kind operator()(uint32_t raw){constexpr unsigned targets[]{0x68b0,0x68de,0x6922,0x6944,0x6970,0x69a6};for(unsigned n=0;n<6;++n)if((raw&0xffffff)==targets[n])return StatePackFieldsTask::Kind(n);throw std::logic_error("Unsupported evolving scene packing descriptor");}};
+}
+StateSceneEditForeground::Job::Job(Kind k,StateSceneEditCoordinator::Input i,uint32_t c,int d,uint8_t p):service(k,i),kind(k),caller(c),depth(d),priority(p){}
+bool StateSceneEditForeground::at(Component c)const{const auto*s=service();const auto*t=s?s->task<StateSceneEditCoordinator>():nullptr;return t&&t->component()==c;}
+bool StateSceneEditForeground::step(ControllerCpu&h){
+ if(!job_){if(!h.nativeFetchClocksOnly||!h.nativeLowBase||h.nativeLowSize<0x17600||!h.interruptMode2||h.indent<=0)return false;constexpr unsigned roots[]{0xb5e4,0xb60c,0xb632,0xb716,0xb6c0,0xb6e0,0xb6fe,0x7548,0x757c,0x75a0,0x75be,0x75e0,0x75e8,0x760e,0x7644};unsigned selected=15;for(unsigned n=0;n<15;++n)if(uint32_t(h.getPC())==roots[n]){selected=n;break;}if(selected==15)return false;const auto sp=h.getSP();if((sp&1)||sp<0xfff400||sp>0xfffbfc)return false;StateSceneEditCoordinator::Input in;in.event=uint16_t(h.regs[6].r);in.character=uint8_t(h.regs[1].rl);in.nameTarget=uint32_t(h.regs[0].er);const auto peek=[&](uint32_t raw){const auto a=raw&0xffffff;return a<h.nativeLowSize?h.nativeLowBase[a]:h.memory[a];};if(!StateSceneEditCoordinator::admitted(Kind(selected),in,peek))return false;constexpr unsigned recipes[]{0x68b0,0x68de,0x6922,0x6944,0x6970,0x69a6};for(unsigned n=0;n<6;++n){uint32_t raw=0;for(unsigned i=0;i<4;++i)raw=(raw<<8)|uint8_t(peek(71306+4*n+i));bool found=false;for(auto v:recipes)found|=(raw&0xffffff)==v;if(!found)return false;}job_.emplace(Kind(selected),in,sp,h.indent,h.exr);++started;++kinds[selected];}
+ auto&j=*job_;if(j.depth!=h.indent)return false;auto&s=j.service;const auto cost=s.nextClocks(h.lastwrite);const auto start=h.cycles;const auto previous=h.lastwrite;Resolver resolver;
+ const auto used=s.advanceBefore(cost,[&](uint32_t raw,unsigned dt){const auto a=raw&0xffffff;if(!endpoint(a))throw std::logic_error("Unsupported evolving scene edit endpoint read");h.cycles=start+dt;h.lastread=history(a);return h.readResource(a);},[&](uint32_t raw,uint8_t value,unsigned dt){const auto a=raw&0xffffff;if(!endpoint(a))throw std::logic_error("Unsupported evolving scene edit endpoint write");h.cycles=start+dt;h.lastwrite=history(a);h.writeResource(a,value);},resolver,previous);
+ if(!cost||used!=cost)throw std::logic_error("Native scene edit phase admission differs");if(s.effect().read)h.lastread=-1;if(s.effect().write)h.lastwrite=-1;h.exr=s.critical()?7:j.priority;++phases;components|=s.components();
+ if(s.complete()){CallerAbi a;for(unsigned n=0;n<7;++n)a.values[n]=uint32_t(h.regs[n].er);a.flags=h.ccr;StateFieldForeground::projectSceneEdit(a,s);for(unsigned n=0;n<7;++n)h.regs[n].er=int32_t(a.values[n]);h.ccr=a.flags;uint32_t target=0;for(unsigned n=0;n<4;++n){h.cycles=start+8+3*n;h.lastread=-1;target=(target<<8)|h.readResource(j.caller+n);}h.setSP(j.caller+4);h.pc=target&0xffffff;h.exr=j.priority;--h.indent;job_.reset();++completed;}
+ h.cycles=start+cost;return true;
+}
+}

@@ -512,3 +512,5 @@ target_sources(ksLib PRIVATE "ksStateUiRefreshService.h" "ksStateUiRefreshAbi.h"
 target_sources(ksLib PRIVATE ksControllerDspService.h ksControllerDspAbi.h ksControllerCoefficientService.h ksControllerCoefficientAbi.h ksParameterUploadRecipe.h ksParameterUploadService.h ksParameterUploadForeground.h ksParameterUploadForeground.cpp ksGlobalUpdateService.h ksGlobalUpdateForeground.h ksGlobalUpdateForeground.cpp ksVoiceTrackingService.h ksStateVoiceRefreshService.h ksStateVoiceRefreshForeground.h ksStateVoiceRefreshForeground.cpp ksStateSceneEditService.h ksStateSceneEditForeground.h)
 
 target_sources(ksLib PRIVATE ksStateSceneService.h ksStateSceneForeground.h ksStateSceneForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStateSceneEditService.h ksStateSceneEditForeground.h ksStateSceneEditForeground.cpp)

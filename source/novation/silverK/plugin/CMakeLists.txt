@@ -2788,3 +2788,13 @@ add_executable(ksStateVoiceRefreshServiceTask_test "${ROOT}/source/novation/ks/k
 target_compile_features(ksStateVoiceRefreshServiceTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_state_voice_refresh_task COMMAND ksStateVoiceRefreshServiceTask_test)
 set_tests_properties(ks_state_voice_refresh_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksStateSceneEditService_test "${ROOT}/source/novation/ks/ksLib/ksStateSceneEditService_test.cpp")
+target_include_directories(ksStateSceneEditService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksStateSceneEditService_test PRIVATE ksLib)
+add_test(NAME ks_state_scene_edit_service_service COMMAND ksStateSceneEditService_test)
+set_tests_properties(ks_state_scene_edit_service_service PROPERTIES TIMEOUT 240 SKIP_RETURN_CODE 77)
+add_executable(ksStateSceneEditServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksStateSceneEditServiceTask_test.cpp")
+target_compile_features(ksStateSceneEditServiceTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_state_scene_edit_service_task COMMAND ksStateSceneEditServiceTask_test)
+set_tests_properties(ks_state_scene_edit_service_task PROPERTIES TIMEOUT 240)

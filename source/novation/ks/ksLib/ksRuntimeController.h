@@ -5,6 +5,7 @@
 #include "ksInterruptScheduler.h"
 #include "ksSerialForeground.h"
 #include "ksStateResetForeground.h"
+#include "ksStateSceneEditForeground.h"
 #include "ksStateVoiceRefreshForeground.h"
 #include "ksGlobalUpdateForeground.h"
 #include "ksParameterUploadForeground.h"
@@ -41,7 +42,7 @@ public:
     static void verifyImage(const ControllerCpu&);
     void step(ControllerCpu&);
     void stepStartup(ControllerCpu&);
-    void resetMetrics(){stateVoiceRefreshForeground.resetMetrics();globalUpdateForeground.resetMetrics();parameterUploadForeground.resetMetrics();stateSceneForeground.resetMetrics();stateFieldForeground.resetMetrics();stateScreenForeground.resetMetrics();panelSettingsForeground.resetMetrics();stateSaveForeground.resetMetrics();stateApplyForeground.resetMetrics();stateDisplayForeground.resetMetrics();stateStoreForeground.resetMetrics();stateMenuForeground.resetMetrics();statePanelForeground.resetMetrics();stateEventsForeground.resetMetrics();panelControlsForeground.resetMetrics();panelScanForeground.resetMetrics();stateResetForeground.resetMetrics();serialForeground.resetMetrics();steps=interruptEntries=0;nativeInterruptStarts=nativeInterruptReturns=nativeInterruptPhases=0;nativeInterruptInitial=activeNativeInterrupts();nativeInterruptKinds.fill(0);nativeTpuComponents=nativeAdcComponents=nativeSerialReceiveComponents=0;
+    void resetMetrics(){stateSceneEditForeground.resetMetrics();stateVoiceRefreshForeground.resetMetrics();globalUpdateForeground.resetMetrics();parameterUploadForeground.resetMetrics();stateSceneForeground.resetMetrics();stateFieldForeground.resetMetrics();stateScreenForeground.resetMetrics();panelSettingsForeground.resetMetrics();stateSaveForeground.resetMetrics();stateApplyForeground.resetMetrics();stateDisplayForeground.resetMetrics();stateStoreForeground.resetMetrics();stateMenuForeground.resetMetrics();statePanelForeground.resetMetrics();stateEventsForeground.resetMetrics();panelControlsForeground.resetMetrics();panelScanForeground.resetMetrics();stateResetForeground.resetMetrics();serialForeground.resetMetrics();steps=interruptEntries=0;nativeInterruptStarts=nativeInterruptReturns=nativeInterruptPhases=0;nativeInterruptInitial=activeNativeInterrupts();nativeInterruptKinds.fill(0);nativeTpuComponents=nativeAdcComponents=nativeSerialReceiveComponents=0;
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
         std::fill(boundaryProfile.begin(),boundaryProfile.end(),0);
 #endif
@@ -69,9 +70,10 @@ public:
     ParameterUploadForeground parameterUploadForeground;
     GlobalUpdateForeground globalUpdateForeground;
     StateVoiceRefreshForeground stateVoiceRefreshForeground;
+    StateSceneEditForeground stateSceneEditForeground;
     StateResetForeground stateResetForeground;
     SerialForeground serialForeground;
-    bool activeNativeWork() const {return stateVoiceRefreshForeground.active()||globalUpdateForeground.active()||parameterUploadForeground.active()||stateSceneForeground.active()||stateFieldForeground.active()||stateScreenForeground.active()||panelSettingsForeground.active()||stateSaveForeground.active()||stateApplyForeground.active()||stateDisplayForeground.active()||stateStoreForeground.active()||stateMenuForeground.active()||statePanelForeground.active()||stateEventsForeground.active()||panelControlsForeground.active()||activeNativeInterrupts()||serialForeground.active()||stateResetForeground.active()||panelScanForeground.active();}
+    bool activeNativeWork() const {return stateSceneEditForeground.active()||stateVoiceRefreshForeground.active()||globalUpdateForeground.active()||parameterUploadForeground.active()||stateSceneForeground.active()||stateFieldForeground.active()||stateScreenForeground.active()||panelSettingsForeground.active()||stateSaveForeground.active()||stateApplyForeground.active()||stateDisplayForeground.active()||stateStoreForeground.active()||stateMenuForeground.active()||statePanelForeground.active()||stateEventsForeground.active()||panelControlsForeground.active()||activeNativeInterrupts()||serialForeground.active()||stateResetForeground.active()||panelScanForeground.active();}
     unsigned activeNativeInterrupts() const { return interruptScheduler.depth(); }
     // Const diagnostic of the current typed continuation, separate from the
     // cumulative component-coverage mask and any saved compatibility CPU PC.
