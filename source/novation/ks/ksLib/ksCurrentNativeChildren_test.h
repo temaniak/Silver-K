@@ -9,7 +9,7 @@ struct CurrentNativeChildrenForTests {
  const StateMenuService*menu=nullptr;const StateEditAddressTask*address=nullptr;
 };
 inline CurrentNativeChildrenForTests currentNativeChildrenForTests(const RuntimeController&r){
- CurrentNativeChildrenForTests x;x.field=r.stateFieldForeground.service();x.screen=r.stateScreenForeground.service();
+ CurrentNativeChildrenForTests x;x.field=r.stateFieldForeground.service();if(!x.field)x.field=r.stateSceneForeground.service();x.screen=r.stateScreenForeground.service();
  if(x.field){if(const auto*s=x.field->task<StateScreenService>())x.screen=s;x.display=x.field->task<StateDisplayService>();x.apply=x.field->task<StateApplyService>();if(const auto*c=x.field->coordinator())x.address=c->task<StateEditAddressTask>();}
  if(x.screen){if(!x.display)x.display=x.screen->task<StateDisplayService>();if(!x.apply)x.apply=x.screen->task<StateApplyService>();x.menu=x.screen->task<StateMenuService>();}
  return x;

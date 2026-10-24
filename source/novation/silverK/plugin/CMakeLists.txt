@@ -2748,3 +2748,13 @@ add_executable(ksStateFieldServiceTask_test "${ROOT}/source/novation/ks/ksLib/ks
 target_compile_features(ksStateFieldServiceTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_state_field_service_task COMMAND ksStateFieldServiceTask_test)
 set_tests_properties(ks_state_field_service_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksStateSceneService_test "${ROOT}/source/novation/ks/ksLib/ksStateSceneService_test.cpp")
+target_include_directories(ksStateSceneService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksStateSceneService_test PRIVATE ksLib)
+add_test(NAME ks_state_scene_service_service COMMAND ksStateSceneService_test)
+set_tests_properties(ks_state_scene_service_service PROPERTIES TIMEOUT 240 SKIP_RETURN_CODE 77)
+add_executable(ksStateSceneServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksStateSceneServiceTask_test.cpp")
+target_compile_features(ksStateSceneServiceTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_state_scene_service_task COMMAND ksStateSceneServiceTask_test)
+set_tests_properties(ks_state_scene_service_task PROPERTIES TIMEOUT 240)

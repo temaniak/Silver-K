@@ -31,6 +31,7 @@ public:
   else if(kind==Kind::Edit)push(StateScreenEditTask(StateScreenEditTask::Kind::Edit,uint8_t(in.character)));
   else startValue(in.valueIndex,in.format);
  }
+ uint16_t presentation()const{return textWord_;}
  Kind kind()const{return kind_;}const Input&input()const{return input_;}Component component()const{return component_;}uint32_t components()const{return components_;}bool complete()const{return !depth_;}const Effect&effect()const{return effect_;}const Summary&summary()const{return summary_;}
  bool critical()const{const auto*t=task<StateApplyService>();return t&&t->critical();}
  template<class T>const T*task()const{return depth_?std::get_if<T>(&frames_[depth_-1]->task):nullptr;}

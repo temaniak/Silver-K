@@ -1722,6 +1722,23 @@ int main(int argc,char** argv){try{
         <<",\"native_state_field_service_edit_active\":"<<runtime->stateFieldForeground.kinds[22]
         <<",\"native_state_field_service_apply_velocity\":"<<runtime->stateFieldForeground.kinds[23]
         <<",\"native_state_field_service_velocity\":"<<runtime->stateFieldForeground.kinds[24]
+        <<",\"native_state_scene_service_calls\":"<<runtime->stateSceneForeground.started
+        <<",\"native_state_scene_service_returns\":"<<runtime->stateSceneForeground.completed
+        <<",\"native_state_scene_service_phases\":"<<runtime->stateSceneForeground.phases
+        <<",\"native_state_scene_service_initial_active\":"<<runtime->stateSceneForeground.initial
+        <<",\"native_state_scene_service_active\":"<<runtime->stateSceneForeground.active()
+        <<",\"native_state_scene_service_components\":"<<runtime->stateSceneForeground.components
+        <<",\"native_state_scene_service_activate\":"<<runtime->stateSceneForeground.kinds[0]
+        <<",\"native_state_scene_service_apply\":"<<runtime->stateSceneForeground.kinds[1]
+        <<",\"native_state_scene_service_restore\":"<<runtime->stateSceneForeground.kinds[2]
+        <<",\"native_state_scene_service_backup\":"<<runtime->stateSceneForeground.kinds[3]
+        <<",\"native_state_scene_service_copy\":"<<runtime->stateSceneForeground.kinds[4]
+        <<",\"native_state_scene_service_map\":"<<runtime->stateSceneForeground.kinds[5]
+        <<",\"native_state_scene_service_load\":"<<runtime->stateSceneForeground.kinds[6]
+        <<",\"native_state_scene_service_bank\":"<<runtime->stateSceneForeground.kinds[7]
+        <<",\"native_state_scene_service_notify\":"<<runtime->stateSceneForeground.kinds[8]
+        <<",\"native_state_scene_service_knob\":"<<runtime->stateSceneForeground.kinds[9]
+        <<",\"native_state_scene_service_select_bank\":"<<runtime->stateSceneForeground.kinds[10]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases
