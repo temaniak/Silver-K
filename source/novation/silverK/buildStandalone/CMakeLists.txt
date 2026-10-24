@@ -575,3 +575,5 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateEditAction
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateProgramLoadDataService.h" "${ROOT}/source/novation/ks/ksLib/ksStateProgramLoadForeground.cpp" "${ROOT}/source/novation/ks/ksLib/ksStateProgramLoadForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateProgramLoadService.h")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStatePlaybackModeCoordinator.h" "${ROOT}/source/novation/ks/ksLib/ksStatePlaybackModeForeground.cpp" "${ROOT}/source/novation/ks/ksLib/ksStatePlaybackModeForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStatePlaybackModeProjection.h" "${ROOT}/source/novation/ks/ksLib/ksStatePlaybackModeService.h" "${ROOT}/source/novation/ks/ksLib/ksStatePlaybackResetService.h")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStatePartNavigationForeground.cpp" "${ROOT}/source/novation/ks/ksLib/ksStatePartNavigationForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStatePartNavigationService.h")

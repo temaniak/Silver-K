@@ -60,7 +60,7 @@ int main(int argc,char** argv){try{
     // PROGRAM_MENU_FLAGS_BEGIN
     const bool programMenuSingle=scenario=="panel-mode-single";
     const bool programMenuToMulti=scenario=="panel-mode-multi";
-    const bool programPartNavigation=false;
+    const bool programPartNavigation=scenario=="panel-part-wrap-multi"||scenario=="panel-part-name"||scenario=="panel-part-category"||scenario=="panel-part-special";
     const bool programMenuFixture=programMenuSingle||programMenuToMulti||programPartNavigation;
     const bool programMenuMulti=programMenuSingle||programPartNavigation;
     // PROGRAM_MENU_FLAGS_END
@@ -364,6 +364,19 @@ int main(int argc,char** argv){try{
                 // Normal user-selected stored destinations, independent of CPU fields.
                 menuWrite(.18,0x167ac,1);menuWrite(.18,0x167ad,3);menuWrite(.18,0x167ae,1);menuWrite(.18,0x167af,0);
                 const auto handler=programMenuSingle?0x4864u:0x4924u;menuButton(.2,handler);menuButton(.8,handler);
+            }
+            else {
+                const auto page=uint8_t(scenario=="panel-part-name"?2:scenario=="panel-part-category"?3:0);
+                const bool special=scenario=="panel-part-special";
+                context(.18,page,uint8_t(special));
+                menuWrite(.18,0x16799,1);menuWrite(.18,0x167d7,0);menuWrite(.18,0x167da,0);
+                if(special){
+                    // Select an existing live working-data image, never an execution address.
+                    for(unsigned i=0;i<4;++i)programMenuSelectedSource=(programMenuSelectedSource<<8)|uint8_t(board->read(0x167bc+i));
+                    for(unsigned i=0;i<4;++i)menuWrite(.18,0x1748e + i,uint8_t(programMenuSelectedSource>>(24-i*8)));
+                    menuWrite(.18,0x17492,1);menuWrite(.18,0x17493,0);
+                }
+                for(unsigned i=0;i<4;++i){if(i)context(.18+i*.4,page,uint8_t(special));menuButton(.2+i*.4,i&1?0x4974:0x496c);}
             }
             std::stable_sort(programMenuWrites.begin(),programMenuWrites.end(),[](const auto&x,const auto&y){return x.frame<y.frame;});
         }
@@ -1817,6 +1830,17 @@ int main(int argc,char** argv){try{
         <<",\"native_state_playback_mode_service_resolve_parts\":"<<runtime->statePlaybackModeForeground.kinds[7]
         <<",\"native_state_playback_mode_service_bind_part\":"<<runtime->statePlaybackModeForeground.kinds[8]
         <<",\"native_state_playback_mode_service_resolve_edit_part\":"<<runtime->statePlaybackModeForeground.kinds[9]
+        <<",\"native_state_part_navigation_service_calls\":"<<runtime->statePartNavigationForeground.started
+        <<",\"native_state_part_navigation_service_returns\":"<<runtime->statePartNavigationForeground.completed
+        <<",\"native_state_part_navigation_service_phases\":"<<runtime->statePartNavigationForeground.phases
+        <<",\"native_state_part_navigation_service_initial_active\":"<<runtime->statePartNavigationForeground.initial
+        <<",\"native_state_part_navigation_service_active\":"<<runtime->statePartNavigationForeground.active()
+        <<",\"native_state_part_navigation_service_components\":"<<runtime->statePartNavigationForeground.components
+        <<",\"native_state_part_navigation_service_down\":"<<runtime->statePartNavigationForeground.kinds[0]
+        <<",\"native_state_part_navigation_service_up\":"<<runtime->statePartNavigationForeground.kinds[1]
+        <<",\"native_state_part_navigation_service_step\":"<<runtime->statePartNavigationForeground.kinds[2]
+        <<",\"native_state_part_navigation_service_part_step\":"<<runtime->statePartNavigationForeground.kinds[3]
+        <<",\"native_state_part_navigation_service_return\":"<<runtime->statePartNavigationForeground.kinds[4]
         <<",\"native_state_edit_action_service_calls\":"<<runtime->stateEditActionForeground.started
         <<",\"native_state_edit_action_service_returns\":"<<runtime->stateEditActionForeground.completed
         <<",\"native_state_edit_action_service_phases\":"<<runtime->stateEditActionForeground.phases

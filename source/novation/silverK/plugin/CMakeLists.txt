@@ -2838,3 +2838,13 @@ add_executable(ksStatePlaybackModeServiceTask_test "${ROOT}/source/novation/ks/k
 target_compile_features(ksStatePlaybackModeServiceTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_state_playback_mode_service_task COMMAND ksStatePlaybackModeServiceTask_test)
 set_tests_properties(ks_state_playback_mode_service_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksStatePartNavigationService_test "${ROOT}/source/novation/ks/ksLib/ksStatePartNavigationService_test.cpp")
+target_include_directories(ksStatePartNavigationService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksStatePartNavigationService_test PRIVATE ksLib)
+add_test(NAME ks_state_part_navigation_service COMMAND ksStatePartNavigationService_test)
+set_tests_properties(ks_state_part_navigation_service PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 240)
+add_executable(ksStatePartNavigationServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksStatePartNavigationServiceTask_test.cpp")
+target_compile_features(ksStatePartNavigationServiceTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_state_part_navigation_service_task COMMAND ksStatePartNavigationServiceTask_test)
+set_tests_properties(ks_state_part_navigation_service_task PROPERTIES TIMEOUT 240)

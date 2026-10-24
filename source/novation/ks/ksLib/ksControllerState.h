@@ -126,6 +126,7 @@ private:
     friend class RuntimeController;
     friend class StateProgramLoadForeground;
     friend class StatePlaybackModeForeground;
+    friend class StatePartNavigationForeground;
     friend class StateEditActionForeground;
     friend class StateSceneToggleForeground;
     friend class StateSceneEditForeground;
