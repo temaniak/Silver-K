@@ -2818,3 +2818,13 @@ add_executable(ksStateEditActionServiceTask_test "${ROOT}/source/novation/ks/ksL
 target_compile_features(ksStateEditActionServiceTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_state_edit_action_service_task COMMAND ksStateEditActionServiceTask_test)
 set_tests_properties(ks_state_edit_action_service_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksStateProgramLoadService_test "${ROOT}/source/novation/ks/ksLib/ksStateProgramLoadService_test.cpp")
+target_include_directories(ksStateProgramLoadService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksStateProgramLoadService_test PRIVATE ksLib)
+add_test(NAME ks_state_program_load_service COMMAND ksStateProgramLoadService_test)
+set_tests_properties(ks_state_program_load_service PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 240)
+add_executable(ksStateProgramLoadServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksStateProgramLoadServiceTask_test.cpp")
+target_compile_features(ksStateProgramLoadServiceTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_state_program_load_service_task COMMAND ksStateProgramLoadServiceTask_test)
+set_tests_properties(ks_state_program_load_service_task PROPERTIES TIMEOUT 240)

@@ -518,3 +518,5 @@ target_sources(ksLib PRIVATE ksStateSceneEditService.h ksStateSceneEditForegroun
 target_sources(ksLib PRIVATE ksStateSaveAbi.h ksStateSceneToggleService.h ksStateSceneToggleForeground.h ksStateSceneToggleForeground.cpp)
 
 target_sources(ksLib PRIVATE ksStateEditActionService.h ksStateEditActionForeground.h ksStateEditActionForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStateProgramLoadDataService.h ksStateProgramLoadForeground.cpp ksStateProgramLoadForeground.h ksStateProgramLoadService.h)

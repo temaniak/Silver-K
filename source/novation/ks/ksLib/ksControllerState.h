@@ -124,6 +124,7 @@ public:
 private:
     friend class ControllerReference;
     friend class RuntimeController;
+    friend class StateProgramLoadForeground;
     friend class StateEditActionForeground;
     friend class StateSceneToggleForeground;
     friend class StateSceneEditForeground;

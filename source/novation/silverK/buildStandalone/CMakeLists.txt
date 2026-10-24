@@ -571,3 +571,5 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateSceneEditS
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateSaveAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateSceneToggleService.h" "${ROOT}/source/novation/ks/ksLib/ksStateSceneToggleForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateSceneToggleForeground.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateEditActionService.h" "${ROOT}/source/novation/ks/ksLib/ksStateEditActionForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateEditActionForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateProgramLoadDataService.h" "${ROOT}/source/novation/ks/ksLib/ksStateProgramLoadForeground.cpp" "${ROOT}/source/novation/ks/ksLib/ksStateProgramLoadForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateProgramLoadService.h")

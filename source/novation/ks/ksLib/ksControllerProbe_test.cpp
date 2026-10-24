@@ -1723,6 +1723,15 @@ int main(int argc,char** argv){try{
         <<",\"native_state_field_service_edit_active\":"<<runtime->stateFieldForeground.kinds[22]
         <<",\"native_state_field_service_apply_velocity\":"<<runtime->stateFieldForeground.kinds[23]
         <<",\"native_state_field_service_velocity\":"<<runtime->stateFieldForeground.kinds[24]
+        <<",\"native_state_program_load_service_calls\":"<<runtime->stateProgramLoadForeground.started
+        <<",\"native_state_program_load_service_returns\":"<<runtime->stateProgramLoadForeground.completed
+        <<",\"native_state_program_load_service_phases\":"<<runtime->stateProgramLoadForeground.phases
+        <<",\"native_state_program_load_service_initial_active\":"<<runtime->stateProgramLoadForeground.initial
+        <<",\"native_state_program_load_service_active\":"<<runtime->stateProgramLoadForeground.active()
+        <<",\"native_state_program_load_service_components\":"<<runtime->stateProgramLoadForeground.components
+        <<",\"native_state_program_load_service_commit_single\":"<<runtime->stateProgramLoadForeground.kinds[0]
+        <<",\"native_state_program_load_service_commit_multi\":"<<runtime->stateProgramLoadForeground.kinds[1]
+        <<",\"native_state_program_load_service_load_single\":"<<runtime->stateProgramLoadForeground.kinds[2]
         <<",\"native_state_edit_action_service_calls\":"<<runtime->stateEditActionForeground.started
         <<",\"native_state_edit_action_service_returns\":"<<runtime->stateEditActionForeground.completed
         <<",\"native_state_edit_action_service_phases\":"<<runtime->stateEditActionForeground.phases
