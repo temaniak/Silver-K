@@ -160,7 +160,7 @@ int main(int argc,char**argv){unsigned item=0;try{
   const auto panelCalls=b->nativeController()->statePanelForeground.started;
   const unsigned menuKind=item==22?2:item==23?4:11;const auto menuCalls=b->nativeController()->stateMenuForeground.kinds[menuKind];
   const auto applyCalls=b->nativeController()->stateApplyForeground.kinds[0];
-  const auto displayCalls=b->nativeController()->stateDisplayForeground.kinds[0];
+  const auto displayCalls=b->nativeController()->stateDisplayForeground.kinds[0];const auto screenValueCalls=b->nativeController()->stateScreenForeground.kinds[unsigned(ks::StateScreenService::Kind::Value)];bool sawNestedFormat=false;
   const unsigned storeKind=item==26?0:1;auto storeCalls=b->nativeController()->stateSaveForeground.kinds[storeKind];auto flashRevision=b->flashRevision;bool sawReload=false,sawVerify=false;
   if(item==26){enqueueMulti(*a);enqueueMulti(*b);for(unsigned n=0;n<24000;++n){check(a->renderSample()==b->renderSample(),"Timeline store preparation audio differs");check(a->controllerCycles()==b->controllerCycles(),"Timeline store preparation clocks differ");sameInterrupts(*a,*b);}drain(*a,*b);storeCalls=b->nativeController()->stateSaveForeground.kinds[storeKind];flashRevision=b->flashRevision;}
   for(auto*board:{a.get(),b.get()}){
@@ -185,9 +185,10 @@ int main(int argc,char**argv){unsigned item=0;try{
   if(vector==89&&item!=11){const uint8_t byte=item==10?0xfe:0xf8;check(a->enqueueMidi(&byte,1)&&b->enqueueMidi(&byte,1),"Test UART byte rejected");}
   if(item>=6){
    unsigned phases=0;bool sawPacking=false;
-   while((foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind])==kindCalls||b->nativeController()->activeNativeWork()||(b->cpu().exr&7)||(stateEvents&&(b->read(0x15408)||b->read(0x15409)!=2))||(statePanel&&(b->read(0x156ea)||b->read(0x156eb)!=2))||(stateMenu&&b->nativeController()->stateMenuForeground.kinds[menuKind]==menuCalls)||(stateStore&&b->nativeController()->stateSaveForeground.kinds[storeKind]==storeCalls)||(stateDisplay&&b->nativeController()->stateDisplayForeground.kinds[0]==displayCalls)||(stateApply&&b->nativeController()->stateApplyForeground.kinds[0]==applyCalls)){
+   while((foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind])==kindCalls||b->nativeController()->activeNativeWork()||(b->cpu().exr&7)||(stateEvents&&(b->read(0x15408)||b->read(0x15409)!=2))||(statePanel&&(b->read(0x156ea)||b->read(0x156eb)!=2))||(stateMenu&&b->nativeController()->stateMenuForeground.kinds[menuKind]==menuCalls)||(stateStore&&b->nativeController()->stateSaveForeground.kinds[storeKind]==storeCalls)||(stateDisplay&&b->nativeController()->stateDisplayForeground.kinds[0]==displayCalls&&b->nativeController()->stateScreenForeground.kinds[unsigned(ks::StateScreenService::Kind::Value)]==screenValueCalls)||(stateApply&&b->nativeController()->stateApplyForeground.kinds[0]==applyCalls)){
     check(++phases<=(stateStore?4000000u:65536u),"Forced ADC/RX/Store lifecycle did not finish");advanceBoth(*a,*b);
     if(stateApply&&b->nativeController()->stateApplyForeground.at(ks::StateApplyService::Component::Packing))sawPacking=true;
+    if(stateDisplay){const auto*d=b->nativeController()->stateScreenForeground.task<ks::StateDisplayService>();if(d&&d->kind()==ks::StateDisplayService::Kind::Format)sawNestedFormat=true;}
     if(stateStore&&b->nativeController()->stateSaveForeground.at(ks::StateSaveService::Component::Reload))sawReload=true;
     if(stateStore&&b->nativeController()->stateSaveForeground.atPage(ks::StateSavePageService::Component::Verify))sawVerify=true;
    }
@@ -199,7 +200,7 @@ int main(int argc,char**argv){unsigned item=0;try{
    if(item==15)check(b->read(0xffeea0)!=4||b->read(0xffeea1)||b->read(0xffeea2)||b->read(0xffeea3),"F8 feedback did not update its estimate");
   }
   if(stateApply)check(b->nativeController()->stateApplyForeground.kinds[0]>applyCalls,"Natural control event missed actual edit application");
-  if(stateDisplay)check(b->nativeController()->stateDisplayForeground.kinds[0]>displayCalls&&(b->nativeController()->stateDisplayForeground.components&0xf0)==0xf0,"Natural menu display missed LCD transport");
+  if(stateDisplay)check((b->nativeController()->stateDisplayForeground.kinds[0]>displayCalls&&(b->nativeController()->stateDisplayForeground.components&0xf0)==0xf0)||(b->nativeController()->stateScreenForeground.kinds[unsigned(ks::StateScreenService::Kind::Value)]>screenValueCalls&&sawNestedFormat),"Natural menu display missed actual standalone/nested LCD transport");
   if(stateStore&&(!sawVerify||b->flashRevision<=flashRevision||b->read(0x16790)!=0))std::cerr<<"Store outcome verify="<<sawVerify<<" reload="<<sawReload<<" flash="<<flashRevision<<'/'<<b->flashRevision<<" page="<<unsigned(b->read(0x16790))<<" program="<<std::hex<<unsigned(b->read(0x167ac))<<':'<<unsigned(b->read(0x167ad))<<" components="<<b->nativeController()->stateSaveForeground.components<<std::dec<<'\n';
   if(stateStore){check(b->nativeController()->stateSaveForeground.kinds[storeKind]>storeCalls,"Natural Store event missed its complete save graph");check(sawVerify&&b->flashRevision>flashRevision&&b->read(0x16790)==0,"Natural Store did not finish Flash and return to playback");}
   if(item==30)check(sawReload,"Single save in multi mode missed full native reload");

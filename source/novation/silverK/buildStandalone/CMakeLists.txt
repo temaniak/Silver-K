@@ -555,3 +555,5 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateSaveServic
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateReloadVoiceService.h" "${ROOT}/source/novation/ks/ksLib/ksStateReloadPanelService.h" "${ROOT}/source/novation/ks/ksLib/ksStateReloadCoordinator.h" "${ROOT}/source/novation/ks/ksLib/ksStateReloadService.h")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelSettingsService.h" "${ROOT}/source/novation/ks/ksLib/ksPanelSettingsForeground.h" "${ROOT}/source/novation/ks/ksLib/ksPanelSettingsForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateScreenService.h" "${ROOT}/source/novation/ks/ksLib/ksStateScreenForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateScreenForeground.cpp")

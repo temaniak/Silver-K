@@ -2728,3 +2728,13 @@ add_executable(ksPanelSettingsServiceTask_test "${ROOT}/source/novation/ks/ksLib
 target_compile_features(ksPanelSettingsServiceTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_panel_settings_service_task COMMAND ksPanelSettingsServiceTask_test)
 set_tests_properties(ks_panel_settings_service_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksStateScreenService_test "${ROOT}/source/novation/ks/ksLib/ksStateScreenService_test.cpp")
+target_include_directories(ksStateScreenService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksStateScreenService_test PRIVATE ksLib)
+add_test(NAME ks_state_screen_service_service COMMAND ksStateScreenService_test)
+set_tests_properties(ks_state_screen_service_service PROPERTIES TIMEOUT 240 SKIP_RETURN_CODE 77)
+add_executable(ksStateScreenServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksStateScreenServiceTask_test.cpp")
+target_compile_features(ksStateScreenServiceTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_state_screen_service_task COMMAND ksStateScreenServiceTask_test)
+set_tests_properties(ks_state_screen_service_task PROPERTIES TIMEOUT 240)

@@ -1675,6 +1675,22 @@ int main(int argc,char** argv){try{
         <<",\"native_panel_settings_service_AnalogInitialize\":"<<runtime->panelSettingsForeground.kinds[10]
         <<",\"native_panel_settings_service_AnalogDuty\":"<<runtime->panelSettingsForeground.kinds[11]
         <<",\"native_panel_settings_service_AnalogLevel\":"<<runtime->panelSettingsForeground.kinds[12]
+        <<",\"native_state_screen_service_calls\":"<<runtime->stateScreenForeground.started
+        <<",\"native_state_screen_service_returns\":"<<runtime->stateScreenForeground.completed
+        <<",\"native_state_screen_service_phases\":"<<runtime->stateScreenForeground.phases
+        <<",\"native_state_screen_service_initial_active\":"<<runtime->stateScreenForeground.initial
+        <<",\"native_state_screen_service_active\":"<<runtime->stateScreenForeground.active()
+        <<",\"native_state_screen_service_components\":"<<runtime->stateScreenForeground.components
+        <<",\"native_state_screen_service_Descriptor\":"<<runtime->stateScreenForeground.kinds[0]
+        <<",\"native_state_screen_service_Set\":"<<runtime->stateScreenForeground.kinds[1]
+        <<",\"native_state_screen_service_Next\":"<<runtime->stateScreenForeground.kinds[2]
+        <<",\"native_state_screen_service_Previous\":"<<runtime->stateScreenForeground.kinds[3]
+        <<",\"native_state_screen_service_Refresh\":"<<runtime->stateScreenForeground.kinds[4]
+        <<",\"native_state_screen_service_Gate\":"<<runtime->stateScreenForeground.kinds[5]
+        <<",\"native_state_screen_service_Render\":"<<runtime->stateScreenForeground.kinds[6]
+        <<",\"native_state_screen_service_Label\":"<<runtime->stateScreenForeground.kinds[7]
+        <<",\"native_state_screen_service_Edit\":"<<runtime->stateScreenForeground.kinds[8]
+        <<",\"native_state_screen_service_Value\":"<<runtime->stateScreenForeground.kinds[9]
         <<",\"native_interrupt_service_calls\":"<<runtime->nativeInterruptStarts
         <<",\"native_interrupt_service_returns\":"<<runtime->nativeInterruptReturns
         <<",\"native_interrupt_service_phases\":"<<runtime->nativeInterruptPhases

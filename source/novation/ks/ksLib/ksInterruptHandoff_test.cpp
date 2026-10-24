@@ -188,7 +188,7 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   }
   bool landed=false;
   for(unsigned n=0;n<65536&&!landed;++n){
-   advanceBoth(*a,*b);const auto*r=b->nativeController();bool target=false;
+   advanceBoth(*a,*b);const auto*r=b->nativeController();const auto*screenDisplay=r->stateScreenForeground.task<ks::StateDisplayService>();const auto*screenMenu=r->stateScreenForeground.task<ks::StateMenuService>();bool target=false;
    switch(phase){
    case 0:target=true;break;
    case 1:target=r->nativeTpu0At(ks::Tpu0Service::Component::Velocity)&&b->cpu().exr==6;break;
@@ -211,9 +211,9 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    case 38:target=r->stateApplyForeground.at(ks::StateApplyService::Kind::Apply)&&r->stateApplyForeground.at(ks::StateApplyService::Component::Packing)&&b->cpu().exr==0;break;
    case 39:target=r->stateApplyForeground.at(ks::StateApplyService::Kind::Apply)&&r->stateApplyForeground.at(ks::StateApplyService::Component::Midi)&&b->cpu().exr==0;break;
    case 40:target=r->stateApplyForeground.at(ks::StateApplyService::Kind::Apply)&&r->stateApplyForeground.at(ks::StateApplyService::Component::Post)&&b->cpu().exr==0;break;
-   case 34:target=r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atFormat(ks::StateMenuFormatTask::Stage::SetPosition)&&b->cpu().exr==0;break;
-   case 35:target=r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atPoll(ks::PanelPollTask::Stage::TestReady)&&b->cpu().exr==0;break;
-   case 36:target=r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atByte(ks::PanelByteTask::Kind::CommandWrite,ks::PanelByteTask::Stage::Transfer)&&b->cpu().exr==0;break;
+   case 34:target=((r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atFormat(ks::StateMenuFormatTask::Stage::SetPosition))||(screenDisplay&&screenDisplay->kind()==ks::StateDisplayService::Kind::Format&&screenDisplay->atFormat(ks::StateMenuFormatTask::Stage::SetPosition)))&&b->cpu().exr==0;break;
+   case 35:target=((r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atPoll(ks::PanelPollTask::Stage::TestReady))||(screenDisplay&&screenDisplay->kind()==ks::StateDisplayService::Kind::Format&&screenDisplay->atPoll(ks::PanelPollTask::Stage::TestReady)))&&b->cpu().exr==0;break;
+   case 36:target=((r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atByte(ks::PanelByteTask::Kind::CommandWrite,ks::PanelByteTask::Stage::Transfer))||(screenDisplay&&screenDisplay->kind()==ks::StateDisplayService::Kind::Format&&screenDisplay->atByte(ks::PanelByteTask::Kind::CommandWrite,ks::PanelByteTask::Stage::Transfer)))&&b->cpu().exr==0;break;
    case 30:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::WritePatchName))||(r->stateSaveForeground.atPreparation(ks::StateStoreService::Kind::WritePatchName)&&r->stateSaveForeground.preparation()->nameTask()&&r->stateSaveForeground.preparation()->nameTask()->stage()==ks::StatePatchNameTask::Stage::AddWritePatch))&&b->cpu().exr==0;break;
    case 31:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::PartReference))||(r->stateSaveForeground.atPreparation(ks::StateStoreService::Kind::MultiSerialize)&&r->stateSaveForeground.atPreparation(ks::StateStoreService::Component::PartReference)))&&b->cpu().exr==0;break;
    case 32:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::PackAll))||(r->stateSaveForeground.atPreparation(ks::StateStoreService::Kind::MultiSerialize)&&r->stateSaveForeground.atPreparation(ks::StateStoreService::Component::PackAll)))&&b->cpu().exr==0;break;
@@ -221,7 +221,7 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    case 25:target=r->stateMenuForeground.at(ks::StateMenuService::Kind::Clock)&&b->cpu().exr==0;break;
    case 26:target=r->stateMenuForeground.at(ks::StateMenuService::Kind::Previous)&&r->stateMenuForeground.at(ks::StateMenuService::Component::EditGate)&&b->cpu().exr==0;break;
    case 27:target=r->stateMenuForeground.at(ks::StateMenuService::Kind::Previous)&&r->stateMenuForeground.at(ks::StateMenuService::Component::RepeatTimer)&&b->cpu().exr==0;break;
-   case 28:target=r->stateMenuForeground.at(ks::StateMenuService::Kind::BindContext)&&b->cpu().exr==0;break;
+   case 28:target=(r->stateMenuForeground.at(ks::StateMenuService::Kind::BindContext)||(screenMenu&&screenMenu->kind()==ks::StateMenuService::Kind::BindContext&&screenMenu->contextTask()&&screenMenu->contextTask()->stage()==ks::StateEditContextTask::Stage::SaveContextIndex))&&b->cpu().exr==0;break;
    case 29:target=r->stateMenuForeground.at(ks::StateMenuService::Kind::IndexedAddress)&&b->cpu().exr==0;break;
    case 22:target=r->statePanelForeground.atRoute(ks::MidiOutputTask::Stage::SaveOnContext)&&b->cpu().exr==0;break;
    case 23:target=r->statePanelForeground.atQueue(ks::InternalMidiQueueTask::Stage::SavePush)&&b->cpu().exr==0;break;
