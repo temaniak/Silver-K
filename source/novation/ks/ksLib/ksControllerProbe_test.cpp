@@ -1723,6 +1723,19 @@ int main(int argc,char** argv){try{
         <<",\"native_state_field_service_edit_active\":"<<runtime->stateFieldForeground.kinds[22]
         <<",\"native_state_field_service_apply_velocity\":"<<runtime->stateFieldForeground.kinds[23]
         <<",\"native_state_field_service_velocity\":"<<runtime->stateFieldForeground.kinds[24]
+        <<",\"native_state_edit_action_service_calls\":"<<runtime->stateEditActionForeground.started
+        <<",\"native_state_edit_action_service_returns\":"<<runtime->stateEditActionForeground.completed
+        <<",\"native_state_edit_action_service_phases\":"<<runtime->stateEditActionForeground.phases
+        <<",\"native_state_edit_action_service_initial_active\":"<<runtime->stateEditActionForeground.initial
+        <<",\"native_state_edit_action_service_active\":"<<runtime->stateEditActionForeground.active()
+        <<",\"native_state_edit_action_service_components\":"<<runtime->stateEditActionForeground.components
+        <<",\"native_state_edit_action_service_toggle_edit\":"<<runtime->stateEditActionForeground.kinds[0]
+        <<",\"native_state_edit_action_service_select_edit\":"<<runtime->stateEditActionForeground.kinds[1]
+        <<",\"native_state_edit_action_service_toggle_one\":"<<runtime->stateEditActionForeground.kinds[2]
+        <<",\"native_state_edit_action_service_toggle_two\":"<<runtime->stateEditActionForeground.kinds[3]
+        <<",\"native_state_edit_action_service_clear_digits\":"<<runtime->stateEditActionForeground.kinds[4]
+        <<",\"native_state_edit_action_service_clear_edit\":"<<runtime->stateEditActionForeground.kinds[5]
+        <<",\"native_state_edit_action_service_release\":"<<runtime->stateEditActionForeground.kinds[6]
         <<",\"native_state_scene_toggle_service_calls\":"<<runtime->stateSceneToggleForeground.started
         <<",\"native_state_scene_toggle_service_returns\":"<<runtime->stateSceneToggleForeground.completed
         <<",\"native_state_scene_toggle_service_phases\":"<<runtime->stateSceneToggleForeground.phases
