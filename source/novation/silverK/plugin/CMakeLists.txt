@@ -3349,7 +3349,7 @@ target_compile_features(ksScheduledTimerServiceTask_test PRIVATE cxx_std_17)
 target_include_directories(ksScheduledTimerServiceTask_test PRIVATE "${ROOT}/source/cpu")
 target_link_libraries(ksScheduledTimerServiceTask_test PRIVATE ksLib)
 add_test(NAME scheduled_timer_service_task COMMAND ksScheduledTimerServiceTask_test)
-set_tests_properties(scheduled_timer_service_task PROPERTIES TIMEOUT 900)
+set_tests_properties(scheduled_timer_service_task PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 900)
 
 add_executable(ksNativeMidiAuxService_test "${ROOT}/source/novation/ks/ksLib/ksNativeMidiAuxService_test.cpp")
 target_include_directories(ksNativeMidiAuxService_test PRIVATE "${ROOT}/source/cpu")
