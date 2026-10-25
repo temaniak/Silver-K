@@ -6,6 +6,8 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <vector>
+#include <cstdint>
 #include <stdexcept>
 namespace {
 uint64_t slice=0;
@@ -132,20 +134,32 @@ int main(int argc,char** argv){try{
     if(variant=="mapped")check(!a->zeroBank() && !b->zeroBank(),"Mapped wave bank adaptation not disabled");
     const uint8_t on[]{0x90,60,100};check(a->enqueueMidi(on,3)&&b->enqueueMidi(on,3),"MIDI rejected");
     int64_t peak=0;
+    // Test-only retained PCM, allocated before rendering and saved after it.
+    // This does not run in an audio callback or change controller/DSP timing.
+    std::vector<int32_t> referencePcm,nativePcm;
+    referencePcm.reserve(24000*24);nativePcm.reserve(24000*24);
     for(unsigned n=0;n<24000;++n){
         if(n==8000){const uint8_t off[]{0x80,60,0};check(a->enqueueMidi(off,3)&&b->enqueueMidi(off,3),"Release rejected");}
         const auto x=a->renderSample(),y=b->renderSample();check(x==y,"Post-reset audio mismatch");same(*a,*b);
+        static_assert(std::tuple_size<ks::Board::AudioFrame>::value==24,"Cold PCM channel count");
+        referencePcm.insert(referencePcm.end(),x.begin(),x.end());nativePcm.insert(nativePcm.end(),y.begin(),y.end());
         for(unsigned c=0;c<4;++c)peak=std::max(peak,std::abs(int64_t(x[c])));
     }
     check(peak>1000,"Boot oracle not admitted as audible");
+    const auto savePcm=[&](const char* name,const std::vector<int32_t>& samples){
+        check(samples.size()==24000*24,"Cold PCM frame bounds");std::ofstream file(out/name,std::ios::binary);
+        check(bool(file),"Cannot save cold PCM");for(const auto value:samples)for(unsigned byte=0;byte<4;++byte)file.put(char(uint32_t(value)>>(8*byte)));
+        file.close();check(bool(file),"Cold PCM write failed");
+    };
+    savePcm("h8.pcm",referencePcm);savePcm("cpp.pcm",nativePcm);
     const auto x=a->finishControllerTrace(),y=b->finishControllerTrace();x->validate();y->validate();
     x->save((out/"h8.kst").string());y->save((out/"cpp.kst").string());
     // Keep both raw tapes and checkpoints. Removed internal CPU locations
     // become the verified native graph caller; resource transfers stay exact.
     check(x->checkpoint==y->checkpoint&&x->beginCycle==y->beginCycle&&x->endCycle==y->endCycle&&x->events.size()==y->events.size()&&x->slices.size()==y->slices.size(),"Reset tape checkpoint/bounds mismatch");
-    uint64_t nativeCpuLocationChanges=0;
+    uint64_t nativeCpuLocationChanges=0,unexpectedCpuLocationChanges=0;bool cpuLocationsAcceptable=true;
     for(size_t n=0;n<x->events.size();++n){const auto&p=x->events[n];const auto&q=y->events[n];check(p.cycle==q.cycle&&p.dsp==q.dsp&&p.offset==q.offset&&p.value==q.value&&p.flags==q.flags,"Reset DSP transfer mismatch");
-        if(p.pc!=q.pc){check(ks::tests::nativeDspTraceLocationMatches(p.pc,q.pc),"Unexpected reset DSP CPU location change");++nativeCpuLocationChanges;}}
+        if(p.pc!=q.pc){if(!ks::tests::nativeDspTraceLocationMatches(p.pc,q.pc)){cpuLocationsAcceptable=false;++unexpectedCpuLocationChanges;}++nativeCpuLocationChanges;}}
     for(size_t n=0;n<x->slices.size();++n){const auto&p=x->slices[n];const auto&q=y->slices[n];check(p.begin==q.begin&&p.end==q.end&&p.first==q.first&&p.count==q.count,"Reset DSP slice mismatch");}
     std::cout<<"Reset diagnostic CPU locations changed="<<nativeCpuLocationChanges<<" (both raw tapes retained)\n";
     check(a->saveUserFlash()==b->saveUserFlash(),"Reset Flash mismatch");
@@ -153,6 +167,30 @@ int main(int argc,char** argv){try{
     check(sameResources(),"Post-reset resource memory mismatch");
     check(a->serialDepth()==b->serialDepth() && a->serialUnderruns==b->serialUnderruns && a->serialOverflows==b->serialOverflows,"Reset serial state mismatch");
     uint8_t v=0,w=0;while(a->popMidiOut(v))check(b->popMidiOut(w)&&v==w,"Reset MIDI output mismatch");check(!b->popMidiOut(w),"Trailing reset MIDI output");
+    // Preserve semantic evidence even when the final diagnostic-PC check fails.
+    // Every original non-PC/resource/state assertion above remains strict.
+    const auto& factory=b->nativeController()->stateFactoryForeground;
+    std::ofstream gates(out/"cold-semantic-gates.json");check(bool(gates),"Cannot save cold semantic evidence");
+    gates<<"{\"semantic_gates_complete\":true,\"variant\":\""<<variant<<"\",\"frames\":24000,\"channels\":24,\"encoding\":\"int32le\",\"peak\":"<<peak
+         <<",\"events\":"<<x->events.size()<<",\"slices\":"<<x->slices.size()<<",\"controller_cycles\":"<<b->controllerCycles()
+         <<",\"checkpoint_exact\":true,\"every_pcm_sample_exact\":true,\"every_nonPC_event_and_slice_exact\":true"
+         <<",\"strict_pc_acceptable\":"<<(cpuLocationsAcceptable?"true":"false")<<",\"unexpected_pc_events\":"<<unexpectedCpuLocationChanges
+         <<",\"native_state_factory_service_calls\":"<<factory.started
+         <<",\"native_state_factory_service_returns\":"<<factory.completed
+         <<",\"native_state_factory_service_phases\":"<<factory.phases
+         <<",\"native_state_factory_service_initial_active\":"<<factory.initial
+         <<",\"native_state_factory_service_active\":"<<factory.active()
+         <<",\"native_state_factory_service_components\":"<<factory.components
+         <<",\"native_state_factory_service_provided\":"<<factory.kinds[0]
+         <<",\"native_state_factory_service_factory\":"<<factory.kinds[1]
+         <<",\"native_state_factory_service_global_load\":"<<factory.kinds[2]
+         <<",\"native_state_factory_service_reset\":"<<factory.kinds[3]
+         <<",\"native_state_factory_service_upload\":"<<factory.kinds[4]
+         <<",\"native_state_factory_service_poll\":"<<factory.kinds[5]
+         <<",\"native_state_factory_service_stream\":"<<factory.kinds[6]
+         <<"}\n";gates.close();check(bool(gates),"Cold semantic evidence write failed");
+    std::cout<<"SEMANTIC_GATES_COMPLETE "<<variant<<" factory_calls="<<factory.started<<" factory_returns="<<factory.completed<<" factory_active="<<factory.active()<<std::endl;
+    check(cpuLocationsAcceptable,"Unexpected reset DSP CPU location change");
     std::cout<<"PASS: "<<variant<<" cold reset, "<<slice<<" original coordinator slices, "<<x->events.size()<<" exact DSP port events, all resource memory (CPU scratch stack excluded)/state/Flash/IO/IRQ, 24000 exact 24-stream audible frames; reference H8 steps="<<a->h8InterpretedSteps()<<", candidate H8 steps="<<b->h8InterpretedSteps()<<"\n";
     return 0;
 }catch(const std::exception& e){std::cerr<<"slice="<<slice<<": "<<e.what()<<'\n';return 1;}}

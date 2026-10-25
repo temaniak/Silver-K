@@ -2878,3 +2878,13 @@ add_executable(ksSysExOutputServiceTask_test "${ROOT}/source/novation/ks/ksLib/k
 target_compile_features(ksSysExOutputServiceTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_sysex_output_service_task COMMAND ksSysExOutputServiceTask_test)
 set_tests_properties(ks_sysex_output_service_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksStateFactoryService_test "${ROOT}/source/novation/ks/ksLib/ksStateFactoryService_test.cpp")
+target_include_directories(ksStateFactoryService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksStateFactoryService_test PRIVATE ksLib)
+add_test(NAME ks_state_factory_service COMMAND ksStateFactoryService_test)
+set_tests_properties(ks_state_factory_service PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 240)
+add_executable(ksStateFactoryServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksStateFactoryServiceTask_test.cpp")
+target_compile_features(ksStateFactoryServiceTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_state_factory_service_task COMMAND ksStateFactoryServiceTask_test)
+set_tests_properties(ks_state_factory_service_task PROPERTIES TIMEOUT 240)

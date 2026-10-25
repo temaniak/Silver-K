@@ -1924,6 +1924,19 @@ int main(int argc,char** argv){try{
         <<",\"native_state_program_browser_service_step\":"<<runtime->stateProgramBrowserForeground.kinds[11]
         <<",\"native_state_program_browser_service_entry\":"<<runtime->stateProgramBrowserForeground.kinds[12]
         <<",\"native_state_program_browser_service_clear\":"<<runtime->stateProgramBrowserForeground.kinds[13]
+        <<",\"native_state_factory_service_calls\":"<<runtime->stateFactoryForeground.started
+        <<",\"native_state_factory_service_returns\":"<<runtime->stateFactoryForeground.completed
+        <<",\"native_state_factory_service_phases\":"<<runtime->stateFactoryForeground.phases
+        <<",\"native_state_factory_service_initial_active\":"<<runtime->stateFactoryForeground.initial
+        <<",\"native_state_factory_service_active\":"<<runtime->stateFactoryForeground.active()
+        <<",\"native_state_factory_service_components\":"<<runtime->stateFactoryForeground.components
+        <<",\"native_state_factory_service_provided\":"<<runtime->stateFactoryForeground.kinds[0]
+        <<",\"native_state_factory_service_factory\":"<<runtime->stateFactoryForeground.kinds[1]
+        <<",\"native_state_factory_service_global_load\":"<<runtime->stateFactoryForeground.kinds[2]
+        <<",\"native_state_factory_service_reset\":"<<runtime->stateFactoryForeground.kinds[3]
+        <<",\"native_state_factory_service_upload\":"<<runtime->stateFactoryForeground.kinds[4]
+        <<",\"native_state_factory_service_poll\":"<<runtime->stateFactoryForeground.kinds[5]
+        <<",\"native_state_factory_service_stream\":"<<runtime->stateFactoryForeground.kinds[6]
         <<",\"native_state_program_load_service_calls\":"<<runtime->stateProgramLoadForeground.started
         <<",\"native_state_program_load_service_returns\":"<<runtime->stateProgramLoadForeground.completed
         <<",\"native_state_program_load_service_phases\":"<<runtime->stateProgramLoadForeground.phases

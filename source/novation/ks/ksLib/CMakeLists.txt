@@ -528,3 +528,5 @@ target_sources(ksLib PRIVATE ksStatePartNavigationForeground.cpp ksStatePartNavi
 target_sources(ksLib PRIVATE ksStateProgramBrowserCoordinator.h ksStateProgramBrowserService.h ksStateProgramBrowserForeground.h ksStateProgramBrowserForeground.cpp)
 
 target_sources(ksLib PRIVATE ksStateStoreDumpService.h ksStateStoreMenuCoordinator.h ksStateStoreMenuService.h ksStateStoreMenuForeground.h ksStateStoreMenuForeground.cpp ksSysExOutputService.h ksStateFactoryService.h ksStateFactoryAbi.h)
+
+target_sources(ksLib PRIVATE ksStateFactoryDspService.h ksStateFactoryDspAbi.h ksStateFactoryForeground.h ksStateFactoryForeground.cpp)
