@@ -182,6 +182,16 @@ int main(int argc,char** argv){try{
          <<",\"native_clock_sync_service_active\":"<<b->nativeController()->clockSyncForeground.active()
          <<",\"native_clock_sync_service_components\":"<<b->nativeController()->clockSyncForeground.components
          <<",\"native_clock_sync_service_update\":"<<b->nativeController()->clockSyncForeground.kinds[0]
+         <<",\"native_state_deferred_parts_service_calls\":"<<b->nativeController()->stateDeferredPartsForeground.started
+         <<",\"native_state_deferred_parts_service_returns\":"<<b->nativeController()->stateDeferredPartsForeground.completed
+         <<",\"native_state_deferred_parts_service_phases\":"<<b->nativeController()->stateDeferredPartsForeground.phases
+         <<",\"native_state_deferred_parts_service_initial_active\":"<<b->nativeController()->stateDeferredPartsForeground.initial
+         <<",\"native_state_deferred_parts_service_active\":"<<b->nativeController()->stateDeferredPartsForeground.active()
+         <<",\"native_state_deferred_parts_service_components\":"<<b->nativeController()->stateDeferredPartsForeground.components
+         <<",\"native_state_deferred_parts_service_deferred\":"<<b->nativeController()->stateDeferredPartsForeground.kinds[0]
+         <<",\"native_state_deferred_parts_service_processed\":"<<b->nativeController()->stateDeferredPartsForeground.processed
+         <<",\"native_state_deferred_parts_service_voice_uploads\":"<<b->nativeController()->stateDeferredPartsForeground.voiceUploads
+         <<",\"native_state_deferred_parts_service_part_mask\":"<<b->nativeController()->stateDeferredPartsForeground.partMask
          <<",\"native_state_factory_service_calls\":"<<factory.started
          <<",\"native_state_factory_service_returns\":"<<factory.completed
          <<",\"native_state_factory_service_phases\":"<<factory.phases

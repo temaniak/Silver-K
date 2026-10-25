@@ -2898,3 +2898,13 @@ add_executable(ksClockSyncServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksC
 target_compile_features(ksClockSyncServiceTask_test PRIVATE cxx_std_17)
 add_test(NAME clock_sync_service_task COMMAND ksClockSyncServiceTask_test)
 set_tests_properties(clock_sync_service_task PROPERTIES TIMEOUT 300)
+
+add_executable(ksStateDeferredPartsService_test "${ROOT}/source/novation/ks/ksLib/ksStateDeferredPartsService_test.cpp")
+target_include_directories(ksStateDeferredPartsService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksStateDeferredPartsService_test PRIVATE ksLib)
+add_test(NAME state_deferred_parts_service COMMAND ksStateDeferredPartsService_test)
+set_tests_properties(state_deferred_parts_service PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
+add_executable(ksStateDeferredPartsServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksStateDeferredPartsServiceTask_test.cpp")
+target_compile_features(ksStateDeferredPartsServiceTask_test PRIVATE cxx_std_17)
+add_test(NAME state_deferred_parts_service_task COMMAND ksStateDeferredPartsServiceTask_test)
+set_tests_properties(state_deferred_parts_service_task PROPERTIES TIMEOUT 300)

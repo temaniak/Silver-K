@@ -1931,6 +1931,16 @@ int main(int argc,char** argv){try{
         <<",\"native_clock_sync_service_active\":"<<runtime->clockSyncForeground.active()
         <<",\"native_clock_sync_service_components\":"<<runtime->clockSyncForeground.components
         <<",\"native_clock_sync_service_update\":"<<runtime->clockSyncForeground.kinds[0]
+        <<",\"native_state_deferred_parts_service_calls\":"<<runtime->stateDeferredPartsForeground.started
+        <<",\"native_state_deferred_parts_service_returns\":"<<runtime->stateDeferredPartsForeground.completed
+        <<",\"native_state_deferred_parts_service_phases\":"<<runtime->stateDeferredPartsForeground.phases
+        <<",\"native_state_deferred_parts_service_initial_active\":"<<runtime->stateDeferredPartsForeground.initial
+        <<",\"native_state_deferred_parts_service_active\":"<<runtime->stateDeferredPartsForeground.active()
+        <<",\"native_state_deferred_parts_service_components\":"<<runtime->stateDeferredPartsForeground.components
+        <<",\"native_state_deferred_parts_service_deferred\":"<<runtime->stateDeferredPartsForeground.kinds[0]
+        <<",\"native_state_deferred_parts_service_processed\":"<<runtime->stateDeferredPartsForeground.processed
+        <<",\"native_state_deferred_parts_service_voice_uploads\":"<<runtime->stateDeferredPartsForeground.voiceUploads
+        <<",\"native_state_deferred_parts_service_part_mask\":"<<runtime->stateDeferredPartsForeground.partMask
         <<",\"native_state_factory_service_calls\":"<<runtime->stateFactoryForeground.started
         <<",\"native_state_factory_service_returns\":"<<runtime->stateFactoryForeground.completed
         <<",\"native_state_factory_service_phases\":"<<runtime->stateFactoryForeground.phases
