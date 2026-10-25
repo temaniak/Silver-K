@@ -2151,6 +2151,26 @@ int main(int argc,char** argv){try{
          <<",\"native_native_arp_search_service_phases\":"<<runtime->nativeArpSearchForeground.phases
          <<",\"native_native_arp_search_service_initial_active\":"<<runtime->nativeArpSearchForeground.initial
          <<",\"native_native_arp_search_service_active\":"<<runtime->nativeArpSearchForeground.active()
+         <<",\"native_scheduled_timer_service_calls\":"<<runtime->scheduledTimerForeground.started
+         <<",\"native_scheduled_timer_service_returns\":"<<runtime->scheduledTimerForeground.completed
+         <<",\"native_scheduled_timer_service_phases\":"<<runtime->scheduledTimerForeground.phases
+         <<",\"native_scheduled_timer_service_initial_active\":"<<runtime->scheduledTimerForeground.initial
+         <<",\"native_scheduled_timer_service_active\":"<<runtime->scheduledTimerForeground.active()
+         <<",\"native_native_midi_aux_service_calls\":"<<runtime->nativeMidiAuxForeground.started
+         <<",\"native_native_midi_aux_service_returns\":"<<runtime->nativeMidiAuxForeground.completed
+         <<",\"native_native_midi_aux_service_phases\":"<<runtime->nativeMidiAuxForeground.phases
+         <<",\"native_native_midi_aux_service_initial_active\":"<<runtime->nativeMidiAuxForeground.initial
+         <<",\"native_native_midi_aux_service_active\":"<<runtime->nativeMidiAuxForeground.active()
+         <<",\"native_native_arp_ordered_service_calls\":"<<runtime->nativeArpOrderedForeground.started
+         <<",\"native_native_arp_ordered_service_returns\":"<<runtime->nativeArpOrderedForeground.completed
+         <<",\"native_native_arp_ordered_service_phases\":"<<runtime->nativeArpOrderedForeground.phases
+         <<",\"native_native_arp_ordered_service_initial_active\":"<<runtime->nativeArpOrderedForeground.initial
+         <<",\"native_native_arp_ordered_service_active\":"<<runtime->nativeArpOrderedForeground.active()
+         <<",\"native_native_arp_run_service_calls\":"<<runtime->nativeArpRunForeground.started
+         <<",\"native_native_arp_run_service_returns\":"<<runtime->nativeArpRunForeground.completed
+         <<",\"native_native_arp_run_service_phases\":"<<runtime->nativeArpRunForeground.phases
+         <<",\"native_native_arp_run_service_initial_active\":"<<runtime->nativeArpRunForeground.initial
+         <<",\"native_native_arp_run_service_active\":"<<runtime->nativeArpRunForeground.active()
         <<",\"native_state_tick_service_calls\":"<<runtime->stateTickForeground.started
         <<",\"native_state_tick_service_returns\":"<<runtime->stateTickForeground.completed
         <<",\"native_state_tick_service_phases\":"<<runtime->stateTickForeground.phases

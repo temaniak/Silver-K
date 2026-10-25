@@ -669,3 +669,13 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeArpRandom
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeArpSearchService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpSearchAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpSearchForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpSearchForeground.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateCentralActionsAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateCentralActionsCoordinator.h" "${ROOT}/source/novation/ks/ksLib/ksStateCentralActionsLeavesAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateCentralActionsService.h" "${ROOT}/source/novation/ks/ksLib/ksSysExNativeAbi.h" "${ROOT}/source/novation/ks/ksLib/ksSysExNativeService.h" "${ROOT}/source/novation/ks/ksLib/ksSysExPatchExpandService.h" "${ROOT}/source/novation/ks/ksLib/ksSysExNativeLeavesAbi.h" "${ROOT}/source/novation/ks/ksLib/ksSysExNativeCoordinator.h" "${ROOT}/source/novation/ks/ksLib/ksStateSignedNumberAbi.h" "${ROOT}/source/novation/ks/ksLib/ksVoiceExpressionBindings.h" "${ROOT}/source/novation/ks/ksLib/ksVoiceActivationBindings.h")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksScheduledTimerService.h" "${ROOT}/source/novation/ks/ksLib/ksScheduledTimerAbi.h" "${ROOT}/source/novation/ks/ksLib/ksScheduledTimerForeground.h" "${ROOT}/source/novation/ks/ksLib/ksScheduledTimerForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeMidiAuxService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeMidiAuxAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeMidiAuxForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeMidiAuxForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeArpOrderedService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpOrderedAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpOrderedForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpOrderedForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeArpRunService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpRunAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpRunForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpRunForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksScheduledTimerBindings.h" "${ROOT}/source/novation/ks/ksLib/ksArpMusicalEffects.h" "${ROOT}/source/novation/ks/ksLib/ksStateUiDomainBindings.h" "${ROOT}/source/novation/ks/ksLib/ksStateCentralActionsBindings.h" "${ROOT}/source/novation/ks/ksLib/ksFieldExpressionBindings.h")

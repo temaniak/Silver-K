@@ -132,6 +132,10 @@ private:
     friend class PanelPedalOutputForeground;
     friend class StateEncoderForeground;
     friend class StateTickForeground;
+    friend class ScheduledTimerForeground;
+    friend class NativeMidiAuxForeground;
+    friend class NativeArpOrderedForeground;
+    friend class NativeArpRunForeground;
     friend class NativePedalControlForeground;
     friend class NativeMidiControlForeground;
     friend class NativePartNoteForeground;

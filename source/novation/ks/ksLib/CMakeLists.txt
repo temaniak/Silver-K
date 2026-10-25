@@ -616,3 +616,13 @@ target_sources(ksLib PRIVATE ksNativeArpRandomService.h ksNativeArpRandomAbi.h k
 target_sources(ksLib PRIVATE ksNativeArpSearchService.h ksNativeArpSearchAbi.h ksNativeArpSearchForeground.h ksNativeArpSearchForeground.cpp)
 
 target_sources(ksLib PRIVATE ksStateCentralActionsAbi.h ksStateCentralActionsCoordinator.h ksStateCentralActionsLeavesAbi.h ksStateCentralActionsService.h ksSysExNativeAbi.h ksSysExNativeService.h ksSysExPatchExpandService.h ksSysExNativeLeavesAbi.h ksSysExNativeCoordinator.h ksStateSignedNumberAbi.h ksVoiceExpressionBindings.h ksVoiceActivationBindings.h)
+
+target_sources(ksLib PRIVATE ksScheduledTimerService.h ksScheduledTimerAbi.h ksScheduledTimerForeground.h ksScheduledTimerForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeMidiAuxService.h ksNativeMidiAuxAbi.h ksNativeMidiAuxForeground.h ksNativeMidiAuxForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeArpOrderedService.h ksNativeArpOrderedAbi.h ksNativeArpOrderedForeground.h ksNativeArpOrderedForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeArpRunService.h ksNativeArpRunAbi.h ksNativeArpRunForeground.h ksNativeArpRunForeground.cpp)
+
+target_sources(ksLib PRIVATE ksScheduledTimerBindings.h ksArpMusicalEffects.h ksStateUiDomainBindings.h ksStateCentralActionsBindings.h ksFieldExpressionBindings.h)
