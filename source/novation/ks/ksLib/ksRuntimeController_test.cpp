@@ -61,7 +61,10 @@ int main(int argc,char** argv){try{
         h->loadmem(os.data().data(),unsigned(os.data().size()),0xa00000);h->interruptMode2=true;
     }
     original->memmap(&x,0,1<<24);native->memmap(&y,0,1<<24);
-    ks::LiveMidiController shared(*native);ks::RuntimeController controller(*native,shared);
+    // Large diagnostic fixtures live outside the limited host test stack.
+    // Allocation happens only during test setup, before controller execution.
+    auto sharedStorage=std::make_unique<ks::LiveMidiController>(*native);auto& shared=*sharedStorage;
+    auto controllerStorage=std::make_unique<ks::RuntimeController>(*native,shared);auto& controller=*controllerStorage;
     native->interpreterAllowed=false;std::mt19937 random(0x4b534e52);uint64_t boundaries=0;
     for(unsigned pc=0x170;pc<0xb8e8;pc+=2){
         for(unsigned sample=0;sample<32;++sample){
@@ -84,7 +87,7 @@ int main(int argc,char** argv){try{
     // Reset boundaries are independently checked even for firmware-update,
     // checksum-failure, all branch outcomes and arbitrary partial frames.
     // These cases supplement full production-reset timelines.
-    ks::RuntimeController resetController(*native,shared,ks::RuntimeController::Entry::Reset);
+    auto resetControllerStorage=std::make_unique<ks::RuntimeController>(*native,shared,ks::RuntimeController::Entry::Reset);auto& resetController=*resetControllerStorage;
     for(unsigned n=0;n<14;++n){
         const auto v=os.data()[0x422+n];
         original->memory[0xffec00+n]=native->memory[0xffec00+n]=lengthOracle->memory[0xffec00+n]=v;
@@ -249,10 +252,10 @@ int main(int argc,char** argv){try{
     try{controller.step(*native);}catch(const std::runtime_error&){rejected=true;}
     check(rejected && native->interpretedSteps==0,"Unknown native state fell back to H8");
     native->memory[0xb000]^=1;rejected=false;
-    try{ks::RuntimeController bad(*native,shared);}catch(const std::runtime_error&){rejected=true;}
+    try{auto bad=std::make_unique<ks::RuntimeController>(*native,shared);}catch(const std::runtime_error&){rejected=true;}
     check(rejected,"Native runtime accepted different ROM");native->memory[0xb000]^=1;
     native->memory[0xa0b000]^=1;rejected=false;
-    try{ks::RuntimeController bad(*native,shared);}catch(const std::runtime_error&){rejected=true;}
+    try{auto bad=std::make_unique<ks::RuntimeController>(*native,shared);}catch(const std::runtime_error&){rejected=true;}
     check(rejected,"Native runtime accepted different active code image");
     std::cout<<"PASS: "<<boundaries<<" native boundaries, 80 interrupt/mask/tie entries and "<<jobs<<" timed HDI jobs; registers/flags/clocks/PC/data/IO bus and RAM match H8; zero interpreter calls; deadline/IRQ, unknown-state, ROM/image and interpreter-lock guards\n";
     return 0;

@@ -62,8 +62,9 @@ int main(int argc,char** argv){try{
     const bool programMenuToMulti=scenario=="panel-mode-multi";
     const bool programPartNavigation=scenario=="panel-part-wrap-multi"||scenario=="panel-part-name"||scenario=="panel-part-category"||scenario=="panel-part-special";
     const bool programBrowserFixture=scenario=="panel-browse-single"||scenario=="panel-browse-multi"||scenario=="panel-browse-part";
-    const bool programMenuFixture=programMenuSingle||programMenuToMulti||programPartNavigation||programBrowserFixture;
-    const bool programMenuMulti=programMenuSingle||programPartNavigation||scenario=="panel-browse-multi"||scenario=="panel-browse-part";
+    const bool programStoreMenuFixture=scenario=="panel-menu-global-save"||scenario=="panel-menu-dump-global"||scenario=="panel-menu-dump-multi"||scenario=="panel-menu-factory";
+    const bool programMenuFixture=programMenuSingle||programMenuToMulti||programPartNavigation||programBrowserFixture||programStoreMenuFixture;
+    const bool programMenuMulti=programMenuSingle||programPartNavigation||scenario=="panel-browse-multi"||scenario=="panel-browse-part"||scenario=="panel-menu-dump-multi";
     // PROGRAM_MENU_FLAGS_END
     const bool panelPartSave=scenario=="panel-save-part";
     const bool panelActions=scenario=="panel-actions-single"||scenario=="panel-actions-multi";
@@ -73,7 +74,7 @@ int main(int argc,char** argv){try{
     const bool panelEdit=scenario=="panel-edit-single" || scenario=="panel-edit-multi";
     const bool panelScreen=panelActions || panelFunctions || panelKeyboard || panelParts || panelEdit || scenario=="panel-screen-single" || scenario=="panel-screen-multi";
     const bool panelIo=panelScreen || scenario=="panel-io-single" || scenario=="panel-io-multi";
-    if(panelIo||programMenuFixture)check(duration>=4.,"Physical panel scenario requires at least four seconds");
+    if(panelIo||programMenuFixture)check(duration>=4.,"Panel/queued-menu scenario requires at least four seconds");
     const bool panelStore=panelPartSave || panelIo || scenario=="panel-store-single" || scenario=="panel-store-multi";
     check(scenario=="single" || scenario=="multi" || scenario=="midi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || panelStore || programMenuFixture,"Unknown controller probe scenario");
     const bool multi=programMenuMulti || panelPartSave || scenario=="panel-actions-multi"||scenario=="panel-functions-multi"||scenario=="panel-keyboard-multi"||scenario=="panel-parts-multi" || scenario=="panel-edit-multi" || scenario=="panel-screen-multi" || scenario=="panel-io-multi" || scenario=="multi" || scenario=="pedal" || scenario=="controls" || scenario=="state" || scenario=="clock" || scenario=="steal" || scenario=="fx" || scenario=="panel-store-multi";
@@ -162,6 +163,50 @@ int main(int argc,char** argv){try{
     size_t programMenuInputCount=0,programMenuWriteCount=0;
     std::array<uint8_t,7> programMenuFinalUi{};
     uint32_t programMenuSelectedSource=0;
+    std::array<uint8_t,10> storeMenuFinalUi{};
+    std::array<uint8_t,21> storeMenuGlobalsRam{},storeMenuGlobalsFlash{};
+    // Probe-only const observations of actual children. They do not add native
+    // admissions or change the graph. Parent-return masks are published only
+    // after the exact sampled Menu job increments its real completion counter.
+    struct SaveWitness {uint32_t kinds=0,observedComplete=0;std::array<uint32_t,15> components{},facts{};};
+    struct StoreMenuWitness {
+        uint64_t samples=0,sampledJobs=0,returnedJobs=0,started=0,returnsBefore=0;
+        bool observing=false;
+        SaveWitness sampled{},returned{},pending{};
+        uint32_t factory=0,returnedFactory=0,pendingFactory=0,dump=0,returnedDump=0,pendingDump=0;
+        uint32_t output=0,returnedOutput=0,pendingOutput=0,playback=0,returnedPlayback=0,pendingPlayback=0;
+        uint64_t payloads=0,returnedPayloads=0,pendingPayloads=0,sendBytes=0,returnedSendBytes=0,pendingSendBytes=0;
+        bool multi=false,returnedMulti=false,pendingMulti=false;
+    } storeMenuWitness;
+    const auto mergeSaveWitness=[](SaveWitness&dst,const SaveWitness&source){dst.kinds|=source.kinds;dst.observedComplete|=source.observedComplete;for(unsigned i=0;i<dst.components.size();++i){dst.components[i]|=source.components[i];dst.facts[i]|=source.facts[i];}};
+    const auto observeStoreMenu=[&]{
+        const auto*runtime=board->nativeController();if(!nativeMode||toggling||!runtime)return;
+        const auto&fore=runtime->stateStoreMenuForeground;auto&w=storeMenuWitness;
+        if(w.observing&&fore.completed>w.returnsBefore){
+            mergeSaveWitness(w.returned,w.pending);w.returnedFactory|=w.pendingFactory;w.returnedDump|=w.pendingDump;w.returnedOutput|=w.pendingOutput;w.returnedPlayback|=w.pendingPlayback;
+            w.returnedPayloads+=w.pendingPayloads;w.returnedSendBytes=std::max(w.returnedSendBytes,w.pendingSendBytes);w.returnedMulti|=w.pendingMulti;++w.returnedJobs;w.observing=false;
+        }
+        const auto*menu=fore.service();if(!menu)return;++w.samples;
+        if(!w.observing||w.started!=fore.started){
+            w.pending={};w.pendingFactory=w.pendingDump=w.pendingOutput=w.pendingPlayback=0;w.pendingPayloads=w.pendingSendBytes=0;w.pendingMulti=false;
+            w.started=fore.started;w.returnsBefore=fore.completed;w.observing=true;++w.sampledJobs;
+        }
+        const auto save=[&](const ks::StateSaveService*job){if(!job)return;const auto k=unsigned(job->kind());check(k<w.pending.components.size(),"Unknown sampled Menu Save kind");
+            w.pending.kinds|=1u<<k;w.pending.components[k]|=job->components();if(job->complete())w.pending.observedComplete|=1u<<k;
+            const auto&f=job->summary();w.pending.facts[k]|=unsigned(f.global)|(unsigned(f.page)<<1)|(unsigned(f.reloaded)<<2)|(unsigned(f.packed)<<3)|(unsigned(f.named)<<4)|(unsigned(f.notice)<<5);
+        };
+        for(unsigned i=0;i<menu->saveCount();++i)save(menu->saveOutcome(i));
+        if(const auto*f=menu->factory()){w.pendingFactory|=f->components();save(f->save());save(f->notice());}
+        if(const auto*d=menu->dump()){
+            w.pendingDump|=d->components();w.pendingPayloads=std::max(w.pendingPayloads,d->summary().sentPayloads);w.pendingMulti|=d->summary().multi;
+            if(const auto*o=d->output())w.pendingOutput|=o->components();
+            if(const auto*o=d->lastSend()){w.pendingOutput|=o->components();w.pendingSendBytes=std::max(w.pendingSendBytes,uint64_t(o->summary().bytesSent));}
+        }
+        if(const auto*p=menu->playback())w.pendingPlayback|=p->components();
+        mergeSaveWitness(w.sampled,w.pending);w.factory|=w.pendingFactory;w.dump|=w.pendingDump;w.output|=w.pendingOutput;w.playback|=w.pendingPlayback;
+        w.payloads=std::max(w.payloads,w.pendingPayloads);w.sendBytes=std::max(w.sendBytes,w.pendingSendBytes);w.multi|=w.pendingMulti;
+    };
+    const auto returnedMenuSave=[&](ks::StateSaveService::Kind kind,uint32_t requiredComponents){const auto k=unsigned(kind);return (storeMenuWitness.returned.kinds&(1u<<k))&&(storeMenuWitness.returned.components[k]&requiredComponents)==requiredComponents;};
     // PROGRAM_MENU_DECLARATIONS_END
     uint64_t frames=0,hash=14695981039346656037ull;int64_t peak=0;double cost=bootCost,wall=bootWall;
     uint64_t h8Start=board->cpu().cycles;
@@ -360,7 +405,20 @@ int main(int argc,char** argv){try{
                 for(auto address:{0x16784u,0x16791u,0x16792u,0x167d5u})menuWrite(at,address,0);
                 menuWrite(at,0x16790,page);menuWrite(at,0x1679e,special);menuWrite(at,0x1679f,0);
             };
-            if(programBrowserFixture){
+            if(programStoreMenuFixture){
+                // Real queued Store472C selected through the immutable ROM
+                // descriptor. The same explicit UI/data inputs reach H8/native.
+                // Hardware1 makes the normal ScreenGate590A reject calibration.
+                programMenuSelectedSource=scenario=="panel-menu-global-save"?0x169e6:scenario=="panel-menu-dump-global"?0x81ff00:scenario=="panel-menu-dump-multi"?0x169fc:0x81fe00;
+                context(.18,0,0);menuWrite(.18,0xffec14,1);
+                menuWrite(.18,0x16784,1);menuWrite(.18,0x16785,uint8_t(scenario=="panel-menu-global-save"?0:9));
+                menuWrite(.18,0x16787,uint8_t(scenario=="panel-menu-factory"));
+                menuWrite(.18,0x169eb,1);
+                if(scenario=="panel-menu-dump-global")menuWrite(.18,0x169e1,12);
+                if(scenario=="panel-menu-dump-multi")menuWrite(.18,0x169e1,0);
+                menuButton(.2,0x472c);
+            }
+            else if(programBrowserFixture){
                 // Explicit queued user navigation with authenticated button descriptors.
                 // These are UI/data mutations; no execution state is supplied.
                 context(.18,0,0);menuWrite(.18,0x16799,uint8_t(scenario=="panel-browse-part"));menuWrite(.18,0x167fb,0);
@@ -429,7 +487,9 @@ int main(int argc,char** argv){try{
                 if(n==native(.24+press*.35))queueStore(false);
             }
             if(mode!="replay")while(next<events.size() && events[next].frame==n)send(events[next++].bytes);
+            observeStoreMenu();
             const auto a=board->renderSample();
+            observeStoreMenu();
             if(panelIo){const auto page=board->read(panelParts?0x167b8:panelScreen?0x16787:0x16790);if(page!=ioPages[ioPageCount-1]){check(ioPageCount<ioPages.size(),"Too many physical panel page transitions");ioPages[ioPageCount++]=page;}}
             if(!captured.empty())captured[n]=a;for(auto v:a){hash^=uint32_t(v);hash*=1099511628211ull;peak=std::max(peak,std::abs(int64_t(v)));}
         }
@@ -448,8 +508,11 @@ int main(int argc,char** argv){try{
             // retain the raw legacy release counter and all other coverage gates.
             const bool playbackReleaseCovered=nativeMode&&!toggling&&runtime
                 &&runtime->statePlaybackModeForeground.completed>0&&!runtime->statePlaybackModeForeground.active()
-                &&(runtime->statePlaybackModeForeground.components&(1u<<unsigned(ks::StatePlaybackModeService::Component::Voices)));
-            for(unsigned i=0;i<last.size();++i)if(!last[i]&&!beforeSwitch[i]&&!(i==6&&playbackReleaseCovered))
+                && (runtime->statePlaybackModeForeground.components&(1u<<unsigned(ks::StatePlaybackModeService::Component::Voices)));
+            const bool menuPlaybackReleaseCovered=nativeMode&&!toggling&&runtime
+                &&storeMenuWitness.returnedJobs>0
+                &&(storeMenuWitness.returnedPlayback&(1u<<unsigned(ks::StatePlaybackModeService::Component::Voices)));
+            for(unsigned i=0;i<last.size();++i)if(!last[i]&&!beforeSwitch[i]&&!(i==6&&(playbackReleaseCovered||menuPlaybackReleaseCovered)))
                 throw std::runtime_error("Live handler coverage absent at index "+std::to_string(i));
             uint64_t delegated=0;for(const auto count:live.originalPages)delegated+=count;
             if(recording)check(delegated==live.originalStepCalls && (nativeMode?delegated==0:delegated>0),"Original H8 delegation accounting differs");}
@@ -503,10 +566,28 @@ int main(int argc,char** argv){try{
         if(programMenuToMulti)check(programMenuFinalUi[2]==1,"Queued Multi button did not enter Multi");
         if(scenario=="panel-part-wrap-multi")check(programMenuFinalUi[1]==1,"Part wrap sequence did not return to part1");
     }
+    if(programStoreMenuFixture){
+        constexpr unsigned addresses[]{0x16784,0x16785,0x16787,0x16790,0x16792,0x1679e,0x1679f,0x167ba,0x169e1,0xffec14};
+        for(unsigned i=0;i<storeMenuFinalUi.size();++i)storeMenuFinalUi[i]=uint8_t(board->read(addresses[i]));
+        for(unsigned i=0;i<storeMenuGlobalsRam.size();++i){storeMenuGlobalsRam[i]=uint8_t(board->read(0x169e6 + i));storeMenuGlobalsFlash[i]=uint8_t(board->read(0x81ff00 + i));}
+        if(scenario=="panel-menu-global-save"||scenario=="panel-menu-factory")check(!storeMenuFinalUi[0]&&!storeMenuFinalUi[4],"Queued Store menu did not clear edit/latch");
+        else check(storeMenuFinalUi[0]==1&&storeMenuFinalUi[1]==9&&storeMenuFinalUi[2]==0,"Queued dump menu context differs");
+        if(nativeMode){const auto&menu=board->nativeController()->stateStoreMenuForeground;
+            check(menu.kinds[0]>0&&menu.completed>0&&!menu.active()&&storeMenuWitness.returnedJobs>0,"Queued Store menu ownership/return absent");
+            if(scenario=="panel-menu-global-save")check(returnedMenuSave(ks::StateSaveService::Kind::GlobalSave,(1u<<9)|(1u<<5)|(1u<<7))&&(storeMenuWitness.returned.facts[9]&3u)==3u,"Global Save typed completed Page comparison absent");
+            if(scenario=="panel-menu-factory")check((storeMenuWitness.returnedFactory&15u)==15u&&returnedMenuSave(ks::StateSaveService::Kind::Offset,(1u<<4)|(1u<<5)|(1u<<7)),"Factory copy/save/globals/notice typed chain absent");
+            if(scenario=="panel-menu-dump-global"||scenario=="panel-menu-dump-multi"){
+                check(storeMenuWitness.returnedPayloads==1&&storeMenuWitness.returnedSendBytes==(scenario=="panel-menu-dump-global"?256u:1024u),"Bounded dump payload absent");
+                if(scenario=="panel-menu-dump-multi")check(storeMenuWitness.returnedMulti,"Multi serialization before dump absent");
+            }
+        }
+    }
     // PROGRAM_MENU_FINAL_END
     if(panelPartSave&&!board->flashRevision)std::cerr<<"Part-save outcome page="<<unsigned(board->read(0x16790))<<" program="<<std::hex<<unsigned(board->read(0x167ac))<<':'<<unsigned(board->read(0x167ad))<<" bank="<<unsigned(board->read(0x167ab))<<" mode="<<unsigned(board->read(0x167ba))<<std::dec<<'\n';
     if(panelStore&&!panelScreen){if(!panelIo)check(panelEvents==(panelPartSave?2u:multi?6u:8u),"Missing panel store events");check(board->flashRevision>0,"Panel store did not write Flash");check(board->read(0x16790)==0,"Store page did not return to playback");}
-    if(panelPartSave&&nativeMode)check(board->nativeController()->stateSaveForeground.kinds[1]&&(board->nativeController()->stateSaveForeground.components&(1u<<16)),"Part save did not run the full native reload");
+    if(panelPartSave&&nativeMode){const auto&save=board->nativeController()->stateSaveForeground;
+        check((save.kinds[1]&&(save.components&(1u<<16)))||returnedMenuSave(ks::StateSaveService::Kind::CommitSingle,1u<<16),"Part save did not run the full native reload");
+    }
     if(scenario=="state")check(board->flashRevision>0,"State scenario did not complete a Flash page write");
     if(panelKeyboard)check(ioFixture->keyboardReads>0&&ioFixture->keyboardTransitions==12,"Keyboard contact source not observed");
     if(panelParts&&nativeMode)check(board->liveMidiController()->statePartSelectionCalls.started>0,"Part handlers were not observed");
@@ -1813,6 +1894,16 @@ int main(int argc,char** argv){try{
         <<",\"native_state_field_service_edit_active\":"<<runtime->stateFieldForeground.kinds[22]
         <<",\"native_state_field_service_apply_velocity\":"<<runtime->stateFieldForeground.kinds[23]
         <<",\"native_state_field_service_velocity\":"<<runtime->stateFieldForeground.kinds[24]
+        <<",\"native_state_store_menu_service_calls\":"<<runtime->stateStoreMenuForeground.started
+        <<",\"native_state_store_menu_service_returns\":"<<runtime->stateStoreMenuForeground.completed
+        <<",\"native_state_store_menu_service_phases\":"<<runtime->stateStoreMenuForeground.phases
+        <<",\"native_state_store_menu_service_initial_active\":"<<runtime->stateStoreMenuForeground.initial
+        <<",\"native_state_store_menu_service_active\":"<<runtime->stateStoreMenuForeground.active()
+        <<",\"native_state_store_menu_service_components\":"<<runtime->stateStoreMenuForeground.components
+        <<",\"native_state_store_menu_service_menu\":"<<runtime->stateStoreMenuForeground.kinds[0]
+        <<",\"native_state_store_menu_service_begin_program\":"<<runtime->stateStoreMenuForeground.kinds[1]
+        <<",\"native_state_store_menu_service_begin_name\":"<<runtime->stateStoreMenuForeground.kinds[2]
+        <<",\"native_state_store_menu_service_begin_store\":"<<runtime->stateStoreMenuForeground.kinds[3]
         <<",\"native_state_program_browser_service_calls\":"<<runtime->stateProgramBrowserForeground.started
         <<",\"native_state_program_browser_service_returns\":"<<runtime->stateProgramBrowserForeground.completed
         <<",\"native_state_program_browser_service_phases\":"<<runtime->stateProgramBrowserForeground.phases
@@ -1982,6 +2073,26 @@ int main(int argc,char** argv){try{
         for(unsigned i=0;i<programMenuWrites.size();++i){if(i)report<<',';const auto&w=programMenuWrites[i];report<<'['<<w.frame<<','<<w.address<<','<<unsigned(w.value)<<']';}
         report<<"],\"program_menu_selected_source\":"<<programMenuSelectedSource<<",\"program_menu_final_ui\":[";
         for(unsigned i=0;i<programMenuFinalUi.size();++i){if(i)report<<',';report<<unsigned(programMenuFinalUi[i]);}report<<']';
+    }
+    if(programStoreMenuFixture){
+        report<<",\"store_menu_final_ui\":[";for(unsigned i=0;i<storeMenuFinalUi.size();++i){if(i)report<<',';report<<unsigned(storeMenuFinalUi[i]);}report<<']';
+        report<<",\"store_menu_ui_addresses\":[92036,92037,92039,92048,92050,92062,92063,92090,92641,16772116]";
+        report<<",\"store_menu_globals_ram\":[";for(unsigned i=0;i<storeMenuGlobalsRam.size();++i){if(i)report<<',';report<<unsigned(storeMenuGlobalsRam[i]);}report<<']';
+        report<<",\"store_menu_globals_flash\":[";for(unsigned i=0;i<storeMenuGlobalsFlash.size();++i){if(i)report<<',';report<<unsigned(storeMenuGlobalsFlash[i]);}report<<']';
+        report<<",\"store_menu_uart_output\":[";for(unsigned i=0;i<midiOut.size();++i){if(i)report<<',';report<<unsigned(midiOut[i]);}report<<']';
+    }
+    if(nativeMode){const auto&w=storeMenuWitness;
+        report<<",\"native_store_menu_witness_samples\":"<<w.samples<<",\"native_store_menu_witness_sampled_jobs\":"<<w.sampledJobs<<",\"native_store_menu_witness_returned_jobs\":"<<w.returnedJobs
+            <<",\"native_store_menu_save_kind_mask\":"<<w.sampled.kinds<<",\"native_store_menu_save_observed_complete_kind_mask\":"<<w.sampled.observedComplete<<",\"native_store_menu_save_returned_parent_kind_mask\":"<<w.returned.kinds;
+        report<<",\"native_store_menu_save_sampled_components_by_kind\":[";for(unsigned i=0;i<w.sampled.components.size();++i){if(i)report<<',';report<<w.sampled.components[i];}report<<']';
+        report<<",\"native_store_menu_save_returned_parent_components_by_kind\":[";for(unsigned i=0;i<w.returned.components.size();++i){if(i)report<<',';report<<w.returned.components[i];}report<<']';
+        report<<",\"native_store_menu_save_returned_parent_facts_by_kind\":[";for(unsigned i=0;i<w.returned.facts.size();++i){if(i)report<<',';report<<w.returned.facts[i];}report<<']';
+        report<<",\"native_store_menu_factory_components\":"<<w.factory<<",\"native_store_menu_factory_returned_parent_components\":"<<w.returnedFactory
+            <<",\"native_store_menu_dump_components\":"<<w.dump<<",\"native_store_menu_dump_returned_parent_components\":"<<w.returnedDump
+            <<",\"native_store_menu_output_components\":"<<w.output<<",\"native_store_menu_output_returned_parent_components\":"<<w.returnedOutput
+            <<",\"native_store_menu_playback_returned_parent_components\":"<<w.returnedPlayback
+            <<",\"native_store_menu_dump_returned_parent_payloads\":"<<w.returnedPayloads<<",\"native_store_menu_dump_returned_parent_send_bytes\":"<<w.returnedSendBytes
+            <<",\"native_store_menu_dump_returned_parent_multi\":"<<unsigned(w.returnedMulti);
     }
     // PROGRAM_MENU_REPORT_END
     if(panelStore){report<<",\"panel_button_pages\":[";for(unsigned i=0;i<panelEvents;++i){if(i)report<<',';report<<unsigned(panelPages[i]);}report<<']';}

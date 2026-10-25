@@ -526,3 +526,5 @@ target_sources(ksLib PRIVATE ksStatePlaybackModeCoordinator.h ksStatePlaybackMod
 target_sources(ksLib PRIVATE ksStatePartNavigationForeground.cpp ksStatePartNavigationForeground.h ksStatePartNavigationService.h)
 
 target_sources(ksLib PRIVATE ksStateProgramBrowserCoordinator.h ksStateProgramBrowserService.h ksStateProgramBrowserForeground.h ksStateProgramBrowserForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStateStoreDumpService.h ksStateStoreMenuCoordinator.h ksStateStoreMenuService.h ksStateStoreMenuForeground.h ksStateStoreMenuForeground.cpp ksSysExOutputService.h ksStateFactoryService.h ksStateFactoryAbi.h)

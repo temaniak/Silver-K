@@ -164,6 +164,23 @@ int main(int argc,char**argv){unsigned item=0;try{
   const auto applyCalls=b->nativeController()->stateApplyForeground.kinds[0];
   const auto displayCalls=b->nativeController()->stateDisplayForeground.kinds[0];const auto screenValueCalls=b->nativeController()->stateScreenForeground.kinds[unsigned(ks::StateScreenService::Kind::Value)];bool sawNestedFormat=false;
   const unsigned storeKind=item==26?0:1;auto storeCalls=b->nativeController()->stateSaveForeground.kinds[storeKind];auto flashRevision=b->flashRevision;bool sawReload=false,sawVerify=false;
+  // A nested Save keeps its own semantic kind, while the only admission and
+  // return counters belong to its containing Menu job. Do not relabel them.
+  bool sawNestedStore=false,nestedStoreReturned=false;uint64_t nestedStoreJob=0,nestedReturnsBefore=0;
+  const auto observeStore=[&]{
+   const auto&r=*b->nativeController();const auto&owner=r.stateStoreMenuForeground;
+   if(sawNestedStore&&!nestedStoreReturned&&owner.completed>nestedReturnsBefore)nestedStoreReturned=true;
+   const auto current=ks::currentNativeSaveForTests(r);
+   if(current.nested&&current.at(ks::StateSaveService::Kind(storeKind))){
+    if(!sawNestedStore){sawNestedStore=true;nestedStoreJob=owner.started;nestedReturnsBefore=owner.completed;}
+    else if(!nestedStoreReturned)check(owner.started==nestedStoreJob,"Sampled Store Menu job changed before returning");
+   }
+   if(current.at(ks::StateSaveService::Kind(storeKind))){
+    if(current.at(ks::StateSaveService::Component::Reload))sawReload=true;
+    if(current.atPage(ks::StateSavePageService::Component::Verify))sawVerify=true;
+   }
+  };
+  const auto storeFinished=[&]{return b->nativeController()->stateSaveForeground.kinds[storeKind]>storeCalls||nestedStoreReturned;};
   if(item==26){enqueueMulti(*a);enqueueMulti(*b);for(unsigned n=0;n<24000;++n){check(a->renderSample()==b->renderSample(),"Timeline store preparation audio differs");check(a->controllerCycles()==b->controllerCycles(),"Timeline store preparation clocks differ");sameInterrupts(*a,*b);}drain(*a,*b);storeCalls=b->nativeController()->stateSaveForeground.kinds[storeKind];flashRevision=b->flashRevision;}
   for(auto*board:{a.get(),b.get()}){
    if(stateStore)storeInput(*board,item==26,item==30);
@@ -187,14 +204,13 @@ int main(int argc,char**argv){unsigned item=0;try{
   if(vector==89&&item!=11){const uint8_t byte=item==10?0xfe:0xf8;check(a->enqueueMidi(&byte,1)&&b->enqueueMidi(&byte,1),"Test UART byte rejected");}
   if(item>=6){
    unsigned phases=0;bool sawPacking=false;
-   while((foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind])==kindCalls||b->nativeController()->activeNativeWork()||(b->cpu().exr&7)||(stateEvents&&(b->read(0x15408)||b->read(0x15409)!=2))||(statePanel&&(b->read(0x156ea)||b->read(0x156eb)!=2))||(stateMenu&&b->nativeController()->stateMenuForeground.kinds[menuKind]==menuCalls&&!(item==24&&sawFieldAddress))||(stateStore&&b->nativeController()->stateSaveForeground.kinds[storeKind]==storeCalls)||(stateDisplay&&b->nativeController()->stateDisplayForeground.kinds[0]==displayCalls&&b->nativeController()->stateScreenForeground.kinds[unsigned(ks::StateScreenService::Kind::Value)]==screenValueCalls&&!sawNestedFormat)||(stateApply&&b->nativeController()->stateApplyForeground.kinds[0]==applyCalls&&!sawFieldApply)){
+   while((foreground?b->nativeController()->serialForeground.kinds[4]:b->nativeController()->nativeInterruptKinds[kind])==kindCalls||b->nativeController()->activeNativeWork()||(b->cpu().exr&7)||(stateEvents&&(b->read(0x15408)||b->read(0x15409)!=2))||(statePanel&&(b->read(0x156ea)||b->read(0x156eb)!=2))||(stateMenu&&b->nativeController()->stateMenuForeground.kinds[menuKind]==menuCalls&&!(item==24&&sawFieldAddress))||(stateStore&&!storeFinished())||(stateDisplay&&b->nativeController()->stateDisplayForeground.kinds[0]==displayCalls&&b->nativeController()->stateScreenForeground.kinds[unsigned(ks::StateScreenService::Kind::Value)]==screenValueCalls&&!sawNestedFormat)||(stateApply&&b->nativeController()->stateApplyForeground.kinds[0]==applyCalls&&!sawFieldApply)){
     check(++phases<=(stateStore?4000000u:65536u),"Forced ADC/RX/Store lifecycle did not finish");advanceBoth(*a,*b);
     if(stateApply&&b->nativeController()->stateApplyForeground.at(ks::StateApplyService::Component::Packing))sawPacking=true;
     const auto nested=ks::currentNativeChildrenForTests(*b->nativeController());
     if(nested.address)sawFieldAddress=true;if(nested.apply&&nested.apply->kind()==ks::StateApplyService::Kind::Apply){sawFieldApply=true;if(nested.apply->component()==ks::StateApplyService::Component::Packing)sawPacking=true;}
     if(stateDisplay&&nested.display&&nested.display->kind()==ks::StateDisplayService::Kind::Format)sawNestedFormat=true;
-    if(stateStore&&b->nativeController()->stateSaveForeground.at(ks::StateSaveService::Component::Reload))sawReload=true;
-    if(stateStore&&b->nativeController()->stateSaveForeground.atPage(ks::StateSavePageService::Component::Verify))sawVerify=true;
+    if(stateStore)observeStore();
    }
    if(item==29)check(sawPacking,"Natural edit did not reach its current packing child");
    if(vector==89&&item!=11)check(a->midiReceived==b->midiReceived&&b->midiReceived>received,"RX case did not consume the actual UART byte");
@@ -206,7 +222,7 @@ int main(int argc,char**argv){unsigned item=0;try{
   if(stateApply)check(b->nativeController()->stateApplyForeground.kinds[0]>applyCalls||(b->nativeController()->stateFieldForeground.started>fieldCalls&&sawFieldApply),"Natural control event missed actual standalone/nested edit application");
   if(stateDisplay)check((b->nativeController()->stateDisplayForeground.kinds[0]>displayCalls&&(b->nativeController()->stateDisplayForeground.components&0xf0)==0xf0)||((b->nativeController()->stateScreenForeground.kinds[unsigned(ks::StateScreenService::Kind::Value)]>screenValueCalls||b->nativeController()->stateFieldForeground.started>fieldCalls)&&sawNestedFormat),"Natural menu display missed actual standalone/nested LCD transport");
   if(stateStore&&(!sawVerify||b->flashRevision<=flashRevision||b->read(0x16790)!=0))std::cerr<<"Store outcome verify="<<sawVerify<<" reload="<<sawReload<<" flash="<<flashRevision<<'/'<<b->flashRevision<<" page="<<unsigned(b->read(0x16790))<<" program="<<std::hex<<unsigned(b->read(0x167ac))<<':'<<unsigned(b->read(0x167ad))<<" components="<<b->nativeController()->stateSaveForeground.components<<std::dec<<'\n';
-  if(stateStore){check(b->nativeController()->stateSaveForeground.kinds[storeKind]>storeCalls,"Natural Store event missed its complete save graph");check(sawVerify&&b->flashRevision>flashRevision&&b->read(0x16790)==0,"Natural Store did not finish Flash and return to playback");}
+  if(stateStore){check(storeFinished(),"Natural Store event missed its complete standalone/nested save graph");check(sawVerify&&b->flashRevision>flashRevision&&b->read(0x16790)==0,"Natural Store did not finish Flash and return to playback");}
   if(item==30)check(sawReload,"Single save in multi mode missed full native reload");
   if(stateMenu)check(b->nativeController()->stateMenuForeground.kinds[menuKind]>menuCalls||(item==24&&b->nativeController()->stateFieldForeground.started>fieldCalls&&sawFieldAddress),"Natural menu/edit event missed actual standalone/nested address root");
   if(statePanel)check(b->nativeController()->statePanelForeground.started>panelCalls&&(b->nativeController()->statePanelForeground.components&0x180)==0x180,"Natural upper State event missed MIDI queue/UART publication");
