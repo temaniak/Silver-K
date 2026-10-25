@@ -207,6 +207,35 @@ int main(int argc,char** argv){try{
          <<",\"native_state_refresh_service_returned_coefficient\":"<<b->nativeController()->stateRefreshForeground.returnedCoefficient
          <<",\"native_state_refresh_service_returned_period_address\":"<<b->nativeController()->stateRefreshForeground.returnedPeriodAddress
          <<",\"native_state_refresh_service_returned_period_value\":"<<b->nativeController()->stateRefreshForeground.returnedPeriodValue
+         <<",\"native_panel_pedal_output_service_calls\":"<<b->nativeController()->panelPedalOutputForeground.started
+         <<",\"native_panel_pedal_output_service_returns\":"<<b->nativeController()->panelPedalOutputForeground.completed
+         <<",\"native_panel_pedal_output_service_phases\":"<<b->nativeController()->panelPedalOutputForeground.phases
+         <<",\"native_panel_pedal_output_service_initial_active\":"<<b->nativeController()->panelPedalOutputForeground.initial
+         <<",\"native_panel_pedal_output_service_active\":"<<b->nativeController()->panelPedalOutputForeground.active()
+         <<",\"native_panel_pedal_output_service_components\":"<<b->nativeController()->panelPedalOutputForeground.components
+         <<",\"native_panel_pedal_output_service_pedal\":"<<b->nativeController()->panelPedalOutputForeground.kinds[0]
+         <<",\"native_panel_pedal_output_service_byte\":"<<b->nativeController()->panelPedalOutputForeground.kinds[1]
+         <<",\"native_state_encoder_service_calls\":"<<b->nativeController()->stateEncoderForeground.started
+         <<",\"native_state_encoder_service_returns\":"<<b->nativeController()->stateEncoderForeground.completed
+         <<",\"native_state_encoder_service_phases\":"<<b->nativeController()->stateEncoderForeground.phases
+         <<",\"native_state_encoder_service_initial_active\":"<<b->nativeController()->stateEncoderForeground.initial
+         <<",\"native_state_encoder_service_active\":"<<b->nativeController()->stateEncoderForeground.active()
+         <<",\"native_state_encoder_service_components\":"<<b->nativeController()->stateEncoderForeground.components
+         <<",\"native_state_encoder_service_encoder\":"<<b->nativeController()->stateEncoderForeground.kinds[0]
+         <<",\"native_state_tick_service_calls\":"<<b->nativeController()->stateTickForeground.started
+         <<",\"native_state_tick_service_returns\":"<<b->nativeController()->stateTickForeground.completed
+         <<",\"native_state_tick_service_phases\":"<<b->nativeController()->stateTickForeground.phases
+         <<",\"native_state_tick_service_initial_active\":"<<b->nativeController()->stateTickForeground.initial
+         <<",\"native_state_tick_service_active\":"<<b->nativeController()->stateTickForeground.active()
+         <<",\"native_state_tick_service_components\":"<<b->nativeController()->stateTickForeground.components
+         <<",\"native_state_tick_service_tick\":"<<b->nativeController()->stateTickForeground.kinds[0]
+         <<",\"native_state_tick_service_returned_clock\":"<<b->nativeController()->stateTickForeground.returnedClock
+         <<",\"native_state_tick_service_returned_buttons\":"<<b->nativeController()->stateTickForeground.returnedButtons
+         <<",\"native_state_tick_service_returned_adc\":"<<b->nativeController()->stateTickForeground.returnedAdc
+         <<",\"native_state_tick_service_returned_encoder\":"<<b->nativeController()->stateTickForeground.returnedEncoder
+         <<",\"native_state_tick_service_returned_pedal\":"<<b->nativeController()->stateTickForeground.returnedPedal
+         <<",\"native_state_tick_service_returned_output\":"<<b->nativeController()->stateTickForeground.returnedOutput
+         <<",\"native_state_tick_service_returned_refresh\":"<<b->nativeController()->stateTickForeground.returnedRefresh
          <<",\"native_state_factory_service_calls\":"<<factory.started
          <<",\"native_state_factory_service_returns\":"<<factory.completed
          <<",\"native_state_factory_service_phases\":"<<factory.phases

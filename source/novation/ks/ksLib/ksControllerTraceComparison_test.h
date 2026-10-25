@@ -26,6 +26,8 @@ inline bool nativeDspTraceLocationMatches(uint32_t original,uint32_t native){
  if(native==0x737a)return original==0x2417||original==0x2425||original==0x243d||original==0x2447||original==0x244f||original==0x2457||original==0x245f||original==0x246d||original==0x2485||original==0x24d9||original==0x24ff||original==0x2507||original==0x250f||original==0x2521||original==0x252f||original==0x2547||original==0x254f||original==0x2557;
  // Exact observed locations of the complete native graph, H8-verified.
  if(native==0x437a)return original==0x2417||original==0x2425||original==0x243d||original==0x2447||original==0x244f||original==0x2457||original==0x245f||original==0x246d||original==0x2485||original==0x24d9||original==0x24ff||original==0x2507||original==0x250f||original==0x2521||original==0x252f||original==0x2547||original==0x254f||original==0x2557;
+ // Exact observed locations of the complete native graph, H8-verified.
+ if(native==0x4494)return original==0x2417||original==0x2425||original==0x243d||original==0x2447||original==0x244f||original==0x2457||original==0x245f||original==0x246d||original==0x2485||original==0x24d9||original==0x24ff||original==0x2507||original==0x250f||original==0x2521||original==0x252f||original==0x2547||original==0x254f||original==0x2557;
  switch(native){
  case 0x47d6:case 0x4eb0:case 0x7354:case 0x96d6:return transport;
  case 0xb554:case 0x9662:return transport||nonincrement;

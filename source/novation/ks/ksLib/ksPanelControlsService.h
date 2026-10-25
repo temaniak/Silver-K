@@ -21,6 +21,7 @@ public:
  uint8_t previousQuarter()const{return encoder_->previousQuarter();}uint8_t previousDelta()const{return encoder_->previousDelta();}
  uint8_t encoderGain()const{return delta()?encoder_->result():uint8_t((encoder_->activity()>4?encoder_->activity()-4:0)+1);}
  const PanelAdcScanTask* adcTask()const{return active_==Component::AdcMux&&kind_==Kind::AdcStart?(mux_?&*mux_:nullptr):(adc_?&*adc_:nullptr);}
+ const PedalSenseTask* pedalTask()const{return pedal_?&*pedal_:nullptr;}
  const PanelEncoderTask* encoderTask()const{return encoder_?&*encoder_:nullptr;}
  uint8_t initialAdcGroup()const{return adc_->group();}bool usedMux()const{return kind_==Kind::AdcStart&&mux_.has_value();}
  uint8_t muxGroup()const{return kind_==Kind::AdcMux?adc_->group():mux_->group();}

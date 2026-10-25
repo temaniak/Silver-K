@@ -589,3 +589,9 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksClockSyncServic
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateDeferredPartsService.h" "${ROOT}/source/novation/ks/ksLib/ksStateDeferredPartsAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateDeferredPartsForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateDeferredPartsForeground.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateRefreshService.h" "${ROOT}/source/novation/ks/ksLib/ksStateRefreshAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateRefreshForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateRefreshForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelPedalOutputService.h" "${ROOT}/source/novation/ks/ksLib/ksPanelPedalOutputAbi.h" "${ROOT}/source/novation/ks/ksLib/ksPanelPedalOutputForeground.h" "${ROOT}/source/novation/ks/ksLib/ksPanelPedalOutputForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateEncoderService.h" "${ROOT}/source/novation/ks/ksLib/ksStateEncoderAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateEncoderForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateEncoderForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateTickService.h" "${ROOT}/source/novation/ks/ksLib/ksStateTickAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateTickForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateTickForeground.cpp")

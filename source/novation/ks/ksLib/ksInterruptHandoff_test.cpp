@@ -201,7 +201,7 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    case 5:target=r->nativeAdcAt(ks::AdcService::Component::ControlPush)&&b->cpu().exr==1;break;
    case 6:target=r->nativeSerialReceiveAt(ks::SerialReceiveService::Component::Counter)&&b->cpu().exr==1;break;
    case 7:target=r->serialForeground.at(ks::SerialForegroundService::Kind::PopRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::ReadStatus)&&b->cpu().exr==7;break;
-   case 8:target=r->serialForeground.at(ks::SerialForegroundService::Kind::Transmit,true)&&r->serialForeground.atTransmit(ks::SerialTransmitTask::Stage::Enable)&&b->cpu().exr==7;break;
+   case 8:target=((r->serialForeground.at(ks::SerialForegroundService::Kind::Transmit,true)&&r->serialForeground.atTransmit(ks::SerialTransmitTask::Stage::Enable))||(nested.pedalSerial&&nested.pedalSerial->kind()==ks::SerialForegroundService::Kind::Transmit&&nested.pedalSerial->critical()&&nested.pedalSerial->atTransmit(ks::SerialTransmitTask::Stage::Enable)))&&b->cpu().exr==7;break;
    case 9:target=r->serialForeground.at(ks::SerialForegroundService::Kind::ResetRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::RetainWord)&&b->cpu().exr==7;break;
    case 10:target=r->stateResetForeground.at(ks::StateResetService::Component::Buttons)&&b->cpu().exr==0;break;
    case 11:target=r->stateResetForeground.at(ks::StateResetService::Component::Controls)&&b->cpu().exr==0;break;
@@ -234,10 +234,10 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    case 19:target=r->stateEventsForeground.at(ks::StateEventsService::Kind::ControlPop)&&r->stateEventsForeground.at(ks::StateEventsService::Component::Convert)&&b->cpu().exr==0;break;
    case 20:target=r->stateEventsForeground.at(ks::StateEventsService::Kind::ControlPop)&&r->stateEventsForeground.at(ks::StateEventsService::Component::Scale)&&b->cpu().exr==0;break;
    case 21:target=r->stateEventsForeground.at(ks::StateEventsService::Kind::ControlPop)&&r->stateEventsForeground.at(ks::StateEventsService::Component::Square)&&b->cpu().exr==0;break;
-   case 14:target=r->panelControlsForeground.at(ks::PanelControlsService::Component::Encoder)&&b->cpu().exr==0;break;
-   case 15:target=r->panelControlsForeground.at(ks::PanelControlsService::Component::Pedal)&&b->cpu().exr==0;break;
-   case 16:target=r->panelControlsForeground.at(ks::PanelControlsService::Component::AdcMux)&&b->cpu().exr==0;break;
-   case 13:target=r->panelScanForeground.at(ks::PanelScanService::Component::Push)&&b->cpu().exr==0;break;
+   case 14:target=(r->panelControlsForeground.at(ks::PanelControlsService::Component::Encoder)||(nested.panelControls&&nested.panelControls->component()==ks::PanelControlsService::Component::Encoder&&nested.panelControls->encoderTask()&&nested.panelControls->encoderTask()->stage()==ks::PanelEncoderTask::Stage::HalfTimer))&&b->cpu().exr==0;break;
+   case 15:target=(r->panelControlsForeground.at(ks::PanelControlsService::Component::Pedal)||(nested.panelControls&&nested.panelControls->component()==ks::PanelControlsService::Component::Pedal&&nested.panelControls->pedalTask()&&nested.panelControls->pedalTask()->stage()==ks::PedalSenseTask::Stage::SelectGlobals))&&b->cpu().exr==0;break;
+   case 16:target=(r->panelControlsForeground.at(ks::PanelControlsService::Component::AdcMux)||(nested.panelControls&&nested.panelControls->component()==ks::PanelControlsService::Component::AdcMux&&nested.panelControls->adcTask()&&nested.panelControls->adcTask()->stage()==ks::PanelAdcScanTask::Stage::ReadMuxGroup))&&b->cpu().exr==0;break;
+   case 13:target=(r->panelScanForeground.at(ks::PanelScanService::Component::Push)||(nested.panelScan&&nested.panelScan->atPush(ks::PanelInputTask::Stage::ZeroKey)))&&b->cpu().exr==0;break;
    case 12:target=r->stateResetForeground.at(ks::StateResetService::Component::Keyboard)&&b->cpu().exr==0;break;
    }
    landed=r->activeNativeInterrupts()==unsigned(phase<7)&&target;
@@ -257,6 +257,9 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   if(phase>=37&&phase<41){const unsigned expected=phase==37?0x6aea:phase==38?0x688e:phase==39?0x2be8:0x6bf0;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same live edit/packing/MIDI/post child");}
   if(phase>=41){const unsigned expected=phase==41||phase==43?0x128a:phase==42?0x122e:phase==44?0x6ff4:0x6c3c;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same Flash/verify/reload child");}
   const auto*selectedRuntime=b->nativeController();
+  const auto&tickOwner=selectedRuntime->stateTickForeground;
+  const bool selectedTickPanel=(phase==8||(phase>=13&&phase<17))&&tickOwner.active();
+  const auto selectedTickReturns=tickOwner.completed,selectedButtonReturns=tickOwner.returnedButtons,selectedEncoderReturns=tickOwner.returnedEncoder,selectedPedalReturns=tickOwner.returnedPedal,selectedAdcReturns=tickOwner.returnedAdc,selectedOutputReturns=tickOwner.returnedOutput;
   const auto cycle=b->controllerCycles(),interpreted=b->h8InterpretedSteps();
   b->enableLiveMidiController(mode==1);
   check(!b->nativeController()&&std::string(b->controllerBackend())==(mode==1?"live-cpp-midi-hybrid":"original-h8"),"Requested tail mode not published");
@@ -270,6 +273,14 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
   const uint8_t on[]{0x90,uint8_t(phase>=14?36+(phase*3+mode)%72:60+phase*3+mode),100};check(a->enqueueMidi(on,3)&&b->enqueueMidi(on,3),"MIDI after switch rejected");
   for(unsigned n=0;n<4096;++n){auto x=a->renderSample(),y=b->renderSample();check(x==y,"IRQ handoff changed audio");check(a->controllerCycles()==b->controllerCycles(),"Handoff render clock differs");sameInterrupts(*a,*b);for(auto v:x)peak=std::max(peak,uint64_t(std::abs(int64_t(v))));++frames;}
   same(*a,*b);
+  if(selectedTickPanel){
+   check(tickOwner.completed>selectedTickReturns,"Queued current Tick did not actually return");
+   if(phase==8)check(tickOwner.returnedOutput>selectedOutputReturns,"Queued Tick pedal UART did not actually return");
+   if(phase==13)check(tickOwner.returnedButtons>selectedButtonReturns,"Queued Tick matrix publication did not actually return");
+   if(phase==14)check(tickOwner.returnedEncoder>selectedEncoderReturns,"Queued Tick Encoder did not actually return");
+   if(phase==15)check(tickOwner.returnedPedal>selectedPedalReturns,"Queued Tick Pedal did not actually return");
+   if(phase==16)check(tickOwner.returnedAdc>selectedAdcReturns,"Queued Tick ADC Mux did not actually return");
+  }
   if(mode==2)check(b->h8InterpretedSteps()==interpreted,"Cancelled switch executed H8");
   else check(b->h8InterpretedSteps()>interpreted,"Requested reference did not resume");
   const uint8_t off[]{0x80,uint8_t(phase>=14?36+(phase*3+mode)%72:60+phase*3+mode),0};check(a->enqueueMidi(off,3)&&b->enqueueMidi(off,3),"Release rejected");

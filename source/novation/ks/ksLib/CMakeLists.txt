@@ -536,3 +536,9 @@ target_sources(ksLib PRIVATE ksClockSyncService.h ksClockSyncAbi.h ksClockSyncFo
 target_sources(ksLib PRIVATE ksStateDeferredPartsService.h ksStateDeferredPartsAbi.h ksStateDeferredPartsForeground.h ksStateDeferredPartsForeground.cpp)
 
 target_sources(ksLib PRIVATE ksStateRefreshService.h ksStateRefreshAbi.h ksStateRefreshForeground.h ksStateRefreshForeground.cpp)
+
+target_sources(ksLib PRIVATE ksPanelPedalOutputService.h ksPanelPedalOutputAbi.h ksPanelPedalOutputForeground.h ksPanelPedalOutputForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStateEncoderService.h ksStateEncoderAbi.h ksStateEncoderForeground.h ksStateEncoderForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStateTickService.h ksStateTickAbi.h ksStateTickForeground.h ksStateTickForeground.cpp)

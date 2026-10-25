@@ -32,9 +32,36 @@ struct CurrentNativeChildrenForTests {
  const StateFieldService*field=nullptr;const StateScreenService*screen=nullptr;
  const StateDisplayService*display=nullptr;const StateApplyService*apply=nullptr;
  const StateMenuService*menu=nullptr;const StateEditAddressTask*address=nullptr;
+ // Current active upper-panel ownership, separate from retained outcomes.
+ const StateTickService*tick=nullptr;const StateEncoderService*encoder=nullptr;
+ const PanelScanService*panelScan=nullptr;const PanelControlsService*panelControls=nullptr;
+ const PanelPedalOutputService*pedalOutput=nullptr;const SerialForegroundService*pedalSerial=nullptr;
 };
 inline CurrentNativeChildrenForTests currentNativeChildrenForTests(const RuntimeController&r){
- CurrentNativeChildrenForTests x;x.save=currentNativeSaveForTests(r);x.field=r.stateFieldForeground.service();if(!x.field)x.field=r.stateSceneForeground.service();if(!x.field)x.field=r.stateSceneEditForeground.service();if(!x.field)x.field=r.stateSceneToggleForeground.field();if(!x.field)if(const auto*s=r.stateEditActionForeground.service())x.field=s->ui();if(!x.field)if(const auto*s=r.statePlaybackModeForeground.service())if(s->component()==StatePlaybackModeService::Component::Ui)x.field=s->ui();if(!x.field)if(const auto*s=r.statePartNavigationForeground.service())if(s->component()==StatePartNavigationService::Component::UiRefresh||s->component()==StatePartNavigationService::Component::SceneEdit)x.field=s->field();x.screen=r.stateScreenForeground.service();if(!x.screen)x.screen=r.stateEditActionForeground.task<StateScreenService>();
+ CurrentNativeChildrenForTests x;
+ x.tick=r.stateTickForeground.service();
+ if(x.tick){
+  switch(x.tick->component()){
+  case StateTickService::Component::Buttons:x.panelScan=x.tick->buttons();break;
+  case StateTickService::Component::Adc:x.panelControls=x.tick->adc();break;
+  case StateTickService::Component::Encoder:x.encoder=x.tick->encoder();break;
+  case StateTickService::Component::Pedal:x.panelControls=x.tick->pedal();break;
+  case StateTickService::Component::Output:x.pedalOutput=x.tick->output();break;
+  default:break;
+  }
+ }else{x.encoder=r.stateEncoderForeground.service();x.pedalOutput=r.panelPedalOutputForeground.service();}
+ if(x.encoder&&x.encoder->component()==StateEncoderService::Component::Read)x.panelControls=x.encoder->reader();
+ if(x.pedalOutput&&x.pedalOutput->component()==PanelPedalOutputService::Component::Serial)x.pedalSerial=x.pedalOutput->task<SerialForegroundService>();
+ x.save=currentNativeSaveForTests(r);x.field=r.stateFieldForeground.service();if(!x.field)x.field=r.stateSceneForeground.service();if(!x.field)x.field=r.stateSceneEditForeground.service();if(!x.field)x.field=r.stateSceneToggleForeground.field();if(!x.field)if(const auto*s=r.stateEditActionForeground.service())x.field=s->ui();if(!x.field)if(const auto*s=r.statePlaybackModeForeground.service())if(s->component()==StatePlaybackModeService::Component::Ui)x.field=s->ui();if(!x.field)if(const auto*s=r.statePartNavigationForeground.service())if(s->component()==StatePartNavigationService::Component::UiRefresh||s->component()==StatePartNavigationService::Component::SceneEdit)x.field=s->field();x.screen=r.stateScreenForeground.service();if(!x.screen)x.screen=r.stateEditActionForeground.task<StateScreenService>();
+ // Follow only current Encoder/Browser children. Its scoped Field outcomes
+ // stay in their owning graph; retained completed children are not selectors.
+ if(x.encoder){
+  if(!x.field)x.field=x.encoder->task<StateFieldService>();
+  if(!x.screen)x.screen=x.encoder->task<StateScreenService>();
+  if(!x.display)x.display=x.encoder->task<StateDisplayService>();
+  if(!x.apply)x.apply=x.encoder->task<StateApplyService>();
+  if(!x.address)if(const auto*c=x.encoder->task<StateFieldCoordinator>())x.address=c->task<StateEditAddressTask>();
+ }
  // Follow only current Menu continuations, never retained outcomes or masks.
  if(!x.field)x.field=r.stateStoreMenuForeground.task<StateFieldService>();
  if(!x.screen)x.screen=r.stateStoreMenuForeground.task<StateScreenService>();
