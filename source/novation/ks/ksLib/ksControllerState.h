@@ -132,6 +132,11 @@ private:
     friend class PanelPedalOutputForeground;
     friend class StateEncoderForeground;
     friend class StateTickForeground;
+    friend class PanelMonitorForeground;
+    friend class StateStatusForeground;
+    friend class DiagnosticCodecForeground;
+    friend class DiagnosticTransferForeground;
+    friend class MidiFileTimeForeground;
     friend class NativeVoiceReleaseForeground;
     friend class NativeVoiceAllocationForeground;
     friend class NativeVoiceStartForeground;

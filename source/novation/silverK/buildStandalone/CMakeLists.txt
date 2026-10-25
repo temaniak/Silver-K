@@ -631,3 +631,13 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeNoteProgr
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeParameterSupportService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeParameterSupportAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeParameterSupportForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeParameterSupportForeground.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeParameterEditService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeParameterEditAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeParameterEditForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeParameterEditForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelMonitorService.h" "${ROOT}/source/novation/ks/ksLib/ksPanelMonitorAbi.h" "${ROOT}/source/novation/ks/ksLib/ksPanelMonitorForeground.h" "${ROOT}/source/novation/ks/ksLib/ksPanelMonitorForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateStatusService.h" "${ROOT}/source/novation/ks/ksLib/ksStateStatusAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateStatusForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateStatusForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksDiagnosticCodecService.h" "${ROOT}/source/novation/ks/ksLib/ksDiagnosticCodecAbi.h" "${ROOT}/source/novation/ks/ksLib/ksDiagnosticCodecForeground.h" "${ROOT}/source/novation/ks/ksLib/ksDiagnosticCodecForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksDiagnosticTransferService.h" "${ROOT}/source/novation/ks/ksLib/ksDiagnosticTransferAbi.h" "${ROOT}/source/novation/ks/ksLib/ksDiagnosticTransferForeground.h" "${ROOT}/source/novation/ks/ksLib/ksDiagnosticTransferForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksMidiFileTimeService.h" "${ROOT}/source/novation/ks/ksLib/ksMidiFileTimeAbi.h" "${ROOT}/source/novation/ks/ksLib/ksMidiFileTimeForeground.h" "${ROOT}/source/novation/ks/ksLib/ksMidiFileTimeForeground.cpp")

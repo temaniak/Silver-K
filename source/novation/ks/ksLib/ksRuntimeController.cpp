@@ -95,6 +95,11 @@ void RuntimeController::stepStartup(ControllerCpu& h){
     if(panelPedalOutputForeground.step(h)){++steps;return;}
     if(stateEncoderForeground.step(h)){++steps;return;}
     if(stateTickForeground.step(h)){++steps;return;}
+    if(panelMonitorForeground.step(h)){++steps;return;}
+    if(stateStatusForeground.step(h)){++steps;return;}
+    if(diagnosticCodecForeground.step(h)){++steps;return;}
+    if(diagnosticTransferForeground.step(h)){++steps;return;}
+    if(midiFileTimeForeground.step(h)){++steps;return;}
     if(nativeVoiceReleaseForeground.step(h)){++steps;return;}
     if(nativeVoiceAllocationForeground.step(h)){++steps;return;}
     if(nativeVoiceStartForeground.step(h)){++steps;return;}
@@ -155,6 +160,11 @@ void RuntimeController::step(ControllerCpu& h){
     if(panelPedalOutputForeground.step(h)){++steps;return;}
     if(stateEncoderForeground.step(h)){++steps;return;}
     if(stateTickForeground.step(h)){++steps;return;}
+    if(panelMonitorForeground.step(h)){++steps;return;}
+    if(stateStatusForeground.step(h)){++steps;return;}
+    if(diagnosticCodecForeground.step(h)){++steps;return;}
+    if(diagnosticTransferForeground.step(h)){++steps;return;}
+    if(midiFileTimeForeground.step(h)){++steps;return;}
     if(nativeVoiceReleaseForeground.step(h)){++steps;return;}
     if(nativeVoiceAllocationForeground.step(h)){++steps;return;}
     if(nativeVoiceStartForeground.step(h)){++steps;return;}

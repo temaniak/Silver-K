@@ -2061,6 +2061,31 @@ int main(int argc,char** argv){try{
          <<",\"native_native_parameter_edit_service_phases\":"<<runtime->nativeParameterEditForeground.phases
          <<",\"native_native_parameter_edit_service_initial_active\":"<<runtime->nativeParameterEditForeground.initial
          <<",\"native_native_parameter_edit_service_active\":"<<runtime->nativeParameterEditForeground.active()
+         <<",\"native_panel_monitor_service_calls\":"<<runtime->panelMonitorForeground.started
+         <<",\"native_panel_monitor_service_returns\":"<<runtime->panelMonitorForeground.completed
+         <<",\"native_panel_monitor_service_phases\":"<<runtime->panelMonitorForeground.phases
+         <<",\"native_panel_monitor_service_initial_active\":"<<runtime->panelMonitorForeground.initial
+         <<",\"native_panel_monitor_service_active\":"<<runtime->panelMonitorForeground.active()
+         <<",\"native_state_status_service_calls\":"<<runtime->stateStatusForeground.started
+         <<",\"native_state_status_service_returns\":"<<runtime->stateStatusForeground.completed
+         <<",\"native_state_status_service_phases\":"<<runtime->stateStatusForeground.phases
+         <<",\"native_state_status_service_initial_active\":"<<runtime->stateStatusForeground.initial
+         <<",\"native_state_status_service_active\":"<<runtime->stateStatusForeground.active()
+         <<",\"native_diagnostic_codec_service_calls\":"<<runtime->diagnosticCodecForeground.started
+         <<",\"native_diagnostic_codec_service_returns\":"<<runtime->diagnosticCodecForeground.completed
+         <<",\"native_diagnostic_codec_service_phases\":"<<runtime->diagnosticCodecForeground.phases
+         <<",\"native_diagnostic_codec_service_initial_active\":"<<runtime->diagnosticCodecForeground.initial
+         <<",\"native_diagnostic_codec_service_active\":"<<runtime->diagnosticCodecForeground.active()
+         <<",\"native_diagnostic_transfer_service_calls\":"<<runtime->diagnosticTransferForeground.started
+         <<",\"native_diagnostic_transfer_service_returns\":"<<runtime->diagnosticTransferForeground.completed
+         <<",\"native_diagnostic_transfer_service_phases\":"<<runtime->diagnosticTransferForeground.phases
+         <<",\"native_diagnostic_transfer_service_initial_active\":"<<runtime->diagnosticTransferForeground.initial
+         <<",\"native_diagnostic_transfer_service_active\":"<<runtime->diagnosticTransferForeground.active()
+         <<",\"native_midi_file_time_service_calls\":"<<runtime->midiFileTimeForeground.started
+         <<",\"native_midi_file_time_service_returns\":"<<runtime->midiFileTimeForeground.completed
+         <<",\"native_midi_file_time_service_phases\":"<<runtime->midiFileTimeForeground.phases
+         <<",\"native_midi_file_time_service_initial_active\":"<<runtime->midiFileTimeForeground.initial
+         <<",\"native_midi_file_time_service_active\":"<<runtime->midiFileTimeForeground.active()
         <<",\"native_state_tick_service_calls\":"<<runtime->stateTickForeground.started
         <<",\"native_state_tick_service_returns\":"<<runtime->stateTickForeground.completed
         <<",\"native_state_tick_service_phases\":"<<runtime->stateTickForeground.phases

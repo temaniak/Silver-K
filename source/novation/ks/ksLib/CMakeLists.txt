@@ -578,3 +578,13 @@ target_sources(ksLib PRIVATE ksNativeNoteProgramService.h ksNativeNoteProgramAbi
 target_sources(ksLib PRIVATE ksNativeParameterSupportService.h ksNativeParameterSupportAbi.h ksNativeParameterSupportForeground.h ksNativeParameterSupportForeground.cpp)
 
 target_sources(ksLib PRIVATE ksNativeParameterEditService.h ksNativeParameterEditAbi.h ksNativeParameterEditForeground.h ksNativeParameterEditForeground.cpp)
+
+target_sources(ksLib PRIVATE ksPanelMonitorService.h ksPanelMonitorAbi.h ksPanelMonitorForeground.h ksPanelMonitorForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStateStatusService.h ksStateStatusAbi.h ksStateStatusForeground.h ksStateStatusForeground.cpp)
+
+target_sources(ksLib PRIVATE ksDiagnosticCodecService.h ksDiagnosticCodecAbi.h ksDiagnosticCodecForeground.h ksDiagnosticCodecForeground.cpp)
+
+target_sources(ksLib PRIVATE ksDiagnosticTransferService.h ksDiagnosticTransferAbi.h ksDiagnosticTransferForeground.h ksDiagnosticTransferForeground.cpp)
+
+target_sources(ksLib PRIVATE ksMidiFileTimeService.h ksMidiFileTimeAbi.h ksMidiFileTimeForeground.h ksMidiFileTimeForeground.cpp)
