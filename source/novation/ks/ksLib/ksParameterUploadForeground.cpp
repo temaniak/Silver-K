@@ -11,7 +11,7 @@ void ParameterUploadForeground::project(CallerAbi&a,const ParameterUploadService
  v[1]=(uint32_t(g.previous())<<24)|tail;
  uint16_t lane=s.lfo[1].delaySelector?uint16_t(0x159f4u+s.lfo[1].index):uint16_t((unsigned(uint8_t((s.lfo[1].delay^127u)-115))<<8)|((s.lfo[1].delay^127u)>115?0:115));
  lane=uint16_t((unsigned(g.mode())<<8)|uint8_t(s.allocationObserved?g.allocation():lane));
- if(g.time())lane=weighted?uint16_t(unsigned(g.distance())<<8):uint16_t((unsigned(g.adjustment())<<8)|(g.inverted()>118?0:118));
+ if(g.time())lane=weighted?uint16_t(unsigned(g.distance())<<8):uint16_t((unsigned(s.distanceObserved?0:g.adjustment())<<8)|(g.inverted()>118?0:118));
  v[2]=(s.presetObserved?0x10000u:v[2]&0xffff0000u)|lane;
  if(s.voiceObserved)v[3]=0x17560u+20u*s.voice;
  v[5]=0x600000;v[6]=s.input.patch;a.flags=uint8_t((a.flags&0xd0)|8);
