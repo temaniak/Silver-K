@@ -61,8 +61,9 @@ int main(int argc,char** argv){try{
     const bool programMenuSingle=scenario=="panel-mode-single";
     const bool programMenuToMulti=scenario=="panel-mode-multi";
     const bool programPartNavigation=scenario=="panel-part-wrap-multi"||scenario=="panel-part-name"||scenario=="panel-part-category"||scenario=="panel-part-special";
-    const bool programMenuFixture=programMenuSingle||programMenuToMulti||programPartNavigation;
-    const bool programMenuMulti=programMenuSingle||programPartNavigation;
+    const bool programBrowserFixture=scenario=="panel-browse-single"||scenario=="panel-browse-multi"||scenario=="panel-browse-part";
+    const bool programMenuFixture=programMenuSingle||programMenuToMulti||programPartNavigation||programBrowserFixture;
+    const bool programMenuMulti=programMenuSingle||programPartNavigation||scenario=="panel-browse-multi"||scenario=="panel-browse-part";
     // PROGRAM_MENU_FLAGS_END
     const bool panelPartSave=scenario=="panel-save-part";
     const bool panelActions=scenario=="panel-actions-single"||scenario=="panel-actions-multi";
@@ -359,7 +360,14 @@ int main(int argc,char** argv){try{
                 for(auto address:{0x16784u,0x16791u,0x16792u,0x167d5u})menuWrite(at,address,0);
                 menuWrite(at,0x16790,page);menuWrite(at,0x1679e,special);menuWrite(at,0x1679f,0);
             };
-            if(programMenuSingle||programMenuToMulti){
+            if(programBrowserFixture){
+                // Explicit queued user navigation with authenticated button descriptors.
+                // These are UI/data mutations; no execution state is supplied.
+                context(.18,0,0);menuWrite(.18,0x16799,uint8_t(scenario=="panel-browse-part"));menuWrite(.18,0x167fb,0);
+                menuWrite(.18,0x167d5,uint8_t(scenario=="panel-browse-multi"));
+                for(unsigned i=0;i<4;++i)menuButton(.2+i*.4,i&1?0x46ac:0x46ec);
+            }
+            else if(programMenuSingle||programMenuToMulti){
                 context(.18,0,0);
                 // Normal user-selected stored destinations, independent of CPU fields.
                 menuWrite(.18,0x167ac,1);menuWrite(.18,0x167ad,3);menuWrite(.18,0x167ae,1);menuWrite(.18,0x167af,0);
@@ -1805,6 +1813,26 @@ int main(int argc,char** argv){try{
         <<",\"native_state_field_service_edit_active\":"<<runtime->stateFieldForeground.kinds[22]
         <<",\"native_state_field_service_apply_velocity\":"<<runtime->stateFieldForeground.kinds[23]
         <<",\"native_state_field_service_velocity\":"<<runtime->stateFieldForeground.kinds[24]
+        <<",\"native_state_program_browser_service_calls\":"<<runtime->stateProgramBrowserForeground.started
+        <<",\"native_state_program_browser_service_returns\":"<<runtime->stateProgramBrowserForeground.completed
+        <<",\"native_state_program_browser_service_phases\":"<<runtime->stateProgramBrowserForeground.phases
+        <<",\"native_state_program_browser_service_initial_active\":"<<runtime->stateProgramBrowserForeground.initial
+        <<",\"native_state_program_browser_service_active\":"<<runtime->stateProgramBrowserForeground.active()
+        <<",\"native_state_program_browser_service_components\":"<<runtime->stateProgramBrowserForeground.components
+        <<",\"native_state_program_browser_service_browse\":"<<runtime->stateProgramBrowserForeground.kinds[0]
+        <<",\"native_state_program_browser_service_repeat\":"<<runtime->stateProgramBrowserForeground.kinds[1]
+        <<",\"native_state_program_browser_service_slow\":"<<runtime->stateProgramBrowserForeground.kinds[2]
+        <<",\"native_state_program_browser_service_fast\":"<<runtime->stateProgramBrowserForeground.kinds[3]
+        <<",\"native_state_program_browser_service_stop\":"<<runtime->stateProgramBrowserForeground.kinds[4]
+        <<",\"native_state_program_browser_service_stopped\":"<<runtime->stateProgramBrowserForeground.kinds[5]
+        <<",\"native_state_program_browser_service_open\":"<<runtime->stateProgramBrowserForeground.kinds[6]
+        <<",\"native_state_program_browser_service_close\":"<<runtime->stateProgramBrowserForeground.kinds[7]
+        <<",\"native_state_program_browser_service_save\":"<<runtime->stateProgramBrowserForeground.kinds[8]
+        <<",\"native_state_program_browser_service_restore\":"<<runtime->stateProgramBrowserForeground.kinds[9]
+        <<",\"native_state_program_browser_service_category\":"<<runtime->stateProgramBrowserForeground.kinds[10]
+        <<",\"native_state_program_browser_service_step\":"<<runtime->stateProgramBrowserForeground.kinds[11]
+        <<",\"native_state_program_browser_service_entry\":"<<runtime->stateProgramBrowserForeground.kinds[12]
+        <<",\"native_state_program_browser_service_clear\":"<<runtime->stateProgramBrowserForeground.kinds[13]
         <<",\"native_state_program_load_service_calls\":"<<runtime->stateProgramLoadForeground.started
         <<",\"native_state_program_load_service_returns\":"<<runtime->stateProgramLoadForeground.completed
         <<",\"native_state_program_load_service_phases\":"<<runtime->stateProgramLoadForeground.phases

@@ -87,6 +87,7 @@ void RuntimeController::stepStartup(ControllerCpu& h){
     const int depth=h.indent;arbitrate(h);if(h.indent!=depth)++interruptEntries;
     if(serialForeground.step(h)){++steps;return;}
     if(stateResetForeground.step(h)){++steps;return;}
+    if(stateProgramBrowserForeground.step(h)){++steps;return;}
     if(stateProgramLoadForeground.step(h)){++steps;return;}
     // Close a legacy Store UI tail before native playback owns its target.
     if(!statePlaybackModeForeground.active()&&h.getPC()==0x48be)shared.stateStoreUiCalls.retireReturns(h);
@@ -120,6 +121,7 @@ void RuntimeController::step(ControllerCpu& h){
     const int depth=h.indent;arbitrate(h);if(h.indent!=depth)++interruptEntries;
     if(serialForeground.step(h)){++steps;return;}
     if(stateResetForeground.step(h)){++steps;return;}
+    if(stateProgramBrowserForeground.step(h)){++steps;return;}
     if(stateProgramLoadForeground.step(h)){++steps;return;}
     // Close a legacy Store UI tail before native playback owns its target.
     if(!statePlaybackModeForeground.active()&&h.getPC()==0x48be)shared.stateStoreUiCalls.retireReturns(h);

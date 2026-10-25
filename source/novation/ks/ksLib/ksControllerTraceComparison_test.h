@@ -11,6 +11,11 @@ inline bool nativeDspTraceLocationMatches(uint32_t original,uint32_t native){
  constexpr std::array<uint32_t,5>word{{0x2521,0x252f,0x2547,0x254f,0x2557}};
  const bool transport=std::find(addressAndIncrement.begin(),addressAndIncrement.end(),original)!=addressAndIncrement.end();
  const bool nonincrement=std::find(word.begin(),word.end(),original)!=word.end();
+ // Exact observed locations of the complete native graph, H8-verified.
+ if(native==0x5db2)return original==0x2417||original==0x2425||original==0x243d||original==0x2447||original==0x244f||original==0x2457||original==0x245f||original==0x246d||original==0x2485||original==0x24d9||original==0x24ff||original==0x2507||original==0x250f;
+ // Exact observed locations of the complete native graph, H8-verified.
+ if(native==0x5edc)return original==0x2417||original==0x2425||original==0x243d||original==0x2447||original==0x244f||original==0x2457||original==0x245f||original==0x246d||original==0x2485||original==0x24d9||original==0x24ff||original==0x2507||original==0x250f;
+ if(native==0x5efc)return original==0x2417||original==0x2425||original==0x243d||original==0x2447||original==0x244f||original==0x2457||original==0x245f||original==0x246d||original==0x2485||original==0x24d9||original==0x24ff||original==0x2507||original==0x250f;
  switch(native){
  case 0x47d6:case 0x4eb0:case 0x7354:case 0x96d6:return transport;
  case 0xb554:case 0x9662:return transport||nonincrement;

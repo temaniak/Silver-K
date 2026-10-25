@@ -2848,3 +2848,13 @@ add_executable(ksStatePartNavigationServiceTask_test "${ROOT}/source/novation/ks
 target_compile_features(ksStatePartNavigationServiceTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_state_part_navigation_service_task COMMAND ksStatePartNavigationServiceTask_test)
 set_tests_properties(ks_state_part_navigation_service_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksStateProgramBrowserService_test "${ROOT}/source/novation/ks/ksLib/ksStateProgramBrowserService_test.cpp")
+target_include_directories(ksStateProgramBrowserService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksStateProgramBrowserService_test PRIVATE ksLib)
+add_test(NAME ks_state_program_browser_service COMMAND ksStateProgramBrowserService_test)
+set_tests_properties(ks_state_program_browser_service PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 240)
+add_executable(ksStateProgramBrowserServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksStateProgramBrowserServiceTask_test.cpp")
+target_compile_features(ksStateProgramBrowserServiceTask_test PRIVATE cxx_std_17)
+add_test(NAME ks_state_program_browser_service_task COMMAND ksStateProgramBrowserServiceTask_test)
+set_tests_properties(ks_state_program_browser_service_task PROPERTIES TIMEOUT 240)
