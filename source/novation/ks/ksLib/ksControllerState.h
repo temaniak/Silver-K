@@ -128,6 +128,7 @@ private:
     friend class StateProgramBrowserForeground;
     friend class ClockSyncForeground;
     friend class StateDeferredPartsForeground;
+    friend class StateRefreshForeground;
     friend class StateFactoryForeground;
     friend class StateProgramLoadForeground;
     friend class StatePlaybackModeForeground;

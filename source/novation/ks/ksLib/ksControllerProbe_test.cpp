@@ -1941,6 +1941,21 @@ int main(int argc,char** argv){try{
         <<",\"native_state_deferred_parts_service_processed\":"<<runtime->stateDeferredPartsForeground.processed
         <<",\"native_state_deferred_parts_service_voice_uploads\":"<<runtime->stateDeferredPartsForeground.voiceUploads
         <<",\"native_state_deferred_parts_service_part_mask\":"<<runtime->stateDeferredPartsForeground.partMask
+        <<",\"native_state_refresh_service_calls\":"<<runtime->stateRefreshForeground.started
+        <<",\"native_state_refresh_service_returns\":"<<runtime->stateRefreshForeground.completed
+        <<",\"native_state_refresh_service_phases\":"<<runtime->stateRefreshForeground.phases
+        <<",\"native_state_refresh_service_initial_active\":"<<runtime->stateRefreshForeground.initial
+        <<",\"native_state_refresh_service_active\":"<<runtime->stateRefreshForeground.active()
+        <<",\"native_state_refresh_service_components\":"<<runtime->stateRefreshForeground.components
+        <<",\"native_state_refresh_service_refresh\":"<<runtime->stateRefreshForeground.kinds[0]
+        <<",\"native_state_refresh_service_returned_packet\":"<<runtime->stateRefreshForeground.returnedPacket
+        <<",\"native_state_refresh_service_returned_panel\":"<<runtime->stateRefreshForeground.returnedPanel
+        <<",\"native_state_refresh_service_returned_deferred\":"<<runtime->stateRefreshForeground.returnedDeferred
+        <<",\"native_state_refresh_service_returned_clock\":"<<runtime->stateRefreshForeground.returnedClock
+        <<",\"native_state_refresh_service_processed_parts\":"<<runtime->stateRefreshForeground.processedParts
+        <<",\"native_state_refresh_service_returned_coefficient\":"<<runtime->stateRefreshForeground.returnedCoefficient
+        <<",\"native_state_refresh_service_returned_period_address\":"<<runtime->stateRefreshForeground.returnedPeriodAddress
+        <<",\"native_state_refresh_service_returned_period_value\":"<<runtime->stateRefreshForeground.returnedPeriodValue
         <<",\"native_state_factory_service_calls\":"<<runtime->stateFactoryForeground.started
         <<",\"native_state_factory_service_returns\":"<<runtime->stateFactoryForeground.completed
         <<",\"native_state_factory_service_phases\":"<<runtime->stateFactoryForeground.phases

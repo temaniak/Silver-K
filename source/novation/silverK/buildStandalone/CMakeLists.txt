@@ -587,3 +587,5 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateFactoryDsp
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksClockSyncService.h" "${ROOT}/source/novation/ks/ksLib/ksClockSyncAbi.h" "${ROOT}/source/novation/ks/ksLib/ksClockSyncForeground.h" "${ROOT}/source/novation/ks/ksLib/ksClockSyncForeground.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateDeferredPartsService.h" "${ROOT}/source/novation/ks/ksLib/ksStateDeferredPartsAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateDeferredPartsForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateDeferredPartsForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateRefreshService.h" "${ROOT}/source/novation/ks/ksLib/ksStateRefreshAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateRefreshForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateRefreshForeground.cpp")

@@ -2908,3 +2908,13 @@ add_executable(ksStateDeferredPartsServiceTask_test "${ROOT}/source/novation/ks/
 target_compile_features(ksStateDeferredPartsServiceTask_test PRIVATE cxx_std_17)
 add_test(NAME state_deferred_parts_service_task COMMAND ksStateDeferredPartsServiceTask_test)
 set_tests_properties(state_deferred_parts_service_task PROPERTIES TIMEOUT 300)
+
+add_executable(ksStateRefreshService_test "${ROOT}/source/novation/ks/ksLib/ksStateRefreshService_test.cpp")
+target_include_directories(ksStateRefreshService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksStateRefreshService_test PRIVATE ksLib)
+add_test(NAME state_refresh_service COMMAND ksStateRefreshService_test)
+set_tests_properties(state_refresh_service PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
+add_executable(ksStateRefreshServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksStateRefreshServiceTask_test.cpp")
+target_compile_features(ksStateRefreshServiceTask_test PRIVATE cxx_std_17)
+add_test(NAME state_refresh_service_task COMMAND ksStateRefreshServiceTask_test)
+set_tests_properties(state_refresh_service_task PROPERTIES TIMEOUT 300)

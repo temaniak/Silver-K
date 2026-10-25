@@ -534,3 +534,5 @@ target_sources(ksLib PRIVATE ksStateFactoryDspService.h ksStateFactoryDspAbi.h k
 target_sources(ksLib PRIVATE ksClockSyncService.h ksClockSyncAbi.h ksClockSyncForeground.h ksClockSyncForeground.cpp)
 
 target_sources(ksLib PRIVATE ksStateDeferredPartsService.h ksStateDeferredPartsAbi.h ksStateDeferredPartsForeground.h ksStateDeferredPartsForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStateRefreshService.h ksStateRefreshAbi.h ksStateRefreshForeground.h ksStateRefreshForeground.cpp)

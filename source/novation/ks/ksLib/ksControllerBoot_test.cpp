@@ -192,6 +192,21 @@ int main(int argc,char** argv){try{
          <<",\"native_state_deferred_parts_service_processed\":"<<b->nativeController()->stateDeferredPartsForeground.processed
          <<",\"native_state_deferred_parts_service_voice_uploads\":"<<b->nativeController()->stateDeferredPartsForeground.voiceUploads
          <<",\"native_state_deferred_parts_service_part_mask\":"<<b->nativeController()->stateDeferredPartsForeground.partMask
+         <<",\"native_state_refresh_service_calls\":"<<b->nativeController()->stateRefreshForeground.started
+         <<",\"native_state_refresh_service_returns\":"<<b->nativeController()->stateRefreshForeground.completed
+         <<",\"native_state_refresh_service_phases\":"<<b->nativeController()->stateRefreshForeground.phases
+         <<",\"native_state_refresh_service_initial_active\":"<<b->nativeController()->stateRefreshForeground.initial
+         <<",\"native_state_refresh_service_active\":"<<b->nativeController()->stateRefreshForeground.active()
+         <<",\"native_state_refresh_service_components\":"<<b->nativeController()->stateRefreshForeground.components
+         <<",\"native_state_refresh_service_refresh\":"<<b->nativeController()->stateRefreshForeground.kinds[0]
+         <<",\"native_state_refresh_service_returned_packet\":"<<b->nativeController()->stateRefreshForeground.returnedPacket
+         <<",\"native_state_refresh_service_returned_panel\":"<<b->nativeController()->stateRefreshForeground.returnedPanel
+         <<",\"native_state_refresh_service_returned_deferred\":"<<b->nativeController()->stateRefreshForeground.returnedDeferred
+         <<",\"native_state_refresh_service_returned_clock\":"<<b->nativeController()->stateRefreshForeground.returnedClock
+         <<",\"native_state_refresh_service_processed_parts\":"<<b->nativeController()->stateRefreshForeground.processedParts
+         <<",\"native_state_refresh_service_returned_coefficient\":"<<b->nativeController()->stateRefreshForeground.returnedCoefficient
+         <<",\"native_state_refresh_service_returned_period_address\":"<<b->nativeController()->stateRefreshForeground.returnedPeriodAddress
+         <<",\"native_state_refresh_service_returned_period_value\":"<<b->nativeController()->stateRefreshForeground.returnedPeriodValue
          <<",\"native_state_factory_service_calls\":"<<factory.started
          <<",\"native_state_factory_service_returns\":"<<factory.completed
          <<",\"native_state_factory_service_phases\":"<<factory.phases
