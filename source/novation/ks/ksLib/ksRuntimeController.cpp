@@ -95,6 +95,14 @@ void RuntimeController::stepStartup(ControllerCpu& h){
     if(panelPedalOutputForeground.step(h)){++steps;return;}
     if(stateEncoderForeground.step(h)){++steps;return;}
     if(stateTickForeground.step(h)){++steps;return;}
+    if(panelMasksForeground.step(h)){++steps;return;}
+    if(voiceFeedbackForeground.step(h)){++steps;return;}
+    if(partFeedbackForeground.step(h)){++steps;return;}
+    if(periodicForeground.step(h)){++steps;return;}
+    if(stateChannelForeground.step(h)){++steps;return;}
+    if(midiPacketForeground.step(h)){++steps;return;}
+    if(nativeKeyForeground.step(h)){++steps;return;}
+    if(nativeArpResetForeground.step(h)){++steps;return;}
     if(stateFactoryForeground.step(h)){++steps;return;}
     if(stateProgramLoadForeground.step(h)){++steps;return;}
     // Close a legacy Store UI tail before native playback owns its target.
@@ -137,6 +145,14 @@ void RuntimeController::step(ControllerCpu& h){
     if(panelPedalOutputForeground.step(h)){++steps;return;}
     if(stateEncoderForeground.step(h)){++steps;return;}
     if(stateTickForeground.step(h)){++steps;return;}
+    if(panelMasksForeground.step(h)){++steps;return;}
+    if(voiceFeedbackForeground.step(h)){++steps;return;}
+    if(partFeedbackForeground.step(h)){++steps;return;}
+    if(periodicForeground.step(h)){++steps;return;}
+    if(stateChannelForeground.step(h)){++steps;return;}
+    if(midiPacketForeground.step(h)){++steps;return;}
+    if(nativeKeyForeground.step(h)){++steps;return;}
+    if(nativeArpResetForeground.step(h)){++steps;return;}
     if(stateFactoryForeground.step(h)){++steps;return;}
     if(stateProgramLoadForeground.step(h)){++steps;return;}
     // Close a legacy Store UI tail before native playback owns its target.

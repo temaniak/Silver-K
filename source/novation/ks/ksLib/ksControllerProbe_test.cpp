@@ -1971,6 +1971,46 @@ int main(int argc,char** argv){try{
         <<",\"native_state_encoder_service_active\":"<<runtime->stateEncoderForeground.active()
         <<",\"native_state_encoder_service_components\":"<<runtime->stateEncoderForeground.components
         <<",\"native_state_encoder_service_encoder\":"<<runtime->stateEncoderForeground.kinds[0]
+         <<",\"native_panel_masks_service_calls\":"<<runtime->panelMasksForeground.started
+         <<",\"native_panel_masks_service_returns\":"<<runtime->panelMasksForeground.completed
+         <<",\"native_panel_masks_service_phases\":"<<runtime->panelMasksForeground.phases
+         <<",\"native_panel_masks_service_initial_active\":"<<runtime->panelMasksForeground.initial
+         <<",\"native_panel_masks_service_active\":"<<runtime->panelMasksForeground.active()
+         <<",\"native_voice_feedback_service_calls\":"<<runtime->voiceFeedbackForeground.started
+         <<",\"native_voice_feedback_service_returns\":"<<runtime->voiceFeedbackForeground.completed
+         <<",\"native_voice_feedback_service_phases\":"<<runtime->voiceFeedbackForeground.phases
+         <<",\"native_voice_feedback_service_initial_active\":"<<runtime->voiceFeedbackForeground.initial
+         <<",\"native_voice_feedback_service_active\":"<<runtime->voiceFeedbackForeground.active()
+         <<",\"native_part_feedback_service_calls\":"<<runtime->partFeedbackForeground.started
+         <<",\"native_part_feedback_service_returns\":"<<runtime->partFeedbackForeground.completed
+         <<",\"native_part_feedback_service_phases\":"<<runtime->partFeedbackForeground.phases
+         <<",\"native_part_feedback_service_initial_active\":"<<runtime->partFeedbackForeground.initial
+         <<",\"native_part_feedback_service_active\":"<<runtime->partFeedbackForeground.active()
+         <<",\"native_periodic_service_calls\":"<<runtime->periodicForeground.started
+         <<",\"native_periodic_service_returns\":"<<runtime->periodicForeground.completed
+         <<",\"native_periodic_service_phases\":"<<runtime->periodicForeground.phases
+         <<",\"native_periodic_service_initial_active\":"<<runtime->periodicForeground.initial
+         <<",\"native_periodic_service_active\":"<<runtime->periodicForeground.active()
+         <<",\"native_state_channel_service_calls\":"<<runtime->stateChannelForeground.started
+         <<",\"native_state_channel_service_returns\":"<<runtime->stateChannelForeground.completed
+         <<",\"native_state_channel_service_phases\":"<<runtime->stateChannelForeground.phases
+         <<",\"native_state_channel_service_initial_active\":"<<runtime->stateChannelForeground.initial
+         <<",\"native_state_channel_service_active\":"<<runtime->stateChannelForeground.active()
+         <<",\"native_midi_packet_service_calls\":"<<runtime->midiPacketForeground.started
+         <<",\"native_midi_packet_service_returns\":"<<runtime->midiPacketForeground.completed
+         <<",\"native_midi_packet_service_phases\":"<<runtime->midiPacketForeground.phases
+         <<",\"native_midi_packet_service_initial_active\":"<<runtime->midiPacketForeground.initial
+         <<",\"native_midi_packet_service_active\":"<<runtime->midiPacketForeground.active()
+         <<",\"native_native_key_service_calls\":"<<runtime->nativeKeyForeground.started
+         <<",\"native_native_key_service_returns\":"<<runtime->nativeKeyForeground.completed
+         <<",\"native_native_key_service_phases\":"<<runtime->nativeKeyForeground.phases
+         <<",\"native_native_key_service_initial_active\":"<<runtime->nativeKeyForeground.initial
+         <<",\"native_native_key_service_active\":"<<runtime->nativeKeyForeground.active()
+         <<",\"native_native_arp_reset_service_calls\":"<<runtime->nativeArpResetForeground.started
+         <<",\"native_native_arp_reset_service_returns\":"<<runtime->nativeArpResetForeground.completed
+         <<",\"native_native_arp_reset_service_phases\":"<<runtime->nativeArpResetForeground.phases
+         <<",\"native_native_arp_reset_service_initial_active\":"<<runtime->nativeArpResetForeground.initial
+         <<",\"native_native_arp_reset_service_active\":"<<runtime->nativeArpResetForeground.active()
         <<",\"native_state_tick_service_calls\":"<<runtime->stateTickForeground.started
         <<",\"native_state_tick_service_returns\":"<<runtime->stateTickForeground.completed
         <<",\"native_state_tick_service_phases\":"<<runtime->stateTickForeground.phases

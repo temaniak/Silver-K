@@ -542,3 +542,19 @@ target_sources(ksLib PRIVATE ksPanelPedalOutputService.h ksPanelPedalOutputAbi.h
 target_sources(ksLib PRIVATE ksStateEncoderService.h ksStateEncoderAbi.h ksStateEncoderForeground.h ksStateEncoderForeground.cpp)
 
 target_sources(ksLib PRIVATE ksStateTickService.h ksStateTickAbi.h ksStateTickForeground.h ksStateTickForeground.cpp)
+
+target_sources(ksLib PRIVATE ksPanelMasksService.h ksPanelMasksAbi.h ksPanelMasksForeground.h ksPanelMasksForeground.cpp)
+
+target_sources(ksLib PRIVATE ksVoiceFeedbackService.h ksVoiceFeedbackAbi.h ksVoiceFeedbackForeground.h ksVoiceFeedbackForeground.cpp)
+
+target_sources(ksLib PRIVATE ksPartFeedbackService.h ksPartFeedbackAbi.h ksPartFeedbackForeground.h ksPartFeedbackForeground.cpp)
+
+target_sources(ksLib PRIVATE ksPeriodicService.h ksPeriodicAbi.h ksPeriodicForeground.h ksPeriodicForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStateChannelService.h ksStateChannelAbi.h ksStateChannelForeground.h ksStateChannelForeground.cpp)
+
+target_sources(ksLib PRIVATE ksMidiPacketService.h ksMidiPacketAbi.h ksMidiPacketForeground.h ksMidiPacketForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeKeyService.h ksNativeKeyAbi.h ksNativeKeyForeground.h ksNativeKeyForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeArpResetService.h ksNativeArpResetAbi.h ksNativeArpResetForeground.h ksNativeArpResetForeground.cpp)

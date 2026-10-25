@@ -222,6 +222,46 @@ int main(int argc,char** argv){try{
          <<",\"native_state_encoder_service_active\":"<<b->nativeController()->stateEncoderForeground.active()
          <<",\"native_state_encoder_service_components\":"<<b->nativeController()->stateEncoderForeground.components
          <<",\"native_state_encoder_service_encoder\":"<<b->nativeController()->stateEncoderForeground.kinds[0]
+         <<",\"native_panel_masks_service_calls\":"<<b->nativeController()->panelMasksForeground.started
+         <<",\"native_panel_masks_service_returns\":"<<b->nativeController()->panelMasksForeground.completed
+         <<",\"native_panel_masks_service_phases\":"<<b->nativeController()->panelMasksForeground.phases
+         <<",\"native_panel_masks_service_initial_active\":"<<b->nativeController()->panelMasksForeground.initial
+         <<",\"native_panel_masks_service_active\":"<<b->nativeController()->panelMasksForeground.active()
+         <<",\"native_voice_feedback_service_calls\":"<<b->nativeController()->voiceFeedbackForeground.started
+         <<",\"native_voice_feedback_service_returns\":"<<b->nativeController()->voiceFeedbackForeground.completed
+         <<",\"native_voice_feedback_service_phases\":"<<b->nativeController()->voiceFeedbackForeground.phases
+         <<",\"native_voice_feedback_service_initial_active\":"<<b->nativeController()->voiceFeedbackForeground.initial
+         <<",\"native_voice_feedback_service_active\":"<<b->nativeController()->voiceFeedbackForeground.active()
+         <<",\"native_part_feedback_service_calls\":"<<b->nativeController()->partFeedbackForeground.started
+         <<",\"native_part_feedback_service_returns\":"<<b->nativeController()->partFeedbackForeground.completed
+         <<",\"native_part_feedback_service_phases\":"<<b->nativeController()->partFeedbackForeground.phases
+         <<",\"native_part_feedback_service_initial_active\":"<<b->nativeController()->partFeedbackForeground.initial
+         <<",\"native_part_feedback_service_active\":"<<b->nativeController()->partFeedbackForeground.active()
+         <<",\"native_periodic_service_calls\":"<<b->nativeController()->periodicForeground.started
+         <<",\"native_periodic_service_returns\":"<<b->nativeController()->periodicForeground.completed
+         <<",\"native_periodic_service_phases\":"<<b->nativeController()->periodicForeground.phases
+         <<",\"native_periodic_service_initial_active\":"<<b->nativeController()->periodicForeground.initial
+         <<",\"native_periodic_service_active\":"<<b->nativeController()->periodicForeground.active()
+         <<",\"native_state_channel_service_calls\":"<<b->nativeController()->stateChannelForeground.started
+         <<",\"native_state_channel_service_returns\":"<<b->nativeController()->stateChannelForeground.completed
+         <<",\"native_state_channel_service_phases\":"<<b->nativeController()->stateChannelForeground.phases
+         <<",\"native_state_channel_service_initial_active\":"<<b->nativeController()->stateChannelForeground.initial
+         <<",\"native_state_channel_service_active\":"<<b->nativeController()->stateChannelForeground.active()
+         <<",\"native_midi_packet_service_calls\":"<<b->nativeController()->midiPacketForeground.started
+         <<",\"native_midi_packet_service_returns\":"<<b->nativeController()->midiPacketForeground.completed
+         <<",\"native_midi_packet_service_phases\":"<<b->nativeController()->midiPacketForeground.phases
+         <<",\"native_midi_packet_service_initial_active\":"<<b->nativeController()->midiPacketForeground.initial
+         <<",\"native_midi_packet_service_active\":"<<b->nativeController()->midiPacketForeground.active()
+         <<",\"native_native_key_service_calls\":"<<b->nativeController()->nativeKeyForeground.started
+         <<",\"native_native_key_service_returns\":"<<b->nativeController()->nativeKeyForeground.completed
+         <<",\"native_native_key_service_phases\":"<<b->nativeController()->nativeKeyForeground.phases
+         <<",\"native_native_key_service_initial_active\":"<<b->nativeController()->nativeKeyForeground.initial
+         <<",\"native_native_key_service_active\":"<<b->nativeController()->nativeKeyForeground.active()
+         <<",\"native_native_arp_reset_service_calls\":"<<b->nativeController()->nativeArpResetForeground.started
+         <<",\"native_native_arp_reset_service_returns\":"<<b->nativeController()->nativeArpResetForeground.completed
+         <<",\"native_native_arp_reset_service_phases\":"<<b->nativeController()->nativeArpResetForeground.phases
+         <<",\"native_native_arp_reset_service_initial_active\":"<<b->nativeController()->nativeArpResetForeground.initial
+         <<",\"native_native_arp_reset_service_active\":"<<b->nativeController()->nativeArpResetForeground.active()
          <<",\"native_state_tick_service_calls\":"<<b->nativeController()->stateTickForeground.started
          <<",\"native_state_tick_service_returns\":"<<b->nativeController()->stateTickForeground.completed
          <<",\"native_state_tick_service_phases\":"<<b->nativeController()->stateTickForeground.phases

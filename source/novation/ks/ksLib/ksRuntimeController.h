@@ -13,6 +13,14 @@
 #include "ksPanelPedalOutputForeground.h"
 #include "ksStateEncoderForeground.h"
 #include "ksStateTickForeground.h"
+#include "ksPanelMasksForeground.h"
+#include "ksVoiceFeedbackForeground.h"
+#include "ksPartFeedbackForeground.h"
+#include "ksPeriodicForeground.h"
+#include "ksStateChannelForeground.h"
+#include "ksMidiPacketForeground.h"
+#include "ksNativeKeyForeground.h"
+#include "ksNativeArpResetForeground.h"
 #include "ksStateFactoryForeground.h"
 #include "ksStateProgramLoadForeground.h"
 #include "ksStatePlaybackModeForeground.h"
@@ -56,7 +64,7 @@ public:
     static void verifyImage(const ControllerCpu&);
     void step(ControllerCpu&);
     void stepStartup(ControllerCpu&);
-    void resetMetrics(){stateTickForeground.resetMetrics();stateEncoderForeground.resetMetrics();panelPedalOutputForeground.resetMetrics();stateRefreshForeground.resetMetrics();stateDeferredPartsForeground.resetMetrics();clockSyncForeground.resetMetrics();stateFactoryForeground.resetMetrics();stateStoreMenuForeground.resetMetrics();stateProgramBrowserForeground.resetMetrics();statePartNavigationForeground.resetMetrics();statePlaybackModeForeground.resetMetrics();stateProgramLoadForeground.resetMetrics();stateEditActionForeground.resetMetrics();stateSceneToggleForeground.resetMetrics();stateSceneEditForeground.resetMetrics();stateVoiceRefreshForeground.resetMetrics();globalUpdateForeground.resetMetrics();parameterUploadForeground.resetMetrics();stateSceneForeground.resetMetrics();stateFieldForeground.resetMetrics();stateScreenForeground.resetMetrics();panelSettingsForeground.resetMetrics();stateSaveForeground.resetMetrics();stateApplyForeground.resetMetrics();stateDisplayForeground.resetMetrics();stateStoreForeground.resetMetrics();stateMenuForeground.resetMetrics();statePanelForeground.resetMetrics();stateEventsForeground.resetMetrics();panelControlsForeground.resetMetrics();panelScanForeground.resetMetrics();stateResetForeground.resetMetrics();serialForeground.resetMetrics();steps=interruptEntries=0;nativeInterruptStarts=nativeInterruptReturns=nativeInterruptPhases=0;nativeInterruptInitial=activeNativeInterrupts();nativeInterruptKinds.fill(0);nativeTpuComponents=nativeAdcComponents=nativeSerialReceiveComponents=0;
+    void resetMetrics(){panelMasksForeground.resetMetrics();voiceFeedbackForeground.resetMetrics();partFeedbackForeground.resetMetrics();periodicForeground.resetMetrics();stateChannelForeground.resetMetrics();midiPacketForeground.resetMetrics();nativeKeyForeground.resetMetrics();nativeArpResetForeground.resetMetrics();stateTickForeground.resetMetrics();stateEncoderForeground.resetMetrics();panelPedalOutputForeground.resetMetrics();stateRefreshForeground.resetMetrics();stateDeferredPartsForeground.resetMetrics();clockSyncForeground.resetMetrics();stateFactoryForeground.resetMetrics();stateStoreMenuForeground.resetMetrics();stateProgramBrowserForeground.resetMetrics();statePartNavigationForeground.resetMetrics();statePlaybackModeForeground.resetMetrics();stateProgramLoadForeground.resetMetrics();stateEditActionForeground.resetMetrics();stateSceneToggleForeground.resetMetrics();stateSceneEditForeground.resetMetrics();stateVoiceRefreshForeground.resetMetrics();globalUpdateForeground.resetMetrics();parameterUploadForeground.resetMetrics();stateSceneForeground.resetMetrics();stateFieldForeground.resetMetrics();stateScreenForeground.resetMetrics();panelSettingsForeground.resetMetrics();stateSaveForeground.resetMetrics();stateApplyForeground.resetMetrics();stateDisplayForeground.resetMetrics();stateStoreForeground.resetMetrics();stateMenuForeground.resetMetrics();statePanelForeground.resetMetrics();stateEventsForeground.resetMetrics();panelControlsForeground.resetMetrics();panelScanForeground.resetMetrics();stateResetForeground.resetMetrics();serialForeground.resetMetrics();steps=interruptEntries=0;nativeInterruptStarts=nativeInterruptReturns=nativeInterruptPhases=0;nativeInterruptInitial=activeNativeInterrupts();nativeInterruptKinds.fill(0);nativeTpuComponents=nativeAdcComponents=nativeSerialReceiveComponents=0;
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
         std::fill(boundaryProfile.begin(),boundaryProfile.end(),0);
 #endif
@@ -92,6 +100,14 @@ public:
     PanelPedalOutputForeground panelPedalOutputForeground;
     StateEncoderForeground stateEncoderForeground;
     StateTickForeground stateTickForeground;
+    PanelMasksForeground panelMasksForeground;
+    VoiceFeedbackForeground voiceFeedbackForeground;
+    PartFeedbackForeground partFeedbackForeground;
+    PeriodicForeground periodicForeground;
+    StateChannelForeground stateChannelForeground;
+    MidiPacketForeground midiPacketForeground;
+    NativeKeyForeground nativeKeyForeground;
+    NativeArpResetForeground nativeArpResetForeground;
     StateFactoryForeground stateFactoryForeground;
     StateProgramLoadForeground stateProgramLoadForeground;
     StatePlaybackModeForeground statePlaybackModeForeground;
@@ -101,7 +117,7 @@ public:
     StateSceneEditForeground stateSceneEditForeground;
     StateResetForeground stateResetForeground;
     SerialForeground serialForeground;
-    bool activeNativeWork() const {return stateTickForeground.active()||stateEncoderForeground.active()||panelPedalOutputForeground.active()||stateRefreshForeground.active()||stateDeferredPartsForeground.active()||clockSyncForeground.active()||stateFactoryForeground.active()||stateStoreMenuForeground.active()||stateProgramBrowserForeground.active()||statePartNavigationForeground.active()||statePlaybackModeForeground.active()||stateProgramLoadForeground.active()||stateEditActionForeground.active()||stateSceneToggleForeground.active()||stateSceneEditForeground.active()||stateVoiceRefreshForeground.active()||globalUpdateForeground.active()||parameterUploadForeground.active()||stateSceneForeground.active()||stateFieldForeground.active()||stateScreenForeground.active()||panelSettingsForeground.active()||stateSaveForeground.active()||stateApplyForeground.active()||stateDisplayForeground.active()||stateStoreForeground.active()||stateMenuForeground.active()||statePanelForeground.active()||stateEventsForeground.active()||panelControlsForeground.active()||activeNativeInterrupts()||serialForeground.active()||stateResetForeground.active()||panelScanForeground.active();}
+    bool activeNativeWork() const {return panelMasksForeground.active()||voiceFeedbackForeground.active()||partFeedbackForeground.active()||periodicForeground.active()||stateChannelForeground.active()||midiPacketForeground.active()||nativeKeyForeground.active()||nativeArpResetForeground.active()||stateTickForeground.active()||stateEncoderForeground.active()||panelPedalOutputForeground.active()||stateRefreshForeground.active()||stateDeferredPartsForeground.active()||clockSyncForeground.active()||stateFactoryForeground.active()||stateStoreMenuForeground.active()||stateProgramBrowserForeground.active()||statePartNavigationForeground.active()||statePlaybackModeForeground.active()||stateProgramLoadForeground.active()||stateEditActionForeground.active()||stateSceneToggleForeground.active()||stateSceneEditForeground.active()||stateVoiceRefreshForeground.active()||globalUpdateForeground.active()||parameterUploadForeground.active()||stateSceneForeground.active()||stateFieldForeground.active()||stateScreenForeground.active()||panelSettingsForeground.active()||stateSaveForeground.active()||stateApplyForeground.active()||stateDisplayForeground.active()||stateStoreForeground.active()||stateMenuForeground.active()||statePanelForeground.active()||stateEventsForeground.active()||panelControlsForeground.active()||activeNativeInterrupts()||serialForeground.active()||stateResetForeground.active()||panelScanForeground.active();}
     unsigned activeNativeInterrupts() const { return interruptScheduler.depth(); }
     // Const diagnostic of the current typed continuation, separate from the
     // cumulative component-coverage mask and any saved compatibility CPU PC.

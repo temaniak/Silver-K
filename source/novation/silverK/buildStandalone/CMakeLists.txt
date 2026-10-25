@@ -595,3 +595,19 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelPedalOutpu
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateEncoderService.h" "${ROOT}/source/novation/ks/ksLib/ksStateEncoderAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateEncoderForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateEncoderForeground.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateTickService.h" "${ROOT}/source/novation/ks/ksLib/ksStateTickAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateTickForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateTickForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPanelMasksService.h" "${ROOT}/source/novation/ks/ksLib/ksPanelMasksAbi.h" "${ROOT}/source/novation/ks/ksLib/ksPanelMasksForeground.h" "${ROOT}/source/novation/ks/ksLib/ksPanelMasksForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksVoiceFeedbackService.h" "${ROOT}/source/novation/ks/ksLib/ksVoiceFeedbackAbi.h" "${ROOT}/source/novation/ks/ksLib/ksVoiceFeedbackForeground.h" "${ROOT}/source/novation/ks/ksLib/ksVoiceFeedbackForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPartFeedbackService.h" "${ROOT}/source/novation/ks/ksLib/ksPartFeedbackAbi.h" "${ROOT}/source/novation/ks/ksLib/ksPartFeedbackForeground.h" "${ROOT}/source/novation/ks/ksLib/ksPartFeedbackForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksPeriodicService.h" "${ROOT}/source/novation/ks/ksLib/ksPeriodicAbi.h" "${ROOT}/source/novation/ks/ksLib/ksPeriodicForeground.h" "${ROOT}/source/novation/ks/ksLib/ksPeriodicForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateChannelService.h" "${ROOT}/source/novation/ks/ksLib/ksStateChannelAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateChannelForeground.h" "${ROOT}/source/novation/ks/ksLib/ksStateChannelForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksMidiPacketService.h" "${ROOT}/source/novation/ks/ksLib/ksMidiPacketAbi.h" "${ROOT}/source/novation/ks/ksLib/ksMidiPacketForeground.h" "${ROOT}/source/novation/ks/ksLib/ksMidiPacketForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeKeyService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeKeyAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeKeyForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeKeyForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeArpResetService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpResetAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpResetForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpResetForeground.cpp")
