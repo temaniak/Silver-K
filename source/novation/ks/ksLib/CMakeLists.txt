@@ -558,3 +558,23 @@ target_sources(ksLib PRIVATE ksMidiPacketService.h ksMidiPacketAbi.h ksMidiPacke
 target_sources(ksLib PRIVATE ksNativeKeyService.h ksNativeKeyAbi.h ksNativeKeyForeground.h ksNativeKeyForeground.cpp)
 
 target_sources(ksLib PRIVATE ksNativeArpResetService.h ksNativeArpResetAbi.h ksNativeArpResetForeground.h ksNativeArpResetForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeVoiceReleaseService.h ksNativeVoiceReleaseAbi.h ksNativeVoiceReleaseForeground.h ksNativeVoiceReleaseForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeVoiceAllocationService.h ksNativeVoiceAllocationAbi.h ksNativeVoiceAllocationForeground.h ksNativeVoiceAllocationForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeVoiceStartService.h ksNativeVoiceStartAbi.h ksNativeVoiceStartForeground.h ksNativeVoiceStartForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeVoiceModulationService.h ksNativeVoiceModulationAbi.h ksNativeVoiceModulationForeground.h ksNativeVoiceModulationForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeVoiceSweepService.h ksNativeVoiceSweepAbi.h ksNativeVoiceSweepForeground.h ksNativeVoiceSweepForeground.cpp)
+
+target_sources(ksLib PRIVATE ksInternalKeyOutputService.h ksInternalKeyOutputAbi.h ksInternalKeyOutputForeground.h ksInternalKeyOutputForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeNoteStateService.h ksNativeNoteStateAbi.h ksNativeNoteStateForeground.h ksNativeNoteStateForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeNoteProgramService.h ksNativeNoteProgramAbi.h ksNativeNoteProgramForeground.h ksNativeNoteProgramForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeParameterSupportService.h ksNativeParameterSupportAbi.h ksNativeParameterSupportForeground.h ksNativeParameterSupportForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeParameterEditService.h ksNativeParameterEditAbi.h ksNativeParameterEditForeground.h ksNativeParameterEditForeground.cpp)

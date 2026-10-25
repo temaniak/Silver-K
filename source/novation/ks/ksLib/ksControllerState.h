@@ -132,6 +132,16 @@ private:
     friend class PanelPedalOutputForeground;
     friend class StateEncoderForeground;
     friend class StateTickForeground;
+    friend class NativeVoiceReleaseForeground;
+    friend class NativeVoiceAllocationForeground;
+    friend class NativeVoiceStartForeground;
+    friend class NativeVoiceModulationForeground;
+    friend class NativeVoiceSweepForeground;
+    friend class InternalKeyOutputForeground;
+    friend class NativeNoteStateForeground;
+    friend class NativeNoteProgramForeground;
+    friend class NativeParameterSupportForeground;
+    friend class NativeParameterEditForeground;
     friend class PanelMasksForeground;
     friend class VoiceFeedbackForeground;
     friend class PartFeedbackForeground;

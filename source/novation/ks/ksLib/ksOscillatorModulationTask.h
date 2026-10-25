@@ -16,6 +16,7 @@ public:
  uint16_t curveIndex()const{return magnitude_;}
  uint16_t offset()const{constexpr uint16_t offsets[]{0x34,0x3f,0x4a,0x61};return offsets[output_];}
  uint32_t dspWord()const{return converted_>>8;}
+ uint32_t converted()const{return converted_;}uint16_t scaled()const{return scaled_;}int16_t factor()const{return factor_;}
  bool resumeWord(){if(!awaitingWord())return false;if(++output_==4)phase_=Stage::Return;else phase_=Stage::ReadBias;return true;}
  unsigned nextClocks()const{switch(phase_){
  case Stage::ReadBias:case Stage::ReadDepth0:case Stage::ReadDepth1:case Stage::ReadDepth2:case Stage::ReadTable:return 15;

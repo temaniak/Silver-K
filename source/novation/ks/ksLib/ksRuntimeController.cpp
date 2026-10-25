@@ -95,6 +95,16 @@ void RuntimeController::stepStartup(ControllerCpu& h){
     if(panelPedalOutputForeground.step(h)){++steps;return;}
     if(stateEncoderForeground.step(h)){++steps;return;}
     if(stateTickForeground.step(h)){++steps;return;}
+    if(nativeVoiceReleaseForeground.step(h)){++steps;return;}
+    if(nativeVoiceAllocationForeground.step(h)){++steps;return;}
+    if(nativeVoiceStartForeground.step(h)){++steps;return;}
+    if(nativeVoiceModulationForeground.step(h)){++steps;return;}
+    if(nativeVoiceSweepForeground.step(h)){++steps;return;}
+    if(internalKeyOutputForeground.step(h)){++steps;return;}
+    if(nativeNoteStateForeground.step(h)){++steps;return;}
+    if(nativeNoteProgramForeground.step(h)){++steps;return;}
+    if(nativeParameterSupportForeground.step(h)){++steps;return;}
+    if(nativeParameterEditForeground.step(h)){++steps;return;}
     if(panelMasksForeground.step(h)){++steps;return;}
     if(voiceFeedbackForeground.step(h)){++steps;return;}
     if(partFeedbackForeground.step(h)){++steps;return;}
@@ -145,6 +155,16 @@ void RuntimeController::step(ControllerCpu& h){
     if(panelPedalOutputForeground.step(h)){++steps;return;}
     if(stateEncoderForeground.step(h)){++steps;return;}
     if(stateTickForeground.step(h)){++steps;return;}
+    if(nativeVoiceReleaseForeground.step(h)){++steps;return;}
+    if(nativeVoiceAllocationForeground.step(h)){++steps;return;}
+    if(nativeVoiceStartForeground.step(h)){++steps;return;}
+    if(nativeVoiceModulationForeground.step(h)){++steps;return;}
+    if(nativeVoiceSweepForeground.step(h)){++steps;return;}
+    if(internalKeyOutputForeground.step(h)){++steps;return;}
+    if(nativeNoteStateForeground.step(h)){++steps;return;}
+    if(nativeNoteProgramForeground.step(h)){++steps;return;}
+    if(nativeParameterSupportForeground.step(h)){++steps;return;}
+    if(nativeParameterEditForeground.step(h)){++steps;return;}
     if(panelMasksForeground.step(h)){++steps;return;}
     if(voiceFeedbackForeground.step(h)){++steps;return;}
     if(partFeedbackForeground.step(h)){++steps;return;}

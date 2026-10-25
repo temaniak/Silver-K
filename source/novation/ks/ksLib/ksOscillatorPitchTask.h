@@ -11,6 +11,7 @@ public:
  bool complete()const{return phase_==Stage::Complete;}bool awaitingVoice()const{return phase_==Stage::AwaitVoice;}bool awaitingWord()const{return phase_==Stage::AwaitWord;}
  uint16_t coarseOffset()const{return uint16_t(7+8*output_);}uint16_t fineOffset()const{return uint16_t(8+8*output_);}uint16_t depthOffset()const{return uint16_t(9+8*output_);}
  uint16_t offset()const{return uint16_t(0x32+11*output_);}uint32_t dspWord()const{return pitchProduct_>>8;}
+ uint32_t pitchProduct()const{return pitchProduct_;}uint32_t wheelProduct()const{return wheelProduct_;}uint8_t unisonCount()const{return unison_;}uint8_t spreadValue()const{return spread_;}
  bool resumeVoice(uint8_t slot){if(!awaitingVoice())return false;slot_=slot;phase_=Stage::ReadUnisonCounter;return true;}
  bool resumeWord(){if(!awaitingWord())return false;phase_=++output_==3?Stage::Return:Stage::ReadStaticPitch;return true;}
  unsigned nextClocks()const{constexpr std::array<unsigned,63> clocks{{12,15,3,3,3,3,3,3,3,3,18,3,15,3,3,9,15,15,3,12,3,3,3,6,15,3,3,3,20,15,3,3,3,3,3,3,3,3,18,21,15,18,3,3,3,3,3,3,6,26,3,15,3,3,3,12,6,26,3,6,23,6,20}};const auto s=unsigned(phase_);return s<63?clocks[s]:phase_==Stage::Return?17:0;}

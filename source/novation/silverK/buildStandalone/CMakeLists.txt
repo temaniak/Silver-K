@@ -611,3 +611,23 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksMidiPacketServi
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeKeyService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeKeyAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeKeyForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeKeyForeground.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeArpResetService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpResetAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpResetForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpResetForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceReleaseService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceReleaseAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceReleaseForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceReleaseForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceAllocationService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceAllocationAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceAllocationForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceAllocationForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceStartService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceStartAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceStartForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceStartForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceModulationService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceModulationAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceModulationForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceModulationForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceSweepService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceSweepAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceSweepForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeVoiceSweepForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksInternalKeyOutputService.h" "${ROOT}/source/novation/ks/ksLib/ksInternalKeyOutputAbi.h" "${ROOT}/source/novation/ks/ksLib/ksInternalKeyOutputForeground.h" "${ROOT}/source/novation/ks/ksLib/ksInternalKeyOutputForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeNoteStateService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeNoteStateAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeNoteStateForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeNoteStateForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeNoteProgramService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeNoteProgramAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeNoteProgramForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeNoteProgramForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeParameterSupportService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeParameterSupportAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeParameterSupportForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeParameterSupportForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeParameterEditService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeParameterEditAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeParameterEditForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeParameterEditForeground.cpp")

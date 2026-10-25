@@ -2011,6 +2011,56 @@ int main(int argc,char** argv){try{
          <<",\"native_native_arp_reset_service_phases\":"<<runtime->nativeArpResetForeground.phases
          <<",\"native_native_arp_reset_service_initial_active\":"<<runtime->nativeArpResetForeground.initial
          <<",\"native_native_arp_reset_service_active\":"<<runtime->nativeArpResetForeground.active()
+         <<",\"native_native_voice_release_service_calls\":"<<runtime->nativeVoiceReleaseForeground.started
+         <<",\"native_native_voice_release_service_returns\":"<<runtime->nativeVoiceReleaseForeground.completed
+         <<",\"native_native_voice_release_service_phases\":"<<runtime->nativeVoiceReleaseForeground.phases
+         <<",\"native_native_voice_release_service_initial_active\":"<<runtime->nativeVoiceReleaseForeground.initial
+         <<",\"native_native_voice_release_service_active\":"<<runtime->nativeVoiceReleaseForeground.active()
+         <<",\"native_native_voice_allocation_service_calls\":"<<runtime->nativeVoiceAllocationForeground.started
+         <<",\"native_native_voice_allocation_service_returns\":"<<runtime->nativeVoiceAllocationForeground.completed
+         <<",\"native_native_voice_allocation_service_phases\":"<<runtime->nativeVoiceAllocationForeground.phases
+         <<",\"native_native_voice_allocation_service_initial_active\":"<<runtime->nativeVoiceAllocationForeground.initial
+         <<",\"native_native_voice_allocation_service_active\":"<<runtime->nativeVoiceAllocationForeground.active()
+         <<",\"native_native_voice_start_service_calls\":"<<runtime->nativeVoiceStartForeground.started
+         <<",\"native_native_voice_start_service_returns\":"<<runtime->nativeVoiceStartForeground.completed
+         <<",\"native_native_voice_start_service_phases\":"<<runtime->nativeVoiceStartForeground.phases
+         <<",\"native_native_voice_start_service_initial_active\":"<<runtime->nativeVoiceStartForeground.initial
+         <<",\"native_native_voice_start_service_active\":"<<runtime->nativeVoiceStartForeground.active()
+         <<",\"native_native_voice_modulation_service_calls\":"<<runtime->nativeVoiceModulationForeground.started
+         <<",\"native_native_voice_modulation_service_returns\":"<<runtime->nativeVoiceModulationForeground.completed
+         <<",\"native_native_voice_modulation_service_phases\":"<<runtime->nativeVoiceModulationForeground.phases
+         <<",\"native_native_voice_modulation_service_initial_active\":"<<runtime->nativeVoiceModulationForeground.initial
+         <<",\"native_native_voice_modulation_service_active\":"<<runtime->nativeVoiceModulationForeground.active()
+         <<",\"native_native_voice_sweep_service_calls\":"<<runtime->nativeVoiceSweepForeground.started
+         <<",\"native_native_voice_sweep_service_returns\":"<<runtime->nativeVoiceSweepForeground.completed
+         <<",\"native_native_voice_sweep_service_phases\":"<<runtime->nativeVoiceSweepForeground.phases
+         <<",\"native_native_voice_sweep_service_initial_active\":"<<runtime->nativeVoiceSweepForeground.initial
+         <<",\"native_native_voice_sweep_service_active\":"<<runtime->nativeVoiceSweepForeground.active()
+         <<",\"native_internal_key_output_service_calls\":"<<runtime->internalKeyOutputForeground.started
+         <<",\"native_internal_key_output_service_returns\":"<<runtime->internalKeyOutputForeground.completed
+         <<",\"native_internal_key_output_service_phases\":"<<runtime->internalKeyOutputForeground.phases
+         <<",\"native_internal_key_output_service_initial_active\":"<<runtime->internalKeyOutputForeground.initial
+         <<",\"native_internal_key_output_service_active\":"<<runtime->internalKeyOutputForeground.active()
+         <<",\"native_native_note_state_service_calls\":"<<runtime->nativeNoteStateForeground.started
+         <<",\"native_native_note_state_service_returns\":"<<runtime->nativeNoteStateForeground.completed
+         <<",\"native_native_note_state_service_phases\":"<<runtime->nativeNoteStateForeground.phases
+         <<",\"native_native_note_state_service_initial_active\":"<<runtime->nativeNoteStateForeground.initial
+         <<",\"native_native_note_state_service_active\":"<<runtime->nativeNoteStateForeground.active()
+         <<",\"native_native_note_program_service_calls\":"<<runtime->nativeNoteProgramForeground.started
+         <<",\"native_native_note_program_service_returns\":"<<runtime->nativeNoteProgramForeground.completed
+         <<",\"native_native_note_program_service_phases\":"<<runtime->nativeNoteProgramForeground.phases
+         <<",\"native_native_note_program_service_initial_active\":"<<runtime->nativeNoteProgramForeground.initial
+         <<",\"native_native_note_program_service_active\":"<<runtime->nativeNoteProgramForeground.active()
+         <<",\"native_native_parameter_support_service_calls\":"<<runtime->nativeParameterSupportForeground.started
+         <<",\"native_native_parameter_support_service_returns\":"<<runtime->nativeParameterSupportForeground.completed
+         <<",\"native_native_parameter_support_service_phases\":"<<runtime->nativeParameterSupportForeground.phases
+         <<",\"native_native_parameter_support_service_initial_active\":"<<runtime->nativeParameterSupportForeground.initial
+         <<",\"native_native_parameter_support_service_active\":"<<runtime->nativeParameterSupportForeground.active()
+         <<",\"native_native_parameter_edit_service_calls\":"<<runtime->nativeParameterEditForeground.started
+         <<",\"native_native_parameter_edit_service_returns\":"<<runtime->nativeParameterEditForeground.completed
+         <<",\"native_native_parameter_edit_service_phases\":"<<runtime->nativeParameterEditForeground.phases
+         <<",\"native_native_parameter_edit_service_initial_active\":"<<runtime->nativeParameterEditForeground.initial
+         <<",\"native_native_parameter_edit_service_active\":"<<runtime->nativeParameterEditForeground.active()
         <<",\"native_state_tick_service_calls\":"<<runtime->stateTickForeground.started
         <<",\"native_state_tick_service_returns\":"<<runtime->stateTickForeground.completed
         <<",\"native_state_tick_service_phases\":"<<runtime->stateTickForeground.phases
