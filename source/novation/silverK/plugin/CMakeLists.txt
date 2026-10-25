@@ -2888,3 +2888,13 @@ add_executable(ksStateFactoryServiceTask_test "${ROOT}/source/novation/ks/ksLib/
 target_compile_features(ksStateFactoryServiceTask_test PRIVATE cxx_std_17)
 add_test(NAME ks_state_factory_service_task COMMAND ksStateFactoryServiceTask_test)
 set_tests_properties(ks_state_factory_service_task PROPERTIES TIMEOUT 240)
+
+add_executable(ksClockSyncService_test "${ROOT}/source/novation/ks/ksLib/ksClockSyncService_test.cpp")
+target_include_directories(ksClockSyncService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksClockSyncService_test PRIVATE ksLib)
+add_test(NAME clock_sync_service COMMAND ksClockSyncService_test)
+set_tests_properties(clock_sync_service PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 300)
+add_executable(ksClockSyncServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksClockSyncServiceTask_test.cpp")
+target_compile_features(ksClockSyncServiceTask_test PRIVATE cxx_std_17)
+add_test(NAME clock_sync_service_task COMMAND ksClockSyncServiceTask_test)
+set_tests_properties(clock_sync_service_task PROPERTIES TIMEOUT 300)

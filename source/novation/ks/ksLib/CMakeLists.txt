@@ -530,3 +530,5 @@ target_sources(ksLib PRIVATE ksStateProgramBrowserCoordinator.h ksStateProgramBr
 target_sources(ksLib PRIVATE ksStateStoreDumpService.h ksStateStoreMenuCoordinator.h ksStateStoreMenuService.h ksStateStoreMenuForeground.h ksStateStoreMenuForeground.cpp ksSysExOutputService.h ksStateFactoryService.h ksStateFactoryAbi.h)
 
 target_sources(ksLib PRIVATE ksStateFactoryDspService.h ksStateFactoryDspAbi.h ksStateFactoryForeground.h ksStateFactoryForeground.cpp)
+
+target_sources(ksLib PRIVATE ksClockSyncService.h ksClockSyncAbi.h ksClockSyncForeground.h ksClockSyncForeground.cpp)

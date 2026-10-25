@@ -175,6 +175,13 @@ int main(int argc,char** argv){try{
          <<",\"events\":"<<x->events.size()<<",\"slices\":"<<x->slices.size()<<",\"controller_cycles\":"<<b->controllerCycles()
          <<",\"checkpoint_exact\":true,\"every_pcm_sample_exact\":true,\"every_nonPC_event_and_slice_exact\":true"
          <<",\"strict_pc_acceptable\":"<<(cpuLocationsAcceptable?"true":"false")<<",\"unexpected_pc_events\":"<<unexpectedCpuLocationChanges
+         <<",\"native_clock_sync_service_calls\":"<<b->nativeController()->clockSyncForeground.started
+         <<",\"native_clock_sync_service_returns\":"<<b->nativeController()->clockSyncForeground.completed
+         <<",\"native_clock_sync_service_phases\":"<<b->nativeController()->clockSyncForeground.phases
+         <<",\"native_clock_sync_service_initial_active\":"<<b->nativeController()->clockSyncForeground.initial
+         <<",\"native_clock_sync_service_active\":"<<b->nativeController()->clockSyncForeground.active()
+         <<",\"native_clock_sync_service_components\":"<<b->nativeController()->clockSyncForeground.components
+         <<",\"native_clock_sync_service_update\":"<<b->nativeController()->clockSyncForeground.kinds[0]
          <<",\"native_state_factory_service_calls\":"<<factory.started
          <<",\"native_state_factory_service_returns\":"<<factory.completed
          <<",\"native_state_factory_service_phases\":"<<factory.phases

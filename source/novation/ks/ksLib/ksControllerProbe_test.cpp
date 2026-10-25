@@ -1924,6 +1924,13 @@ int main(int argc,char** argv){try{
         <<",\"native_state_program_browser_service_step\":"<<runtime->stateProgramBrowserForeground.kinds[11]
         <<",\"native_state_program_browser_service_entry\":"<<runtime->stateProgramBrowserForeground.kinds[12]
         <<",\"native_state_program_browser_service_clear\":"<<runtime->stateProgramBrowserForeground.kinds[13]
+        <<",\"native_clock_sync_service_calls\":"<<runtime->clockSyncForeground.started
+        <<",\"native_clock_sync_service_returns\":"<<runtime->clockSyncForeground.completed
+        <<",\"native_clock_sync_service_phases\":"<<runtime->clockSyncForeground.phases
+        <<",\"native_clock_sync_service_initial_active\":"<<runtime->clockSyncForeground.initial
+        <<",\"native_clock_sync_service_active\":"<<runtime->clockSyncForeground.active()
+        <<",\"native_clock_sync_service_components\":"<<runtime->clockSyncForeground.components
+        <<",\"native_clock_sync_service_update\":"<<runtime->clockSyncForeground.kinds[0]
         <<",\"native_state_factory_service_calls\":"<<runtime->stateFactoryForeground.started
         <<",\"native_state_factory_service_returns\":"<<runtime->stateFactoryForeground.completed
         <<",\"native_state_factory_service_phases\":"<<runtime->stateFactoryForeground.phases

@@ -89,6 +89,7 @@ void RuntimeController::stepStartup(ControllerCpu& h){
     if(stateResetForeground.step(h)){++steps;return;}
     if(stateStoreMenuForeground.step(h)){++steps;return;}
     if(stateProgramBrowserForeground.step(h)){++steps;return;}
+    if(clockSyncForeground.step(h)){++steps;return;}
     if(stateFactoryForeground.step(h)){++steps;return;}
     if(stateProgramLoadForeground.step(h)){++steps;return;}
     // Close a legacy Store UI tail before native playback owns its target.
@@ -125,6 +126,7 @@ void RuntimeController::step(ControllerCpu& h){
     if(stateResetForeground.step(h)){++steps;return;}
     if(stateStoreMenuForeground.step(h)){++steps;return;}
     if(stateProgramBrowserForeground.step(h)){++steps;return;}
+    if(clockSyncForeground.step(h)){++steps;return;}
     if(stateFactoryForeground.step(h)){++steps;return;}
     if(stateProgramLoadForeground.step(h)){++steps;return;}
     // Close a legacy Store UI tail before native playback owns its target.
