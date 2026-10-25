@@ -641,3 +641,31 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksDiagnosticCodec
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksDiagnosticTransferService.h" "${ROOT}/source/novation/ks/ksLib/ksDiagnosticTransferAbi.h" "${ROOT}/source/novation/ks/ksLib/ksDiagnosticTransferForeground.h" "${ROOT}/source/novation/ks/ksLib/ksDiagnosticTransferForeground.cpp")
 
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksMidiFileTimeService.h" "${ROOT}/source/novation/ks/ksLib/ksMidiFileTimeAbi.h" "${ROOT}/source/novation/ks/ksLib/ksMidiFileTimeForeground.h" "${ROOT}/source/novation/ks/ksLib/ksMidiFileTimeForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativePedalControlService.h" "${ROOT}/source/novation/ks/ksLib/ksNativePedalControlAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativePedalControlForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativePedalControlForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeMidiControlService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeMidiControlAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeMidiControlForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeMidiControlForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativePartNoteService.h" "${ROOT}/source/novation/ks/ksLib/ksNativePartNoteAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativePartNoteForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativePartNoteForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeInternalNoteService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeInternalNoteAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeInternalNoteForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeInternalNoteForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeProgramEventService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeProgramEventAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeProgramEventForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeProgramEventForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeArpEmissionService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpEmissionAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpEmissionForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpEmissionForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeMonoArpBootstrapService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeMonoArpBootstrapAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeMonoArpBootstrapForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeMonoArpBootstrapForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeArpPrimitiveService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpPrimitiveAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpPrimitiveForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpPrimitiveForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeArpGateService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpGateAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpGateForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpGateForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeArpEmitService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpEmitAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpEmitForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpEmitForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeArpChordService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpChordAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpChordForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpChordForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeArpRandomService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpRandomAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpRandomForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpRandomForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeArpSearchService.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpSearchAbi.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpSearchForeground.h" "${ROOT}/source/novation/ks/ksLib/ksNativeArpSearchForeground.cpp")
+
+target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksStateCentralActionsAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateCentralActionsCoordinator.h" "${ROOT}/source/novation/ks/ksLib/ksStateCentralActionsLeavesAbi.h" "${ROOT}/source/novation/ks/ksLib/ksStateCentralActionsService.h" "${ROOT}/source/novation/ks/ksLib/ksSysExNativeAbi.h" "${ROOT}/source/novation/ks/ksLib/ksSysExNativeService.h" "${ROOT}/source/novation/ks/ksLib/ksSysExPatchExpandService.h" "${ROOT}/source/novation/ks/ksLib/ksSysExNativeLeavesAbi.h" "${ROOT}/source/novation/ks/ksLib/ksSysExNativeCoordinator.h" "${ROOT}/source/novation/ks/ksLib/ksStateSignedNumberAbi.h" "${ROOT}/source/novation/ks/ksLib/ksVoiceExpressionBindings.h" "${ROOT}/source/novation/ks/ksLib/ksVoiceActivationBindings.h")

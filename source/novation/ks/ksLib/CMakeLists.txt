@@ -588,3 +588,31 @@ target_sources(ksLib PRIVATE ksDiagnosticCodecService.h ksDiagnosticCodecAbi.h k
 target_sources(ksLib PRIVATE ksDiagnosticTransferService.h ksDiagnosticTransferAbi.h ksDiagnosticTransferForeground.h ksDiagnosticTransferForeground.cpp)
 
 target_sources(ksLib PRIVATE ksMidiFileTimeService.h ksMidiFileTimeAbi.h ksMidiFileTimeForeground.h ksMidiFileTimeForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativePedalControlService.h ksNativePedalControlAbi.h ksNativePedalControlForeground.h ksNativePedalControlForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeMidiControlService.h ksNativeMidiControlAbi.h ksNativeMidiControlForeground.h ksNativeMidiControlForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativePartNoteService.h ksNativePartNoteAbi.h ksNativePartNoteForeground.h ksNativePartNoteForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeInternalNoteService.h ksNativeInternalNoteAbi.h ksNativeInternalNoteForeground.h ksNativeInternalNoteForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeProgramEventService.h ksNativeProgramEventAbi.h ksNativeProgramEventForeground.h ksNativeProgramEventForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeArpEmissionService.h ksNativeArpEmissionAbi.h ksNativeArpEmissionForeground.h ksNativeArpEmissionForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeMonoArpBootstrapService.h ksNativeMonoArpBootstrapAbi.h ksNativeMonoArpBootstrapForeground.h ksNativeMonoArpBootstrapForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeArpPrimitiveService.h ksNativeArpPrimitiveAbi.h ksNativeArpPrimitiveForeground.h ksNativeArpPrimitiveForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeArpGateService.h ksNativeArpGateAbi.h ksNativeArpGateForeground.h ksNativeArpGateForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeArpEmitService.h ksNativeArpEmitAbi.h ksNativeArpEmitForeground.h ksNativeArpEmitForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeArpChordService.h ksNativeArpChordAbi.h ksNativeArpChordForeground.h ksNativeArpChordForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeArpRandomService.h ksNativeArpRandomAbi.h ksNativeArpRandomForeground.h ksNativeArpRandomForeground.cpp)
+
+target_sources(ksLib PRIVATE ksNativeArpSearchService.h ksNativeArpSearchAbi.h ksNativeArpSearchForeground.h ksNativeArpSearchForeground.cpp)
+
+target_sources(ksLib PRIVATE ksStateCentralActionsAbi.h ksStateCentralActionsCoordinator.h ksStateCentralActionsLeavesAbi.h ksStateCentralActionsService.h ksSysExNativeAbi.h ksSysExNativeService.h ksSysExPatchExpandService.h ksSysExNativeLeavesAbi.h ksSysExNativeCoordinator.h ksStateSignedNumberAbi.h ksVoiceExpressionBindings.h ksVoiceActivationBindings.h)

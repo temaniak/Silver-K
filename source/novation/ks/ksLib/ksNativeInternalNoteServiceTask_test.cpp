@@ -1,0 +1,19 @@
+#include "ksNativeInternalNoteService.h"
+#include <array>
+#include <memory>
+#include <vector>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <new>
+#include <stdexcept>
+namespace{bool tracking=false;uint64_t allocations=0;}
+void*operator new(std::size_t n){if(tracking)++allocations;if(auto*p=std::malloc(n?n:1))return p;throw std::bad_alloc();}void*operator new[](std::size_t n){return::operator new(n);}void operator delete(void*p)noexcept{std::free(p);}void operator delete[](void*p)noexcept{std::free(p);}void operator delete(void*p,std::size_t)noexcept{std::free(p);}void operator delete[](void*p,std::size_t)noexcept{std::free(p);}
+void check(bool v,const char*m){if(!v)throw std::runtime_error(m);}
+
+int main(){try{using T=ks::NativeInternalNoteService;using K=T::Kind;std::vector<uint8_t>m(1<<24);std::vector<unsigned char>snapshot(sizeof(T));uint64_t graphs=0,phases=0,rejects=0,reads=0,writes=0;uint32_t components=0;
+for(unsigned kind=0;kind<2;++kind)for(unsigned note:{35u,59u,60u,61u,84u,85u})for(unsigned held:{0u,1u}){std::fill(m.begin()+0x15000,m.begin()+0x30000,uint8_t(0));const auto wide=[&](unsigned a,uint32_t v){for(unsigned n=0;n<4;++n)m[a+n]=uint8_t(v>>(24-8*n));};const unsigned part=2,controls=0x174ae + 20*part,base=0x160d2+334*part;m[0x17526]=m[0x16798]=part;m[0xffec14]=1;m[0x174a6]=4;wide(controls,0x18000);m[controls+13]=127;m[controls+14]=64;m[0x18000]=16;m[0x18004]=64;m[0x1803a]=m[0x1803d]=m[0x18042]=64;m[0x1804f]=0x35;m[0x1804e]=m[0x18093]=2;m[0x18050]=7;m[0x180ad]=8;m[0x167ac]=1;m[0x167ad]=3;wide(0x167bc,0x18000);wide(0x167c0,0x19000);m[base+313]=1;m[base+314]=uint8_t(note);m[base+306]=m[base+307]=held?3:0;for(unsigned i=0;i<128;++i)m[base+64+i]=uint8_t(64+i%64);for(unsigned i=0;i<3;++i){m[base+240+2*i]=64;m[base+241+2*i]=uint8_t(59+i);}if(held)for(unsigned n:{59u,60u,61u})for(unsigned off:{192u,208u})m[base+off+n/8]|=1u<<(n&7);m[0x15c1f]=uint8_t(note);m[0x15c20]=100;m[0x159f2]=m[0x159f3]=255;m[0x160d0]=1;m[base+327]=held?0:96;m[0x169ed]=127;m[0xffed6d]=45;m[0xffed6f]=17;
+auto owner=std::make_unique<T>(K(kind),T::Input{0x15c1f});auto&t=*owner;unsigned count=0;int previous=-1;tracking=true;while(!t.complete()){struct Unowned{};check(!t.task<Unowned>(),"Unknown part note task query");const auto cost=t.nextClocks(previous);check(cost>0,"Part note pure stalled");std::memcpy(snapshot.data(),&t,sizeof(T));unsigned callbacks=0;check(t.advanceBefore(cost-1,[&](uint32_t,unsigned){++callbacks;return uint8_t(0);},[&](uint32_t,uint8_t,unsigned){++callbacks;},previous)==0&&!callbacks&&!std::memcmp(snapshot.data(),&t,sizeof(T)),"Part note budget changed object");++rejects;const auto read=[&](uint32_t a,unsigned dt){check(a<(1u<<24)&&dt<=cost,"Part note pure read bound");++reads;return a==0x400004||a==0x600004?uint8_t(255):m[a];};const auto write=[&](uint32_t a,uint8_t v,unsigned dt){check(a<(1u<<24)&&dt<=cost&&!(a>=0xfff000&&a<0xfffc00),"Part note pure write bound");++writes;m[a]=v;previous=a<0x400000?int(a):-1;};check(t.advanceBefore(cost,read,write,previous)==cost,"Part note pure admission");if(t.effect().write)previous=-1;check(++count<1000000,"Part note pure did not complete");++phases;}
+if(kind==0)check(m[base+224+note/8]&(1u<<(note&7)),"Internal On bitmap oracle");else check(!(m[base+224+note/8]&(1u<<(note&7))),"Internal Off bitmap oracle");struct UnownedCompleted{};check(!t.task<UnownedCompleted>()&&!t.task<ks::InternalNoteTask>()&&!t.task<ks::DspFaultTask>(),"Completed PartNote selector");components|=t.components();tracking=false;++graphs;}
+check(components==15&&!allocations,"Part note pure coverage/heap");std::cout<<"PASS Pure NativeInternalNote graphs="<<graphs<<" phases="<<phases<<" whole_object_budget_rejects="<<rejects<<" reads="<<reads<<" writes="<<writes<<" components="<<components<<" sizeof="<<sizeof(T)<<" allocations="<<allocations<<'\n';return 0;
+}catch(const std::exception&e){tracking=false;std::cerr<<e.what()<<'\n';return 1;}}

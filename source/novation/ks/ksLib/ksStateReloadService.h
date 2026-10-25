@@ -8,6 +8,8 @@ namespace ks {
 // authenticated zero-request panel refresh. Every child is a native value task.
 class StateReloadService final {
 public:
+ StateReloadService()=default;
+ explicit StateReloadService(uint32_t source):coordinator_(source){}
  enum class Component {Coordinator,Voices,Signal,Panel};
  struct Effect {bool read=false,write=false;};
  Component component()const{return component_;}

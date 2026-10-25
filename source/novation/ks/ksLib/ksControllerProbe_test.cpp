@@ -2086,6 +2086,71 @@ int main(int argc,char** argv){try{
          <<",\"native_midi_file_time_service_phases\":"<<runtime->midiFileTimeForeground.phases
          <<",\"native_midi_file_time_service_initial_active\":"<<runtime->midiFileTimeForeground.initial
          <<",\"native_midi_file_time_service_active\":"<<runtime->midiFileTimeForeground.active()
+         <<",\"native_native_pedal_control_service_calls\":"<<runtime->nativePedalControlForeground.started
+         <<",\"native_native_pedal_control_service_returns\":"<<runtime->nativePedalControlForeground.completed
+         <<",\"native_native_pedal_control_service_phases\":"<<runtime->nativePedalControlForeground.phases
+         <<",\"native_native_pedal_control_service_initial_active\":"<<runtime->nativePedalControlForeground.initial
+         <<",\"native_native_pedal_control_service_active\":"<<runtime->nativePedalControlForeground.active()
+         <<",\"native_native_midi_control_service_calls\":"<<runtime->nativeMidiControlForeground.started
+         <<",\"native_native_midi_control_service_returns\":"<<runtime->nativeMidiControlForeground.completed
+         <<",\"native_native_midi_control_service_phases\":"<<runtime->nativeMidiControlForeground.phases
+         <<",\"native_native_midi_control_service_initial_active\":"<<runtime->nativeMidiControlForeground.initial
+         <<",\"native_native_midi_control_service_active\":"<<runtime->nativeMidiControlForeground.active()
+         <<",\"native_native_part_note_service_calls\":"<<runtime->nativePartNoteForeground.started
+         <<",\"native_native_part_note_service_returns\":"<<runtime->nativePartNoteForeground.completed
+         <<",\"native_native_part_note_service_phases\":"<<runtime->nativePartNoteForeground.phases
+         <<",\"native_native_part_note_service_initial_active\":"<<runtime->nativePartNoteForeground.initial
+         <<",\"native_native_part_note_service_active\":"<<runtime->nativePartNoteForeground.active()
+         <<",\"native_native_internal_note_service_calls\":"<<runtime->nativeInternalNoteForeground.started
+         <<",\"native_native_internal_note_service_returns\":"<<runtime->nativeInternalNoteForeground.completed
+         <<",\"native_native_internal_note_service_phases\":"<<runtime->nativeInternalNoteForeground.phases
+         <<",\"native_native_internal_note_service_initial_active\":"<<runtime->nativeInternalNoteForeground.initial
+         <<",\"native_native_internal_note_service_active\":"<<runtime->nativeInternalNoteForeground.active()
+         <<",\"native_native_program_event_service_calls\":"<<runtime->nativeProgramEventForeground.started
+         <<",\"native_native_program_event_service_returns\":"<<runtime->nativeProgramEventForeground.completed
+         <<",\"native_native_program_event_service_phases\":"<<runtime->nativeProgramEventForeground.phases
+         <<",\"native_native_program_event_service_initial_active\":"<<runtime->nativeProgramEventForeground.initial
+         <<",\"native_native_program_event_service_active\":"<<runtime->nativeProgramEventForeground.active()
+         <<",\"native_native_arp_emission_service_calls\":"<<runtime->nativeArpEmissionForeground.started
+         <<",\"native_native_arp_emission_service_returns\":"<<runtime->nativeArpEmissionForeground.completed
+         <<",\"native_native_arp_emission_service_phases\":"<<runtime->nativeArpEmissionForeground.phases
+         <<",\"native_native_arp_emission_service_initial_active\":"<<runtime->nativeArpEmissionForeground.initial
+         <<",\"native_native_arp_emission_service_active\":"<<runtime->nativeArpEmissionForeground.active()
+         <<",\"native_native_mono_arp_bootstrap_service_calls\":"<<runtime->nativeMonoArpBootstrapForeground.started
+         <<",\"native_native_mono_arp_bootstrap_service_returns\":"<<runtime->nativeMonoArpBootstrapForeground.completed
+         <<",\"native_native_mono_arp_bootstrap_service_phases\":"<<runtime->nativeMonoArpBootstrapForeground.phases
+         <<",\"native_native_mono_arp_bootstrap_service_initial_active\":"<<runtime->nativeMonoArpBootstrapForeground.initial
+         <<",\"native_native_mono_arp_bootstrap_service_active\":"<<runtime->nativeMonoArpBootstrapForeground.active()
+         <<",\"native_native_arp_primitive_service_calls\":"<<runtime->nativeArpPrimitiveForeground.started
+         <<",\"native_native_arp_primitive_service_returns\":"<<runtime->nativeArpPrimitiveForeground.completed
+         <<",\"native_native_arp_primitive_service_phases\":"<<runtime->nativeArpPrimitiveForeground.phases
+         <<",\"native_native_arp_primitive_service_initial_active\":"<<runtime->nativeArpPrimitiveForeground.initial
+         <<",\"native_native_arp_primitive_service_active\":"<<runtime->nativeArpPrimitiveForeground.active()
+         <<",\"native_native_arp_gate_service_calls\":"<<runtime->nativeArpGateForeground.started
+         <<",\"native_native_arp_gate_service_returns\":"<<runtime->nativeArpGateForeground.completed
+         <<",\"native_native_arp_gate_service_phases\":"<<runtime->nativeArpGateForeground.phases
+         <<",\"native_native_arp_gate_service_initial_active\":"<<runtime->nativeArpGateForeground.initial
+         <<",\"native_native_arp_gate_service_active\":"<<runtime->nativeArpGateForeground.active()
+         <<",\"native_native_arp_emit_service_calls\":"<<runtime->nativeArpEmitForeground.started
+         <<",\"native_native_arp_emit_service_returns\":"<<runtime->nativeArpEmitForeground.completed
+         <<",\"native_native_arp_emit_service_phases\":"<<runtime->nativeArpEmitForeground.phases
+         <<",\"native_native_arp_emit_service_initial_active\":"<<runtime->nativeArpEmitForeground.initial
+         <<",\"native_native_arp_emit_service_active\":"<<runtime->nativeArpEmitForeground.active()
+         <<",\"native_native_arp_chord_service_calls\":"<<runtime->nativeArpChordForeground.started
+         <<",\"native_native_arp_chord_service_returns\":"<<runtime->nativeArpChordForeground.completed
+         <<",\"native_native_arp_chord_service_phases\":"<<runtime->nativeArpChordForeground.phases
+         <<",\"native_native_arp_chord_service_initial_active\":"<<runtime->nativeArpChordForeground.initial
+         <<",\"native_native_arp_chord_service_active\":"<<runtime->nativeArpChordForeground.active()
+         <<",\"native_native_arp_random_service_calls\":"<<runtime->nativeArpRandomForeground.started
+         <<",\"native_native_arp_random_service_returns\":"<<runtime->nativeArpRandomForeground.completed
+         <<",\"native_native_arp_random_service_phases\":"<<runtime->nativeArpRandomForeground.phases
+         <<",\"native_native_arp_random_service_initial_active\":"<<runtime->nativeArpRandomForeground.initial
+         <<",\"native_native_arp_random_service_active\":"<<runtime->nativeArpRandomForeground.active()
+         <<",\"native_native_arp_search_service_calls\":"<<runtime->nativeArpSearchForeground.started
+         <<",\"native_native_arp_search_service_returns\":"<<runtime->nativeArpSearchForeground.completed
+         <<",\"native_native_arp_search_service_phases\":"<<runtime->nativeArpSearchForeground.phases
+         <<",\"native_native_arp_search_service_initial_active\":"<<runtime->nativeArpSearchForeground.initial
+         <<",\"native_native_arp_search_service_active\":"<<runtime->nativeArpSearchForeground.active()
         <<",\"native_state_tick_service_calls\":"<<runtime->stateTickForeground.started
         <<",\"native_state_tick_service_returns\":"<<runtime->stateTickForeground.completed
         <<",\"native_state_tick_service_phases\":"<<runtime->stateTickForeground.phases

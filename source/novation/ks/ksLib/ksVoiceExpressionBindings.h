@@ -1,0 +1,10 @@
+#pragma once
+#include "ksNativeArpEmissionService.h"
+namespace ks {
+// Transfer only the explicit musical data-map handle across completed voice
+// jobs. These helpers do not project caller ABI or create a processor bank.
+inline uint32_t voiceStartExpressionSourceAfter(const NativeVoiceStartService&s,uint32_t prior){if(!s.complete()||!s.start())throw std::logic_error("Incomplete voice expression binding");if(s.allocation())prior=s.allocation()->populationPitch()->summary().port==DspPort::A?0x400000u:0x600000u;if(s.start()->suppressed())return prior;if(!s.gate())throw std::logic_error("Missing voice gate binding");return s.summary().port==DspPort::A?0x400000u:0x600000u;}
+inline uint32_t noteProgramExpressionSourceAfter(const NativeNoteProgramService&s,uint32_t prior){if(!s.complete())throw std::logic_error("Incomplete program expression binding");if(s.summary().played)return voiceStartExpressionSourceAfter(*s.summary().start,prior);return prior;}
+inline uint32_t arpEmissionExpressionSourceAfter(const NativeArpEmissionService&s,uint32_t prior,uint16_t retainedNoteVelocity=0){if(!s.complete())throw std::logic_error("Incomplete arp expression binding");const auto&v=s.summary();if(s.kind()==NativeArpEmissionService::Kind::Off){prior=(prior&0xffffff00u)|uint8_t(v.input.noteVelocity);if(s.midi())prior=(prior&0xffff0000u)|(uint16_t(64u<<8)|s.event().note());if(s.release()&&s.release()->releasedAny())prior=s.release()->dspPort();return prior;}prior=(prior&0xffff0000u)|v.input.noteVelocity;if(s.program())prior=noteProgramExpressionSourceAfter(*s.program(),prior);return(prior&0xffff0000u)|retainedNoteVelocity;}
+inline uint32_t arpEmissionNotificationAfter(const NativeArpEmissionService&s,uint32_t prior){if(!s.complete())throw std::logic_error("Incomplete arp notification binding");if(s.kind()==NativeArpEmissionService::Kind::Off){if(s.midi())prior=(prior&0xffff0000u)|s.midi()->summary().event;if(s.release()&&s.release()->patchObserved())prior=s.release()->lastPatch();return prior;}if(s.program()&&s.program()->summary().played)return s.program()->summary().start->summary().patch;return prior;}
+}

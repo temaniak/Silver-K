@@ -44,7 +44,7 @@ public:
   case Component::Periodic:periodic_->advanceBefore(cost,read,write,previous);effect_={periodic_->effect().read,periodic_->effect().write};if(periodic_->complete()){summary_.periodicTask=periodic_;periodic_.reset();parent_.resumeChild();select(Component::Reset);}break;
   }return cost;
  }
- static bool span(uint32_t raw,unsigned n,bool writing){const auto a=raw&0xffffff;if(!n||a>0xffffffu-(n-1))return false;if(a>=0x15000&&a+n<=0x30000)return true;if(a>=0xa15000&&a+n<=0xa30000)return true;return !writing&&a>=0xb8e8&&a+n<=0x15000;}
+ static bool span(uint32_t raw,unsigned n,bool writing){const auto a=raw&0xffffff;if(!n||a>0xffffffu-(n-1))return false;if(a>=0x15000&&a+n<=0x30000)return true;if(a>=0xa15000&&a+n<=0xa30000)return true;return !writing&&((a<4&&a+n<=4)||(a>=0x800000&&a+n<=0x880000)||(a>=0xb8e8&&a+n<=0x15000));}
 private:
  uint32_t base()const{return 0x160d2u+334*parent_.part();}
  static int history(uint32_t a){return a<0x400000?int(a):-1;}

@@ -17,6 +17,8 @@ namespace ks {
 // by the closed StateReloadService, never compatibility calls or code tokens.
 class StateReloadCoordinator final {
 public:
+ StateReloadCoordinator()=default;
+ explicit StateReloadCoordinator(uint32_t source):multi_(StateMultiLoadTask::Entry::Provided),source_(source){const auto a=source&0xffffff;if(!(a>=0x800000&&a<0x900000&&1024<=0x900000-a))checkedData(source,1024);}
  enum class Component { Multi,Storage,Mode,Patch,Invalidate,AdcReset,Expand,Semitone,Enable,Lookup,Keys,Effects };
  enum class Request { None,Voices,Signal,Panel };
  struct Effect { bool read=false,write=false; };

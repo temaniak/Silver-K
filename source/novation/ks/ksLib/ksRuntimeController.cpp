@@ -6,7 +6,9 @@
 #include <stdexcept>
 
 namespace ks {
-RuntimeController::RuntimeController(const ControllerCpu& h,LiveMidiController& state,Entry entry):shared(state){
+RuntimeController::RuntimeController(const ControllerCpu& h,LiveMidiController& state,Entry entry):nativeLargeJobStorage(std::make_unique<NativeLargeJobStorage>()),
+    nativePartNoteForeground(nativeLargeJobStorage->partNote),
+    nativeProgramEventForeground(nativeLargeJobStorage->programEvent),shared(state){
     uint64_t hash=14695981039346656037ull;
     for(unsigned n=0;n<87360;++n){hash^=h.memory[n];hash*=1099511628211ull;}
     if(hash!=0xbd1afefba93cb7b9ull)throw std::runtime_error("Native KS runtime requires verified OS 2.1.02");
@@ -95,6 +97,19 @@ void RuntimeController::stepStartup(ControllerCpu& h){
     if(panelPedalOutputForeground.step(h)){++steps;return;}
     if(stateEncoderForeground.step(h)){++steps;return;}
     if(stateTickForeground.step(h)){++steps;return;}
+    if(nativePedalControlForeground.step(h)){++steps;return;}
+    if(nativeMidiControlForeground.step(h)){++steps;return;}
+    if(nativePartNoteForeground.step(h)){++steps;return;}
+    if(nativeInternalNoteForeground.step(h)){++steps;return;}
+    if(nativeProgramEventForeground.step(h)){++steps;return;}
+    if(nativeArpEmissionForeground.step(h)){++steps;return;}
+    if(nativeMonoArpBootstrapForeground.step(h)){++steps;return;}
+    if(nativeArpPrimitiveForeground.step(h)){++steps;return;}
+    if(nativeArpGateForeground.step(h)){++steps;return;}
+    if(nativeArpEmitForeground.step(h)){++steps;return;}
+    if(nativeArpChordForeground.step(h)){++steps;return;}
+    if(nativeArpRandomForeground.step(h)){++steps;return;}
+    if(nativeArpSearchForeground.step(h)){++steps;return;}
     if(panelMonitorForeground.step(h)){++steps;return;}
     if(stateStatusForeground.step(h)){++steps;return;}
     if(diagnosticCodecForeground.step(h)){++steps;return;}
@@ -160,6 +175,19 @@ void RuntimeController::step(ControllerCpu& h){
     if(panelPedalOutputForeground.step(h)){++steps;return;}
     if(stateEncoderForeground.step(h)){++steps;return;}
     if(stateTickForeground.step(h)){++steps;return;}
+    if(nativePedalControlForeground.step(h)){++steps;return;}
+    if(nativeMidiControlForeground.step(h)){++steps;return;}
+    if(nativePartNoteForeground.step(h)){++steps;return;}
+    if(nativeInternalNoteForeground.step(h)){++steps;return;}
+    if(nativeProgramEventForeground.step(h)){++steps;return;}
+    if(nativeArpEmissionForeground.step(h)){++steps;return;}
+    if(nativeMonoArpBootstrapForeground.step(h)){++steps;return;}
+    if(nativeArpPrimitiveForeground.step(h)){++steps;return;}
+    if(nativeArpGateForeground.step(h)){++steps;return;}
+    if(nativeArpEmitForeground.step(h)){++steps;return;}
+    if(nativeArpChordForeground.step(h)){++steps;return;}
+    if(nativeArpRandomForeground.step(h)){++steps;return;}
+    if(nativeArpSearchForeground.step(h)){++steps;return;}
     if(panelMonitorForeground.step(h)){++steps;return;}
     if(stateStatusForeground.step(h)){++steps;return;}
     if(diagnosticCodecForeground.step(h)){++steps;return;}

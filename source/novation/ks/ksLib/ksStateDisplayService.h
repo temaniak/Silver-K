@@ -14,7 +14,7 @@ namespace ks {
 // text tails remain typed children, through busy polling to actual byte ports.
 class StateDisplayService final {
 public:
- enum class Kind {Format,Off,Text,Character,Command};
+ enum class Kind {Format,Off,Text,Character,Command,SignedNumber};
  enum class Component {Format,Number,Decimal,Text,Parse,Action,Poll,Byte};
  enum class Presentation {Unknown,Table,Number,Disabled,Text,Character,Command};
  struct Input {uint8_t type=0,value=0,bit=0;uint16_t character=0;uint32_t source=0;};
@@ -25,7 +25,8 @@ public:
   case Kind::Off:format_.emplace(StateMenuFormatTask::Kind::Off);select(Component::Format);break;
   case Kind::Text:presentation_=Presentation::Text;startText(TextOwner::Root,input.source,PanelTextTask::Kind::Parsed);break;
   case Kind::Character:presentation_=Presentation::Character;startParse(ParseOwner::Root);break;
-  case Kind::Command:presentation_=Presentation::Command;actionOwner_=ActionOwner::Root;startAction(PanelActionTask::Kind::Command);break;}
+  case Kind::Command:presentation_=Presentation::Command;actionOwner_=ActionOwner::Root;startAction(PanelActionTask::Kind::Command);break;
+  case Kind::SignedNumber:presentation_=Presentation::Number;numberOwner_=NumberOwner::Tail;numberValue_=input.value;number_.emplace(PanelFormatTask::Kind::SignedThree);select(Component::Number);break;}
  }
  Kind kind()const{return kind_;}Component component()const{return component_;}uint32_t components()const{return components_;}bool complete()const{return complete_;}
  Presentation presentation()const{return presentation_;}const Input&input()const{return input_;}const LcdResult&lcdResult()const{return lcdResult_;}
