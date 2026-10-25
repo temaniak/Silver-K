@@ -69,6 +69,22 @@ python tools/check_repository.py
 
 Standalone provides JUCE's Windows audio backends (WASAPI/DirectSound); an optional locally supplied ASIO SDK can be enabled with `-DSilverK_ASIO_SDK_PATH=C:/path/to/asiosdk`. The SDK is not redistributed. The core and firmware/patch logic are shared with macOS; AU and codesigning are conditional on macOS.
 
-For offline builds, pass `-DJUCE_SOURCE=/path/to/JUCE -DDSP_SOURCE=/path/to/dsp56300 -DASMJIT_SOURCE=/path/to/asmjit` using the exact revisions in [`cmake/Dependencies.cmake`](../cmake/Dependencies.cmake). Those must be **source checkouts**, not binary releases. The macOS JUCE compatibility patch applies to a build-local copy only.
+## Linux x64
+
+Install CMake 3.22+, Python 3, a C++ compiler (GCC or Clang), and the ALSA/JACK/X11/OpenGL development headers (e.g. `libasound2-dev`, `libjack-dev`, `libx11-dev`, `libgl-dev` on Debian/Ubuntu). Dependencies are fetched from pinned source revisions and compiled locally; prebuilt libraries are not required.
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target silverK_Standalone silverK_VST3 silverK_LV2 -j "$(nproc)"
+```
+
+Products are under `build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release/`:
+- `Standalone/Silver-K` — JUCE standalone host application (ALSA/JACK/PulseAudio/PipeWire audio backends)
+- `VST3/Silver-K.vst3/Contents/x86_64-linux/Silver-K.so` — VST3 plugin
+- `LV2/Silver-K.lv2/libSilver-K.so` — LV2 plugin (install to `~/.lv2/` or `/usr/lib/lv2/`)
+
+The standalone remembers its data root in Setup; ROMs, Patches and Skins folders work the same as on other platforms. Firmware and original sound data are not included.
+
+For offline builds, pass `-DJUCE_SOURCE=/path/to/JUCE -DDSP_SOURCE=/path/to/dsp56300 -DASMJIT_SOURCE=/path/to/asmjit` using the exact revisions in [`cmake/Dependencies.cmake`](../cmake/Dependencies.cmake). Those must be **source checkouts**, not binary releases.
 
 The ROM-free `silver_resampler_realtime` test streams five minutes of synthetic audio through the K-Station rate pairing and checks that the audio callback does not allocate.

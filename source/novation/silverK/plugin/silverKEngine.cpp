@@ -1,5 +1,7 @@
 #include "silverKEngine.h"
 #include <array>
+#include <cmath>
+#include <stdexcept>
 namespace silverK {
 namespace {synthLib::DeviceCreateParams params(const std::vector<uint8_t>& rom){synthLib::DeviceCreateParams p;p.romData=rom;return p;}}
 KEngine::KEngine(const std::vector<uint8_t>& rom,double hostRate,int block,const std::vector<uint8_t>& state,unsigned bufferFloor,baseLib::performance::Diagnostics* performance):device(params(rom),performance),rate(hostRate){
