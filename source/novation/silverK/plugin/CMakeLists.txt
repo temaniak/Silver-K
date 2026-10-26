@@ -3481,3 +3481,15 @@ target_include_directories(ksServiceCycleServiceTask_test PRIVATE "${ROOT}/sourc
 target_link_libraries(ksServiceCycleServiceTask_test PRIVATE ksLib)
 add_test(NAME ksServiceCycleServiceTask COMMAND ksServiceCycleServiceTask_test)
 set_tests_properties(ksServiceCycleServiceTask PROPERTIES TIMEOUT 900 SKIP_RETURN_CODE 77)
+
+# Standalone builds ksLib manually with BUILD_TESTING disabled. This test
+# deliberately links only baseLib; it must not join legacy backend target lists.
+if(NOT TARGET ksNativeControllerExecutor_test)
+ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksNativeControllerExecutor.h")
+ add_executable(ksNativeControllerExecutor_test "${ROOT}/source/novation/ks/ksLib/ksNativeControllerExecutor_test.cpp" "${ROOT}/source/novation/ks/ksLib/ksNativeOraclePartition_test.h" "${ROOT}/source/novation/ks/ksLib/ksRom.cpp")
+ target_compile_features(ksNativeControllerExecutor_test PRIVATE cxx_std_17)
+ target_include_directories(ksNativeControllerExecutor_test PRIVATE "${ROOT}/source/cpu")
+ target_link_libraries(ksNativeControllerExecutor_test PRIVATE baseLib)
+ add_test(NAME ksNativeControllerExecutor COMMAND ksNativeControllerExecutor_test)
+ set_tests_properties(ksNativeControllerExecutor PROPERTIES TIMEOUT 300 SKIP_RETURN_CODE 77)
+endif()

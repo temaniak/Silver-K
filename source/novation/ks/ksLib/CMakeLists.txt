@@ -636,3 +636,14 @@ target_sources(ksLib PRIVATE ksControllerDeviceState.h)
 
 # Shared authenticated-image policy has no compatibility CPU dependency.
 target_sources(ksLib PRIVATE ksControllerImageValidation.h)
+
+# CPU-free owner header; no compatibility execution adapter is included.
+target_sources(ksLib PRIVATE ksNativeControllerExecutor.h)
+if(BUILD_TESTING AND NOT TARGET ksNativeControllerExecutor_test)
+ add_executable(ksNativeControllerExecutor_test ksNativeControllerExecutor_test.cpp ksNativeOraclePartition_test.h ksRom.cpp)
+ target_compile_features(ksNativeControllerExecutor_test PRIVATE cxx_std_17)
+ target_include_directories(ksNativeControllerExecutor_test PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../../../cpu)
+ target_link_libraries(ksNativeControllerExecutor_test PRIVATE baseLib)
+ add_test(NAME ksNativeControllerExecutor COMMAND ksNativeControllerExecutor_test)
+ set_tests_properties(ksNativeControllerExecutor PROPERTIES TIMEOUT 300 SKIP_RETURN_CODE 77)
+endif()
