@@ -134,6 +134,9 @@ private:
     friend class StateTickForeground;
     friend class NativeMidiPipelineForeground;
     friend class MidiFileEventForeground;
+    friend class ServiceCycleForeground;
+    friend class NativeArpOwnedForeground;
+    friend class MidiFileTransportForeground;
     friend class ScheduledTimerForeground;
     friend class NativeMidiAuxForeground;
     friend class NativeArpOrderedForeground;

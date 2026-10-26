@@ -13,11 +13,13 @@ RuntimeController::RuntimeController(const ControllerCpu& h,LiveMidiController& 
     nativeMidiAuxForeground(nativeLargeJobStorage->midiAux),
     nativeMidiPipelineForeground(nativeLargeJobStorage->pipeline),
     midiFileEventForeground(nativeLargeJobStorage->fileEvent),
+    serviceCycleForeground(nativeLargeJobStorage->mainCycle),
     shared(state){
     uint64_t hash=14695981039346656037ull;
     for(unsigned n=0;n<87360;++n){hash^=h.memory[n];hash*=1099511628211ull;}
     if(hash!=0xbd1afefba93cb7b9ull)throw std::runtime_error("Native KS runtime requires verified OS 2.1.02");
     if(entry==Entry::PostBoot)verifyImage(h);
+    serviceCycleForeground.bindMetadata(h.memory);
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
     const auto* profile=std::getenv("SILVER_KS_CONTROLLER_PROFILE");
     if(profile && std::strcmp(profile,"1")==0)boundaryProfile.assign(0x10000,0);
@@ -76,6 +78,7 @@ bool RuntimeController::stepCode(ControllerCpu& h){
     else if(pc<0xb8e8)handled=extended(h);
     if(!handled)return false;
     ++steps;
+    if(serviceCycleForeground.started||serviceCycleForeground.initial)++legacyBodiesAfterMain;
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
     if(!boundaryProfile.empty())++boundaryProfile[pc];
 #endif
@@ -92,6 +95,7 @@ bool RuntimeController::stepCode(ControllerCpu& h){
 void RuntimeController::stepStartup(ControllerCpu& h){
     if(serviceInterrupt(h)){++steps;return;}
     const int depth=h.indent;arbitrate(h);if(h.indent!=depth)++interruptEntries;
+    if(serviceCycleForeground.step(h)){++steps;return;}
     if(serialForeground.step(h)){++steps;return;}
     if(stateResetForeground.step(h)){++steps;return;}
     if(stateStoreMenuForeground.step(h)){++steps;return;}
@@ -176,6 +180,7 @@ void RuntimeController::stepStartup(ControllerCpu& h){
 void RuntimeController::step(ControllerCpu& h){
     if(serviceInterrupt(h)){++steps;return;}
     const int depth=h.indent;arbitrate(h);if(h.indent!=depth)++interruptEntries;
+    if(serviceCycleForeground.step(h)){++steps;return;}
     if(serialForeground.step(h)){++steps;return;}
     if(stateResetForeground.step(h)){++steps;return;}
     if(stateStoreMenuForeground.step(h)){++steps;return;}

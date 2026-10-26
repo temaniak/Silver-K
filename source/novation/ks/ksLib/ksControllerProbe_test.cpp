@@ -1,4 +1,5 @@
 #include "ksBoard.h"
+#include "ksMainProbeWitness_test.h"
 #include "ksPanelIoFixture_test.h"
 #include "ksRom.h"
 #include "dsp56kBase/threadtools.h"
@@ -171,26 +172,30 @@ int main(int argc,char** argv){try{
     struct SaveWitness {uint32_t kinds=0,observedComplete=0;std::array<uint32_t,15> components{},facts{};};
     struct StoreMenuWitness {
         uint64_t samples=0,sampledJobs=0,returnedJobs=0,started=0,returnsBefore=0;
-        bool observing=false;
+        bool observing=false;ks::CurrentNativeParentForTests parent{};uint32_t pendingMenu=0,returnedMenu=0,pendingMenuKinds=0,returnedMenuKinds=0;
         SaveWitness sampled{},returned{},pending{};
         uint32_t factory=0,returnedFactory=0,pendingFactory=0,dump=0,returnedDump=0,pendingDump=0;
         uint32_t output=0,returnedOutput=0,pendingOutput=0,playback=0,returnedPlayback=0,pendingPlayback=0;
         uint64_t payloads=0,returnedPayloads=0,pendingPayloads=0,sendBytes=0,returnedSendBytes=0,pendingSendBytes=0;
         bool multi=false,returnedMulti=false,pendingMulti=false;
-    } storeMenuWitness;
+    } storeMenuWitness,mainStoreMenuWitness;
+    ks::MainProbeUiWitness mainUiWitness;ks::MainProbeRoles mainRoleWitness;uint32_t mainRolesBeforeSwitch=0;
     const auto mergeSaveWitness=[](SaveWitness&dst,const SaveWitness&source){dst.kinds|=source.kinds;dst.observedComplete|=source.observedComplete;for(unsigned i=0;i<dst.components.size();++i){dst.components[i]|=source.components[i];dst.facts[i]|=source.facts[i];}};
     const auto observeStoreMenu=[&]{
         const auto*runtime=board->nativeController();if(!nativeMode||toggling||!runtime)return;
-        const auto&fore=runtime->stateStoreMenuForeground;auto&w=storeMenuWitness;
-        if(w.observing&&fore.completed>w.returnsBefore){
-            mergeSaveWitness(w.returned,w.pending);w.returnedFactory|=w.pendingFactory;w.returnedDump|=w.pendingDump;w.returnedOutput|=w.pendingOutput;w.returnedPlayback|=w.pendingPlayback;
-            w.returnedPayloads+=w.pendingPayloads;w.returnedSendBytes=std::max(w.returnedSendBytes,w.pendingSendBytes);w.returnedMulti|=w.pendingMulti;++w.returnedJobs;w.observing=false;
-        }
-        const auto*menu=fore.service();if(!menu)return;++w.samples;
-        if(!w.observing||w.started!=fore.started){
-            w.pending={};w.pendingFactory=w.pendingDump=w.pendingOutput=w.pendingPlayback=0;w.pendingPayloads=w.pendingSendBytes=0;w.pendingMulti=false;
-            w.started=fore.started;w.returnsBefore=fore.completed;w.observing=true;++w.sampledJobs;
-        }
+        const auto sampleMenu=[&](StoreMenuWitness&w,const ks::StateStoreMenuService*menu,ks::CurrentNativeParentForTests parent){
+            if(w.observing&&w.parent.returns()>w.returnsBefore){
+                mergeSaveWitness(w.returned,w.pending);w.returnedFactory|=w.pendingFactory;w.returnedDump|=w.pendingDump;w.returnedOutput|=w.pendingOutput;w.returnedPlayback|=w.pendingPlayback;
+                w.returnedMenu|=w.pendingMenu;w.returnedMenuKinds|=w.pendingMenuKinds;
+                w.returnedPayloads+=w.pendingPayloads;w.returnedSendBytes=std::max(w.returnedSendBytes,w.pendingSendBytes);w.returnedMulti|=w.pendingMulti;++w.returnedJobs;w.observing=false;
+            }
+            if(!menu)return;++w.samples;
+            if(w.observing)check(w.parent.completed==parent.completed&&w.started==parent.job(),"Sampled Menu changed its containing parent before return");
+            else{
+                w.pending={};w.pendingFactory=w.pendingDump=w.pendingOutput=w.pendingPlayback=w.pendingMenu=w.pendingMenuKinds=0;w.pendingPayloads=w.pendingSendBytes=0;w.pendingMulti=false;
+                w.parent=parent;w.started=parent.job();w.returnsBefore=parent.returns();w.observing=true;++w.sampledJobs;
+            }
+            w.pendingMenu|=menu->components();w.pendingMenuKinds|=1u<<unsigned(menu->kind());
         const auto save=[&](const ks::StateSaveService*job){if(!job)return;const auto k=unsigned(job->kind());check(k<w.pending.components.size(),"Unknown sampled Menu Save kind");
             w.pending.kinds|=1u<<k;w.pending.components[k]|=job->components();if(job->complete())w.pending.observedComplete|=1u<<k;
             const auto&f=job->summary();w.pending.facts[k]|=unsigned(f.global)|(unsigned(f.page)<<1)|(unsigned(f.reloaded)<<2)|(unsigned(f.packed)<<3)|(unsigned(f.named)<<4)|(unsigned(f.notice)<<5);
@@ -205,8 +210,16 @@ int main(int argc,char** argv){try{
         if(const auto*p=menu->playback())w.pendingPlayback|=p->components();
         mergeSaveWitness(w.sampled,w.pending);w.factory|=w.pendingFactory;w.dump|=w.pendingDump;w.output|=w.pendingOutput;w.playback|=w.pendingPlayback;
         w.payloads=std::max(w.payloads,w.pendingPayloads);w.sendBytes=std::max(w.sendBytes,w.pendingSendBytes);w.multi|=w.pendingMulti;
+        };
+        const auto&fore=runtime->stateStoreMenuForeground;
+        sampleMenu(storeMenuWitness,fore.service(),{&fore.started,&fore.completed});
+        const auto*ui=ks::currentNativeCentralForTests(*runtime);
+        const auto*menu=ui?std::get_if<ks::StateStoreMenuService>(&ui->heavy()):nullptr;
+        sampleMenu(mainStoreMenuWitness,menu,ks::currentNativeMainParentForTests(*runtime));
+        mainUiWitness.observe(*runtime);
     };
-    const auto returnedMenuSave=[&](ks::StateSaveService::Kind kind,uint32_t requiredComponents){const auto k=unsigned(kind);return (storeMenuWitness.returned.kinds&(1u<<k))&&(storeMenuWitness.returned.components[k]&requiredComponents)==requiredComponents;};
+    const auto observeMainRoles=[&]{if(nativeMode)if(const auto*r=board->nativeController())mainRoleWitness.observe(*r);};
+    const auto returnedMenuSave=[&](ks::StateSaveService::Kind kind,uint32_t requiredComponents){const auto k=unsigned(kind);return ((storeMenuWitness.returned.kinds&(1u<<k))&&(storeMenuWitness.returned.components[k]&requiredComponents)==requiredComponents)||((mainStoreMenuWitness.returned.kinds&(1u<<k))&&(mainStoreMenuWitness.returned.components[k]&requiredComponents)==requiredComponents);};
     // PROGRAM_MENU_DECLARATIONS_END
     uint64_t frames=0,hash=14695981039346656037ull;int64_t peak=0;double cost=bootCost,wall=bootWall;
     uint64_t h8Start=board->cpu().cycles;
@@ -473,9 +486,10 @@ int main(int argc,char** argv){try{
                 // Handoff destroys this native instance. Retain coverage from
                 // its actual live interval, not just the new instance at .95 s.
                 beforeSwitch=coverage(*board->liveMidiController());
+                mainRolesBeforeSwitch|=mainRoleWitness.returnedMask();mainRoleWitness={};
                 board->enableLiveMidiController(false);
             }
-            if(toggling && n==native(.95)){if(nativeMode)board->enableNativeController();else board->enableLiveMidiController();if(recording)board->enableControllerDelegationProfile();}
+            if(toggling && n==native(.95)){mainRolesBeforeSwitch|=mainRoleWitness.returnedMask();mainRoleWitness={};if(nativeMode)board->enableNativeController();else board->enableLiveMidiController();if(recording)board->enableControllerDelegationProfile();}
     // PROGRAM_MENU_APPLY_BEGIN
             while(programMenuWriteCount<programMenuWrites.size()&&programMenuWrites[programMenuWriteCount].frame==n){const auto&w=programMenuWrites[programMenuWriteCount++];board->write(w.address,w.value);}
             while(programMenuInputCount<programMenuInputs.size()&&programMenuInputs[programMenuInputCount].frame==n){const auto&e=programMenuInputs[programMenuInputCount++];queueProgramMenu(e.logical,e.pressed);}
@@ -487,9 +501,9 @@ int main(int argc,char** argv){try{
                 if(n==native(.24+press*.35))queueStore(false);
             }
             if(mode!="replay")while(next<events.size() && events[next].frame==n)send(events[next++].bytes);
-            observeStoreMenu();
+            observeStoreMenu();observeMainRoles();
             const auto a=board->renderSample();
-            observeStoreMenu();
+            observeStoreMenu();observeMainRoles();
             if(panelIo){const auto page=board->read(panelParts?0x167b8:panelScreen?0x16787:0x16790);if(page!=ioPages[ioPageCount-1]){check(ioPageCount<ioPages.size(),"Too many physical panel page transitions");ioPages[ioPageCount++]=page;}}
             if(!captured.empty())captured[n]=a;for(auto v:a){hash^=uint32_t(v);hash*=1099511628211ull;peak=std::max(peak,std::abs(int64_t(v)));}
         }
@@ -509,11 +523,12 @@ int main(int argc,char** argv){try{
             const bool playbackReleaseCovered=nativeMode&&!toggling&&runtime
                 &&runtime->statePlaybackModeForeground.completed>0&&!runtime->statePlaybackModeForeground.active()
                 && (runtime->statePlaybackModeForeground.components&(1u<<unsigned(ks::StatePlaybackModeService::Component::Voices)));
+            const bool mainPlaybackReleaseCovered=nativeMode&&!toggling&&runtime&&mainUiWitness.playback.returnedJobs&&(mainUiWitness.playback.returnedComponents&(1u<<unsigned(ks::StatePlaybackModeService::Component::Voices)));
             const bool menuPlaybackReleaseCovered=nativeMode&&!toggling&&runtime
-                &&storeMenuWitness.returnedJobs>0
-                &&(storeMenuWitness.returnedPlayback&(1u<<unsigned(ks::StatePlaybackModeService::Component::Voices)));
-            for(unsigned i=0;i<last.size();++i)if(!last[i]&&!beforeSwitch[i]&&!(i==6&&(playbackReleaseCovered||menuPlaybackReleaseCovered)))
-                throw std::runtime_error("Live handler coverage absent at index "+std::to_string(i));
+                &&(storeMenuWitness.returnedJobs>0||mainStoreMenuWitness.returnedJobs>0)
+                &&((storeMenuWitness.returnedPlayback|mainStoreMenuWitness.returnedPlayback)&(1u<<unsigned(ks::StatePlaybackModeService::Component::Voices)));
+            for(unsigned i=0;i<last.size();++i)if(!last[i]&&!beforeSwitch[i]&&!(i==6&&(playbackReleaseCovered||menuPlaybackReleaseCovered||mainPlaybackReleaseCovered))&&!(nativeMode&&((mainRoleWitness.returnedMask()|mainRolesBeforeSwitch)&(1u<<i))))
+                throw std::runtime_error("Live handler coverage absent at index "+std::to_string(i)+"; actual Main returned-role mask="+std::to_string(mainRoleWitness.returnedMask())+"; returned before switch mask="+std::to_string(mainRolesBeforeSwitch));
             uint64_t delegated=0;for(const auto count:live.originalPages)delegated+=count;
             if(recording)check(delegated==live.originalStepCalls && (nativeMode?delegated==0:delegated>0),"Original H8 delegation accounting differs");}
         if(nativeMode){
@@ -573,12 +588,12 @@ int main(int argc,char** argv){try{
         if(scenario=="panel-menu-global-save"||scenario=="panel-menu-factory")check(!storeMenuFinalUi[0]&&!storeMenuFinalUi[4],"Queued Store menu did not clear edit/latch");
         else check(storeMenuFinalUi[0]==1&&storeMenuFinalUi[1]==9&&storeMenuFinalUi[2]==0,"Queued dump menu context differs");
         if(nativeMode){const auto&menu=board->nativeController()->stateStoreMenuForeground;
-            check(menu.kinds[0]>0&&menu.completed>0&&!menu.active()&&storeMenuWitness.returnedJobs>0,"Queued Store menu ownership/return absent");
-            if(scenario=="panel-menu-global-save")check(returnedMenuSave(ks::StateSaveService::Kind::GlobalSave,(1u<<9)|(1u<<5)|(1u<<7))&&(storeMenuWitness.returned.facts[9]&3u)==3u,"Global Save typed completed Page comparison absent");
-            if(scenario=="panel-menu-factory")check((storeMenuWitness.returnedFactory&15u)==15u&&returnedMenuSave(ks::StateSaveService::Kind::Offset,(1u<<4)|(1u<<5)|(1u<<7)),"Factory copy/save/globals/notice typed chain absent");
+            check((menu.kinds[0]>0&&menu.completed>0&&!menu.active()&&storeMenuWitness.returnedJobs>0)||(mainStoreMenuWitness.returnedJobs>0&&(mainStoreMenuWitness.returnedMenuKinds&1u)),"Queued Store menu ownership/return absent");
+            if(scenario=="panel-menu-global-save")check(returnedMenuSave(ks::StateSaveService::Kind::GlobalSave,(1u<<9)|(1u<<5)|(1u<<7))&&((storeMenuWitness.returned.facts[9]|mainStoreMenuWitness.returned.facts[9])&3u)==3u,"Global Save typed completed Page comparison absent");
+            if(scenario=="panel-menu-factory")check(((storeMenuWitness.returnedFactory|mainStoreMenuWitness.returnedFactory)&15u)==15u&&returnedMenuSave(ks::StateSaveService::Kind::Offset,(1u<<4)|(1u<<5)|(1u<<7)),"Factory copy/save/globals/notice typed chain absent");
             if(scenario=="panel-menu-dump-global"||scenario=="panel-menu-dump-multi"){
-                check(storeMenuWitness.returnedPayloads==1&&storeMenuWitness.returnedSendBytes==(scenario=="panel-menu-dump-global"?256u:1024u),"Bounded dump payload absent");
-                if(scenario=="panel-menu-dump-multi")check(storeMenuWitness.returnedMulti,"Multi serialization before dump absent");
+                check((storeMenuWitness.returnedPayloads==1&&storeMenuWitness.returnedSendBytes==(scenario=="panel-menu-dump-global"?256u:1024u))||(mainStoreMenuWitness.returnedPayloads==1&&mainStoreMenuWitness.returnedSendBytes==(scenario=="panel-menu-dump-global"?256u:1024u)),"Bounded dump payload absent");
+                if(scenario=="panel-menu-dump-multi")check(storeMenuWitness.returnedMulti||mainStoreMenuWitness.returnedMulti,"Multi serialization before dump absent");
             }
         }
     }
@@ -590,7 +605,7 @@ int main(int argc,char** argv){try{
     }
     if(scenario=="state")check(board->flashRevision>0,"State scenario did not complete a Flash page write");
     if(panelKeyboard)check(ioFixture->keyboardReads>0&&ioFixture->keyboardTransitions==12,"Keyboard contact source not observed");
-    if(panelParts&&nativeMode)check(board->liveMidiController()->statePartSelectionCalls.started>0,"Part handlers were not observed");
+    if(panelParts&&nativeMode)check(board->liveMidiController()->statePartSelectionCalls.started>0||mainUiWitness.part.returnedJobs>0||mainUiWitness.partSelectionTask.returnedPartButtonTask(),"Part handlers were not observed");
     if(panelEdit)check(ioFixture->encoderTransitions>0,"Active screen edit did not move encoder");
     if(panelIo){check(ioFixture->matrixReads&&ioFixture->pedalReads&&ioFixture->encoderReads&&ioFixture->adcReads,"Physical input source not observed");check(ioFixture->buttonTransitions==(panelScreen?18u:(multi?6u:8u)),"Missing physical button transitions");check(ioFixture->pedalTransitions==4&&(panelScreen||(ioFixture->encoderTransitions&&ioFixture->adcTransitions)),"Missing physical pedal/encoder/ADC transitions");}
     const auto memoryEnd=memoryDigests();
@@ -2171,6 +2186,40 @@ int main(int argc,char** argv){try{
          <<",\"native_native_arp_run_service_phases\":"<<runtime->nativeArpRunForeground.phases
          <<",\"native_native_arp_run_service_initial_active\":"<<runtime->nativeArpRunForeground.initial
          <<",\"native_native_arp_run_service_active\":"<<runtime->nativeArpRunForeground.active()
+         <<",\"native_main_service_calls\":"<<runtime->serviceCycleForeground.started
+         <<",\"native_main_service_returns\":"<<runtime->serviceCycleForeground.completed
+         <<",\"native_main_service_phases\":"<<runtime->serviceCycleForeground.phases
+         <<",\"native_main_service_initial_active\":"<<runtime->serviceCycleForeground.initial
+         <<",\"native_main_service_active\":"<<runtime->serviceCycleForeground.active()
+         <<",\"native_main_legacy_bodies_after_admission\":"<<runtime->legacyBodiesAfterMain
+         <<",\"native_main_service_child0_returns\":"<<runtime->serviceCycleForeground.children[0]
+         <<",\"native_main_service_child1_returns\":"<<runtime->serviceCycleForeground.children[1]
+         <<",\"native_main_service_child2_returns\":"<<runtime->serviceCycleForeground.children[2]
+         <<",\"native_main_service_child3_returns\":"<<runtime->serviceCycleForeground.children[3]
+         <<",\"native_main_service_child4_returns\":"<<runtime->serviceCycleForeground.children[4]
+         <<",\"native_main_service_child5_returns\":"<<runtime->serviceCycleForeground.children[5]
+         <<",\"native_main_service_child6_returns\":"<<runtime->serviceCycleForeground.children[6]
+         <<",\"native_main_service_child7_returns\":"<<runtime->serviceCycleForeground.children[7]
+         <<",\"native_main_service_child8_returns\":"<<runtime->serviceCycleForeground.children[8]
+         <<",\"native_main_service_child9_returns\":"<<runtime->serviceCycleForeground.children[9]
+         <<",\"native_main_service_child10_returns\":"<<runtime->serviceCycleForeground.children[10]
+         <<",\"native_main_service_child11_returns\":"<<runtime->serviceCycleForeground.children[11]
+         <<",\"native_main_service_child12_returns\":"<<runtime->serviceCycleForeground.children[12]
+         <<",\"native_main_service_child13_returns\":"<<runtime->serviceCycleForeground.children[13]
+         <<",\"native_main_service_child14_returns\":"<<runtime->serviceCycleForeground.children[14]
+         <<",\"native_main_service_child15_returns\":"<<runtime->serviceCycleForeground.children[15]
+         <<",\"native_main_service_child16_returns\":"<<runtime->serviceCycleForeground.children[16]
+         <<",\"native_main_tick_initial\":"<<runtime->serviceCycleForeground.tickReturns.initial
+         <<",\"native_main_tick_started\":"<<runtime->serviceCycleForeground.tickReturns.started
+         <<",\"native_main_tick_completed\":"<<runtime->serviceCycleForeground.tickReturns.completed
+         <<",\"native_main_tick_clock\":"<<runtime->serviceCycleForeground.tickReturns.clock
+         <<",\"native_main_tick_buttons\":"<<runtime->serviceCycleForeground.tickReturns.buttons
+         <<",\"native_main_tick_adc\":"<<runtime->serviceCycleForeground.tickReturns.adc
+         <<",\"native_main_tick_encoder\":"<<runtime->serviceCycleForeground.tickReturns.encoder
+         <<",\"native_main_tick_pedal\":"<<runtime->serviceCycleForeground.tickReturns.pedal
+         <<",\"native_main_tick_output\":"<<runtime->serviceCycleForeground.tickReturns.output
+         <<",\"native_main_tick_refresh\":"<<runtime->serviceCycleForeground.tickReturns.refresh
+         <<",\"native_main_tick_components\":"<<runtime->serviceCycleForeground.tickReturns.components
          <<",\"native_midi_pipeline_service_calls\":"<<runtime->nativeMidiPipelineForeground.started
          <<",\"native_midi_pipeline_service_returns\":"<<runtime->nativeMidiPipelineForeground.completed
          <<",\"native_midi_pipeline_service_phases\":"<<runtime->nativeMidiPipelineForeground.phases
@@ -2378,6 +2427,21 @@ int main(int argc,char** argv){try{
             <<",\"native_store_menu_dump_returned_parent_payloads\":"<<w.returnedPayloads<<",\"native_store_menu_dump_returned_parent_send_bytes\":"<<w.returnedSendBytes
             <<",\"native_store_menu_dump_returned_parent_multi\":"<<unsigned(w.returnedMulti);
     }
+    if(nativeMode){const auto&w=mainStoreMenuWitness;
+        report<<",\"native_main_store_menu_witness_samples\":"<<w.samples<<",\"native_main_store_menu_witness_sampled_jobs\":"<<w.sampledJobs<<",\"native_main_store_menu_witness_returned_jobs\":"<<w.returnedJobs
+            <<",\"native_main_store_menu_save_kind_mask\":"<<w.sampled.kinds<<",\"native_main_store_menu_save_observed_complete_kind_mask\":"<<w.sampled.observedComplete<<",\"native_main_store_menu_save_returned_parent_kind_mask\":"<<w.returned.kinds;
+        report<<",\"native_main_store_menu_save_sampled_components_by_kind\":[";for(unsigned i=0;i<w.sampled.components.size();++i){if(i)report<<',';report<<w.sampled.components[i];}report<<']';
+        report<<",\"native_main_store_menu_save_returned_parent_components_by_kind\":[";for(unsigned i=0;i<w.returned.components.size();++i){if(i)report<<',';report<<w.returned.components[i];}report<<']';
+        report<<",\"native_main_store_menu_save_returned_parent_facts_by_kind\":[";for(unsigned i=0;i<w.returned.facts.size();++i){if(i)report<<',';report<<w.returned.facts[i];}report<<']';
+        report<<",\"native_main_store_menu_factory_components\":"<<w.factory<<",\"native_main_store_menu_factory_returned_parent_components\":"<<w.returnedFactory
+            <<",\"native_main_store_menu_dump_components\":"<<w.dump<<",\"native_main_store_menu_dump_returned_parent_components\":"<<w.returnedDump
+            <<",\"native_main_store_menu_output_components\":"<<w.output<<",\"native_main_store_menu_output_returned_parent_components\":"<<w.returnedOutput
+            <<",\"native_main_store_menu_playback_returned_parent_components\":"<<w.returnedPlayback
+            <<",\"native_main_store_menu_dump_returned_parent_payloads\":"<<w.returnedPayloads<<",\"native_main_store_menu_dump_returned_parent_send_bytes\":"<<w.returnedSendBytes
+            <<",\"native_main_store_menu_dump_returned_parent_multi\":"<<unsigned(w.returnedMulti);
+        report<<",\"native_main_store_menu_returned_parent_components\":"<<w.returnedMenu<<",\"native_main_store_menu_returned_parent_kind_mask\":"<<w.returnedMenuKinds;
+    }
+    if(nativeMode){mainUiWitness.write(report);mainRoleWitness.write(report);report<<",\"native_main_role_returned_before_switch_mask\":"<<mainRolesBeforeSwitch;}
     // PROGRAM_MENU_REPORT_END
     if(panelStore){report<<",\"panel_button_pages\":[";for(unsigned i=0;i<panelEvents;++i){if(i)report<<',';report<<unsigned(panelPages[i]);}report<<']';}
     if(panelIo){

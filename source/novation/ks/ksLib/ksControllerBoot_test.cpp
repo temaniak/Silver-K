@@ -422,6 +422,40 @@ int main(int argc,char** argv){try{
          <<",\"native_native_arp_run_service_phases\":"<<b->nativeController()->nativeArpRunForeground.phases
          <<",\"native_native_arp_run_service_initial_active\":"<<b->nativeController()->nativeArpRunForeground.initial
          <<",\"native_native_arp_run_service_active\":"<<b->nativeController()->nativeArpRunForeground.active()
+         <<",\"native_main_service_calls\":"<<b->nativeController()->serviceCycleForeground.started
+         <<",\"native_main_service_returns\":"<<b->nativeController()->serviceCycleForeground.completed
+         <<",\"native_main_service_phases\":"<<b->nativeController()->serviceCycleForeground.phases
+         <<",\"native_main_service_initial_active\":"<<b->nativeController()->serviceCycleForeground.initial
+         <<",\"native_main_service_active\":"<<b->nativeController()->serviceCycleForeground.active()
+         <<",\"native_main_legacy_bodies_after_admission\":"<<b->nativeController()->legacyBodiesAfterMain
+         <<",\"native_main_service_child0_returns\":"<<b->nativeController()->serviceCycleForeground.children[0]
+         <<",\"native_main_service_child1_returns\":"<<b->nativeController()->serviceCycleForeground.children[1]
+         <<",\"native_main_service_child2_returns\":"<<b->nativeController()->serviceCycleForeground.children[2]
+         <<",\"native_main_service_child3_returns\":"<<b->nativeController()->serviceCycleForeground.children[3]
+         <<",\"native_main_service_child4_returns\":"<<b->nativeController()->serviceCycleForeground.children[4]
+         <<",\"native_main_service_child5_returns\":"<<b->nativeController()->serviceCycleForeground.children[5]
+         <<",\"native_main_service_child6_returns\":"<<b->nativeController()->serviceCycleForeground.children[6]
+         <<",\"native_main_service_child7_returns\":"<<b->nativeController()->serviceCycleForeground.children[7]
+         <<",\"native_main_service_child8_returns\":"<<b->nativeController()->serviceCycleForeground.children[8]
+         <<",\"native_main_service_child9_returns\":"<<b->nativeController()->serviceCycleForeground.children[9]
+         <<",\"native_main_service_child10_returns\":"<<b->nativeController()->serviceCycleForeground.children[10]
+         <<",\"native_main_service_child11_returns\":"<<b->nativeController()->serviceCycleForeground.children[11]
+         <<",\"native_main_service_child12_returns\":"<<b->nativeController()->serviceCycleForeground.children[12]
+         <<",\"native_main_service_child13_returns\":"<<b->nativeController()->serviceCycleForeground.children[13]
+         <<",\"native_main_service_child14_returns\":"<<b->nativeController()->serviceCycleForeground.children[14]
+         <<",\"native_main_service_child15_returns\":"<<b->nativeController()->serviceCycleForeground.children[15]
+         <<",\"native_main_service_child16_returns\":"<<b->nativeController()->serviceCycleForeground.children[16]
+         <<",\"native_main_tick_initial\":"<<b->nativeController()->serviceCycleForeground.tickReturns.initial
+         <<",\"native_main_tick_started\":"<<b->nativeController()->serviceCycleForeground.tickReturns.started
+         <<",\"native_main_tick_completed\":"<<b->nativeController()->serviceCycleForeground.tickReturns.completed
+         <<",\"native_main_tick_clock\":"<<b->nativeController()->serviceCycleForeground.tickReturns.clock
+         <<",\"native_main_tick_buttons\":"<<b->nativeController()->serviceCycleForeground.tickReturns.buttons
+         <<",\"native_main_tick_adc\":"<<b->nativeController()->serviceCycleForeground.tickReturns.adc
+         <<",\"native_main_tick_encoder\":"<<b->nativeController()->serviceCycleForeground.tickReturns.encoder
+         <<",\"native_main_tick_pedal\":"<<b->nativeController()->serviceCycleForeground.tickReturns.pedal
+         <<",\"native_main_tick_output\":"<<b->nativeController()->serviceCycleForeground.tickReturns.output
+         <<",\"native_main_tick_refresh\":"<<b->nativeController()->serviceCycleForeground.tickReturns.refresh
+         <<",\"native_main_tick_components\":"<<b->nativeController()->serviceCycleForeground.tickReturns.components
          <<",\"native_midi_pipeline_service_calls\":"<<b->nativeController()->nativeMidiPipelineForeground.started
          <<",\"native_midi_pipeline_service_returns\":"<<b->nativeController()->nativeMidiPipelineForeground.completed
          <<",\"native_midi_pipeline_service_phases\":"<<b->nativeController()->nativeMidiPipelineForeground.phases

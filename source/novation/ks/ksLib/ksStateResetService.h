@@ -16,6 +16,9 @@ public:
         else if(kind==Kind::Keyboard)startKeyboard();
         else select(Component::State);
     }
+    const StateForegroundTask*stateTask()const{return !complete_&&active_==Component::State?&state_:nullptr;}
+    const PanelInputTask*panelTask()const{return !complete_&&(active_==Component::Buttons||active_==Component::Controls)?&*ring_:nullptr;}
+    const KeyboardEventsTask*keyboardTask()const{return !complete_&&active_==Component::Keyboard?&*keyboard_:nullptr;}
     Kind kind()const{return kind_;}
     Component component()const{return active_;}
     uint32_t components()const{return components_;}
