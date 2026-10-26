@@ -3386,3 +3386,27 @@ target_include_directories(ksNativeArpRunServiceTask_test PRIVATE "${ROOT}/sourc
 target_link_libraries(ksNativeArpRunServiceTask_test PRIVATE ksLib)
 add_test(NAME native_arp_run_service_task COMMAND ksNativeArpRunServiceTask_test)
 set_tests_properties(native_arp_run_service_task PROPERTIES TIMEOUT 900)
+
+add_executable(ksNativeMidiPipelineService_test "${ROOT}/source/novation/ks/ksLib/ksNativeMidiPipelineService_test.cpp")
+target_include_directories(ksNativeMidiPipelineService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksNativeMidiPipelineService_test PRIVATE ksLib)
+add_test(NAME native_midi_pipeline_service_Service_test COMMAND ksNativeMidiPipelineService_test)
+set_tests_properties(native_midi_pipeline_service_Service_test PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 900)
+
+add_executable(ksNativeMidiPipelineServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksNativeMidiPipelineServiceTask_test.cpp")
+target_include_directories(ksNativeMidiPipelineServiceTask_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksNativeMidiPipelineServiceTask_test PRIVATE ksLib)
+add_test(NAME native_midi_pipeline_service_ServiceTask_test COMMAND ksNativeMidiPipelineServiceTask_test)
+set_tests_properties(native_midi_pipeline_service_ServiceTask_test PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 900)
+
+add_executable(ksMidiFileEventService_test "${ROOT}/source/novation/ks/ksLib/ksMidiFileEventService_test.cpp")
+target_include_directories(ksMidiFileEventService_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksMidiFileEventService_test PRIVATE ksLib)
+add_test(NAME midi_file_event_service_Service_test COMMAND ksMidiFileEventService_test)
+set_tests_properties(midi_file_event_service_Service_test PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 900)
+
+add_executable(ksMidiFileEventServiceTask_test "${ROOT}/source/novation/ks/ksLib/ksMidiFileEventServiceTask_test.cpp")
+target_include_directories(ksMidiFileEventServiceTask_test PRIVATE "${ROOT}/source/cpu")
+target_link_libraries(ksMidiFileEventServiceTask_test PRIVATE ksLib)
+add_test(NAME midi_file_event_service_ServiceTask_test COMMAND ksMidiFileEventServiceTask_test)
+set_tests_properties(midi_file_event_service_ServiceTask_test PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 900)

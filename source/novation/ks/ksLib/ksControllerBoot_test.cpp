@@ -422,6 +422,16 @@ int main(int argc,char** argv){try{
          <<",\"native_native_arp_run_service_phases\":"<<b->nativeController()->nativeArpRunForeground.phases
          <<",\"native_native_arp_run_service_initial_active\":"<<b->nativeController()->nativeArpRunForeground.initial
          <<",\"native_native_arp_run_service_active\":"<<b->nativeController()->nativeArpRunForeground.active()
+         <<",\"native_midi_pipeline_service_calls\":"<<b->nativeController()->nativeMidiPipelineForeground.started
+         <<",\"native_midi_pipeline_service_returns\":"<<b->nativeController()->nativeMidiPipelineForeground.completed
+         <<",\"native_midi_pipeline_service_phases\":"<<b->nativeController()->nativeMidiPipelineForeground.phases
+         <<",\"native_midi_pipeline_service_initial_active\":"<<b->nativeController()->nativeMidiPipelineForeground.initial
+         <<",\"native_midi_pipeline_service_active\":"<<b->nativeController()->nativeMidiPipelineForeground.active()
+         <<",\"midi_file_event_service_calls\":"<<b->nativeController()->midiFileEventForeground.started
+         <<",\"midi_file_event_service_returns\":"<<b->nativeController()->midiFileEventForeground.completed
+         <<",\"midi_file_event_service_phases\":"<<b->nativeController()->midiFileEventForeground.phases
+         <<",\"midi_file_event_service_initial_active\":"<<b->nativeController()->midiFileEventForeground.initial
+         <<",\"midi_file_event_service_active\":"<<b->nativeController()->midiFileEventForeground.active()
          <<",\"native_state_tick_service_calls\":"<<b->nativeController()->stateTickForeground.started
          <<",\"native_state_tick_service_returns\":"<<b->nativeController()->stateTickForeground.completed
          <<",\"native_state_tick_service_phases\":"<<b->nativeController()->stateTickForeground.phases

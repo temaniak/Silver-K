@@ -2171,6 +2171,16 @@ int main(int argc,char** argv){try{
          <<",\"native_native_arp_run_service_phases\":"<<runtime->nativeArpRunForeground.phases
          <<",\"native_native_arp_run_service_initial_active\":"<<runtime->nativeArpRunForeground.initial
          <<",\"native_native_arp_run_service_active\":"<<runtime->nativeArpRunForeground.active()
+         <<",\"native_midi_pipeline_service_calls\":"<<runtime->nativeMidiPipelineForeground.started
+         <<",\"native_midi_pipeline_service_returns\":"<<runtime->nativeMidiPipelineForeground.completed
+         <<",\"native_midi_pipeline_service_phases\":"<<runtime->nativeMidiPipelineForeground.phases
+         <<",\"native_midi_pipeline_service_initial_active\":"<<runtime->nativeMidiPipelineForeground.initial
+         <<",\"native_midi_pipeline_service_active\":"<<runtime->nativeMidiPipelineForeground.active()
+         <<",\"midi_file_event_service_calls\":"<<runtime->midiFileEventForeground.started
+         <<",\"midi_file_event_service_returns\":"<<runtime->midiFileEventForeground.completed
+         <<",\"midi_file_event_service_phases\":"<<runtime->midiFileEventForeground.phases
+         <<",\"midi_file_event_service_initial_active\":"<<runtime->midiFileEventForeground.initial
+         <<",\"midi_file_event_service_active\":"<<runtime->midiFileEventForeground.active()
         <<",\"native_state_tick_service_calls\":"<<runtime->stateTickForeground.started
         <<",\"native_state_tick_service_returns\":"<<runtime->stateTickForeground.completed
         <<",\"native_state_tick_service_phases\":"<<runtime->stateTickForeground.phases

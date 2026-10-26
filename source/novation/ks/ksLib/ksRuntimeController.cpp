@@ -10,7 +10,10 @@ RuntimeController::RuntimeController(const ControllerCpu& h,LiveMidiController& 
     nativePartNoteForeground(nativeLargeJobStorage->partNote),
     nativeProgramEventForeground(nativeLargeJobStorage->programEvent),
     scheduledTimerForeground(nativeLargeJobStorage->timers),
-    nativeMidiAuxForeground(nativeLargeJobStorage->midiAux),shared(state){
+    nativeMidiAuxForeground(nativeLargeJobStorage->midiAux),
+    nativeMidiPipelineForeground(nativeLargeJobStorage->pipeline),
+    midiFileEventForeground(nativeLargeJobStorage->fileEvent),
+    shared(state){
     uint64_t hash=14695981039346656037ull;
     for(unsigned n=0;n<87360;++n){hash^=h.memory[n];hash*=1099511628211ull;}
     if(hash!=0xbd1afefba93cb7b9ull)throw std::runtime_error("Native KS runtime requires verified OS 2.1.02");
@@ -99,6 +102,8 @@ void RuntimeController::stepStartup(ControllerCpu& h){
     if(panelPedalOutputForeground.step(h)){++steps;return;}
     if(stateEncoderForeground.step(h)){++steps;return;}
     if(stateTickForeground.step(h)){++steps;return;}
+    if(nativeMidiPipelineForeground.step(h)){++steps;return;}
+    if(midiFileEventForeground.step(h)){++steps;return;}
     if(scheduledTimerForeground.step(h)){++steps;return;}
     if(nativeMidiAuxForeground.step(h)){++steps;return;}
     if(nativeArpOrderedForeground.step(h)){++steps;return;}
@@ -181,6 +186,8 @@ void RuntimeController::step(ControllerCpu& h){
     if(panelPedalOutputForeground.step(h)){++steps;return;}
     if(stateEncoderForeground.step(h)){++steps;return;}
     if(stateTickForeground.step(h)){++steps;return;}
+    if(nativeMidiPipelineForeground.step(h)){++steps;return;}
+    if(midiFileEventForeground.step(h)){++steps;return;}
     if(scheduledTimerForeground.step(h)){++steps;return;}
     if(nativeMidiAuxForeground.step(h)){++steps;return;}
     if(nativeArpOrderedForeground.step(h)){++steps;return;}
