@@ -13,11 +13,14 @@ juce::Component* find(juce::Component& c,const juce::String& id){if(c.getCompone
 juce::var report(Processor& p){return juce::JSON::parse(p.performanceReport());}
 juce::String backendName(const char* name){
  juce::String expected=name;
+ // Live switching exercises the explicit legacy comparison backend.
+ // A fresh saved Native project restores the separate semantic owner.
  if(expected=="native-cpp-runtime"){
   const bool transport=juce::SystemStats::getEnvironmentVariable("SILVER_KS_DSP_TRANSPORT",{})=="events";
   const bool jobs=juce::SystemStats::getEnvironmentVariable("SILVER_KS_CONTROL_JOBS",{})=="1";
-  if(jobs)expected=transport?"native-cpp-events-control":"native-cpp-control-jobs";
-  else if(transport)expected="native-cpp-events-transport";
+  if(jobs)expected=transport?"legacy-native-events-control-comparison":"legacy-native-control-jobs-comparison";
+  else if(transport)expected="legacy-native-events-transport-comparison";
+  else expected="legacy-native-runtime-comparison";
  }
  return expected;
 }
@@ -76,7 +79,7 @@ int main(int argc,char** argv){try{
    check(!file.exists()&&file.replaceWithData(state.getData(),state.getSize()),"Could not save private wrapper-check state");
   }
   check(candidate.setKSControllerMode(0,error),error);
-  candidate.setStateInformation(saved.getData(),int(saved.getSize()));check(candidate.firmwareReady()&&candidate.ksControllerMode()==1,"Project did not restore native controller");backend(candidate,"native-cpp-runtime");
+  candidate.setStateInformation(saved.getData(),int(saved.getSize()));check(candidate.firmwareReady()&&candidate.ksControllerMode()==1,"Project did not restore native controller");backend(candidate,"native-cpp-semantic");
   check(int(juce::JSON::parse(settings)["ksControllerMode"])==0,"Project restore overwrote new-instance preference");
   xml->removeAttribute("ksControllerMode");juce::AudioProcessor::copyXmlToBinary(*xml,saved);
   candidate.setStateInformation(saved.getData(),int(saved.getSize()));check(candidate.firmwareReady()&&candidate.ksControllerMode()==0,"Old project did not retain original H8 default");backend(candidate,"original-h8");

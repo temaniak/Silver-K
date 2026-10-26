@@ -235,7 +235,7 @@ void Processor::timerCallback(){
 void Processor::setBufferProfile(int profile){{std::lock_guard lock(controlMutex);buffering.store(juce::jlimit(0,3,profile));applyBufferProfile();}notifyHostLatency();savePreferences();}
 bool Processor::setKSControllerMode(int mode,juce::String& error){
  error.clear();if(mode<0 || mode>2){error="Invalid KS controller selection";return false;}
- if(mode!=int(ks::ControllerMode::Native) && !ks::controllerReferenceAvailable()){error="KS H8/hybrid is available only in comparison tests";return false;}
+ if(mode!=int(ks::ControllerMode::Native) && !ks::boardComparisonAvailable()){error="KS H8/hybrid is available only in comparison tests";return false;}
  {
   std::lock_guard lock(controlMutex);
   if(isFirmwareLoading()){error="Wait for firmware loading to finish";return false;}

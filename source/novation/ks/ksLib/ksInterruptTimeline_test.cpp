@@ -1,6 +1,7 @@
+// Explicit retained LEGACY comparison test; not a semantic NativeControllerExecutor proof.
 #include "ksControllerTraceComparison_test.h"
 #include "ksCurrentNativeChildren_test.h"
-#include "ksBoard.h"
+#include "ksBoardComparison_test.h"
 #include "ksRom.h"
 #include <algorithm>
 #include <array>
@@ -70,7 +71,7 @@ void initialMainBoundary(ks::Board&b){
  while(!b.mainEntered&&b.controllerCycles()<deadline){b.advance();b.discardAudio();}
  check(!b.ready,"Coarse boot passed the initial main reset boundary");
  while(!b.ready&&b.controllerCycles()<deadline){b.advance(1);b.discardAudio();}
- check(b.ready&&b.cpu().getPC()==0x4334,"Initial main reset boundary missing");
+ check(b.ready&&ks::test::comparisonCpu(b).getPC()==0x4334,"Initial main reset boundary missing");
 }
 void dirtyResetRings(ks::Board&b){
  word(b,0x1537c,0x7e);word(b,0x1537e,0x42);
@@ -82,7 +83,7 @@ void emptyResetRings(ks::Board&b){
   check(!b.read(address)&&!b.read(address+1),"Initial State reset did not clear all three event rings");
 }
 void sameInterrupts(ks::Board&a,ks::Board&b){
- const auto&x=a.cpu();const auto&y=b.cpu();
+ const auto&x=ks::test::comparisonCpu(a);const auto&y=ks::test::comparisonCpu(b);
  check(x.pending_irqs==y.pending_irqs&&x.pending_irqs_high==y.pending_irqs_high&&x.exr==y.exr,"Interrupt pending masks/priority differ");
  for(unsigned n=0;n<128;++n)check(x.interruptPriority[n]==y.interruptPriority[n],"Interrupt priority table differs");
 }
@@ -91,7 +92,7 @@ void advanceBoth(ks::Board&a,ks::Board&b){
 }
 void drain(ks::Board&a,ks::Board&b){
  unsigned phases=0;
- while(b.nativeController()->activeNativeWork()||(b.cpu().exr&7)){
+ while(ks::test::legacyRuntime(b)->activeNativeWork()||(ks::test::comparisonCpu(b).exr&7)){
   check(++phases<=65536,"Previous IRQ did not drain");advanceBoth(a,b);
  }
 }
@@ -145,16 +146,16 @@ int main(int argc,char**argv){unsigned item=0;try{
  if(argc!=5){std::cout<<"SKIP: private KS OS/Flash/Wave and new output directory required\n";return 77;}
  const std::filesystem::path out(argv[4]);check(!std::filesystem::exists(out),"Output directory already exists");std::filesystem::create_directories(out);
  ks::Rom rom(argv[1]);check(rom.isValid(),"Invalid ROM");auto flash=bytes(argv[2]),wave=bytes(argv[3]);
- auto a=std::make_unique<ks::Board>(rom.data(),wave,flash,true),b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
+ auto a=ks::test::makeLegacyBoard(rom.data(),wave,flash,true),b=ks::test::makeLegacyBoard(rom.data(),wave,flash,true);
  initialMainBoundary(*a);initialMainBoundary(*b);b->enableNativeController();b->resetControllerMetrics();
  dirtyResetRings(*a);dirtyResetRings(*b);
  a->startControllerTrace();b->startControllerTrace();std::ofstream pcmA(out/"h8.pcm",std::ios::binary),pcmB(out/"cpp.pcm",std::ios::binary);
  unsigned resetPhases=0;
- while(!b->nativeController()->stateResetForeground.completed||b->nativeController()->activeNativeWork()){
+ while(!ks::test::legacyRuntime(*b)->stateResetForeground.completed||ks::test::legacyRuntime(*b)->activeNativeWork()){
   check(++resetPhases<=65536,"Natural initial State reset did not finish");advanceBoth(*a,*b);
  }
  emptyResetRings(*a);emptyResetRings(*b);
- check(b->nativeController()->stateResetForeground.kinds[0]==1&&b->nativeController()->stateResetForeground.components==0xf,"Natural initial State reset missed its complete child graph");
+ check(ks::test::legacyRuntime(*b)->stateResetForeground.kinds[0]==1&&ks::test::legacyRuntime(*b)->stateResetForeground.components==0xf,"Natural initial State reset missed its complete child graph");
  check(a->boot()&&b->boot(),"Normal musical warmup failed after initial State reset");
  uint64_t frames=0,peak=0,tickPacketScenarioWitnesses=0,tickScanScenarioWitnesses=0,pumpResetScenarioWitnesses=0,pumpPopScenarioWitnesses=0;
  for(item=0;item<31;++item){
@@ -169,11 +170,11 @@ int main(int argc,char**argv){unsigned item=0;try{
   const bool stateApply=item>=28&&item<30;
   const unsigned vector=foreground?128:item==0?88:item<=2?90:item==3?42:item==4?91:item==5?32:item<10?28:89;
   const unsigned kind=vector==88?0:vector==90?1:(vector==42||vector==91)?2:vector==32?3:vector==28?4:5;
-  const auto kindCalls=b->nativeController()->nativeInterruptKinds[kind],received=b->midiReceived;
-  const auto calls=b->nativeController()->nativeInterruptStarts,irqReturns=b->nativeController()->nativeInterruptReturns;bool fullRxRetainedAtIrqReturn=false;
+  const auto kindCalls=ks::test::legacyRuntime(*b)->nativeInterruptKinds[kind],received=b->midiReceived;
+  const auto calls=ks::test::legacyRuntime(*b)->nativeInterruptStarts,irqReturns=ks::test::legacyRuntime(*b)->nativeInterruptReturns;bool fullRxRetainedAtIrqReturn=false;
   ks::ScopedNativeChildWitnessForTests pumpReset,pumpPop;
   const auto observePump=[&]{
-   const auto&r=*b->nativeController();const auto*m=ks::currentNativeMainForTests(r);
+   const auto&r=*ks::test::legacyRuntime(*b);const auto*m=ks::currentNativeMainForTests(r);
    const auto*pump=m?m->current<ks::NativeMidiPumpService>():nullptr;
    // Only a completed retained Serial outcome in this actual Pump job is a
    // child-return witness. Its containing Main MIDI child must then return.
@@ -184,7 +185,7 @@ int main(int argc,char**argv){unsigned item=0;try{
   };
   TickChildWitness tickPacket,tickScan;tickScan.counter=&ks::CurrentNativeTickForTests::returnedButtons;
   const auto observeTick=[&]{
-   const auto owner=ks::currentNativeTickForTests(*b->nativeController());const auto*tick=owner.service();
+   const auto owner=ks::currentNativeTickForTests(*ks::test::legacyRuntime(*b));const auto*tick=owner.service();
    // Retained output is inspected solely as a completed outcome of this
    // current parent job, never as a selector for an active child phase.
    const auto*output=tick?tick->output():nullptr;
@@ -193,17 +194,17 @@ int main(int argc,char**argv){unsigned item=0;try{
    const auto*buttons=tick&&tick->component()==ks::StateTickService::Component::Buttons?tick->buttons():nullptr;
    tickScan.observe(owner,buttons&&buttons->component()==ks::PanelScanService::Component::Push,owner.returnedButtons());
   };
-  const auto panelCalls=b->nativeController()->statePanelForeground.started;const auto fieldCalls=b->nativeController()->stateFieldForeground.started;bool sawFieldAddress=false,sawFieldApply=false;
-  const unsigned menuKind=item==22?2:item==23?4:11;const auto menuCalls=b->nativeController()->stateMenuForeground.kinds[menuKind];
-  const auto applyCalls=b->nativeController()->stateApplyForeground.kinds[0];
-  const auto displayCalls=b->nativeController()->stateDisplayForeground.kinds[0];const auto screenValueCalls=b->nativeController()->stateScreenForeground.kinds[unsigned(ks::StateScreenService::Kind::Value)];bool sawNestedFormat=false;
-  const unsigned storeKind=item==26?0:1;auto storeCalls=b->nativeController()->stateSaveForeground.kinds[storeKind];auto flashRevision=b->flashRevision;bool sawReload=false,sawVerify=false;
+  const auto panelCalls=ks::test::legacyRuntime(*b)->statePanelForeground.started;const auto fieldCalls=ks::test::legacyRuntime(*b)->stateFieldForeground.started;bool sawFieldAddress=false,sawFieldApply=false;
+  const unsigned menuKind=item==22?2:item==23?4:11;const auto menuCalls=ks::test::legacyRuntime(*b)->stateMenuForeground.kinds[menuKind];
+  const auto applyCalls=ks::test::legacyRuntime(*b)->stateApplyForeground.kinds[0];
+  const auto displayCalls=ks::test::legacyRuntime(*b)->stateDisplayForeground.kinds[0];const auto screenValueCalls=ks::test::legacyRuntime(*b)->stateScreenForeground.kinds[unsigned(ks::StateScreenService::Kind::Value)];bool sawNestedFormat=false;
+  const unsigned storeKind=item==26?0:1;auto storeCalls=ks::test::legacyRuntime(*b)->stateSaveForeground.kinds[storeKind];auto flashRevision=b->flashRevision;bool sawReload=false,sawVerify=false;
   // A nested Save keeps its own semantic kind, while the only admission and
   // return counters belong to its containing Menu job. Do not relabel them.
   bool sawNestedStore=false,nestedStoreReturned=false;uint64_t nestedStoreJob=0,nestedReturnsBefore=0;ks::CurrentNativeParentForTests nestedStoreParent{};
   ks::ScopedNativeChildWitnessForTests mainPanel,mainEvents,mainMenu,mainDisplay,mainApply;uint32_t mainPanelComponents=0,mainEventComponents=0;
   const auto observeStore=[&]{
-   const auto&r=*b->nativeController();
+   const auto&r=*ks::test::legacyRuntime(*b);
    if(sawNestedStore&&!nestedStoreReturned&&nestedStoreParent.returns()>nestedReturnsBefore)nestedStoreReturned=true;
    const auto current=ks::currentNativeSaveForTests(r);
    if(current.nested&&current.at(ks::StateSaveService::Kind(storeKind))){
@@ -215,8 +216,8 @@ int main(int argc,char**argv){unsigned item=0;try{
     if(current.atPage(ks::StateSavePageService::Component::Verify))sawVerify=true;
    }
   };
-  const auto storeFinished=[&]{return b->nativeController()->stateSaveForeground.kinds[storeKind]>storeCalls||nestedStoreReturned;};
-  if(item==26){enqueueMulti(*a);enqueueMulti(*b);for(unsigned n=0;n<24000;++n){check(a->renderSample()==b->renderSample(),"Timeline store preparation audio differs");check(a->controllerCycles()==b->controllerCycles(),"Timeline store preparation clocks differ");sameInterrupts(*a,*b);}drain(*a,*b);storeCalls=b->nativeController()->stateSaveForeground.kinds[storeKind];flashRevision=b->flashRevision;}
+  const auto storeFinished=[&]{return ks::test::legacyRuntime(*b)->stateSaveForeground.kinds[storeKind]>storeCalls||nestedStoreReturned;};
+  if(item==26){enqueueMulti(*a);enqueueMulti(*b);for(unsigned n=0;n<24000;++n){check(a->renderSample()==b->renderSample(),"Timeline store preparation audio differs");check(a->controllerCycles()==b->controllerCycles(),"Timeline store preparation clocks differ");sameInterrupts(*a,*b);}drain(*a,*b);storeCalls=ks::test::legacyRuntime(*b)->stateSaveForeground.kinds[storeKind];flashRevision=b->flashRevision;}
   for(auto*board:{a.get(),b.get()}){
    if(stateStore)storeInput(*board,item==26,item==30);
    if(stateDisplay)menuInput(*board,2);
@@ -231,24 +232,24 @@ int main(int argc,char**argv){unsigned item=0;try{
    if(vector==89)receive(*board,item-10);
    if(vector==90){board->write(0xffed6c,0);board->write(0xffed6d,0);board->write(0xffed6e,0);board->write(0xffed6f,item==1?255:0);board->write(0xffee6f,0xf8);}
    if(foreground)continue;
-   board->cpu().interruptPriority[vector]=vector==32?6:1;
+   ks::test::comparisonCpu(*board).interruptPriority[vector]=vector==32?6:1;
    // The full-ring case admits an already-latched byte before main can
    // consume its deliberately full ring; all other RX cases use the UART.
-   if(vector!=89||item==11){if(item==11){board->write(0xffff8d,0xfe);board->write(0xffff8c,uint8_t(board->read(0xffff8c)|0x40));}board->cpu().interrupt(vector);}
+   if(vector!=89||item==11){if(item==11){board->write(0xffff8d,0xfe);board->write(0xffff8c,uint8_t(board->read(0xffff8c)|0x40));}ks::test::comparisonCpu(*board).interrupt(vector);}
   }
   if(vector==89&&item!=11){const uint8_t byte=item==10?0xfe:0xf8;check(a->enqueueMidi(&byte,1)&&b->enqueueMidi(&byte,1),"Test UART byte rejected");}
   if(item>=6){
    unsigned phases=0;bool sawPacking=false;
-   while((item==11&&!pumpReset.returned)||(foreground?!tickPacket.returned:b->nativeController()->nativeInterruptKinds[kind]==kindCalls)||b->nativeController()->activeNativeWork()||(b->cpu().exr&7)||(stateEvents&&(b->read(0x15408)||b->read(0x15409)!=2))||(statePanel&&(b->read(0x156ea)||b->read(0x156eb)!=2))||(stateMenu&&b->nativeController()->stateMenuForeground.kinds[menuKind]==menuCalls&&!(item==24&&sawFieldAddress)&&!mainMenu.returned)||(stateStore&&!storeFinished())||(stateDisplay&&b->nativeController()->stateDisplayForeground.kinds[0]==displayCalls&&b->nativeController()->stateScreenForeground.kinds[unsigned(ks::StateScreenService::Kind::Value)]==screenValueCalls&&!sawNestedFormat)||(stateApply&&b->nativeController()->stateApplyForeground.kinds[0]==applyCalls&&!sawFieldApply)){
+   while((item==11&&!pumpReset.returned)||(foreground?!tickPacket.returned:ks::test::legacyRuntime(*b)->nativeInterruptKinds[kind]==kindCalls)||ks::test::legacyRuntime(*b)->activeNativeWork()||(ks::test::comparisonCpu(*b).exr&7)||(stateEvents&&(b->read(0x15408)||b->read(0x15409)!=2))||(statePanel&&(b->read(0x156ea)||b->read(0x156eb)!=2))||(stateMenu&&ks::test::legacyRuntime(*b)->stateMenuForeground.kinds[menuKind]==menuCalls&&!(item==24&&sawFieldAddress)&&!mainMenu.returned)||(stateStore&&!storeFinished())||(stateDisplay&&ks::test::legacyRuntime(*b)->stateDisplayForeground.kinds[0]==displayCalls&&ks::test::legacyRuntime(*b)->stateScreenForeground.kinds[unsigned(ks::StateScreenService::Kind::Value)]==screenValueCalls&&!sawNestedFormat)||(stateApply&&ks::test::legacyRuntime(*b)->stateApplyForeground.kinds[0]==applyCalls&&!sawFieldApply)){
     check(++phases<=(stateStore?4000000u:65536u),"Forced ADC/RX/Store lifecycle did not finish");advanceBoth(*a,*b);observePump();if(foreground)observeTick();
-    if(item==11&&!fullRxRetainedAtIrqReturn&&b->nativeController()->nativeInterruptReturns>irqReturns){
-     check(b->nativeController()->nativeInterruptKinds[kind]>kindCalls&&!b->nativeController()->activeNativeInterrupts(),"Full RX ring did not complete its actual RX IRQ");
+    if(item==11&&!fullRxRetainedAtIrqReturn&&ks::test::legacyRuntime(*b)->nativeInterruptReturns>irqReturns){
+     check(ks::test::legacyRuntime(*b)->nativeInterruptKinds[kind]>kindCalls&&!ks::test::legacyRuntime(*b)->activeNativeInterrupts(),"Full RX ring did not complete its actual RX IRQ");
      check(a->read(0xffed68)==2&&a->read(0xffec65)==255&&b->read(0xffed68)==2&&b->read(0xffec65)==255,"Full RX ring did not retain producer/report overflow at actual IRQ return");
      fullRxRetainedAtIrqReturn=true;
     }
-    if(stateApply&&b->nativeController()->stateApplyForeground.at(ks::StateApplyService::Component::Packing))sawPacking=true;
-    const auto nested=ks::currentNativeChildrenForTests(*b->nativeController());
-    const auto mainParent=ks::currentNativeMainParentForTests(*b->nativeController());
+    if(stateApply&&ks::test::legacyRuntime(*b)->stateApplyForeground.at(ks::StateApplyService::Component::Packing))sawPacking=true;
+    const auto nested=ks::currentNativeChildrenForTests(*ks::test::legacyRuntime(*b));
+    const auto mainParent=ks::currentNativeMainParentForTests(*ks::test::legacyRuntime(*b));
     const auto*menuAction=nested.central?nested.central->coordinator().task<ks::StateMenuActionsTask>():nullptr;
     const bool actualMenu=menuAction&&(item==22?nested.menuPrevious:nested.menuNext);
     mainPanel.observe(mainParent,statePanel&&nested.panel);mainEvents.observe(mainParent,stateEvents&&nested.events);
@@ -268,14 +269,14 @@ int main(int argc,char**argv){unsigned item=0;try{
    if(item>=12&&item<=14)check(b->read(0xffeea0)==4&&!b->read(0xffeea1)&&!b->read(0xffeea2)&&!b->read(0xffeea3),"F8 reset/short feedback unexpectedly changed its estimate");
    if(item==15)check(b->read(0xffeea0)!=4||b->read(0xffeea1)||b->read(0xffeea2)||b->read(0xffeea3),"F8 feedback did not update its estimate");
   }
-  if(stateApply)check(b->nativeController()->stateApplyForeground.kinds[0]>applyCalls||(b->nativeController()->stateFieldForeground.started>fieldCalls&&sawFieldApply)||(mainApply.returned&&sawFieldApply),"Natural control event missed actual standalone/nested edit application");
-  if(stateDisplay)check((b->nativeController()->stateDisplayForeground.kinds[0]>displayCalls&&(b->nativeController()->stateDisplayForeground.components&0xf0)==0xf0)||((b->nativeController()->stateScreenForeground.kinds[unsigned(ks::StateScreenService::Kind::Value)]>screenValueCalls||b->nativeController()->stateFieldForeground.started>fieldCalls)&&sawNestedFormat)||(mainDisplay.returned&&sawNestedFormat),"Natural menu display missed actual standalone/nested LCD transport");
-  if(stateStore&&(!sawVerify||b->flashRevision<=flashRevision||b->read(0x16790)!=0))std::cerr<<"Store outcome verify="<<sawVerify<<" reload="<<sawReload<<" flash="<<flashRevision<<'/'<<b->flashRevision<<" page="<<unsigned(b->read(0x16790))<<" program="<<std::hex<<unsigned(b->read(0x167ac))<<':'<<unsigned(b->read(0x167ad))<<" components="<<b->nativeController()->stateSaveForeground.components<<std::dec<<'\n';
+  if(stateApply)check(ks::test::legacyRuntime(*b)->stateApplyForeground.kinds[0]>applyCalls||(ks::test::legacyRuntime(*b)->stateFieldForeground.started>fieldCalls&&sawFieldApply)||(mainApply.returned&&sawFieldApply),"Natural control event missed actual standalone/nested edit application");
+  if(stateDisplay)check((ks::test::legacyRuntime(*b)->stateDisplayForeground.kinds[0]>displayCalls&&(ks::test::legacyRuntime(*b)->stateDisplayForeground.components&0xf0)==0xf0)||((ks::test::legacyRuntime(*b)->stateScreenForeground.kinds[unsigned(ks::StateScreenService::Kind::Value)]>screenValueCalls||ks::test::legacyRuntime(*b)->stateFieldForeground.started>fieldCalls)&&sawNestedFormat)||(mainDisplay.returned&&sawNestedFormat),"Natural menu display missed actual standalone/nested LCD transport");
+  if(stateStore&&(!sawVerify||b->flashRevision<=flashRevision||b->read(0x16790)!=0))std::cerr<<"Store outcome verify="<<sawVerify<<" reload="<<sawReload<<" flash="<<flashRevision<<'/'<<b->flashRevision<<" page="<<unsigned(b->read(0x16790))<<" program="<<std::hex<<unsigned(b->read(0x167ac))<<':'<<unsigned(b->read(0x167ad))<<" components="<<ks::test::legacyRuntime(*b)->stateSaveForeground.components<<std::dec<<'\n';
   if(stateStore){check(storeFinished(),"Natural Store event missed its complete standalone/nested save graph");check(sawVerify&&b->flashRevision>flashRevision&&b->read(0x16790)==0,"Natural Store did not finish Flash and return to playback");}
   if(item==30)check(sawReload,"Single save in multi mode missed full native reload");
-  if(stateMenu)check(b->nativeController()->stateMenuForeground.kinds[menuKind]>menuCalls||(item==24&&b->nativeController()->stateFieldForeground.started>fieldCalls&&sawFieldAddress)||mainMenu.returned,"Natural menu/edit event missed actual standalone/nested address root");
-  if(statePanel)check((b->nativeController()->statePanelForeground.started>panelCalls&&(b->nativeController()->statePanelForeground.components&0x180)==0x180)||(mainPanel.returned&&(mainPanelComponents&0x180)==0x180),"Natural upper State event missed MIDI queue/UART publication");
-  if(stateEvents)check((b->nativeController()->stateEventsForeground.components&(item==18?0x10u:0x20u))!=0||(mainEvents.returned&&(mainEventComponents&(item==18?0x10u:0x20u))!=0),"Natural State event did not run its nested scale/square");
+  if(stateMenu)check(ks::test::legacyRuntime(*b)->stateMenuForeground.kinds[menuKind]>menuCalls||(item==24&&ks::test::legacyRuntime(*b)->stateFieldForeground.started>fieldCalls&&sawFieldAddress)||mainMenu.returned,"Natural menu/edit event missed actual standalone/nested address root");
+  if(statePanel)check((ks::test::legacyRuntime(*b)->statePanelForeground.started>panelCalls&&(ks::test::legacyRuntime(*b)->statePanelForeground.components&0x180)==0x180)||(mainPanel.returned&&(mainPanelComponents&0x180)==0x180),"Natural upper State event missed MIDI queue/UART publication");
+  if(stateEvents)check((ks::test::legacyRuntime(*b)->stateEventsForeground.components&(item==18?0x10u:0x20u))!=0||(mainEvents.returned&&(mainEventComponents&(item==18?0x10u:0x20u))!=0),"Natural State event did not run its nested scale/square");
   if(panelScan){check(tickScan.returned,"Natural State Tick did not complete its actual matrix Push child");++tickScanScenarioWitnesses;}
   const uint8_t on[]{0x90,uint8_t(foreground?84:48+item*5),100};check(a->enqueueMidi(on,3)&&b->enqueueMidi(on,3),"Note rejected");
   for(unsigned n=0;n<4096;++n){
@@ -285,14 +286,14 @@ int main(int argc,char**argv){unsigned item=0;try{
    for(auto v:x)peak=std::max(peak,uint64_t(std::abs(int64_t(v))));++frames;
   }
   if(foreground){check(tickPacket.returned,"Real pedal transition did not complete all three Byte outcomes and return its Tick parent");++tickPacketScenarioWitnesses;}
-  else check(b->nativeController()->nativeInterruptStarts>calls&&b->nativeController()->nativeInterruptKinds[kind]>kindCalls,"Scenario did not execute its native IRQ kind");
-  if(item==11)check(b->nativeController()->serialForeground.kinds[0]>0||pumpReset.returned,"RX overflow did not complete the actual standalone/Main-Pump foreground reset");
+  else check(ks::test::legacyRuntime(*b)->nativeInterruptStarts>calls&&ks::test::legacyRuntime(*b)->nativeInterruptKinds[kind]>kindCalls,"Scenario did not execute its native IRQ kind");
+  if(item==11)check(ks::test::legacyRuntime(*b)->serialForeground.kinds[0]>0||pumpReset.returned,"RX overflow did not complete the actual standalone/Main-Pump foreground reset");
   if(pumpReset.returned)++pumpResetScenarioWitnesses;if(pumpPop.returned)++pumpPopScenarioWitnesses;
-  if(vector==32)check(b->nativeController()->nativeTpuComponents==0x7ff,"Full timer did not visit all eleven semantic components");
-  if(item==9)check(b->nativeController()->nativeAdcComponents==0x3f,"ADC cases did not visit all six semantic components");
-  if(item==15)check(b->nativeController()->nativeSerialReceiveComponents==0xf,"F8 cases did not visit all four semantic components");
+  if(vector==32)check(ks::test::legacyRuntime(*b)->nativeTpuComponents==0x7ff,"Full timer did not visit all eleven semantic components");
+  if(item==9)check(ks::test::legacyRuntime(*b)->nativeAdcComponents==0x3f,"ADC cases did not visit all six semantic components");
+  if(item==15)check(ks::test::legacyRuntime(*b)->nativeSerialReceiveComponents==0xf,"F8 cases did not visit all four semantic components");
   for(unsigned port=0xfffe00;port<0xffffa0;++port)check(a->read(port)==b->read(port),"Interrupt timeline hardware resource differs");
-  const auto&x=a->cpu();const auto&y=b->cpu();check(std::equal(x.memory,x.memory+0xfff000,y.memory)&&std::equal(x.memory+0xfffc00,x.memory+(1<<24),y.memory+0xfffc00),"Interrupt timeline resource memory differs");
+  const auto&x=ks::test::comparisonCpu(*a);const auto&y=ks::test::comparisonCpu(*b);check(std::equal(x.memory,x.memory+0xfff000,y.memory)&&std::equal(x.memory+0xfffc00,x.memory+(1<<24),y.memory+0xfffc00),"Interrupt timeline resource memory differs");
   check(ks::stateMessage(a->state())==ks::stateMessage(b->state())&&a->saveUserFlash()==b->saveUserFlash(),"Interrupt timeline state/Flash differs");
   uint8_t v,w;while(a->popMidiOut(v))check(b->popMidiOut(w)&&v==w,"Interrupt timeline MIDI differs");check(!b->popMidiOut(w),"Trailing native MIDI");
  }
@@ -308,7 +309,7 @@ int main(int argc,char**argv){unsigned item=0;try{
   if(p.pc!=q.pc){check(ks::tests::nativeDspTraceLocationMatches(p.pc,q.pc),"Unexpected DSP trace CPU location change");++nativeCpuLocationChanges;}}
 
  for(size_t n=0;n<x->slices.size();++n){const auto&p=x->slices[n];const auto&q=y->slices[n];check(p.begin==q.begin&&p.end==q.end&&p.first==q.first&&p.count==q.count,"Interrupt timeline DSP slice differs");}
- const auto*r=b->nativeController();check(r->nativeInterruptKinds[0]&&r->nativeInterruptKinds[1]&&r->nativeInterruptKinds[2]&&r->nativeInterruptKinds[3]&&r->nativeInterruptKinds[4]&&r->nativeInterruptKinds[5],"Missing native IRQ kind coverage");
+ const auto*r=ks::test::legacyRuntime(*b);check(r->nativeInterruptKinds[0]&&r->nativeInterruptKinds[1]&&r->nativeInterruptKinds[2]&&r->nativeInterruptKinds[3]&&r->nativeInterruptKinds[4]&&r->nativeInterruptKinds[5],"Missing native IRQ kind coverage");
  check(r->nativeInterruptStarts+r->nativeInterruptInitial==r->nativeInterruptReturns+r->activeNativeInterrupts(),"Native IRQ accounting differs");
  check((r->serialForeground.kinds[0]||pumpResetScenarioWitnesses)&&(r->serialForeground.kinds[1]||pumpPopScenarioWitnesses)&&tickPacketScenarioWitnesses==15&&tickScanScenarioWitnesses==1,"Missing native foreground reset/pop or actual Tick pedal/matrix completion coverage");
  check(r->serialForeground.started+r->serialForeground.initial==r->serialForeground.completed+r->serialForeground.active(),"Native foreground accounting differs");

@@ -1,5 +1,6 @@
+// Explicit retained LEGACY comparison test; not a semantic NativeControllerExecutor proof.
 #include "ksCurrentNativeChildren_test.h"
-#include "ksBoard.h"
+#include "ksBoardComparison_test.h"
 #include "ksRom.h"
 #include <algorithm>
 #include <array>
@@ -34,7 +35,7 @@ void initialMainBoundary(ks::Board&b){
  while(!b.mainEntered&&b.controllerCycles()<deadline){b.advance();b.discardAudio();}
  check(!b.ready,"Coarse boot passed the initial main reset boundary");
  while(!b.ready&&b.controllerCycles()<deadline){b.advance(1);b.discardAudio();}
- check(b.ready&&b.cpu().getPC()==0x4334,"Initial main reset boundary missing");
+ check(b.ready&&ks::test::comparisonCpu(b).getPC()==0x4334,"Initial main reset boundary missing");
 }
 void dirtyResetRings(ks::Board&b){
  word(b,0x1537c,0x7e);word(b,0x1537e,0x42);
@@ -78,7 +79,7 @@ void applyInput(ks::Board& b,bool packed){
  word(b,0x15406,2);word(b,0x15408,0);word(b,0x1540a,packed?0x0126:0x4000);
 }
 void sameInterrupts(ks::Board&a,ks::Board&b){
- const auto&x=a.cpu();const auto&y=b.cpu();
+ const auto&x=ks::test::comparisonCpu(a);const auto&y=ks::test::comparisonCpu(b);
  check(x.pending_irqs==y.pending_irqs&&x.pending_irqs_high==y.pending_irqs_high&&x.exr==y.exr,"Interrupt pending masks/priority differ");
  for(unsigned n=0;n<128;++n)check(x.interruptPriority[n]==y.interruptPriority[n],"Interrupt priority table differs");
 }
@@ -87,7 +88,7 @@ void advanceBoth(ks::Board&a,ks::Board&b){
 }
 void drain(ks::Board&a,ks::Board&b){
  unsigned phases=0;
- while(b.nativeController()->activeNativeWork()||(b.cpu().exr&7)){
+ while(ks::test::legacyRuntime(b)->activeNativeWork()||(ks::test::comparisonCpu(b).exr&7)){
   check(++phases<=65536,"Previous IRQ did not drain");advanceBoth(a,b);
  }
 }
@@ -128,7 +129,7 @@ void same(ks::Board&a,ks::Board&b){
  check(a.controllerCycles()==b.controllerCycles(),"Handoff moved controller time");sameInterrupts(a,b);
  check(ks::stateMessage(a.state())==ks::stateMessage(b.state()),"Handoff changed musical state");
  check(a.saveUserFlash()==b.saveUserFlash(),"Handoff changed Flash");
- const auto&x=a.cpu();const auto&y=b.cpu();
+ const auto&x=ks::test::comparisonCpu(a);const auto&y=ks::test::comparisonCpu(b);
  check(std::equal(x.memory+0xa00000,x.memory+0xc00000,y.memory+0xa00000)&&std::equal(x.memory+0xffdc00,x.memory+0xfff000,y.memory+0xffdc00),"Handoff changed persistent memory");
  check(a.serialUnderruns==b.serialUnderruns&&a.serialOverflows==b.serialOverflows,"Handoff changed serial accounting");
  for(unsigned port=0xfffe00;port<0xffffa0;++port)check(a.read(port)==b.read(port),"Handoff changed hardware resource");
@@ -138,16 +139,16 @@ void same(ks::Board&a,ks::Board&b){
 int main(int argc,char**argv){unsigned phase=0,mode=0;try{
  if(argc!=4){std::cout<<"SKIP: private KS OS/Flash/Wave required\n";return 77;}
  ks::Rom rom(argv[1]);check(rom.isValid(),"Invalid ROM");auto flash=bytes(argv[2]),wave=bytes(argv[3]);
- auto a=std::make_unique<ks::Board>(rom.data(),wave,flash,true),b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
+ auto a=ks::test::makeLegacyBoard(rom.data(),wave,flash,true),b=ks::test::makeLegacyBoard(rom.data(),wave,flash,true);
  check(a->boot()&&b->boot(),"Reference boot failed");same(*a,*b);
  uint64_t frames=0,peak=0,preparationFrames=0;
  for(phase=0;phase<46;++phase)for(mode=0;mode<3;++mode){
   if(phase>=10&&phase<13){
-   a=std::make_unique<ks::Board>(rom.data(),wave,flash,true);b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);
+   a=ks::test::makeLegacyBoard(rom.data(),wave,flash,true);b=ks::test::makeLegacyBoard(rom.data(),wave,flash,true);
    initialMainBoundary(*a);initialMainBoundary(*b);dirtyResetRings(*a);dirtyResetRings(*b);
   }
-  if(phase>=30){a=std::make_unique<ks::Board>(rom.data(),wave,flash,true);b=std::make_unique<ks::Board>(rom.data(),wave,flash,true);check(a->boot()&&b->boot(),"Store handoff boot failed");same(*a,*b);}
-  b->enableNativeController();check(b->nativeController(),"Native handoff failed");
+  if(phase>=30){a=ks::test::makeLegacyBoard(rom.data(),wave,flash,true);b=ks::test::makeLegacyBoard(rom.data(),wave,flash,true);check(a->boot()&&b->boot(),"Store handoff boot failed");same(*a,*b);}
+  b->enableNativeController();check(ks::test::legacyRuntime(*b),"Native handoff failed");
   drain(*a,*b);
   if((phase>=31&&phase<34)||phase>=44){enqueueMulti(*a);enqueueMulti(*b);for(unsigned n=0;n<24000;++n){check(a->renderSample()==b->renderSample(),"Store mode preparation audio differs");check(a->controllerCycles()==b->controllerCycles(),"Store mode preparation clocks differ");sameInterrupts(*a,*b);++preparationFrames;}drain(*a,*b);same(*a,*b);}
   b->resetControllerMetrics();
@@ -182,89 +183,89 @@ int main(int argc,char**argv){unsigned phase=0,mode=0;try{
    if(phase>=37&&phase<41)applyInput(*board,phase==38);
    if(phase>=7)continue;
    const unsigned vector=!phase?90:phase<3?32:phase<6?28:89;
-   board->cpu().exr=0;board->cpu().interruptPriority[vector]=phase>0&&phase<3?6:1;
-   if(phase!=6)board->cpu().interrupt(vector);
+   ks::test::comparisonCpu(*board).exr=0;ks::test::comparisonCpu(*board).interruptPriority[vector]=phase>0&&phase<3?6:1;
+   if(phase!=6)ks::test::comparisonCpu(*board).interrupt(vector);
   }
   if(phase==6){const uint8_t clock=0xf8;check(a->enqueueMidi(&clock,1)&&b->enqueueMidi(&clock,1),"Handoff F8 rejected");
   }
   bool landed=false;
   for(unsigned n=0;n<65536&&!landed;++n){
-   advanceBoth(*a,*b);const auto*r=b->nativeController();const auto nested=ks::currentNativeChildrenForTests(*r);const auto*screenDisplay=nested.display;const auto*screenMenu=nested.menu;const auto*fieldApply=nested.apply;const auto currentSave=nested.save;
+   advanceBoth(*a,*b);const auto*r=ks::test::legacyRuntime(*b);const auto nested=ks::currentNativeChildrenForTests(*r);const auto*screenDisplay=nested.display;const auto*screenMenu=nested.menu;const auto*fieldApply=nested.apply;const auto currentSave=nested.save;
    const auto expectedSaveKind=phase>=31&&phase<34?ks::StateSaveService::Kind::CommitMulti:ks::StateSaveService::Kind::CommitSingle;
    const bool expectedSave=currentSave.at(expectedSaveKind);bool target=false;
    switch(phase){
    case 0:target=true;break;
-   case 1:target=r->nativeTpu0At(ks::Tpu0Service::Component::Velocity)&&b->cpu().exr==6;break;
-   case 2:target=r->nativeTpu0At(ks::Tpu0Service::Component::Midi,true)&&b->cpu().exr==7;break;
-   case 3:target=r->nativeAdcAt(ks::AdcService::Component::OrdinaryScale)&&b->cpu().exr==1;break;
-   case 4:target=r->nativeAdcAt(ks::AdcService::Component::SpecialScale)&&b->cpu().exr==1;break;
-   case 5:target=r->nativeAdcAt(ks::AdcService::Component::ControlPush)&&b->cpu().exr==1;break;
-   case 6:target=r->nativeSerialReceiveAt(ks::SerialReceiveService::Component::Counter)&&b->cpu().exr==1;break;
-   case 7:target=((r->serialForeground.at(ks::SerialForegroundService::Kind::PopRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::ReadStatus))||(nested.pumpSerial&&nested.pumpSerial->kind()==ks::SerialForegroundService::Kind::PopRx&&nested.pumpSerial->critical()&&nested.pumpSerial->atQueue(ks::SerialQueueTask::Stage::ReadStatus)))&&b->cpu().exr==7;break;
-   case 8:target=((r->serialForeground.at(ks::SerialForegroundService::Kind::Transmit,true)&&r->serialForeground.atTransmit(ks::SerialTransmitTask::Stage::Enable))||(nested.pedalSerial&&nested.pedalSerial->kind()==ks::SerialForegroundService::Kind::Transmit&&nested.pedalSerial->critical()&&nested.pedalSerial->atTransmit(ks::SerialTransmitTask::Stage::Enable)))&&b->cpu().exr==7;break;
-   case 9:target=((r->serialForeground.at(ks::SerialForegroundService::Kind::ResetRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::RetainWord))||(nested.pumpSerial&&nested.pumpSerial->kind()==ks::SerialForegroundService::Kind::ResetRx&&nested.pumpSerial->critical()&&nested.pumpSerial->atQueue(ks::SerialQueueTask::Stage::RetainWord)))&&b->cpu().exr==7;break;
-   case 10:target=r->stateResetForeground.at(ks::StateResetService::Component::Buttons)&&b->cpu().exr==0;break;
-   case 11:target=r->stateResetForeground.at(ks::StateResetService::Component::Controls)&&b->cpu().exr==0;break;
-   case 41:target=expectedSave&&currentSave.atPage(ks::StateSavePageService::Component::Compare)&&currentSave.at(ks::FlashPageCompareTask::Stage::ReadTarget)&&b->cpu().exr==0;break;
-   case 42:target=expectedSave&&currentSave.at(ks::FlashPageProgramTask::Stage::ReadSource)&&b->cpu().exr==6;break;
-   case 43:target=expectedSave&&currentSave.atPage(ks::StateSavePageService::Component::Verify)&&currentSave.at(ks::FlashPageCompareTask::Stage::ReadTarget)&&b->cpu().exr==0;break;
-   case 44:target=expectedSave&&currentSave.reload()&&currentSave.atReload(ks::StateReloadService::Component::Coordinator)&&currentSave.reload()->coordinator().multi().stage()==ks::StateMultiLoadTask::Stage::ResolveSource&&b->cpu().exr==0;break;
-   case 45:target=expectedSave&&currentSave.atReload(ks::StateReloadService::Component::Panel)&&b->cpu().exr==0;break;
-   case 37:target=((r->stateApplyForeground.at(ks::StateApplyService::Kind::Apply)&&r->stateApplyForeground.at(ks::StateApplyService::Component::Apply))||(fieldApply&&fieldApply->kind()==ks::StateApplyService::Kind::Apply&&fieldApply->manualTask()&&fieldApply->manualTask()->stage()==ks::StateManualEditTask::Stage::RetainRequest))&&b->cpu().exr==0;break;
-   case 38:target=((r->stateApplyForeground.at(ks::StateApplyService::Kind::Apply)&&r->stateApplyForeground.at(ks::StateApplyService::Component::Packing))||(fieldApply&&fieldApply->kind()==ks::StateApplyService::Kind::Apply&&fieldApply->component()==ks::StateApplyService::Component::Packing))&&b->cpu().exr==0;break;
-   case 39:target=((r->stateApplyForeground.at(ks::StateApplyService::Kind::Apply)&&r->stateApplyForeground.at(ks::StateApplyService::Component::Midi))||(fieldApply&&fieldApply->kind()==ks::StateApplyService::Kind::Apply&&fieldApply->component()==ks::StateApplyService::Component::Midi))&&b->cpu().exr==0;break;
-   case 40:target=((r->stateApplyForeground.at(ks::StateApplyService::Kind::Apply)&&r->stateApplyForeground.at(ks::StateApplyService::Component::Post))||(fieldApply&&fieldApply->kind()==ks::StateApplyService::Kind::Apply&&fieldApply->component()==ks::StateApplyService::Component::Post))&&b->cpu().exr==0;break;
-   case 34:target=((r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atFormat(ks::StateMenuFormatTask::Stage::SetPosition))||(screenDisplay&&screenDisplay->kind()==ks::StateDisplayService::Kind::Format&&screenDisplay->atFormat(ks::StateMenuFormatTask::Stage::SetPosition)))&&b->cpu().exr==0;break;
-   case 35:target=((r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atPoll(ks::PanelPollTask::Stage::TestReady))||(screenDisplay&&screenDisplay->kind()==ks::StateDisplayService::Kind::Format&&screenDisplay->atPoll(ks::PanelPollTask::Stage::TestReady)))&&b->cpu().exr==0;break;
-   case 36:target=((r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atByte(ks::PanelByteTask::Kind::CommandWrite,ks::PanelByteTask::Stage::Transfer))||(screenDisplay&&screenDisplay->kind()==ks::StateDisplayService::Kind::Format&&screenDisplay->atByte(ks::PanelByteTask::Kind::CommandWrite,ks::PanelByteTask::Stage::Transfer)))&&b->cpu().exr==0;break;
-   case 30:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::WritePatchName))||(expectedSave&&currentSave.atPreparation(ks::StateStoreService::Kind::WritePatchName)&&currentSave.preparation()->nameTask()&&currentSave.preparation()->nameTask()->stage()==ks::StatePatchNameTask::Stage::AddWritePatch))&&b->cpu().exr==0;break;
-   case 31:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::PartReference))||(expectedSave&&currentSave.atPreparation(ks::StateStoreService::Kind::MultiSerialize)&&currentSave.atPreparation(ks::StateStoreService::Component::PartReference)))&&b->cpu().exr==0;break;
-   case 32:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::PackAll))||(expectedSave&&currentSave.atPreparation(ks::StateStoreService::Kind::MultiSerialize)&&currentSave.atPreparation(ks::StateStoreService::Component::PackAll)))&&b->cpu().exr==0;break;
-   case 33:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::Oscillators))||(expectedSave&&currentSave.atPreparation(ks::StateStoreService::Kind::MultiSerialize)&&currentSave.atPreparation(ks::StateStoreService::Component::Oscillators)))&&b->cpu().exr==0;break;
-   case 25:target=(r->stateMenuForeground.at(ks::StateMenuService::Kind::Clock)||(nested.menuClock&&nested.menuClock->stage()==ks::ControllerClockReadTask::Stage::ReadCounter)||(nested.tickClock&&nested.tickClock->stage()==ks::ControllerClockReadTask::Stage::ReadCounter))&&b->cpu().exr==0;break;
-   case 26:target=((r->stateMenuForeground.at(ks::StateMenuService::Kind::Previous)&&r->stateMenuForeground.at(ks::StateMenuService::Component::EditGate))||(nested.menuPrevious&&screenMenu&&screenMenu->kind()==ks::StateMenuService::Kind::EditActive&&screenMenu->gatePhase()==0))&&b->cpu().exr==0;break;
-   case 27:target=((r->stateMenuForeground.at(ks::StateMenuService::Kind::Previous)&&r->stateMenuForeground.at(ks::StateMenuService::Component::RepeatTimer))||(nested.menuRepeat&&nested.menuRepeat->kind()==ks::ScheduledTimerTask::Kind::Arm&&nested.menuRepeat->stage()==ks::ScheduledTimerTask::Stage::StoreAction))&&b->cpu().exr==0;break;
-   case 28:target=(r->stateMenuForeground.at(ks::StateMenuService::Kind::BindContext)||(screenMenu&&screenMenu->kind()==ks::StateMenuService::Kind::BindContext&&screenMenu->contextTask()&&screenMenu->contextTask()->stage()==ks::StateEditContextTask::Stage::SaveContextIndex))&&b->cpu().exr==0;break;
-   case 29:target=(r->stateMenuForeground.at(ks::StateMenuService::Kind::IndexedAddress)||(nested.address&&nested.address->stage()==ks::StateEditAddressTask::Stage::ReadSelector))&&b->cpu().exr==0;break;
-   case 22:target=(r->statePanelForeground.atRoute(ks::MidiOutputTask::Stage::SaveOnContext)||(nested.panel&&nested.panel->atRoute(ks::MidiOutputTask::Stage::SaveOnContext)))&&b->cpu().exr==0;break;
-   case 23:target=(r->statePanelForeground.atQueue(ks::InternalMidiQueueTask::Stage::SavePush)||(nested.panel&&nested.panel->atQueue(ks::InternalMidiQueueTask::Stage::SavePush)))&&b->cpu().exr==0;break;
-   case 24:target=(r->statePanelForeground.atSerial(ks::SerialTransmitTask::Stage::RetainFirst)||(nested.panel&&nested.panel->atSerial(ks::SerialTransmitTask::Stage::RetainFirst)))&&b->cpu().exr==0;break;
-   case 17:target=(r->stateEventsForeground.at(ks::StateEventsService::Kind::ButtonPop)||(nested.events&&nested.events->kind()==ks::StateEventsService::Kind::ButtonPop&&nested.events->atPanel(ks::PanelInputTask::Stage::ReadConsumer)))&&b->cpu().exr==0;break;
-   case 18:target=((r->stateEventsForeground.at(ks::StateEventsService::Kind::KeyboardPop)||(nested.events&&nested.events->kind()==ks::StateEventsService::Kind::KeyboardPop&&nested.events->atKeyboard(ks::KeyboardEventsTask::Stage::ReadPopConsumer)))||(r->statePanelForeground.atKeyboard(ks::KeyboardEventsTask::Stage::ReadPopConsumer)||(nested.panel&&nested.panel->atKeyboard(ks::KeyboardEventsTask::Stage::ReadPopConsumer))))&&b->cpu().exr==0;break;
-   case 19:target=(r->stateEventsForeground.at(ks::StateEventsService::Kind::ControlPop)||(nested.events&&nested.events->kind()==ks::StateEventsService::Kind::ControlPop))&&(r->stateEventsForeground.at(ks::StateEventsService::Component::Convert)||(nested.events&&nested.events->component()==ks::StateEventsService::Component::Convert))&&b->cpu().exr==0;break;
-   case 20:target=(r->stateEventsForeground.at(ks::StateEventsService::Kind::ControlPop)||(nested.events&&nested.events->kind()==ks::StateEventsService::Kind::ControlPop))&&(r->stateEventsForeground.at(ks::StateEventsService::Component::Scale)||(nested.events&&nested.events->component()==ks::StateEventsService::Component::Scale))&&b->cpu().exr==0;break;
-   case 21:target=(r->stateEventsForeground.at(ks::StateEventsService::Kind::ControlPop)||(nested.events&&nested.events->kind()==ks::StateEventsService::Kind::ControlPop))&&(r->stateEventsForeground.at(ks::StateEventsService::Component::Square)||(nested.events&&nested.events->component()==ks::StateEventsService::Component::Square))&&b->cpu().exr==0;break;
-   case 14:target=(r->panelControlsForeground.at(ks::PanelControlsService::Component::Encoder)||(nested.panelControls&&nested.panelControls->component()==ks::PanelControlsService::Component::Encoder&&nested.panelControls->encoderTask()&&nested.panelControls->encoderTask()->stage()==ks::PanelEncoderTask::Stage::HalfTimer))&&b->cpu().exr==0;break;
-   case 15:target=(r->panelControlsForeground.at(ks::PanelControlsService::Component::Pedal)||(nested.panelControls&&nested.panelControls->component()==ks::PanelControlsService::Component::Pedal&&nested.panelControls->pedalTask()&&nested.panelControls->pedalTask()->stage()==ks::PedalSenseTask::Stage::SelectGlobals))&&b->cpu().exr==0;break;
-   case 16:target=(r->panelControlsForeground.at(ks::PanelControlsService::Component::AdcMux)||(nested.panelControls&&nested.panelControls->component()==ks::PanelControlsService::Component::AdcMux&&nested.panelControls->adcTask()&&nested.panelControls->adcTask()->stage()==ks::PanelAdcScanTask::Stage::ReadMuxGroup))&&b->cpu().exr==0;break;
-   case 13:target=(r->panelScanForeground.at(ks::PanelScanService::Component::Push)||(nested.panelScan&&nested.panelScan->atPush(ks::PanelInputTask::Stage::ZeroKey)))&&b->cpu().exr==0;break;
-   case 12:target=r->stateResetForeground.at(ks::StateResetService::Component::Keyboard)&&b->cpu().exr==0;break;
+   case 1:target=r->nativeTpu0At(ks::Tpu0Service::Component::Velocity)&&ks::test::comparisonCpu(*b).exr==6;break;
+   case 2:target=r->nativeTpu0At(ks::Tpu0Service::Component::Midi,true)&&ks::test::comparisonCpu(*b).exr==7;break;
+   case 3:target=r->nativeAdcAt(ks::AdcService::Component::OrdinaryScale)&&ks::test::comparisonCpu(*b).exr==1;break;
+   case 4:target=r->nativeAdcAt(ks::AdcService::Component::SpecialScale)&&ks::test::comparisonCpu(*b).exr==1;break;
+   case 5:target=r->nativeAdcAt(ks::AdcService::Component::ControlPush)&&ks::test::comparisonCpu(*b).exr==1;break;
+   case 6:target=r->nativeSerialReceiveAt(ks::SerialReceiveService::Component::Counter)&&ks::test::comparisonCpu(*b).exr==1;break;
+   case 7:target=((r->serialForeground.at(ks::SerialForegroundService::Kind::PopRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::ReadStatus))||(nested.pumpSerial&&nested.pumpSerial->kind()==ks::SerialForegroundService::Kind::PopRx&&nested.pumpSerial->critical()&&nested.pumpSerial->atQueue(ks::SerialQueueTask::Stage::ReadStatus)))&&ks::test::comparisonCpu(*b).exr==7;break;
+   case 8:target=((r->serialForeground.at(ks::SerialForegroundService::Kind::Transmit,true)&&r->serialForeground.atTransmit(ks::SerialTransmitTask::Stage::Enable))||(nested.pedalSerial&&nested.pedalSerial->kind()==ks::SerialForegroundService::Kind::Transmit&&nested.pedalSerial->critical()&&nested.pedalSerial->atTransmit(ks::SerialTransmitTask::Stage::Enable)))&&ks::test::comparisonCpu(*b).exr==7;break;
+   case 9:target=((r->serialForeground.at(ks::SerialForegroundService::Kind::ResetRx,true)&&r->serialForeground.atQueue(ks::SerialQueueTask::Stage::RetainWord))||(nested.pumpSerial&&nested.pumpSerial->kind()==ks::SerialForegroundService::Kind::ResetRx&&nested.pumpSerial->critical()&&nested.pumpSerial->atQueue(ks::SerialQueueTask::Stage::RetainWord)))&&ks::test::comparisonCpu(*b).exr==7;break;
+   case 10:target=r->stateResetForeground.at(ks::StateResetService::Component::Buttons)&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 11:target=r->stateResetForeground.at(ks::StateResetService::Component::Controls)&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 41:target=expectedSave&&currentSave.atPage(ks::StateSavePageService::Component::Compare)&&currentSave.at(ks::FlashPageCompareTask::Stage::ReadTarget)&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 42:target=expectedSave&&currentSave.at(ks::FlashPageProgramTask::Stage::ReadSource)&&ks::test::comparisonCpu(*b).exr==6;break;
+   case 43:target=expectedSave&&currentSave.atPage(ks::StateSavePageService::Component::Verify)&&currentSave.at(ks::FlashPageCompareTask::Stage::ReadTarget)&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 44:target=expectedSave&&currentSave.reload()&&currentSave.atReload(ks::StateReloadService::Component::Coordinator)&&currentSave.reload()->coordinator().multi().stage()==ks::StateMultiLoadTask::Stage::ResolveSource&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 45:target=expectedSave&&currentSave.atReload(ks::StateReloadService::Component::Panel)&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 37:target=((r->stateApplyForeground.at(ks::StateApplyService::Kind::Apply)&&r->stateApplyForeground.at(ks::StateApplyService::Component::Apply))||(fieldApply&&fieldApply->kind()==ks::StateApplyService::Kind::Apply&&fieldApply->manualTask()&&fieldApply->manualTask()->stage()==ks::StateManualEditTask::Stage::RetainRequest))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 38:target=((r->stateApplyForeground.at(ks::StateApplyService::Kind::Apply)&&r->stateApplyForeground.at(ks::StateApplyService::Component::Packing))||(fieldApply&&fieldApply->kind()==ks::StateApplyService::Kind::Apply&&fieldApply->component()==ks::StateApplyService::Component::Packing))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 39:target=((r->stateApplyForeground.at(ks::StateApplyService::Kind::Apply)&&r->stateApplyForeground.at(ks::StateApplyService::Component::Midi))||(fieldApply&&fieldApply->kind()==ks::StateApplyService::Kind::Apply&&fieldApply->component()==ks::StateApplyService::Component::Midi))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 40:target=((r->stateApplyForeground.at(ks::StateApplyService::Kind::Apply)&&r->stateApplyForeground.at(ks::StateApplyService::Component::Post))||(fieldApply&&fieldApply->kind()==ks::StateApplyService::Kind::Apply&&fieldApply->component()==ks::StateApplyService::Component::Post))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 34:target=((r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atFormat(ks::StateMenuFormatTask::Stage::SetPosition))||(screenDisplay&&screenDisplay->kind()==ks::StateDisplayService::Kind::Format&&screenDisplay->atFormat(ks::StateMenuFormatTask::Stage::SetPosition)))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 35:target=((r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atPoll(ks::PanelPollTask::Stage::TestReady))||(screenDisplay&&screenDisplay->kind()==ks::StateDisplayService::Kind::Format&&screenDisplay->atPoll(ks::PanelPollTask::Stage::TestReady)))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 36:target=((r->stateDisplayForeground.at(ks::StateDisplayService::Kind::Format)&&r->stateDisplayForeground.atByte(ks::PanelByteTask::Kind::CommandWrite,ks::PanelByteTask::Stage::Transfer))||(screenDisplay&&screenDisplay->kind()==ks::StateDisplayService::Kind::Format&&screenDisplay->atByte(ks::PanelByteTask::Kind::CommandWrite,ks::PanelByteTask::Stage::Transfer)))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 30:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::WritePatchName))||(expectedSave&&currentSave.atPreparation(ks::StateStoreService::Kind::WritePatchName)&&currentSave.preparation()->nameTask()&&currentSave.preparation()->nameTask()->stage()==ks::StatePatchNameTask::Stage::AddWritePatch))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 31:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::PartReference))||(expectedSave&&currentSave.atPreparation(ks::StateStoreService::Kind::MultiSerialize)&&currentSave.atPreparation(ks::StateStoreService::Component::PartReference)))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 32:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::PackAll))||(expectedSave&&currentSave.atPreparation(ks::StateStoreService::Kind::MultiSerialize)&&currentSave.atPreparation(ks::StateStoreService::Component::PackAll)))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 33:target=((r->stateStoreForeground.at(ks::StateStoreService::Kind::MultiSerialize)&&r->stateStoreForeground.at(ks::StateStoreService::Component::Oscillators))||(expectedSave&&currentSave.atPreparation(ks::StateStoreService::Kind::MultiSerialize)&&currentSave.atPreparation(ks::StateStoreService::Component::Oscillators)))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 25:target=(r->stateMenuForeground.at(ks::StateMenuService::Kind::Clock)||(nested.menuClock&&nested.menuClock->stage()==ks::ControllerClockReadTask::Stage::ReadCounter)||(nested.tickClock&&nested.tickClock->stage()==ks::ControllerClockReadTask::Stage::ReadCounter))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 26:target=((r->stateMenuForeground.at(ks::StateMenuService::Kind::Previous)&&r->stateMenuForeground.at(ks::StateMenuService::Component::EditGate))||(nested.menuPrevious&&screenMenu&&screenMenu->kind()==ks::StateMenuService::Kind::EditActive&&screenMenu->gatePhase()==0))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 27:target=((r->stateMenuForeground.at(ks::StateMenuService::Kind::Previous)&&r->stateMenuForeground.at(ks::StateMenuService::Component::RepeatTimer))||(nested.menuRepeat&&nested.menuRepeat->kind()==ks::ScheduledTimerTask::Kind::Arm&&nested.menuRepeat->stage()==ks::ScheduledTimerTask::Stage::StoreAction))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 28:target=(r->stateMenuForeground.at(ks::StateMenuService::Kind::BindContext)||(screenMenu&&screenMenu->kind()==ks::StateMenuService::Kind::BindContext&&screenMenu->contextTask()&&screenMenu->contextTask()->stage()==ks::StateEditContextTask::Stage::SaveContextIndex))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 29:target=(r->stateMenuForeground.at(ks::StateMenuService::Kind::IndexedAddress)||(nested.address&&nested.address->stage()==ks::StateEditAddressTask::Stage::ReadSelector))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 22:target=(r->statePanelForeground.atRoute(ks::MidiOutputTask::Stage::SaveOnContext)||(nested.panel&&nested.panel->atRoute(ks::MidiOutputTask::Stage::SaveOnContext)))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 23:target=(r->statePanelForeground.atQueue(ks::InternalMidiQueueTask::Stage::SavePush)||(nested.panel&&nested.panel->atQueue(ks::InternalMidiQueueTask::Stage::SavePush)))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 24:target=(r->statePanelForeground.atSerial(ks::SerialTransmitTask::Stage::RetainFirst)||(nested.panel&&nested.panel->atSerial(ks::SerialTransmitTask::Stage::RetainFirst)))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 17:target=(r->stateEventsForeground.at(ks::StateEventsService::Kind::ButtonPop)||(nested.events&&nested.events->kind()==ks::StateEventsService::Kind::ButtonPop&&nested.events->atPanel(ks::PanelInputTask::Stage::ReadConsumer)))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 18:target=((r->stateEventsForeground.at(ks::StateEventsService::Kind::KeyboardPop)||(nested.events&&nested.events->kind()==ks::StateEventsService::Kind::KeyboardPop&&nested.events->atKeyboard(ks::KeyboardEventsTask::Stage::ReadPopConsumer)))||(r->statePanelForeground.atKeyboard(ks::KeyboardEventsTask::Stage::ReadPopConsumer)||(nested.panel&&nested.panel->atKeyboard(ks::KeyboardEventsTask::Stage::ReadPopConsumer))))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 19:target=(r->stateEventsForeground.at(ks::StateEventsService::Kind::ControlPop)||(nested.events&&nested.events->kind()==ks::StateEventsService::Kind::ControlPop))&&(r->stateEventsForeground.at(ks::StateEventsService::Component::Convert)||(nested.events&&nested.events->component()==ks::StateEventsService::Component::Convert))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 20:target=(r->stateEventsForeground.at(ks::StateEventsService::Kind::ControlPop)||(nested.events&&nested.events->kind()==ks::StateEventsService::Kind::ControlPop))&&(r->stateEventsForeground.at(ks::StateEventsService::Component::Scale)||(nested.events&&nested.events->component()==ks::StateEventsService::Component::Scale))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 21:target=(r->stateEventsForeground.at(ks::StateEventsService::Kind::ControlPop)||(nested.events&&nested.events->kind()==ks::StateEventsService::Kind::ControlPop))&&(r->stateEventsForeground.at(ks::StateEventsService::Component::Square)||(nested.events&&nested.events->component()==ks::StateEventsService::Component::Square))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 14:target=(r->panelControlsForeground.at(ks::PanelControlsService::Component::Encoder)||(nested.panelControls&&nested.panelControls->component()==ks::PanelControlsService::Component::Encoder&&nested.panelControls->encoderTask()&&nested.panelControls->encoderTask()->stage()==ks::PanelEncoderTask::Stage::HalfTimer))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 15:target=(r->panelControlsForeground.at(ks::PanelControlsService::Component::Pedal)||(nested.panelControls&&nested.panelControls->component()==ks::PanelControlsService::Component::Pedal&&nested.panelControls->pedalTask()&&nested.panelControls->pedalTask()->stage()==ks::PedalSenseTask::Stage::SelectGlobals))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 16:target=(r->panelControlsForeground.at(ks::PanelControlsService::Component::AdcMux)||(nested.panelControls&&nested.panelControls->component()==ks::PanelControlsService::Component::AdcMux&&nested.panelControls->adcTask()&&nested.panelControls->adcTask()->stage()==ks::PanelAdcScanTask::Stage::ReadMuxGroup))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 13:target=(r->panelScanForeground.at(ks::PanelScanService::Component::Push)||(nested.panelScan&&nested.panelScan->atPush(ks::PanelInputTask::Stage::ZeroKey)))&&ks::test::comparisonCpu(*b).exr==0;break;
+   case 12:target=r->stateResetForeground.at(ks::StateResetService::Component::Keyboard)&&ks::test::comparisonCpu(*b).exr==0;break;
    }
    landed=r->activeNativeInterrupts()==unsigned(phase<7)&&target;
   }
   check(landed,"Switch did not land at requested native IRQ phase");
-  if(phase==2)check(a->cpu().getPC()==0x113c&&a->cpu().exr==7,"H8 did not reach the same MIDI masking boundary");
-  if(phase>=3&&phase<7){const unsigned expected=phase==3?0x17a8:phase==4?0x176e:phase==5?0x1848:0x25fe;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same ADC/RX child entry");}
-  if(phase>=7&&phase<10){const unsigned expected=phase==7?0x1020:phase==8?0x113c:0xfec;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same foreground critical boundary");}
-  if(phase>=10&&phase<13){const unsigned expected=phase==10?0x13fe:phase==11?0x1578:0x1efe;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same State reset child");}
-  if(phase==13)check(unsigned(a->cpu().getPC())==0x14e4,"H8 did not reach the same matrix event publication");
-  if(phase>=14&&phase<17){const unsigned expected=phase==14?0x188a:phase==15?0x13c2:0x1646;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same panel controls child");}
-  if(phase>=17&&phase<22){const unsigned expected=phase==17?0x1416:phase==18?0x1f16:phase==19?0x20fc:phase==20?0x2144:0x218c;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same State event child");}
-  if(phase>=22&&phase<25){const unsigned expected=phase==22?0x2b38:phase==23?0x2c88:0x1104;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same upper State MIDI child");}
-  if(phase>=25&&phase<30){const unsigned expected=phase==25?0x1300:phase==26?0x4efe:phase==27?0x4134:phase==28?0x5a4a:0x52ae;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same menu/context child");}
-  if(phase>=30&&phase<34){const unsigned expected=phase==30?0x6e82:phase==31?0xa670:phase==32?0x687e:0x68b0;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same natural store preparation child");}
-  if(phase>=34&&phase<37){const unsigned expected=phase==34?0x5ae4:phase==35?0x8ec:0x86c;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same menu/LCD child");}
-  if(phase>=37&&phase<41){const unsigned expected=phase==37?0x6aea:phase==38?0x688e:phase==39?0x2be8:0x6bf0;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same live edit/packing/MIDI/post child");}
-  if(phase>=41){const unsigned expected=phase==41||phase==43?0x128a:phase==42?0x122e:phase==44?0x6ff4:0x6c3c;check(unsigned(a->cpu().getPC())==expected,"H8 did not reach the same Flash/verify/reload child");}
-  const auto*selectedRuntime=b->nativeController();
+  if(phase==2)check(ks::test::comparisonCpu(*a).getPC()==0x113c&&ks::test::comparisonCpu(*a).exr==7,"H8 did not reach the same MIDI masking boundary");
+  if(phase>=3&&phase<7){const unsigned expected=phase==3?0x17a8:phase==4?0x176e:phase==5?0x1848:0x25fe;check(unsigned(ks::test::comparisonCpu(*a).getPC())==expected,"H8 did not reach the same ADC/RX child entry");}
+  if(phase>=7&&phase<10){const unsigned expected=phase==7?0x1020:phase==8?0x113c:0xfec;check(unsigned(ks::test::comparisonCpu(*a).getPC())==expected,"H8 did not reach the same foreground critical boundary");}
+  if(phase>=10&&phase<13){const unsigned expected=phase==10?0x13fe:phase==11?0x1578:0x1efe;check(unsigned(ks::test::comparisonCpu(*a).getPC())==expected,"H8 did not reach the same State reset child");}
+  if(phase==13)check(unsigned(ks::test::comparisonCpu(*a).getPC())==0x14e4,"H8 did not reach the same matrix event publication");
+  if(phase>=14&&phase<17){const unsigned expected=phase==14?0x188a:phase==15?0x13c2:0x1646;check(unsigned(ks::test::comparisonCpu(*a).getPC())==expected,"H8 did not reach the same panel controls child");}
+  if(phase>=17&&phase<22){const unsigned expected=phase==17?0x1416:phase==18?0x1f16:phase==19?0x20fc:phase==20?0x2144:0x218c;check(unsigned(ks::test::comparisonCpu(*a).getPC())==expected,"H8 did not reach the same State event child");}
+  if(phase>=22&&phase<25){const unsigned expected=phase==22?0x2b38:phase==23?0x2c88:0x1104;check(unsigned(ks::test::comparisonCpu(*a).getPC())==expected,"H8 did not reach the same upper State MIDI child");}
+  if(phase>=25&&phase<30){const unsigned expected=phase==25?0x1300:phase==26?0x4efe:phase==27?0x4134:phase==28?0x5a4a:0x52ae;check(unsigned(ks::test::comparisonCpu(*a).getPC())==expected,"H8 did not reach the same menu/context child");}
+  if(phase>=30&&phase<34){const unsigned expected=phase==30?0x6e82:phase==31?0xa670:phase==32?0x687e:0x68b0;check(unsigned(ks::test::comparisonCpu(*a).getPC())==expected,"H8 did not reach the same natural store preparation child");}
+  if(phase>=34&&phase<37){const unsigned expected=phase==34?0x5ae4:phase==35?0x8ec:0x86c;check(unsigned(ks::test::comparisonCpu(*a).getPC())==expected,"H8 did not reach the same menu/LCD child");}
+  if(phase>=37&&phase<41){const unsigned expected=phase==37?0x6aea:phase==38?0x688e:phase==39?0x2be8:0x6bf0;check(unsigned(ks::test::comparisonCpu(*a).getPC())==expected,"H8 did not reach the same live edit/packing/MIDI/post child");}
+  if(phase>=41){const unsigned expected=phase==41||phase==43?0x128a:phase==42?0x122e:phase==44?0x6ff4:0x6c3c;check(unsigned(ks::test::comparisonCpu(*a).getPC())==expected,"H8 did not reach the same Flash/verify/reload child");}
+  const auto*selectedRuntime=ks::test::legacyRuntime(*b);
   const auto tickOwner=ks::currentNativeTickForTests(*selectedRuntime);
   const bool selectedTickPanel=(phase==8||(phase>=13&&phase<17))&&tickOwner.active();
   const auto selectedTickReturns=tickOwner.completed(),selectedButtonReturns=tickOwner.returnedButtons(),selectedEncoderReturns=tickOwner.returnedEncoder(),selectedPedalReturns=tickOwner.returnedPedal(),selectedAdcReturns=tickOwner.returnedAdc(),selectedOutputReturns=tickOwner.returnedOutput();
   const auto cycle=b->controllerCycles(),interpreted=b->h8InterpretedSteps();
   b->enableLiveMidiController(mode==1);
-  check(!b->nativeController()&&std::string(b->controllerBackend())==(mode==1?"live-cpp-midi-hybrid":"original-h8"),"Requested tail mode not published");
+  check(!ks::test::legacyRuntime(*b)&&std::string(b->controllerBackend())==(mode==1?"live-cpp-midi-hybrid":"original-h8"),"Requested tail mode not published");
   check(b->controllerCycles()==cycle,"Controller request added guest time");
-  if(mode==2){b->enableNativeController();check(b->nativeController(),"Pending reference selection not cancelled");}
+  if(mode==2){b->enableNativeController();check(ks::test::legacyRuntime(*b),"Pending reference selection not cancelled");}
   if(phase>=10&&phase<13){
    check(a->boot()&&b->boot(),"Normal musical warmup failed after State reset handoff");
    check(selectedRuntime->stateResetForeground.completed==1&&selectedRuntime->stateResetForeground.components==0xf,"State reset tail did not finish every logical child");

@@ -85,7 +85,7 @@ bool isKStation()const{return kMode.load();}
  uint8_t editorChannel()const{return isKStation()?controlChannel.load():midiChannel();}
  int bufferProfile()const{return buffering.load();}
  void setBufferProfile(int);
- int ksControllerMode()const{return ks::controllerReferenceAvailable()?int(ksController.load()):int(ks::ControllerMode::Native);}
+ int ksControllerMode()const{return ks::boardComparisonAvailable()?int(ksController.load()):int(ks::ControllerMode::Native);}
  bool setKSControllerMode(int,juce::String& error); // UI/control thread only.
  // Message/control thread only. Mode: 0 stop, 1 new summary, 2 new detailed session.
  bool setPerformanceDiagnostics(int mode);

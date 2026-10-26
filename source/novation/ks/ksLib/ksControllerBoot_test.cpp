@@ -1,5 +1,6 @@
+// Explicit retained LEGACY comparison test; not a semantic NativeControllerExecutor proof.
 #include "ksControllerTraceComparison_test.h"
-#include "ksBoard.h"
+#include "ksBoardComparison_test.h"
 #include "ksRom.h"
 #include <algorithm>
 #include <filesystem>
@@ -14,8 +15,8 @@ uint64_t slice=0;
 void check(bool v,const char* why){if(!v)throw std::runtime_error(why);}
 std::vector<uint8_t> bytes(const std::filesystem::path& p){std::ifstream f(p,std::ios::binary);check(bool(f),"Cannot read fixture");return {std::istreambuf_iterator<char>(f),{}};}
 void same(ks::Board& a,ks::Board& b){
-    auto& x=static_cast<ks::ControllerCpu&>(a.cpu());auto& y=static_cast<ks::ControllerCpu&>(b.cpu());
-    const bool nativeWork=b.nativeController()&&b.nativeController()->activeNativeWork();
+    auto& x=static_cast<ks::ControllerCpu&>(ks::test::comparisonCpu(a));auto& y=static_cast<ks::ControllerCpu&>(ks::test::comparisonCpu(b));
+    const bool nativeWork=ks::test::legacyRuntime(b)&&ks::test::legacyRuntime(b)->activeNativeWork();
     if(x.cycles!=y.cycles || (!nativeWork&&x.getPC()!=y.getPC())){
         std::cerr<<"reference pc="<<std::hex<<x.getPC()<<" candidate pc="<<y.getPC()<<std::dec<<" cycles "<<x.cycles<<" / "<<y.cycles<<'\n';
         throw std::runtime_error("Reset cycle/PC mismatch");
@@ -29,69 +30,69 @@ void same(ks::Board& a,ks::Board& b){
     check(std::equal(std::begin(x.interruptPriority),std::end(x.interruptPriority),std::begin(y.interruptPriority)),"Reset IRQ priority mismatch");
     check(a.overlay==b.overlay && a.mainEntered==b.mainEntered && a.ready==b.ready,"Reset lifecycle mismatch");
     check(b.h8InterpretedSteps()==0,"Native reset called original interpreter");
-    check(b.liveMidiController()->noteActions.keySearchCalls.partialEntries==0,"Native reset used the test-only partial-key adapter");
-    check(!b.liveMidiController()->startupCalls.partialEntries && !b.liveMidiController()->voiceActions.selectCalls.partialEntries,"Native reset used partial startup/select recovery");
-    check(!b.liveMidiController()->voiceActions.routingCalls.partialEntries,"Native reset used partial routing recovery");
-    check(!b.liveMidiController()->noteActions.partControlCalls.partialEntries && !b.liveMidiController()->voiceActions.partControlCalls.partialEntries,"Native reset used partial part-control recovery");
-    check(!b.liveMidiController()->voiceActions.velocityCurveCalls.partialEntries,"Native reset used partial velocity recovery");
-    check(!b.liveMidiController()->voiceActions.selectionCalls.partialEntries,"Native reset used partial selection/gate recovery");
-    check(!b.liveMidiController()->voiceActions.populationCalls.partialEntries,"Native reset used partial population recovery");
-    check(b.liveMidiController()->bootSetupCalls.partialEntries==0,"Native reset used partial bootstrap setup recovery");
-    check(b.liveMidiController()->bootStreamCalls.partialEntries==0,"Native reset used partial bootstrap-stream recovery");
-    check(b.liveMidiController()->faultCalls.partialEntries==0,"Native reset used partial fault recovery");
-    check(b.liveMidiController()->voiceActions.addressCalls.partialEntries==0,"Native reset used partial DSP-address recovery");
-    check(b.liveMidiController()->voiceActions.wordCalls.partialEntries==0,"Native reset used partial DSP-word recovery");
-    check(b.liveMidiController()->parameterScaleCalls.partialEntries==0,"Native reset used partial coefficient recovery");
-    check(!b.liveMidiController()->panelMatrixCalls.partialEntries,"Native reset used partial panel-matrix recovery");
-    check(!b.liveMidiController()->pedalSenseCalls.partialEntries,"Native reset used partial pedal recovery");
-    check(!b.liveMidiController()->panelEncoderCalls.partialEntries,"Native reset used partial encoder recovery");
-    check(!b.liveMidiController()->panelAdcSamplesCalls.partialEntries,"Native reset used partial ADC-samples recovery");
-    check(!b.liveMidiController()->panelAdcScaleCalls.partialEntries,"Native reset used partial ADC-scale recovery");
-    check(!b.liveMidiController()->panelAdcCalibrationCalls.partialEntries,"Native reset used partial ADC-calibration recovery");
-    check(!b.liveMidiController()->panelAdcIrqCalls.partialEntries,"Native reset used partial ADC-IRQ recovery");
-    check(!b.liveMidiController()->panelAdcScanCalls.partialEntries,"Native reset used partial ADC-scan recovery");
-    check(!b.liveMidiController()->internalMidiQueueCalls.partialEntries,"Native reset used partial InternalMidiQueue recovery");
-    check(!b.liveMidiController()->midiOutputCalls.partialEntries,"Native reset used partial MidiOutput recovery");
-    check(!b.liveMidiController()->internalMidiServiceCalls.partialEntries,"Native reset used partial InternalMidiService recovery");
-    check(!b.liveMidiController()->stateForegroundCalls.partialEntries,"Native reset used partial StateForeground recovery");
-    check(!b.liveMidiController()->stateButtonDispatchCalls.partialEntries,"Native reset used partial StateButtonDispatch recovery");
-    check(!b.liveMidiController()->panelAnalogCalls.partialEntries,"Native reset used partial PanelAnalog recovery");
-    check(!b.liveMidiController()->clockSyncCalls.partialEntries,"Native reset used partial ClockSync recovery");
-    check(!b.liveMidiController()->clockPulseCalls.partialEntries,"Native reset used partial ClockPulse recovery");
-    check(!b.liveMidiController()->clockDisplayCalls.partialEntries,"Native reset used partial ClockDisplay recovery");
-    check(!b.liveMidiController()->stateScreenCalls.partialEntries,"Native reset used partial StateScreen recovery");
-    check(!b.liveMidiController()->panelSettingsCalls.partialEntries,"Native reset used partial PanelSettings recovery");
-    check(!b.liveMidiController()->stateEditContextCalls.partialEntries,"Native reset used partial StateEditContext recovery");
-    check(!b.liveMidiController()->stateScreenEditCalls.partialEntries,"Native reset used partial StateScreenEdit recovery");
-    check(!b.liveMidiController()->stateMenuFormatCalls.partialEntries,"Native reset used partial StateMenuFormat recovery");
-    check(!b.liveMidiController()->systemServicesCalls.partialEntries,"Native reset used partial SystemServices recovery");
-    check(!b.liveMidiController()->keyboardEventsCalls.partialEntries,"Native reset used partial KeyboardEvents recovery");
-    check(!b.liveMidiController()->statePartSelectionCalls.partialEntries,"Native reset used partial StatePartSelection recovery");
-    check(!b.liveMidiController()->stateMenuActionsCalls.partialEntries,"Native reset used partial StateMenuActions recovery");
-    check(!b.liveMidiController()->keyboardScanCalls.partialEntries,"Native reset used partial KeyboardScan recovery");
-    check(!b.liveMidiController()->diagnosticCodecCalls.partialEntries,"Native reset used partial DiagnosticCodec recovery");
-    check(!b.liveMidiController()->diagnosticTransferCalls.partialEntries,"Native reset used partial DiagnosticTransfer recovery");
-    check(!b.liveMidiController()->memoryDiagnosticsCalls.partialEntries,"Native reset used partial MemoryDiagnostics recovery");
-    check(!b.liveMidiController()->startupBannerCalls.partialEntries,"Native reset used partial StartupBanner recovery");
-    check(!b.liveMidiController()->stateScreenActionsCalls.partialEntries,"Native reset used partial StateScreenActions recovery");
-    check(!b.liveMidiController()->statePanelModesCalls.partialEntries,"Native reset used partial StatePanelModes recovery");
-    check(!b.liveMidiController()->stateFunctionKeysCalls.partialEntries,"Native reset used partial StateFunctionKeys recovery");
-    check(!b.liveMidiController()->stateEditWorkflowCalls.partialEntries,"Native reset used partial StateEditWorkflow recovery");
-    check(!b.liveMidiController()->loaderInputsCalls.partialEntries,"Native reset used partial LoaderInputs recovery");
-    check(!b.liveMidiController()->loaderCodecCalls.partialEntries,"Native reset used partial LoaderCodec recovery");
-    check(!b.liveMidiController()->loaderPacketsCalls.partialEntries,"Native reset used partial LoaderPackets recovery");
-    check(!b.liveMidiController()->loaderProgramCalls.partialEntries,"Native reset used partial LoaderProgram recovery");
-    check(!b.liveMidiController()->loaderSessionCalls.partialEntries,"Native reset used partial LoaderSession recovery");
-    check(!b.liveMidiController()->stateValueBoundsCalls.partialEntries,"Native reset used partial StateValueBounds recovery");
-    check(!b.liveMidiController()->stateEditLabelCalls.partialEntries,"Native reset used partial StateEditLabel recovery");
-    check(!b.liveMidiController()->stateFieldActionsCalls.partialEntries,"Native reset used partial StateFieldActions recovery");
-    check(!b.liveMidiController()->stateBankNavigationCalls.partialEntries,"Native reset used partial StateBankNavigation recovery");
-    check(!b.liveMidiController()->stateStatusDisplayCalls.partialEntries,"Native reset used partial StateStatusDisplay recovery");
-    check(!b.liveMidiController()->stateStoredValueCalls.partialEntries,"Native reset used partial StateStoredValue recovery");
-    check(!b.liveMidiController()->stateBrowseWorkflowCalls.partialEntries,"Native reset used partial StateBrowseWorkflow recovery");
-    check(!b.liveMidiController()->stateProgramBrowseCalls.partialEntries,"Native reset used partial StateProgramBrowse recovery");
-    check(!b.liveMidiController()->stateProgramDisplayCalls.partialEntries,"Native reset used partial StateProgramDisplay recovery");
-    check(!b.liveMidiController()->stateProgramEventCalls.partialEntries,"Native reset used partial StateProgramEvent recovery");
+    check(ks::test::legacyMidi(b)->noteActions.keySearchCalls.partialEntries==0,"Native reset used the test-only partial-key adapter");
+    check(!ks::test::legacyMidi(b)->startupCalls.partialEntries && !ks::test::legacyMidi(b)->voiceActions.selectCalls.partialEntries,"Native reset used partial startup/select recovery");
+    check(!ks::test::legacyMidi(b)->voiceActions.routingCalls.partialEntries,"Native reset used partial routing recovery");
+    check(!ks::test::legacyMidi(b)->noteActions.partControlCalls.partialEntries && !ks::test::legacyMidi(b)->voiceActions.partControlCalls.partialEntries,"Native reset used partial part-control recovery");
+    check(!ks::test::legacyMidi(b)->voiceActions.velocityCurveCalls.partialEntries,"Native reset used partial velocity recovery");
+    check(!ks::test::legacyMidi(b)->voiceActions.selectionCalls.partialEntries,"Native reset used partial selection/gate recovery");
+    check(!ks::test::legacyMidi(b)->voiceActions.populationCalls.partialEntries,"Native reset used partial population recovery");
+    check(ks::test::legacyMidi(b)->bootSetupCalls.partialEntries==0,"Native reset used partial bootstrap setup recovery");
+    check(ks::test::legacyMidi(b)->bootStreamCalls.partialEntries==0,"Native reset used partial bootstrap-stream recovery");
+    check(ks::test::legacyMidi(b)->faultCalls.partialEntries==0,"Native reset used partial fault recovery");
+    check(ks::test::legacyMidi(b)->voiceActions.addressCalls.partialEntries==0,"Native reset used partial DSP-address recovery");
+    check(ks::test::legacyMidi(b)->voiceActions.wordCalls.partialEntries==0,"Native reset used partial DSP-word recovery");
+    check(ks::test::legacyMidi(b)->parameterScaleCalls.partialEntries==0,"Native reset used partial coefficient recovery");
+    check(!ks::test::legacyMidi(b)->panelMatrixCalls.partialEntries,"Native reset used partial panel-matrix recovery");
+    check(!ks::test::legacyMidi(b)->pedalSenseCalls.partialEntries,"Native reset used partial pedal recovery");
+    check(!ks::test::legacyMidi(b)->panelEncoderCalls.partialEntries,"Native reset used partial encoder recovery");
+    check(!ks::test::legacyMidi(b)->panelAdcSamplesCalls.partialEntries,"Native reset used partial ADC-samples recovery");
+    check(!ks::test::legacyMidi(b)->panelAdcScaleCalls.partialEntries,"Native reset used partial ADC-scale recovery");
+    check(!ks::test::legacyMidi(b)->panelAdcCalibrationCalls.partialEntries,"Native reset used partial ADC-calibration recovery");
+    check(!ks::test::legacyMidi(b)->panelAdcIrqCalls.partialEntries,"Native reset used partial ADC-IRQ recovery");
+    check(!ks::test::legacyMidi(b)->panelAdcScanCalls.partialEntries,"Native reset used partial ADC-scan recovery");
+    check(!ks::test::legacyMidi(b)->internalMidiQueueCalls.partialEntries,"Native reset used partial InternalMidiQueue recovery");
+    check(!ks::test::legacyMidi(b)->midiOutputCalls.partialEntries,"Native reset used partial MidiOutput recovery");
+    check(!ks::test::legacyMidi(b)->internalMidiServiceCalls.partialEntries,"Native reset used partial InternalMidiService recovery");
+    check(!ks::test::legacyMidi(b)->stateForegroundCalls.partialEntries,"Native reset used partial StateForeground recovery");
+    check(!ks::test::legacyMidi(b)->stateButtonDispatchCalls.partialEntries,"Native reset used partial StateButtonDispatch recovery");
+    check(!ks::test::legacyMidi(b)->panelAnalogCalls.partialEntries,"Native reset used partial PanelAnalog recovery");
+    check(!ks::test::legacyMidi(b)->clockSyncCalls.partialEntries,"Native reset used partial ClockSync recovery");
+    check(!ks::test::legacyMidi(b)->clockPulseCalls.partialEntries,"Native reset used partial ClockPulse recovery");
+    check(!ks::test::legacyMidi(b)->clockDisplayCalls.partialEntries,"Native reset used partial ClockDisplay recovery");
+    check(!ks::test::legacyMidi(b)->stateScreenCalls.partialEntries,"Native reset used partial StateScreen recovery");
+    check(!ks::test::legacyMidi(b)->panelSettingsCalls.partialEntries,"Native reset used partial PanelSettings recovery");
+    check(!ks::test::legacyMidi(b)->stateEditContextCalls.partialEntries,"Native reset used partial StateEditContext recovery");
+    check(!ks::test::legacyMidi(b)->stateScreenEditCalls.partialEntries,"Native reset used partial StateScreenEdit recovery");
+    check(!ks::test::legacyMidi(b)->stateMenuFormatCalls.partialEntries,"Native reset used partial StateMenuFormat recovery");
+    check(!ks::test::legacyMidi(b)->systemServicesCalls.partialEntries,"Native reset used partial SystemServices recovery");
+    check(!ks::test::legacyMidi(b)->keyboardEventsCalls.partialEntries,"Native reset used partial KeyboardEvents recovery");
+    check(!ks::test::legacyMidi(b)->statePartSelectionCalls.partialEntries,"Native reset used partial StatePartSelection recovery");
+    check(!ks::test::legacyMidi(b)->stateMenuActionsCalls.partialEntries,"Native reset used partial StateMenuActions recovery");
+    check(!ks::test::legacyMidi(b)->keyboardScanCalls.partialEntries,"Native reset used partial KeyboardScan recovery");
+    check(!ks::test::legacyMidi(b)->diagnosticCodecCalls.partialEntries,"Native reset used partial DiagnosticCodec recovery");
+    check(!ks::test::legacyMidi(b)->diagnosticTransferCalls.partialEntries,"Native reset used partial DiagnosticTransfer recovery");
+    check(!ks::test::legacyMidi(b)->memoryDiagnosticsCalls.partialEntries,"Native reset used partial MemoryDiagnostics recovery");
+    check(!ks::test::legacyMidi(b)->startupBannerCalls.partialEntries,"Native reset used partial StartupBanner recovery");
+    check(!ks::test::legacyMidi(b)->stateScreenActionsCalls.partialEntries,"Native reset used partial StateScreenActions recovery");
+    check(!ks::test::legacyMidi(b)->statePanelModesCalls.partialEntries,"Native reset used partial StatePanelModes recovery");
+    check(!ks::test::legacyMidi(b)->stateFunctionKeysCalls.partialEntries,"Native reset used partial StateFunctionKeys recovery");
+    check(!ks::test::legacyMidi(b)->stateEditWorkflowCalls.partialEntries,"Native reset used partial StateEditWorkflow recovery");
+    check(!ks::test::legacyMidi(b)->loaderInputsCalls.partialEntries,"Native reset used partial LoaderInputs recovery");
+    check(!ks::test::legacyMidi(b)->loaderCodecCalls.partialEntries,"Native reset used partial LoaderCodec recovery");
+    check(!ks::test::legacyMidi(b)->loaderPacketsCalls.partialEntries,"Native reset used partial LoaderPackets recovery");
+    check(!ks::test::legacyMidi(b)->loaderProgramCalls.partialEntries,"Native reset used partial LoaderProgram recovery");
+    check(!ks::test::legacyMidi(b)->loaderSessionCalls.partialEntries,"Native reset used partial LoaderSession recovery");
+    check(!ks::test::legacyMidi(b)->stateValueBoundsCalls.partialEntries,"Native reset used partial StateValueBounds recovery");
+    check(!ks::test::legacyMidi(b)->stateEditLabelCalls.partialEntries,"Native reset used partial StateEditLabel recovery");
+    check(!ks::test::legacyMidi(b)->stateFieldActionsCalls.partialEntries,"Native reset used partial StateFieldActions recovery");
+    check(!ks::test::legacyMidi(b)->stateBankNavigationCalls.partialEntries,"Native reset used partial StateBankNavigation recovery");
+    check(!ks::test::legacyMidi(b)->stateStatusDisplayCalls.partialEntries,"Native reset used partial StateStatusDisplay recovery");
+    check(!ks::test::legacyMidi(b)->stateStoredValueCalls.partialEntries,"Native reset used partial StateStoredValue recovery");
+    check(!ks::test::legacyMidi(b)->stateBrowseWorkflowCalls.partialEntries,"Native reset used partial StateBrowseWorkflow recovery");
+    check(!ks::test::legacyMidi(b)->stateProgramBrowseCalls.partialEntries,"Native reset used partial StateProgramBrowse recovery");
+    check(!ks::test::legacyMidi(b)->stateProgramDisplayCalls.partialEntries,"Native reset used partial StateProgramDisplay recovery");
+    check(!ks::test::legacyMidi(b)->stateProgramEventCalls.partialEntries,"Native reset used partial StateProgramEvent recovery");
     for(unsigned n=0xfffe00;n<=0xffffff;++n)check(a.read(n)==b.read(n),"Reset IO mismatch");
     check(a.waveReads==b.waveReads && a.hostWrites[0]==b.hostWrites[0] && a.hostWrites[1]==b.hostWrites[1],"Reset hardware counters mismatch");
 }
@@ -104,8 +105,8 @@ int main(int argc,char** argv){try{
     check(variant=="single" || variant=="irregular" || variant=="multi" || variant=="mapped","Unknown boot variant");
     if(variant=="multi"){flash[0x1ff01]=0;flash[0x1ff04]=1;}
     if(variant=="mapped"){wave.front()=0x12;wave[1]=0x34;wave[wave.size()-2]=0xab;wave.back()=0xcd;}
-    auto a=std::make_unique<ks::Board>(os.data(),wave,flash,true,false);
-    auto b=std::make_unique<ks::Board>(os.data(),wave,flash,true,true);
+    auto a=ks::test::makeLegacyBoard(os.data(),wave,flash,true,false);
+    auto b=ks::test::makeLegacyBoard(os.data(),wave,flash,true,true);
     same(*a,*b);a->startControllerTrace();b->startControllerTrace();
     // Match production 128-cycle coordination from reset; the oracle owns
     // its original timer/IRQ/core path and independent DSP instances.
@@ -114,19 +115,19 @@ int main(int argc,char** argv){try{
         constexpr unsigned budgets[]{128,127,129,97,193,255,1,63};
         const auto budget=variant=="irregular"?budgets[slice%8]:128;
         a->advance(budget);b->advance(budget);++slice;same(*a,*b);a->discardAudio();b->discardAudio();
-        if(!(slice%100000))std::cout<<"slices="<<slice<<" pc="<<std::hex<<a->cpu().getPC()<<std::dec<<" cycle="<<a->controllerCycles()<<std::endl;
+        if(!(slice%100000))std::cout<<"slices="<<slice<<" pc="<<std::hex<<ks::test::comparisonCpu(*a).getPC()<<std::dec<<" cycle="<<a->controllerCycles()<<std::endl;
     }
     check(a->boot() && b->boot(),"Warm initialization failed");same(*a,*b);
-    check(b->liveMidiController()->startupCalls.startupStarted==1 && b->liveMidiController()->startupCalls.startupCompleted==1 && b->liveMidiController()->startupCalls.resetStarted==1 && b->liveMidiController()->startupCalls.resetCompleted==1,"Cold start did not complete native outer startup/reset");
-    check(b->liveMidiController()->bootSetupCalls.started==2 && b->liveMidiController()->bootSetupCalls.completed==2,"Cold startup did not complete both native DSP setup jobs");
-    check(b->liveMidiController()->bootStreamCalls.started==2 && b->liveMidiController()->bootStreamCalls.completed==2,"Cold startup did not complete both native DSP firmware streams");
-    check(b->liveMidiController()->panelAdcCalibrationCalls.started>0&&b->liveMidiController()->panelAdcCalibrationCalls.completed>0,"Cold start did not exercise native ADC calibration");
-    check(b->nativeController()->panelSettingsForeground.kinds[unsigned(ks::PanelSettingsService::Kind::Warmup)]>0&&(b->nativeController()->panelSettingsForeground.components&(1u<<unsigned(ks::PanelSettingsService::Component::AdcStart)))&&b->nativeController()->nativeInterruptKinds[4]>0,"Cold start did not exercise CPU-free ADC warmup/start/IRQ");
+    check(ks::test::legacyMidi(*b)->startupCalls.startupStarted==1 && ks::test::legacyMidi(*b)->startupCalls.startupCompleted==1 && ks::test::legacyMidi(*b)->startupCalls.resetStarted==1 && ks::test::legacyMidi(*b)->startupCalls.resetCompleted==1,"Cold start did not complete native outer startup/reset");
+    check(ks::test::legacyMidi(*b)->bootSetupCalls.started==2 && ks::test::legacyMidi(*b)->bootSetupCalls.completed==2,"Cold startup did not complete both native DSP setup jobs");
+    check(ks::test::legacyMidi(*b)->bootStreamCalls.started==2 && ks::test::legacyMidi(*b)->bootStreamCalls.completed==2,"Cold startup did not complete both native DSP firmware streams");
+    check(ks::test::legacyMidi(*b)->panelAdcCalibrationCalls.started>0&&ks::test::legacyMidi(*b)->panelAdcCalibrationCalls.completed>0,"Cold start did not exercise native ADC calibration");
+    check(ks::test::legacyRuntime(*b)->panelSettingsForeground.kinds[unsigned(ks::PanelSettingsService::Kind::Warmup)]>0&&(ks::test::legacyRuntime(*b)->panelSettingsForeground.components&(1u<<unsigned(ks::PanelSettingsService::Component::AdcStart)))&&ks::test::legacyRuntime(*b)->nativeInterruptKinds[4]>0,"Cold start did not exercise CPU-free ADC warmup/start/IRQ");
     // Native IRQs no longer materialize temporary CPU frames. Only the
     // firmware's reserved scratch stack may differ; all other 16 MiB bytes
     // remain part of the independent cold-boot comparison.
     const auto sameResources=[&]{
-        const auto*x=a->cpu().memory;const auto*y=b->cpu().memory;
+        const auto*x=ks::test::comparisonCpu(*a).memory;const auto*y=ks::test::comparisonCpu(*b).memory;
         return std::equal(x,x+0xfff000,y)&&std::equal(x+0xfffc00,x+(1<<24),y+0xfffc00);
     };
     check(sameResources(),"Complete boot resource memory mismatch");
@@ -169,317 +170,317 @@ int main(int argc,char** argv){try{
     uint8_t v=0,w=0;while(a->popMidiOut(v))check(b->popMidiOut(w)&&v==w,"Reset MIDI output mismatch");check(!b->popMidiOut(w),"Trailing reset MIDI output");
     // Preserve semantic evidence even when the final diagnostic-PC check fails.
     // Every original non-PC/resource/state assertion above remains strict.
-    const auto& factory=b->nativeController()->stateFactoryForeground;
+    const auto& factory=ks::test::legacyRuntime(*b)->stateFactoryForeground;
     std::ofstream gates(out/"cold-semantic-gates.json");check(bool(gates),"Cannot save cold semantic evidence");
     gates<<"{\"semantic_gates_complete\":true,\"variant\":\""<<variant<<"\",\"frames\":24000,\"channels\":24,\"encoding\":\"int32le\",\"peak\":"<<peak
          <<",\"events\":"<<x->events.size()<<",\"slices\":"<<x->slices.size()<<",\"controller_cycles\":"<<b->controllerCycles()
          <<",\"checkpoint_exact\":true,\"every_pcm_sample_exact\":true,\"every_nonPC_event_and_slice_exact\":true"
          <<",\"strict_pc_acceptable\":"<<(cpuLocationsAcceptable?"true":"false")<<",\"unexpected_pc_events\":"<<unexpectedCpuLocationChanges
-         <<",\"native_clock_sync_service_calls\":"<<b->nativeController()->clockSyncForeground.started
-         <<",\"native_clock_sync_service_returns\":"<<b->nativeController()->clockSyncForeground.completed
-         <<",\"native_clock_sync_service_phases\":"<<b->nativeController()->clockSyncForeground.phases
-         <<",\"native_clock_sync_service_initial_active\":"<<b->nativeController()->clockSyncForeground.initial
-         <<",\"native_clock_sync_service_active\":"<<b->nativeController()->clockSyncForeground.active()
-         <<",\"native_clock_sync_service_components\":"<<b->nativeController()->clockSyncForeground.components
-         <<",\"native_clock_sync_service_update\":"<<b->nativeController()->clockSyncForeground.kinds[0]
-         <<",\"native_state_deferred_parts_service_calls\":"<<b->nativeController()->stateDeferredPartsForeground.started
-         <<",\"native_state_deferred_parts_service_returns\":"<<b->nativeController()->stateDeferredPartsForeground.completed
-         <<",\"native_state_deferred_parts_service_phases\":"<<b->nativeController()->stateDeferredPartsForeground.phases
-         <<",\"native_state_deferred_parts_service_initial_active\":"<<b->nativeController()->stateDeferredPartsForeground.initial
-         <<",\"native_state_deferred_parts_service_active\":"<<b->nativeController()->stateDeferredPartsForeground.active()
-         <<",\"native_state_deferred_parts_service_components\":"<<b->nativeController()->stateDeferredPartsForeground.components
-         <<",\"native_state_deferred_parts_service_deferred\":"<<b->nativeController()->stateDeferredPartsForeground.kinds[0]
-         <<",\"native_state_deferred_parts_service_processed\":"<<b->nativeController()->stateDeferredPartsForeground.processed
-         <<",\"native_state_deferred_parts_service_voice_uploads\":"<<b->nativeController()->stateDeferredPartsForeground.voiceUploads
-         <<",\"native_state_deferred_parts_service_part_mask\":"<<b->nativeController()->stateDeferredPartsForeground.partMask
-         <<",\"native_state_refresh_service_calls\":"<<b->nativeController()->stateRefreshForeground.started
-         <<",\"native_state_refresh_service_returns\":"<<b->nativeController()->stateRefreshForeground.completed
-         <<",\"native_state_refresh_service_phases\":"<<b->nativeController()->stateRefreshForeground.phases
-         <<",\"native_state_refresh_service_initial_active\":"<<b->nativeController()->stateRefreshForeground.initial
-         <<",\"native_state_refresh_service_active\":"<<b->nativeController()->stateRefreshForeground.active()
-         <<",\"native_state_refresh_service_components\":"<<b->nativeController()->stateRefreshForeground.components
-         <<",\"native_state_refresh_service_refresh\":"<<b->nativeController()->stateRefreshForeground.kinds[0]
-         <<",\"native_state_refresh_service_returned_packet\":"<<b->nativeController()->stateRefreshForeground.returnedPacket
-         <<",\"native_state_refresh_service_returned_panel\":"<<b->nativeController()->stateRefreshForeground.returnedPanel
-         <<",\"native_state_refresh_service_returned_deferred\":"<<b->nativeController()->stateRefreshForeground.returnedDeferred
-         <<",\"native_state_refresh_service_returned_clock\":"<<b->nativeController()->stateRefreshForeground.returnedClock
-         <<",\"native_state_refresh_service_processed_parts\":"<<b->nativeController()->stateRefreshForeground.processedParts
-         <<",\"native_state_refresh_service_returned_coefficient\":"<<b->nativeController()->stateRefreshForeground.returnedCoefficient
-         <<",\"native_state_refresh_service_returned_period_address\":"<<b->nativeController()->stateRefreshForeground.returnedPeriodAddress
-         <<",\"native_state_refresh_service_returned_period_value\":"<<b->nativeController()->stateRefreshForeground.returnedPeriodValue
-         <<",\"native_panel_pedal_output_service_calls\":"<<b->nativeController()->panelPedalOutputForeground.started
-         <<",\"native_panel_pedal_output_service_returns\":"<<b->nativeController()->panelPedalOutputForeground.completed
-         <<",\"native_panel_pedal_output_service_phases\":"<<b->nativeController()->panelPedalOutputForeground.phases
-         <<",\"native_panel_pedal_output_service_initial_active\":"<<b->nativeController()->panelPedalOutputForeground.initial
-         <<",\"native_panel_pedal_output_service_active\":"<<b->nativeController()->panelPedalOutputForeground.active()
-         <<",\"native_panel_pedal_output_service_components\":"<<b->nativeController()->panelPedalOutputForeground.components
-         <<",\"native_panel_pedal_output_service_pedal\":"<<b->nativeController()->panelPedalOutputForeground.kinds[0]
-         <<",\"native_panel_pedal_output_service_byte\":"<<b->nativeController()->panelPedalOutputForeground.kinds[1]
-         <<",\"native_state_encoder_service_calls\":"<<b->nativeController()->stateEncoderForeground.started
-         <<",\"native_state_encoder_service_returns\":"<<b->nativeController()->stateEncoderForeground.completed
-         <<",\"native_state_encoder_service_phases\":"<<b->nativeController()->stateEncoderForeground.phases
-         <<",\"native_state_encoder_service_initial_active\":"<<b->nativeController()->stateEncoderForeground.initial
-         <<",\"native_state_encoder_service_active\":"<<b->nativeController()->stateEncoderForeground.active()
-         <<",\"native_state_encoder_service_components\":"<<b->nativeController()->stateEncoderForeground.components
-         <<",\"native_state_encoder_service_encoder\":"<<b->nativeController()->stateEncoderForeground.kinds[0]
-         <<",\"native_panel_masks_service_calls\":"<<b->nativeController()->panelMasksForeground.started
-         <<",\"native_panel_masks_service_returns\":"<<b->nativeController()->panelMasksForeground.completed
-         <<",\"native_panel_masks_service_phases\":"<<b->nativeController()->panelMasksForeground.phases
-         <<",\"native_panel_masks_service_initial_active\":"<<b->nativeController()->panelMasksForeground.initial
-         <<",\"native_panel_masks_service_active\":"<<b->nativeController()->panelMasksForeground.active()
-         <<",\"native_voice_feedback_service_calls\":"<<b->nativeController()->voiceFeedbackForeground.started
-         <<",\"native_voice_feedback_service_returns\":"<<b->nativeController()->voiceFeedbackForeground.completed
-         <<",\"native_voice_feedback_service_phases\":"<<b->nativeController()->voiceFeedbackForeground.phases
-         <<",\"native_voice_feedback_service_initial_active\":"<<b->nativeController()->voiceFeedbackForeground.initial
-         <<",\"native_voice_feedback_service_active\":"<<b->nativeController()->voiceFeedbackForeground.active()
-         <<",\"native_part_feedback_service_calls\":"<<b->nativeController()->partFeedbackForeground.started
-         <<",\"native_part_feedback_service_returns\":"<<b->nativeController()->partFeedbackForeground.completed
-         <<",\"native_part_feedback_service_phases\":"<<b->nativeController()->partFeedbackForeground.phases
-         <<",\"native_part_feedback_service_initial_active\":"<<b->nativeController()->partFeedbackForeground.initial
-         <<",\"native_part_feedback_service_active\":"<<b->nativeController()->partFeedbackForeground.active()
-         <<",\"native_periodic_service_calls\":"<<b->nativeController()->periodicForeground.started
-         <<",\"native_periodic_service_returns\":"<<b->nativeController()->periodicForeground.completed
-         <<",\"native_periodic_service_phases\":"<<b->nativeController()->periodicForeground.phases
-         <<",\"native_periodic_service_initial_active\":"<<b->nativeController()->periodicForeground.initial
-         <<",\"native_periodic_service_active\":"<<b->nativeController()->periodicForeground.active()
-         <<",\"native_state_channel_service_calls\":"<<b->nativeController()->stateChannelForeground.started
-         <<",\"native_state_channel_service_returns\":"<<b->nativeController()->stateChannelForeground.completed
-         <<",\"native_state_channel_service_phases\":"<<b->nativeController()->stateChannelForeground.phases
-         <<",\"native_state_channel_service_initial_active\":"<<b->nativeController()->stateChannelForeground.initial
-         <<",\"native_state_channel_service_active\":"<<b->nativeController()->stateChannelForeground.active()
-         <<",\"native_midi_packet_service_calls\":"<<b->nativeController()->midiPacketForeground.started
-         <<",\"native_midi_packet_service_returns\":"<<b->nativeController()->midiPacketForeground.completed
-         <<",\"native_midi_packet_service_phases\":"<<b->nativeController()->midiPacketForeground.phases
-         <<",\"native_midi_packet_service_initial_active\":"<<b->nativeController()->midiPacketForeground.initial
-         <<",\"native_midi_packet_service_active\":"<<b->nativeController()->midiPacketForeground.active()
-         <<",\"native_native_key_service_calls\":"<<b->nativeController()->nativeKeyForeground.started
-         <<",\"native_native_key_service_returns\":"<<b->nativeController()->nativeKeyForeground.completed
-         <<",\"native_native_key_service_phases\":"<<b->nativeController()->nativeKeyForeground.phases
-         <<",\"native_native_key_service_initial_active\":"<<b->nativeController()->nativeKeyForeground.initial
-         <<",\"native_native_key_service_active\":"<<b->nativeController()->nativeKeyForeground.active()
-         <<",\"native_native_arp_reset_service_calls\":"<<b->nativeController()->nativeArpResetForeground.started
-         <<",\"native_native_arp_reset_service_returns\":"<<b->nativeController()->nativeArpResetForeground.completed
-         <<",\"native_native_arp_reset_service_phases\":"<<b->nativeController()->nativeArpResetForeground.phases
-         <<",\"native_native_arp_reset_service_initial_active\":"<<b->nativeController()->nativeArpResetForeground.initial
-         <<",\"native_native_arp_reset_service_active\":"<<b->nativeController()->nativeArpResetForeground.active()
-         <<",\"native_native_voice_release_service_calls\":"<<b->nativeController()->nativeVoiceReleaseForeground.started
-         <<",\"native_native_voice_release_service_returns\":"<<b->nativeController()->nativeVoiceReleaseForeground.completed
-         <<",\"native_native_voice_release_service_phases\":"<<b->nativeController()->nativeVoiceReleaseForeground.phases
-         <<",\"native_native_voice_release_service_initial_active\":"<<b->nativeController()->nativeVoiceReleaseForeground.initial
-         <<",\"native_native_voice_release_service_active\":"<<b->nativeController()->nativeVoiceReleaseForeground.active()
-         <<",\"native_native_voice_allocation_service_calls\":"<<b->nativeController()->nativeVoiceAllocationForeground.started
-         <<",\"native_native_voice_allocation_service_returns\":"<<b->nativeController()->nativeVoiceAllocationForeground.completed
-         <<",\"native_native_voice_allocation_service_phases\":"<<b->nativeController()->nativeVoiceAllocationForeground.phases
-         <<",\"native_native_voice_allocation_service_initial_active\":"<<b->nativeController()->nativeVoiceAllocationForeground.initial
-         <<",\"native_native_voice_allocation_service_active\":"<<b->nativeController()->nativeVoiceAllocationForeground.active()
-         <<",\"native_native_voice_start_service_calls\":"<<b->nativeController()->nativeVoiceStartForeground.started
-         <<",\"native_native_voice_start_service_returns\":"<<b->nativeController()->nativeVoiceStartForeground.completed
-         <<",\"native_native_voice_start_service_phases\":"<<b->nativeController()->nativeVoiceStartForeground.phases
-         <<",\"native_native_voice_start_service_initial_active\":"<<b->nativeController()->nativeVoiceStartForeground.initial
-         <<",\"native_native_voice_start_service_active\":"<<b->nativeController()->nativeVoiceStartForeground.active()
-         <<",\"native_native_voice_modulation_service_calls\":"<<b->nativeController()->nativeVoiceModulationForeground.started
-         <<",\"native_native_voice_modulation_service_returns\":"<<b->nativeController()->nativeVoiceModulationForeground.completed
-         <<",\"native_native_voice_modulation_service_phases\":"<<b->nativeController()->nativeVoiceModulationForeground.phases
-         <<",\"native_native_voice_modulation_service_initial_active\":"<<b->nativeController()->nativeVoiceModulationForeground.initial
-         <<",\"native_native_voice_modulation_service_active\":"<<b->nativeController()->nativeVoiceModulationForeground.active()
-         <<",\"native_native_voice_sweep_service_calls\":"<<b->nativeController()->nativeVoiceSweepForeground.started
-         <<",\"native_native_voice_sweep_service_returns\":"<<b->nativeController()->nativeVoiceSweepForeground.completed
-         <<",\"native_native_voice_sweep_service_phases\":"<<b->nativeController()->nativeVoiceSweepForeground.phases
-         <<",\"native_native_voice_sweep_service_initial_active\":"<<b->nativeController()->nativeVoiceSweepForeground.initial
-         <<",\"native_native_voice_sweep_service_active\":"<<b->nativeController()->nativeVoiceSweepForeground.active()
-         <<",\"native_internal_key_output_service_calls\":"<<b->nativeController()->internalKeyOutputForeground.started
-         <<",\"native_internal_key_output_service_returns\":"<<b->nativeController()->internalKeyOutputForeground.completed
-         <<",\"native_internal_key_output_service_phases\":"<<b->nativeController()->internalKeyOutputForeground.phases
-         <<",\"native_internal_key_output_service_initial_active\":"<<b->nativeController()->internalKeyOutputForeground.initial
-         <<",\"native_internal_key_output_service_active\":"<<b->nativeController()->internalKeyOutputForeground.active()
-         <<",\"native_native_note_state_service_calls\":"<<b->nativeController()->nativeNoteStateForeground.started
-         <<",\"native_native_note_state_service_returns\":"<<b->nativeController()->nativeNoteStateForeground.completed
-         <<",\"native_native_note_state_service_phases\":"<<b->nativeController()->nativeNoteStateForeground.phases
-         <<",\"native_native_note_state_service_initial_active\":"<<b->nativeController()->nativeNoteStateForeground.initial
-         <<",\"native_native_note_state_service_active\":"<<b->nativeController()->nativeNoteStateForeground.active()
-         <<",\"native_native_note_program_service_calls\":"<<b->nativeController()->nativeNoteProgramForeground.started
-         <<",\"native_native_note_program_service_returns\":"<<b->nativeController()->nativeNoteProgramForeground.completed
-         <<",\"native_native_note_program_service_phases\":"<<b->nativeController()->nativeNoteProgramForeground.phases
-         <<",\"native_native_note_program_service_initial_active\":"<<b->nativeController()->nativeNoteProgramForeground.initial
-         <<",\"native_native_note_program_service_active\":"<<b->nativeController()->nativeNoteProgramForeground.active()
-         <<",\"native_native_parameter_support_service_calls\":"<<b->nativeController()->nativeParameterSupportForeground.started
-         <<",\"native_native_parameter_support_service_returns\":"<<b->nativeController()->nativeParameterSupportForeground.completed
-         <<",\"native_native_parameter_support_service_phases\":"<<b->nativeController()->nativeParameterSupportForeground.phases
-         <<",\"native_native_parameter_support_service_initial_active\":"<<b->nativeController()->nativeParameterSupportForeground.initial
-         <<",\"native_native_parameter_support_service_active\":"<<b->nativeController()->nativeParameterSupportForeground.active()
-         <<",\"native_native_parameter_edit_service_calls\":"<<b->nativeController()->nativeParameterEditForeground.started
-         <<",\"native_native_parameter_edit_service_returns\":"<<b->nativeController()->nativeParameterEditForeground.completed
-         <<",\"native_native_parameter_edit_service_phases\":"<<b->nativeController()->nativeParameterEditForeground.phases
-         <<",\"native_native_parameter_edit_service_initial_active\":"<<b->nativeController()->nativeParameterEditForeground.initial
-         <<",\"native_native_parameter_edit_service_active\":"<<b->nativeController()->nativeParameterEditForeground.active()
-         <<",\"native_panel_monitor_service_calls\":"<<b->nativeController()->panelMonitorForeground.started
-         <<",\"native_panel_monitor_service_returns\":"<<b->nativeController()->panelMonitorForeground.completed
-         <<",\"native_panel_monitor_service_phases\":"<<b->nativeController()->panelMonitorForeground.phases
-         <<",\"native_panel_monitor_service_initial_active\":"<<b->nativeController()->panelMonitorForeground.initial
-         <<",\"native_panel_monitor_service_active\":"<<b->nativeController()->panelMonitorForeground.active()
-         <<",\"native_state_status_service_calls\":"<<b->nativeController()->stateStatusForeground.started
-         <<",\"native_state_status_service_returns\":"<<b->nativeController()->stateStatusForeground.completed
-         <<",\"native_state_status_service_phases\":"<<b->nativeController()->stateStatusForeground.phases
-         <<",\"native_state_status_service_initial_active\":"<<b->nativeController()->stateStatusForeground.initial
-         <<",\"native_state_status_service_active\":"<<b->nativeController()->stateStatusForeground.active()
-         <<",\"native_diagnostic_codec_service_calls\":"<<b->nativeController()->diagnosticCodecForeground.started
-         <<",\"native_diagnostic_codec_service_returns\":"<<b->nativeController()->diagnosticCodecForeground.completed
-         <<",\"native_diagnostic_codec_service_phases\":"<<b->nativeController()->diagnosticCodecForeground.phases
-         <<",\"native_diagnostic_codec_service_initial_active\":"<<b->nativeController()->diagnosticCodecForeground.initial
-         <<",\"native_diagnostic_codec_service_active\":"<<b->nativeController()->diagnosticCodecForeground.active()
-         <<",\"native_diagnostic_transfer_service_calls\":"<<b->nativeController()->diagnosticTransferForeground.started
-         <<",\"native_diagnostic_transfer_service_returns\":"<<b->nativeController()->diagnosticTransferForeground.completed
-         <<",\"native_diagnostic_transfer_service_phases\":"<<b->nativeController()->diagnosticTransferForeground.phases
-         <<",\"native_diagnostic_transfer_service_initial_active\":"<<b->nativeController()->diagnosticTransferForeground.initial
-         <<",\"native_diagnostic_transfer_service_active\":"<<b->nativeController()->diagnosticTransferForeground.active()
-         <<",\"native_midi_file_time_service_calls\":"<<b->nativeController()->midiFileTimeForeground.started
-         <<",\"native_midi_file_time_service_returns\":"<<b->nativeController()->midiFileTimeForeground.completed
-         <<",\"native_midi_file_time_service_phases\":"<<b->nativeController()->midiFileTimeForeground.phases
-         <<",\"native_midi_file_time_service_initial_active\":"<<b->nativeController()->midiFileTimeForeground.initial
-         <<",\"native_midi_file_time_service_active\":"<<b->nativeController()->midiFileTimeForeground.active()
-         <<",\"native_native_pedal_control_service_calls\":"<<b->nativeController()->nativePedalControlForeground.started
-         <<",\"native_native_pedal_control_service_returns\":"<<b->nativeController()->nativePedalControlForeground.completed
-         <<",\"native_native_pedal_control_service_phases\":"<<b->nativeController()->nativePedalControlForeground.phases
-         <<",\"native_native_pedal_control_service_initial_active\":"<<b->nativeController()->nativePedalControlForeground.initial
-         <<",\"native_native_pedal_control_service_active\":"<<b->nativeController()->nativePedalControlForeground.active()
-         <<",\"native_native_midi_control_service_calls\":"<<b->nativeController()->nativeMidiControlForeground.started
-         <<",\"native_native_midi_control_service_returns\":"<<b->nativeController()->nativeMidiControlForeground.completed
-         <<",\"native_native_midi_control_service_phases\":"<<b->nativeController()->nativeMidiControlForeground.phases
-         <<",\"native_native_midi_control_service_initial_active\":"<<b->nativeController()->nativeMidiControlForeground.initial
-         <<",\"native_native_midi_control_service_active\":"<<b->nativeController()->nativeMidiControlForeground.active()
-         <<",\"native_native_part_note_service_calls\":"<<b->nativeController()->nativePartNoteForeground.started
-         <<",\"native_native_part_note_service_returns\":"<<b->nativeController()->nativePartNoteForeground.completed
-         <<",\"native_native_part_note_service_phases\":"<<b->nativeController()->nativePartNoteForeground.phases
-         <<",\"native_native_part_note_service_initial_active\":"<<b->nativeController()->nativePartNoteForeground.initial
-         <<",\"native_native_part_note_service_active\":"<<b->nativeController()->nativePartNoteForeground.active()
-         <<",\"native_native_internal_note_service_calls\":"<<b->nativeController()->nativeInternalNoteForeground.started
-         <<",\"native_native_internal_note_service_returns\":"<<b->nativeController()->nativeInternalNoteForeground.completed
-         <<",\"native_native_internal_note_service_phases\":"<<b->nativeController()->nativeInternalNoteForeground.phases
-         <<",\"native_native_internal_note_service_initial_active\":"<<b->nativeController()->nativeInternalNoteForeground.initial
-         <<",\"native_native_internal_note_service_active\":"<<b->nativeController()->nativeInternalNoteForeground.active()
-         <<",\"native_native_program_event_service_calls\":"<<b->nativeController()->nativeProgramEventForeground.started
-         <<",\"native_native_program_event_service_returns\":"<<b->nativeController()->nativeProgramEventForeground.completed
-         <<",\"native_native_program_event_service_phases\":"<<b->nativeController()->nativeProgramEventForeground.phases
-         <<",\"native_native_program_event_service_initial_active\":"<<b->nativeController()->nativeProgramEventForeground.initial
-         <<",\"native_native_program_event_service_active\":"<<b->nativeController()->nativeProgramEventForeground.active()
-         <<",\"native_native_arp_emission_service_calls\":"<<b->nativeController()->nativeArpEmissionForeground.started
-         <<",\"native_native_arp_emission_service_returns\":"<<b->nativeController()->nativeArpEmissionForeground.completed
-         <<",\"native_native_arp_emission_service_phases\":"<<b->nativeController()->nativeArpEmissionForeground.phases
-         <<",\"native_native_arp_emission_service_initial_active\":"<<b->nativeController()->nativeArpEmissionForeground.initial
-         <<",\"native_native_arp_emission_service_active\":"<<b->nativeController()->nativeArpEmissionForeground.active()
-         <<",\"native_native_mono_arp_bootstrap_service_calls\":"<<b->nativeController()->nativeMonoArpBootstrapForeground.started
-         <<",\"native_native_mono_arp_bootstrap_service_returns\":"<<b->nativeController()->nativeMonoArpBootstrapForeground.completed
-         <<",\"native_native_mono_arp_bootstrap_service_phases\":"<<b->nativeController()->nativeMonoArpBootstrapForeground.phases
-         <<",\"native_native_mono_arp_bootstrap_service_initial_active\":"<<b->nativeController()->nativeMonoArpBootstrapForeground.initial
-         <<",\"native_native_mono_arp_bootstrap_service_active\":"<<b->nativeController()->nativeMonoArpBootstrapForeground.active()
-         <<",\"native_native_arp_primitive_service_calls\":"<<b->nativeController()->nativeArpPrimitiveForeground.started
-         <<",\"native_native_arp_primitive_service_returns\":"<<b->nativeController()->nativeArpPrimitiveForeground.completed
-         <<",\"native_native_arp_primitive_service_phases\":"<<b->nativeController()->nativeArpPrimitiveForeground.phases
-         <<",\"native_native_arp_primitive_service_initial_active\":"<<b->nativeController()->nativeArpPrimitiveForeground.initial
-         <<",\"native_native_arp_primitive_service_active\":"<<b->nativeController()->nativeArpPrimitiveForeground.active()
-         <<",\"native_native_arp_gate_service_calls\":"<<b->nativeController()->nativeArpGateForeground.started
-         <<",\"native_native_arp_gate_service_returns\":"<<b->nativeController()->nativeArpGateForeground.completed
-         <<",\"native_native_arp_gate_service_phases\":"<<b->nativeController()->nativeArpGateForeground.phases
-         <<",\"native_native_arp_gate_service_initial_active\":"<<b->nativeController()->nativeArpGateForeground.initial
-         <<",\"native_native_arp_gate_service_active\":"<<b->nativeController()->nativeArpGateForeground.active()
-         <<",\"native_native_arp_emit_service_calls\":"<<b->nativeController()->nativeArpEmitForeground.started
-         <<",\"native_native_arp_emit_service_returns\":"<<b->nativeController()->nativeArpEmitForeground.completed
-         <<",\"native_native_arp_emit_service_phases\":"<<b->nativeController()->nativeArpEmitForeground.phases
-         <<",\"native_native_arp_emit_service_initial_active\":"<<b->nativeController()->nativeArpEmitForeground.initial
-         <<",\"native_native_arp_emit_service_active\":"<<b->nativeController()->nativeArpEmitForeground.active()
-         <<",\"native_native_arp_chord_service_calls\":"<<b->nativeController()->nativeArpChordForeground.started
-         <<",\"native_native_arp_chord_service_returns\":"<<b->nativeController()->nativeArpChordForeground.completed
-         <<",\"native_native_arp_chord_service_phases\":"<<b->nativeController()->nativeArpChordForeground.phases
-         <<",\"native_native_arp_chord_service_initial_active\":"<<b->nativeController()->nativeArpChordForeground.initial
-         <<",\"native_native_arp_chord_service_active\":"<<b->nativeController()->nativeArpChordForeground.active()
-         <<",\"native_native_arp_random_service_calls\":"<<b->nativeController()->nativeArpRandomForeground.started
-         <<",\"native_native_arp_random_service_returns\":"<<b->nativeController()->nativeArpRandomForeground.completed
-         <<",\"native_native_arp_random_service_phases\":"<<b->nativeController()->nativeArpRandomForeground.phases
-         <<",\"native_native_arp_random_service_initial_active\":"<<b->nativeController()->nativeArpRandomForeground.initial
-         <<",\"native_native_arp_random_service_active\":"<<b->nativeController()->nativeArpRandomForeground.active()
-         <<",\"native_native_arp_search_service_calls\":"<<b->nativeController()->nativeArpSearchForeground.started
-         <<",\"native_native_arp_search_service_returns\":"<<b->nativeController()->nativeArpSearchForeground.completed
-         <<",\"native_native_arp_search_service_phases\":"<<b->nativeController()->nativeArpSearchForeground.phases
-         <<",\"native_native_arp_search_service_initial_active\":"<<b->nativeController()->nativeArpSearchForeground.initial
-         <<",\"native_native_arp_search_service_active\":"<<b->nativeController()->nativeArpSearchForeground.active()
-         <<",\"native_scheduled_timer_service_calls\":"<<b->nativeController()->scheduledTimerForeground.started
-         <<",\"native_scheduled_timer_service_returns\":"<<b->nativeController()->scheduledTimerForeground.completed
-         <<",\"native_scheduled_timer_service_phases\":"<<b->nativeController()->scheduledTimerForeground.phases
-         <<",\"native_scheduled_timer_service_initial_active\":"<<b->nativeController()->scheduledTimerForeground.initial
-         <<",\"native_scheduled_timer_service_active\":"<<b->nativeController()->scheduledTimerForeground.active()
-         <<",\"native_native_midi_aux_service_calls\":"<<b->nativeController()->nativeMidiAuxForeground.started
-         <<",\"native_native_midi_aux_service_returns\":"<<b->nativeController()->nativeMidiAuxForeground.completed
-         <<",\"native_native_midi_aux_service_phases\":"<<b->nativeController()->nativeMidiAuxForeground.phases
-         <<",\"native_native_midi_aux_service_initial_active\":"<<b->nativeController()->nativeMidiAuxForeground.initial
-         <<",\"native_native_midi_aux_service_active\":"<<b->nativeController()->nativeMidiAuxForeground.active()
-         <<",\"native_native_arp_ordered_service_calls\":"<<b->nativeController()->nativeArpOrderedForeground.started
-         <<",\"native_native_arp_ordered_service_returns\":"<<b->nativeController()->nativeArpOrderedForeground.completed
-         <<",\"native_native_arp_ordered_service_phases\":"<<b->nativeController()->nativeArpOrderedForeground.phases
-         <<",\"native_native_arp_ordered_service_initial_active\":"<<b->nativeController()->nativeArpOrderedForeground.initial
-         <<",\"native_native_arp_ordered_service_active\":"<<b->nativeController()->nativeArpOrderedForeground.active()
-         <<",\"native_native_arp_run_service_calls\":"<<b->nativeController()->nativeArpRunForeground.started
-         <<",\"native_native_arp_run_service_returns\":"<<b->nativeController()->nativeArpRunForeground.completed
-         <<",\"native_native_arp_run_service_phases\":"<<b->nativeController()->nativeArpRunForeground.phases
-         <<",\"native_native_arp_run_service_initial_active\":"<<b->nativeController()->nativeArpRunForeground.initial
-         <<",\"native_native_arp_run_service_active\":"<<b->nativeController()->nativeArpRunForeground.active()
-         <<",\"native_main_service_calls\":"<<b->nativeController()->serviceCycleForeground.started
-         <<",\"native_main_service_returns\":"<<b->nativeController()->serviceCycleForeground.completed
-         <<",\"native_main_service_phases\":"<<b->nativeController()->serviceCycleForeground.phases
-         <<",\"native_main_service_initial_active\":"<<b->nativeController()->serviceCycleForeground.initial
-         <<",\"native_main_service_active\":"<<b->nativeController()->serviceCycleForeground.active()
-         <<",\"native_main_legacy_bodies_after_admission\":"<<b->nativeController()->legacyBodiesAfterMain
-         <<",\"native_main_service_child0_returns\":"<<b->nativeController()->serviceCycleForeground.children[0]
-         <<",\"native_main_service_child1_returns\":"<<b->nativeController()->serviceCycleForeground.children[1]
-         <<",\"native_main_service_child2_returns\":"<<b->nativeController()->serviceCycleForeground.children[2]
-         <<",\"native_main_service_child3_returns\":"<<b->nativeController()->serviceCycleForeground.children[3]
-         <<",\"native_main_service_child4_returns\":"<<b->nativeController()->serviceCycleForeground.children[4]
-         <<",\"native_main_service_child5_returns\":"<<b->nativeController()->serviceCycleForeground.children[5]
-         <<",\"native_main_service_child6_returns\":"<<b->nativeController()->serviceCycleForeground.children[6]
-         <<",\"native_main_service_child7_returns\":"<<b->nativeController()->serviceCycleForeground.children[7]
-         <<",\"native_main_service_child8_returns\":"<<b->nativeController()->serviceCycleForeground.children[8]
-         <<",\"native_main_service_child9_returns\":"<<b->nativeController()->serviceCycleForeground.children[9]
-         <<",\"native_main_service_child10_returns\":"<<b->nativeController()->serviceCycleForeground.children[10]
-         <<",\"native_main_service_child11_returns\":"<<b->nativeController()->serviceCycleForeground.children[11]
-         <<",\"native_main_service_child12_returns\":"<<b->nativeController()->serviceCycleForeground.children[12]
-         <<",\"native_main_service_child13_returns\":"<<b->nativeController()->serviceCycleForeground.children[13]
-         <<",\"native_main_service_child14_returns\":"<<b->nativeController()->serviceCycleForeground.children[14]
-         <<",\"native_main_service_child15_returns\":"<<b->nativeController()->serviceCycleForeground.children[15]
-         <<",\"native_main_service_child16_returns\":"<<b->nativeController()->serviceCycleForeground.children[16]
-         <<",\"native_main_tick_initial\":"<<b->nativeController()->serviceCycleForeground.tickReturns.initial
-         <<",\"native_main_tick_started\":"<<b->nativeController()->serviceCycleForeground.tickReturns.started
-         <<",\"native_main_tick_completed\":"<<b->nativeController()->serviceCycleForeground.tickReturns.completed
-         <<",\"native_main_tick_clock\":"<<b->nativeController()->serviceCycleForeground.tickReturns.clock
-         <<",\"native_main_tick_buttons\":"<<b->nativeController()->serviceCycleForeground.tickReturns.buttons
-         <<",\"native_main_tick_adc\":"<<b->nativeController()->serviceCycleForeground.tickReturns.adc
-         <<",\"native_main_tick_encoder\":"<<b->nativeController()->serviceCycleForeground.tickReturns.encoder
-         <<",\"native_main_tick_pedal\":"<<b->nativeController()->serviceCycleForeground.tickReturns.pedal
-         <<",\"native_main_tick_output\":"<<b->nativeController()->serviceCycleForeground.tickReturns.output
-         <<",\"native_main_tick_refresh\":"<<b->nativeController()->serviceCycleForeground.tickReturns.refresh
-         <<",\"native_main_tick_components\":"<<b->nativeController()->serviceCycleForeground.tickReturns.components
-         <<",\"native_midi_pipeline_service_calls\":"<<b->nativeController()->nativeMidiPipelineForeground.started
-         <<",\"native_midi_pipeline_service_returns\":"<<b->nativeController()->nativeMidiPipelineForeground.completed
-         <<",\"native_midi_pipeline_service_phases\":"<<b->nativeController()->nativeMidiPipelineForeground.phases
-         <<",\"native_midi_pipeline_service_initial_active\":"<<b->nativeController()->nativeMidiPipelineForeground.initial
-         <<",\"native_midi_pipeline_service_active\":"<<b->nativeController()->nativeMidiPipelineForeground.active()
-         <<",\"midi_file_event_service_calls\":"<<b->nativeController()->midiFileEventForeground.started
-         <<",\"midi_file_event_service_returns\":"<<b->nativeController()->midiFileEventForeground.completed
-         <<",\"midi_file_event_service_phases\":"<<b->nativeController()->midiFileEventForeground.phases
-         <<",\"midi_file_event_service_initial_active\":"<<b->nativeController()->midiFileEventForeground.initial
-         <<",\"midi_file_event_service_active\":"<<b->nativeController()->midiFileEventForeground.active()
-         <<",\"native_state_tick_service_calls\":"<<b->nativeController()->stateTickForeground.started
-         <<",\"native_state_tick_service_returns\":"<<b->nativeController()->stateTickForeground.completed
-         <<",\"native_state_tick_service_phases\":"<<b->nativeController()->stateTickForeground.phases
-         <<",\"native_state_tick_service_initial_active\":"<<b->nativeController()->stateTickForeground.initial
-         <<",\"native_state_tick_service_active\":"<<b->nativeController()->stateTickForeground.active()
-         <<",\"native_state_tick_service_components\":"<<b->nativeController()->stateTickForeground.components
-         <<",\"native_state_tick_service_tick\":"<<b->nativeController()->stateTickForeground.kinds[0]
-         <<",\"native_state_tick_service_returned_clock\":"<<b->nativeController()->stateTickForeground.returnedClock
-         <<",\"native_state_tick_service_returned_buttons\":"<<b->nativeController()->stateTickForeground.returnedButtons
-         <<",\"native_state_tick_service_returned_adc\":"<<b->nativeController()->stateTickForeground.returnedAdc
-         <<",\"native_state_tick_service_returned_encoder\":"<<b->nativeController()->stateTickForeground.returnedEncoder
-         <<",\"native_state_tick_service_returned_pedal\":"<<b->nativeController()->stateTickForeground.returnedPedal
-         <<",\"native_state_tick_service_returned_output\":"<<b->nativeController()->stateTickForeground.returnedOutput
-         <<",\"native_state_tick_service_returned_refresh\":"<<b->nativeController()->stateTickForeground.returnedRefresh
+         <<",\"native_clock_sync_service_calls\":"<<ks::test::legacyRuntime(*b)->clockSyncForeground.started
+         <<",\"native_clock_sync_service_returns\":"<<ks::test::legacyRuntime(*b)->clockSyncForeground.completed
+         <<",\"native_clock_sync_service_phases\":"<<ks::test::legacyRuntime(*b)->clockSyncForeground.phases
+         <<",\"native_clock_sync_service_initial_active\":"<<ks::test::legacyRuntime(*b)->clockSyncForeground.initial
+         <<",\"native_clock_sync_service_active\":"<<ks::test::legacyRuntime(*b)->clockSyncForeground.active()
+         <<",\"native_clock_sync_service_components\":"<<ks::test::legacyRuntime(*b)->clockSyncForeground.components
+         <<",\"native_clock_sync_service_update\":"<<ks::test::legacyRuntime(*b)->clockSyncForeground.kinds[0]
+         <<",\"native_state_deferred_parts_service_calls\":"<<ks::test::legacyRuntime(*b)->stateDeferredPartsForeground.started
+         <<",\"native_state_deferred_parts_service_returns\":"<<ks::test::legacyRuntime(*b)->stateDeferredPartsForeground.completed
+         <<",\"native_state_deferred_parts_service_phases\":"<<ks::test::legacyRuntime(*b)->stateDeferredPartsForeground.phases
+         <<",\"native_state_deferred_parts_service_initial_active\":"<<ks::test::legacyRuntime(*b)->stateDeferredPartsForeground.initial
+         <<",\"native_state_deferred_parts_service_active\":"<<ks::test::legacyRuntime(*b)->stateDeferredPartsForeground.active()
+         <<",\"native_state_deferred_parts_service_components\":"<<ks::test::legacyRuntime(*b)->stateDeferredPartsForeground.components
+         <<",\"native_state_deferred_parts_service_deferred\":"<<ks::test::legacyRuntime(*b)->stateDeferredPartsForeground.kinds[0]
+         <<",\"native_state_deferred_parts_service_processed\":"<<ks::test::legacyRuntime(*b)->stateDeferredPartsForeground.processed
+         <<",\"native_state_deferred_parts_service_voice_uploads\":"<<ks::test::legacyRuntime(*b)->stateDeferredPartsForeground.voiceUploads
+         <<",\"native_state_deferred_parts_service_part_mask\":"<<ks::test::legacyRuntime(*b)->stateDeferredPartsForeground.partMask
+         <<",\"native_state_refresh_service_calls\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.started
+         <<",\"native_state_refresh_service_returns\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.completed
+         <<",\"native_state_refresh_service_phases\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.phases
+         <<",\"native_state_refresh_service_initial_active\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.initial
+         <<",\"native_state_refresh_service_active\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.active()
+         <<",\"native_state_refresh_service_components\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.components
+         <<",\"native_state_refresh_service_refresh\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.kinds[0]
+         <<",\"native_state_refresh_service_returned_packet\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.returnedPacket
+         <<",\"native_state_refresh_service_returned_panel\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.returnedPanel
+         <<",\"native_state_refresh_service_returned_deferred\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.returnedDeferred
+         <<",\"native_state_refresh_service_returned_clock\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.returnedClock
+         <<",\"native_state_refresh_service_processed_parts\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.processedParts
+         <<",\"native_state_refresh_service_returned_coefficient\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.returnedCoefficient
+         <<",\"native_state_refresh_service_returned_period_address\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.returnedPeriodAddress
+         <<",\"native_state_refresh_service_returned_period_value\":"<<ks::test::legacyRuntime(*b)->stateRefreshForeground.returnedPeriodValue
+         <<",\"native_panel_pedal_output_service_calls\":"<<ks::test::legacyRuntime(*b)->panelPedalOutputForeground.started
+         <<",\"native_panel_pedal_output_service_returns\":"<<ks::test::legacyRuntime(*b)->panelPedalOutputForeground.completed
+         <<",\"native_panel_pedal_output_service_phases\":"<<ks::test::legacyRuntime(*b)->panelPedalOutputForeground.phases
+         <<",\"native_panel_pedal_output_service_initial_active\":"<<ks::test::legacyRuntime(*b)->panelPedalOutputForeground.initial
+         <<",\"native_panel_pedal_output_service_active\":"<<ks::test::legacyRuntime(*b)->panelPedalOutputForeground.active()
+         <<",\"native_panel_pedal_output_service_components\":"<<ks::test::legacyRuntime(*b)->panelPedalOutputForeground.components
+         <<",\"native_panel_pedal_output_service_pedal\":"<<ks::test::legacyRuntime(*b)->panelPedalOutputForeground.kinds[0]
+         <<",\"native_panel_pedal_output_service_byte\":"<<ks::test::legacyRuntime(*b)->panelPedalOutputForeground.kinds[1]
+         <<",\"native_state_encoder_service_calls\":"<<ks::test::legacyRuntime(*b)->stateEncoderForeground.started
+         <<",\"native_state_encoder_service_returns\":"<<ks::test::legacyRuntime(*b)->stateEncoderForeground.completed
+         <<",\"native_state_encoder_service_phases\":"<<ks::test::legacyRuntime(*b)->stateEncoderForeground.phases
+         <<",\"native_state_encoder_service_initial_active\":"<<ks::test::legacyRuntime(*b)->stateEncoderForeground.initial
+         <<",\"native_state_encoder_service_active\":"<<ks::test::legacyRuntime(*b)->stateEncoderForeground.active()
+         <<",\"native_state_encoder_service_components\":"<<ks::test::legacyRuntime(*b)->stateEncoderForeground.components
+         <<",\"native_state_encoder_service_encoder\":"<<ks::test::legacyRuntime(*b)->stateEncoderForeground.kinds[0]
+         <<",\"native_panel_masks_service_calls\":"<<ks::test::legacyRuntime(*b)->panelMasksForeground.started
+         <<",\"native_panel_masks_service_returns\":"<<ks::test::legacyRuntime(*b)->panelMasksForeground.completed
+         <<",\"native_panel_masks_service_phases\":"<<ks::test::legacyRuntime(*b)->panelMasksForeground.phases
+         <<",\"native_panel_masks_service_initial_active\":"<<ks::test::legacyRuntime(*b)->panelMasksForeground.initial
+         <<",\"native_panel_masks_service_active\":"<<ks::test::legacyRuntime(*b)->panelMasksForeground.active()
+         <<",\"native_voice_feedback_service_calls\":"<<ks::test::legacyRuntime(*b)->voiceFeedbackForeground.started
+         <<",\"native_voice_feedback_service_returns\":"<<ks::test::legacyRuntime(*b)->voiceFeedbackForeground.completed
+         <<",\"native_voice_feedback_service_phases\":"<<ks::test::legacyRuntime(*b)->voiceFeedbackForeground.phases
+         <<",\"native_voice_feedback_service_initial_active\":"<<ks::test::legacyRuntime(*b)->voiceFeedbackForeground.initial
+         <<",\"native_voice_feedback_service_active\":"<<ks::test::legacyRuntime(*b)->voiceFeedbackForeground.active()
+         <<",\"native_part_feedback_service_calls\":"<<ks::test::legacyRuntime(*b)->partFeedbackForeground.started
+         <<",\"native_part_feedback_service_returns\":"<<ks::test::legacyRuntime(*b)->partFeedbackForeground.completed
+         <<",\"native_part_feedback_service_phases\":"<<ks::test::legacyRuntime(*b)->partFeedbackForeground.phases
+         <<",\"native_part_feedback_service_initial_active\":"<<ks::test::legacyRuntime(*b)->partFeedbackForeground.initial
+         <<",\"native_part_feedback_service_active\":"<<ks::test::legacyRuntime(*b)->partFeedbackForeground.active()
+         <<",\"native_periodic_service_calls\":"<<ks::test::legacyRuntime(*b)->periodicForeground.started
+         <<",\"native_periodic_service_returns\":"<<ks::test::legacyRuntime(*b)->periodicForeground.completed
+         <<",\"native_periodic_service_phases\":"<<ks::test::legacyRuntime(*b)->periodicForeground.phases
+         <<",\"native_periodic_service_initial_active\":"<<ks::test::legacyRuntime(*b)->periodicForeground.initial
+         <<",\"native_periodic_service_active\":"<<ks::test::legacyRuntime(*b)->periodicForeground.active()
+         <<",\"native_state_channel_service_calls\":"<<ks::test::legacyRuntime(*b)->stateChannelForeground.started
+         <<",\"native_state_channel_service_returns\":"<<ks::test::legacyRuntime(*b)->stateChannelForeground.completed
+         <<",\"native_state_channel_service_phases\":"<<ks::test::legacyRuntime(*b)->stateChannelForeground.phases
+         <<",\"native_state_channel_service_initial_active\":"<<ks::test::legacyRuntime(*b)->stateChannelForeground.initial
+         <<",\"native_state_channel_service_active\":"<<ks::test::legacyRuntime(*b)->stateChannelForeground.active()
+         <<",\"native_midi_packet_service_calls\":"<<ks::test::legacyRuntime(*b)->midiPacketForeground.started
+         <<",\"native_midi_packet_service_returns\":"<<ks::test::legacyRuntime(*b)->midiPacketForeground.completed
+         <<",\"native_midi_packet_service_phases\":"<<ks::test::legacyRuntime(*b)->midiPacketForeground.phases
+         <<",\"native_midi_packet_service_initial_active\":"<<ks::test::legacyRuntime(*b)->midiPacketForeground.initial
+         <<",\"native_midi_packet_service_active\":"<<ks::test::legacyRuntime(*b)->midiPacketForeground.active()
+         <<",\"native_native_key_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeKeyForeground.started
+         <<",\"native_native_key_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeKeyForeground.completed
+         <<",\"native_native_key_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeKeyForeground.phases
+         <<",\"native_native_key_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeKeyForeground.initial
+         <<",\"native_native_key_service_active\":"<<ks::test::legacyRuntime(*b)->nativeKeyForeground.active()
+         <<",\"native_native_arp_reset_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeArpResetForeground.started
+         <<",\"native_native_arp_reset_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeArpResetForeground.completed
+         <<",\"native_native_arp_reset_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeArpResetForeground.phases
+         <<",\"native_native_arp_reset_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeArpResetForeground.initial
+         <<",\"native_native_arp_reset_service_active\":"<<ks::test::legacyRuntime(*b)->nativeArpResetForeground.active()
+         <<",\"native_native_voice_release_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeVoiceReleaseForeground.started
+         <<",\"native_native_voice_release_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeVoiceReleaseForeground.completed
+         <<",\"native_native_voice_release_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeVoiceReleaseForeground.phases
+         <<",\"native_native_voice_release_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeVoiceReleaseForeground.initial
+         <<",\"native_native_voice_release_service_active\":"<<ks::test::legacyRuntime(*b)->nativeVoiceReleaseForeground.active()
+         <<",\"native_native_voice_allocation_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeVoiceAllocationForeground.started
+         <<",\"native_native_voice_allocation_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeVoiceAllocationForeground.completed
+         <<",\"native_native_voice_allocation_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeVoiceAllocationForeground.phases
+         <<",\"native_native_voice_allocation_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeVoiceAllocationForeground.initial
+         <<",\"native_native_voice_allocation_service_active\":"<<ks::test::legacyRuntime(*b)->nativeVoiceAllocationForeground.active()
+         <<",\"native_native_voice_start_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeVoiceStartForeground.started
+         <<",\"native_native_voice_start_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeVoiceStartForeground.completed
+         <<",\"native_native_voice_start_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeVoiceStartForeground.phases
+         <<",\"native_native_voice_start_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeVoiceStartForeground.initial
+         <<",\"native_native_voice_start_service_active\":"<<ks::test::legacyRuntime(*b)->nativeVoiceStartForeground.active()
+         <<",\"native_native_voice_modulation_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeVoiceModulationForeground.started
+         <<",\"native_native_voice_modulation_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeVoiceModulationForeground.completed
+         <<",\"native_native_voice_modulation_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeVoiceModulationForeground.phases
+         <<",\"native_native_voice_modulation_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeVoiceModulationForeground.initial
+         <<",\"native_native_voice_modulation_service_active\":"<<ks::test::legacyRuntime(*b)->nativeVoiceModulationForeground.active()
+         <<",\"native_native_voice_sweep_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeVoiceSweepForeground.started
+         <<",\"native_native_voice_sweep_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeVoiceSweepForeground.completed
+         <<",\"native_native_voice_sweep_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeVoiceSweepForeground.phases
+         <<",\"native_native_voice_sweep_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeVoiceSweepForeground.initial
+         <<",\"native_native_voice_sweep_service_active\":"<<ks::test::legacyRuntime(*b)->nativeVoiceSweepForeground.active()
+         <<",\"native_internal_key_output_service_calls\":"<<ks::test::legacyRuntime(*b)->internalKeyOutputForeground.started
+         <<",\"native_internal_key_output_service_returns\":"<<ks::test::legacyRuntime(*b)->internalKeyOutputForeground.completed
+         <<",\"native_internal_key_output_service_phases\":"<<ks::test::legacyRuntime(*b)->internalKeyOutputForeground.phases
+         <<",\"native_internal_key_output_service_initial_active\":"<<ks::test::legacyRuntime(*b)->internalKeyOutputForeground.initial
+         <<",\"native_internal_key_output_service_active\":"<<ks::test::legacyRuntime(*b)->internalKeyOutputForeground.active()
+         <<",\"native_native_note_state_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeNoteStateForeground.started
+         <<",\"native_native_note_state_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeNoteStateForeground.completed
+         <<",\"native_native_note_state_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeNoteStateForeground.phases
+         <<",\"native_native_note_state_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeNoteStateForeground.initial
+         <<",\"native_native_note_state_service_active\":"<<ks::test::legacyRuntime(*b)->nativeNoteStateForeground.active()
+         <<",\"native_native_note_program_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeNoteProgramForeground.started
+         <<",\"native_native_note_program_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeNoteProgramForeground.completed
+         <<",\"native_native_note_program_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeNoteProgramForeground.phases
+         <<",\"native_native_note_program_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeNoteProgramForeground.initial
+         <<",\"native_native_note_program_service_active\":"<<ks::test::legacyRuntime(*b)->nativeNoteProgramForeground.active()
+         <<",\"native_native_parameter_support_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeParameterSupportForeground.started
+         <<",\"native_native_parameter_support_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeParameterSupportForeground.completed
+         <<",\"native_native_parameter_support_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeParameterSupportForeground.phases
+         <<",\"native_native_parameter_support_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeParameterSupportForeground.initial
+         <<",\"native_native_parameter_support_service_active\":"<<ks::test::legacyRuntime(*b)->nativeParameterSupportForeground.active()
+         <<",\"native_native_parameter_edit_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeParameterEditForeground.started
+         <<",\"native_native_parameter_edit_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeParameterEditForeground.completed
+         <<",\"native_native_parameter_edit_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeParameterEditForeground.phases
+         <<",\"native_native_parameter_edit_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeParameterEditForeground.initial
+         <<",\"native_native_parameter_edit_service_active\":"<<ks::test::legacyRuntime(*b)->nativeParameterEditForeground.active()
+         <<",\"native_panel_monitor_service_calls\":"<<ks::test::legacyRuntime(*b)->panelMonitorForeground.started
+         <<",\"native_panel_monitor_service_returns\":"<<ks::test::legacyRuntime(*b)->panelMonitorForeground.completed
+         <<",\"native_panel_monitor_service_phases\":"<<ks::test::legacyRuntime(*b)->panelMonitorForeground.phases
+         <<",\"native_panel_monitor_service_initial_active\":"<<ks::test::legacyRuntime(*b)->panelMonitorForeground.initial
+         <<",\"native_panel_monitor_service_active\":"<<ks::test::legacyRuntime(*b)->panelMonitorForeground.active()
+         <<",\"native_state_status_service_calls\":"<<ks::test::legacyRuntime(*b)->stateStatusForeground.started
+         <<",\"native_state_status_service_returns\":"<<ks::test::legacyRuntime(*b)->stateStatusForeground.completed
+         <<",\"native_state_status_service_phases\":"<<ks::test::legacyRuntime(*b)->stateStatusForeground.phases
+         <<",\"native_state_status_service_initial_active\":"<<ks::test::legacyRuntime(*b)->stateStatusForeground.initial
+         <<",\"native_state_status_service_active\":"<<ks::test::legacyRuntime(*b)->stateStatusForeground.active()
+         <<",\"native_diagnostic_codec_service_calls\":"<<ks::test::legacyRuntime(*b)->diagnosticCodecForeground.started
+         <<",\"native_diagnostic_codec_service_returns\":"<<ks::test::legacyRuntime(*b)->diagnosticCodecForeground.completed
+         <<",\"native_diagnostic_codec_service_phases\":"<<ks::test::legacyRuntime(*b)->diagnosticCodecForeground.phases
+         <<",\"native_diagnostic_codec_service_initial_active\":"<<ks::test::legacyRuntime(*b)->diagnosticCodecForeground.initial
+         <<",\"native_diagnostic_codec_service_active\":"<<ks::test::legacyRuntime(*b)->diagnosticCodecForeground.active()
+         <<",\"native_diagnostic_transfer_service_calls\":"<<ks::test::legacyRuntime(*b)->diagnosticTransferForeground.started
+         <<",\"native_diagnostic_transfer_service_returns\":"<<ks::test::legacyRuntime(*b)->diagnosticTransferForeground.completed
+         <<",\"native_diagnostic_transfer_service_phases\":"<<ks::test::legacyRuntime(*b)->diagnosticTransferForeground.phases
+         <<",\"native_diagnostic_transfer_service_initial_active\":"<<ks::test::legacyRuntime(*b)->diagnosticTransferForeground.initial
+         <<",\"native_diagnostic_transfer_service_active\":"<<ks::test::legacyRuntime(*b)->diagnosticTransferForeground.active()
+         <<",\"native_midi_file_time_service_calls\":"<<ks::test::legacyRuntime(*b)->midiFileTimeForeground.started
+         <<",\"native_midi_file_time_service_returns\":"<<ks::test::legacyRuntime(*b)->midiFileTimeForeground.completed
+         <<",\"native_midi_file_time_service_phases\":"<<ks::test::legacyRuntime(*b)->midiFileTimeForeground.phases
+         <<",\"native_midi_file_time_service_initial_active\":"<<ks::test::legacyRuntime(*b)->midiFileTimeForeground.initial
+         <<",\"native_midi_file_time_service_active\":"<<ks::test::legacyRuntime(*b)->midiFileTimeForeground.active()
+         <<",\"native_native_pedal_control_service_calls\":"<<ks::test::legacyRuntime(*b)->nativePedalControlForeground.started
+         <<",\"native_native_pedal_control_service_returns\":"<<ks::test::legacyRuntime(*b)->nativePedalControlForeground.completed
+         <<",\"native_native_pedal_control_service_phases\":"<<ks::test::legacyRuntime(*b)->nativePedalControlForeground.phases
+         <<",\"native_native_pedal_control_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativePedalControlForeground.initial
+         <<",\"native_native_pedal_control_service_active\":"<<ks::test::legacyRuntime(*b)->nativePedalControlForeground.active()
+         <<",\"native_native_midi_control_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeMidiControlForeground.started
+         <<",\"native_native_midi_control_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeMidiControlForeground.completed
+         <<",\"native_native_midi_control_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeMidiControlForeground.phases
+         <<",\"native_native_midi_control_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeMidiControlForeground.initial
+         <<",\"native_native_midi_control_service_active\":"<<ks::test::legacyRuntime(*b)->nativeMidiControlForeground.active()
+         <<",\"native_native_part_note_service_calls\":"<<ks::test::legacyRuntime(*b)->nativePartNoteForeground.started
+         <<",\"native_native_part_note_service_returns\":"<<ks::test::legacyRuntime(*b)->nativePartNoteForeground.completed
+         <<",\"native_native_part_note_service_phases\":"<<ks::test::legacyRuntime(*b)->nativePartNoteForeground.phases
+         <<",\"native_native_part_note_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativePartNoteForeground.initial
+         <<",\"native_native_part_note_service_active\":"<<ks::test::legacyRuntime(*b)->nativePartNoteForeground.active()
+         <<",\"native_native_internal_note_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeInternalNoteForeground.started
+         <<",\"native_native_internal_note_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeInternalNoteForeground.completed
+         <<",\"native_native_internal_note_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeInternalNoteForeground.phases
+         <<",\"native_native_internal_note_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeInternalNoteForeground.initial
+         <<",\"native_native_internal_note_service_active\":"<<ks::test::legacyRuntime(*b)->nativeInternalNoteForeground.active()
+         <<",\"native_native_program_event_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeProgramEventForeground.started
+         <<",\"native_native_program_event_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeProgramEventForeground.completed
+         <<",\"native_native_program_event_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeProgramEventForeground.phases
+         <<",\"native_native_program_event_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeProgramEventForeground.initial
+         <<",\"native_native_program_event_service_active\":"<<ks::test::legacyRuntime(*b)->nativeProgramEventForeground.active()
+         <<",\"native_native_arp_emission_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeArpEmissionForeground.started
+         <<",\"native_native_arp_emission_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeArpEmissionForeground.completed
+         <<",\"native_native_arp_emission_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeArpEmissionForeground.phases
+         <<",\"native_native_arp_emission_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeArpEmissionForeground.initial
+         <<",\"native_native_arp_emission_service_active\":"<<ks::test::legacyRuntime(*b)->nativeArpEmissionForeground.active()
+         <<",\"native_native_mono_arp_bootstrap_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeMonoArpBootstrapForeground.started
+         <<",\"native_native_mono_arp_bootstrap_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeMonoArpBootstrapForeground.completed
+         <<",\"native_native_mono_arp_bootstrap_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeMonoArpBootstrapForeground.phases
+         <<",\"native_native_mono_arp_bootstrap_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeMonoArpBootstrapForeground.initial
+         <<",\"native_native_mono_arp_bootstrap_service_active\":"<<ks::test::legacyRuntime(*b)->nativeMonoArpBootstrapForeground.active()
+         <<",\"native_native_arp_primitive_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeArpPrimitiveForeground.started
+         <<",\"native_native_arp_primitive_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeArpPrimitiveForeground.completed
+         <<",\"native_native_arp_primitive_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeArpPrimitiveForeground.phases
+         <<",\"native_native_arp_primitive_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeArpPrimitiveForeground.initial
+         <<",\"native_native_arp_primitive_service_active\":"<<ks::test::legacyRuntime(*b)->nativeArpPrimitiveForeground.active()
+         <<",\"native_native_arp_gate_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeArpGateForeground.started
+         <<",\"native_native_arp_gate_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeArpGateForeground.completed
+         <<",\"native_native_arp_gate_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeArpGateForeground.phases
+         <<",\"native_native_arp_gate_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeArpGateForeground.initial
+         <<",\"native_native_arp_gate_service_active\":"<<ks::test::legacyRuntime(*b)->nativeArpGateForeground.active()
+         <<",\"native_native_arp_emit_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeArpEmitForeground.started
+         <<",\"native_native_arp_emit_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeArpEmitForeground.completed
+         <<",\"native_native_arp_emit_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeArpEmitForeground.phases
+         <<",\"native_native_arp_emit_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeArpEmitForeground.initial
+         <<",\"native_native_arp_emit_service_active\":"<<ks::test::legacyRuntime(*b)->nativeArpEmitForeground.active()
+         <<",\"native_native_arp_chord_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeArpChordForeground.started
+         <<",\"native_native_arp_chord_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeArpChordForeground.completed
+         <<",\"native_native_arp_chord_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeArpChordForeground.phases
+         <<",\"native_native_arp_chord_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeArpChordForeground.initial
+         <<",\"native_native_arp_chord_service_active\":"<<ks::test::legacyRuntime(*b)->nativeArpChordForeground.active()
+         <<",\"native_native_arp_random_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeArpRandomForeground.started
+         <<",\"native_native_arp_random_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeArpRandomForeground.completed
+         <<",\"native_native_arp_random_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeArpRandomForeground.phases
+         <<",\"native_native_arp_random_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeArpRandomForeground.initial
+         <<",\"native_native_arp_random_service_active\":"<<ks::test::legacyRuntime(*b)->nativeArpRandomForeground.active()
+         <<",\"native_native_arp_search_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeArpSearchForeground.started
+         <<",\"native_native_arp_search_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeArpSearchForeground.completed
+         <<",\"native_native_arp_search_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeArpSearchForeground.phases
+         <<",\"native_native_arp_search_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeArpSearchForeground.initial
+         <<",\"native_native_arp_search_service_active\":"<<ks::test::legacyRuntime(*b)->nativeArpSearchForeground.active()
+         <<",\"native_scheduled_timer_service_calls\":"<<ks::test::legacyRuntime(*b)->scheduledTimerForeground.started
+         <<",\"native_scheduled_timer_service_returns\":"<<ks::test::legacyRuntime(*b)->scheduledTimerForeground.completed
+         <<",\"native_scheduled_timer_service_phases\":"<<ks::test::legacyRuntime(*b)->scheduledTimerForeground.phases
+         <<",\"native_scheduled_timer_service_initial_active\":"<<ks::test::legacyRuntime(*b)->scheduledTimerForeground.initial
+         <<",\"native_scheduled_timer_service_active\":"<<ks::test::legacyRuntime(*b)->scheduledTimerForeground.active()
+         <<",\"native_native_midi_aux_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeMidiAuxForeground.started
+         <<",\"native_native_midi_aux_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeMidiAuxForeground.completed
+         <<",\"native_native_midi_aux_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeMidiAuxForeground.phases
+         <<",\"native_native_midi_aux_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeMidiAuxForeground.initial
+         <<",\"native_native_midi_aux_service_active\":"<<ks::test::legacyRuntime(*b)->nativeMidiAuxForeground.active()
+         <<",\"native_native_arp_ordered_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeArpOrderedForeground.started
+         <<",\"native_native_arp_ordered_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeArpOrderedForeground.completed
+         <<",\"native_native_arp_ordered_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeArpOrderedForeground.phases
+         <<",\"native_native_arp_ordered_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeArpOrderedForeground.initial
+         <<",\"native_native_arp_ordered_service_active\":"<<ks::test::legacyRuntime(*b)->nativeArpOrderedForeground.active()
+         <<",\"native_native_arp_run_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeArpRunForeground.started
+         <<",\"native_native_arp_run_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeArpRunForeground.completed
+         <<",\"native_native_arp_run_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeArpRunForeground.phases
+         <<",\"native_native_arp_run_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeArpRunForeground.initial
+         <<",\"native_native_arp_run_service_active\":"<<ks::test::legacyRuntime(*b)->nativeArpRunForeground.active()
+         <<",\"native_main_service_calls\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.started
+         <<",\"native_main_service_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.completed
+         <<",\"native_main_service_phases\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.phases
+         <<",\"native_main_service_initial_active\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.initial
+         <<",\"native_main_service_active\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.active()
+         <<",\"native_main_legacy_bodies_after_admission\":"<<ks::test::legacyRuntime(*b)->legacyBodiesAfterMain
+         <<",\"native_main_service_child0_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[0]
+         <<",\"native_main_service_child1_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[1]
+         <<",\"native_main_service_child2_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[2]
+         <<",\"native_main_service_child3_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[3]
+         <<",\"native_main_service_child4_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[4]
+         <<",\"native_main_service_child5_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[5]
+         <<",\"native_main_service_child6_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[6]
+         <<",\"native_main_service_child7_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[7]
+         <<",\"native_main_service_child8_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[8]
+         <<",\"native_main_service_child9_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[9]
+         <<",\"native_main_service_child10_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[10]
+         <<",\"native_main_service_child11_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[11]
+         <<",\"native_main_service_child12_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[12]
+         <<",\"native_main_service_child13_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[13]
+         <<",\"native_main_service_child14_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[14]
+         <<",\"native_main_service_child15_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[15]
+         <<",\"native_main_service_child16_returns\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.children[16]
+         <<",\"native_main_tick_initial\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.tickReturns.initial
+         <<",\"native_main_tick_started\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.tickReturns.started
+         <<",\"native_main_tick_completed\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.tickReturns.completed
+         <<",\"native_main_tick_clock\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.tickReturns.clock
+         <<",\"native_main_tick_buttons\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.tickReturns.buttons
+         <<",\"native_main_tick_adc\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.tickReturns.adc
+         <<",\"native_main_tick_encoder\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.tickReturns.encoder
+         <<",\"native_main_tick_pedal\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.tickReturns.pedal
+         <<",\"native_main_tick_output\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.tickReturns.output
+         <<",\"native_main_tick_refresh\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.tickReturns.refresh
+         <<",\"native_main_tick_components\":"<<ks::test::legacyRuntime(*b)->serviceCycleForeground.tickReturns.components
+         <<",\"native_midi_pipeline_service_calls\":"<<ks::test::legacyRuntime(*b)->nativeMidiPipelineForeground.started
+         <<",\"native_midi_pipeline_service_returns\":"<<ks::test::legacyRuntime(*b)->nativeMidiPipelineForeground.completed
+         <<",\"native_midi_pipeline_service_phases\":"<<ks::test::legacyRuntime(*b)->nativeMidiPipelineForeground.phases
+         <<",\"native_midi_pipeline_service_initial_active\":"<<ks::test::legacyRuntime(*b)->nativeMidiPipelineForeground.initial
+         <<",\"native_midi_pipeline_service_active\":"<<ks::test::legacyRuntime(*b)->nativeMidiPipelineForeground.active()
+         <<",\"midi_file_event_service_calls\":"<<ks::test::legacyRuntime(*b)->midiFileEventForeground.started
+         <<",\"midi_file_event_service_returns\":"<<ks::test::legacyRuntime(*b)->midiFileEventForeground.completed
+         <<",\"midi_file_event_service_phases\":"<<ks::test::legacyRuntime(*b)->midiFileEventForeground.phases
+         <<",\"midi_file_event_service_initial_active\":"<<ks::test::legacyRuntime(*b)->midiFileEventForeground.initial
+         <<",\"midi_file_event_service_active\":"<<ks::test::legacyRuntime(*b)->midiFileEventForeground.active()
+         <<",\"native_state_tick_service_calls\":"<<ks::test::legacyRuntime(*b)->stateTickForeground.started
+         <<",\"native_state_tick_service_returns\":"<<ks::test::legacyRuntime(*b)->stateTickForeground.completed
+         <<",\"native_state_tick_service_phases\":"<<ks::test::legacyRuntime(*b)->stateTickForeground.phases
+         <<",\"native_state_tick_service_initial_active\":"<<ks::test::legacyRuntime(*b)->stateTickForeground.initial
+         <<",\"native_state_tick_service_active\":"<<ks::test::legacyRuntime(*b)->stateTickForeground.active()
+         <<",\"native_state_tick_service_components\":"<<ks::test::legacyRuntime(*b)->stateTickForeground.components
+         <<",\"native_state_tick_service_tick\":"<<ks::test::legacyRuntime(*b)->stateTickForeground.kinds[0]
+         <<",\"native_state_tick_service_returned_clock\":"<<ks::test::legacyRuntime(*b)->stateTickForeground.returnedClock
+         <<",\"native_state_tick_service_returned_buttons\":"<<ks::test::legacyRuntime(*b)->stateTickForeground.returnedButtons
+         <<",\"native_state_tick_service_returned_adc\":"<<ks::test::legacyRuntime(*b)->stateTickForeground.returnedAdc
+         <<",\"native_state_tick_service_returned_encoder\":"<<ks::test::legacyRuntime(*b)->stateTickForeground.returnedEncoder
+         <<",\"native_state_tick_service_returned_pedal\":"<<ks::test::legacyRuntime(*b)->stateTickForeground.returnedPedal
+         <<",\"native_state_tick_service_returned_output\":"<<ks::test::legacyRuntime(*b)->stateTickForeground.returnedOutput
+         <<",\"native_state_tick_service_returned_refresh\":"<<ks::test::legacyRuntime(*b)->stateTickForeground.returnedRefresh
          <<",\"native_state_factory_service_calls\":"<<factory.started
          <<",\"native_state_factory_service_returns\":"<<factory.completed
          <<",\"native_state_factory_service_phases\":"<<factory.phases

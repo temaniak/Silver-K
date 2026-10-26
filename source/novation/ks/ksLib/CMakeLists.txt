@@ -647,3 +647,7 @@ if(BUILD_TESTING AND NOT TARGET ksNativeControllerExecutor_test)
  add_test(NAME ksNativeControllerExecutor COMMAND ksNativeControllerExecutor_test)
  set_tests_properties(ksNativeControllerExecutor PROPERTIES TIMEOUT 300 SKIP_RETURN_CODE 77)
 endif()
+
+# Apply after the complete target graph, including later Plugin/source additions.
+include("${CMAKE_CURRENT_LIST_DIR}/ksControllerSourcePartition.cmake")
+ks_schedule_controller_source_partition("${CMAKE_CURRENT_LIST_DIR}")

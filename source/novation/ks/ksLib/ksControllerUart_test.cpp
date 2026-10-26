@@ -1,4 +1,5 @@
-#include "ksBoard.h"
+// Explicit retained LEGACY comparison test; not a semantic NativeControllerExecutor proof.
+#include "ksBoardComparison_test.h"
 #include "ksRom.h"
 #include <algorithm>
 #include <cmath>
@@ -15,8 +16,8 @@ uint64_t lastReceived=0;bool observed=false;
 void check(bool ok,const char* message){if(!ok)throw std::runtime_error(message);}
 std::vector<uint8_t> bytes(const std::filesystem::path& path){std::ifstream in(path,std::ios::binary);check(bool(in),"Cannot read fixture input");return {std::istreambuf_iterator<char>(in),{}};}
 void same(ks::Board& a,ks::Board& b){
-    const auto& x=static_cast<ks::ControllerCpu&>(a.cpu());
-    const auto& y=static_cast<ks::ControllerCpu&>(b.cpu());
+    const auto& x=static_cast<ks::ControllerCpu&>(ks::test::comparisonCpu(a));
+    const auto& y=static_cast<ks::ControllerCpu&>(ks::test::comparisonCpu(b));
     check(x.cycles==y.cycles && x.getPC()==y.getPC(),"UART scheduling cycle/PC differs");
     check(x.ccr==y.ccr && x.exr==y.exr,"UART scheduling flags differ");
     for(unsigned n=0;n<8;++n)check(x.regs[n].er==y.regs[n].er,"UART scheduling register differs");
@@ -27,7 +28,7 @@ void same(ks::Board& a,ks::Board& b){
     if(observed)check(a.midiReceived-lastReceived<=1,"UART observation skipped multiple bytes");
     lastReceived=a.midiReceived;observed=true;
     for(unsigned n=0xfffe00;n<=0xffffff;++n)check(a.read(n)==b.read(n),"UART/timer/IO state differs");
-    if(b.nativeController())check(b.h8StepsSinceNativeHandoff()==0,"UART scheduling executed H8 after handoff");
+    if(ks::test::legacyRuntime(b))check(b.h8StepsSinceNativeHandoff()==0,"UART scheduling executed H8 after handoff");
 }
 }
 int main(int argc,char** argv){try{
@@ -35,8 +36,8 @@ int main(int argc,char** argv){try{
     const std::filesystem::path output(argv[4]);check(!std::filesystem::exists(output),"Refusing to reuse UART output directory");
     std::filesystem::create_directories(output);
     ks::Rom os(argv[1]);check(os.isValid(),"Invalid KS firmware");const auto flash=bytes(argv[2]),wave=bytes(argv[3]);
-    auto original=std::make_unique<ks::Board>(os.data(),wave,flash,true);
-    auto native=std::make_unique<ks::Board>(os.data(),wave,flash,true);
+    auto original=ks::test::makeLegacyBoard(os.data(),wave,flash,true);
+    auto native=ks::test::makeLegacyBoard(os.data(),wave,flash,true);
     check(original->boot() && native->boot(),"UART fixture boot failed");same(*original,*native);
     const uint64_t bootMidiReceived=original->midiReceived;
     native->enableNativeController();
@@ -65,7 +66,7 @@ int main(int argc,char** argv){try{
     const auto x=original->finishControllerTrace(),y=native->finishControllerTrace();
     x->validate();y->validate();x->save((output/"h8.kst").string());y->save((output/"native.kst").string());
     check(bytes(output/"h8.kst")==bytes(output/"native.kst"),"UART full DSP bus/slice bytes differ");
-    const auto& a=original->cpu();const auto& b=native->cpu();
+    const auto& a=ks::test::comparisonCpu(*original);const auto& b=ks::test::comparisonCpu(*native);
     check(std::equal(std::begin(a.memory),std::end(a.memory),std::begin(b.memory)),"UART final controller memory differs");
     check(original->saveUserFlash()==native->saveUserFlash(),"UART final Flash differs");
     check(ks::stateMessage(original->state())==ks::stateMessage(native->state()),"UART final synth state differs");
