@@ -1,4 +1,5 @@
 #include "ksBoard.h"
+#include "ksControllerImageValidation.h"
 #include "ksControllerTimers.h"
 #include "ksDspTransport.h"
 #include "ksControllerJobs.h"
@@ -87,8 +88,7 @@ uint8_t Board::read(uint32_t a){
 }
 void Board::write(uint32_t a,uint8_t v){
     if(nativeController() && nativeCodeSealed){
-        const uint32_t code=a>=0xa00000 && a<0xc00000?a-0xa00000:a;
-        if((code>=0x170 && code<0x172)||(code>=0x490 && code<0x2a0c)||(code>=0x2a18 && code<0xb8e8))
+        if(controllerImage::immutableCodeAddress(a))
             throw std::runtime_error("Native KS controller cannot modify verified executable SRAM");
     }
     if(a<0x200000){if(overlay)h8->memory[0xa00000+a]=v;return;}

@@ -1,4 +1,5 @@
 #include "ksRuntimeController.h"
+#include "ksControllerImageValidation.h"
 #include "ksLiveMidiController.h"
 #include <sstream>
 #include <cstdlib>
@@ -15,9 +16,7 @@ RuntimeController::RuntimeController(const ControllerCpu& h,LiveMidiController& 
     midiFileEventForeground(nativeLargeJobStorage->fileEvent),
     serviceCycleForeground(nativeLargeJobStorage->mainCycle),
     shared(state){
-    uint64_t hash=14695981039346656037ull;
-    for(unsigned n=0;n<87360;++n){hash^=h.memory[n];hash*=1099511628211ull;}
-    if(hash!=0xbd1afefba93cb7b9ull)throw std::runtime_error("Native KS runtime requires verified OS 2.1.02");
+    controllerImage::verifyRom(h.memory,sizeof(h.memory));
     if(entry==Entry::PostBoot)verifyImage(h);
     serviceCycleForeground.bindMetadata(h.memory);
 #if defined(SILVER_KS_CONTROLLER_PROFILING)
@@ -28,9 +27,7 @@ RuntimeController::RuntimeController(const ControllerCpu& h,LiveMidiController& 
 void RuntimeController::verifyImage(const ControllerCpu& h){
     // H8 boots from Flash into SRAM. Verify the actual executable image too;
     // ROM identity alone would not establish an unchanged handoff image.
-    for(auto range:{std::pair<unsigned,unsigned>{0x170,0x172},{0x490,0x2a0c},{0x2a18,0xb8e8}})
-        for(unsigned pc=range.first;pc<range.second;++pc)
-            if(h.memory[0xa00000+pc]!=h.memory[pc])throw std::runtime_error("Native KS handoff code image differs from verified ROM");
+    controllerImage::verifyOverlay(h.memory,sizeof(h.memory),h.memory+0xa00000,0x200000);
 }
 void RuntimeController::arbitrate(ControllerCpu& h){
     if(h.interruptMode2 && (h.pending_irqs || h.pending_irqs_high)){

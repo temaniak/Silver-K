@@ -633,3 +633,6 @@ target_sources(ksLib PRIVATE ksMidiFileGlobalsService.h ksMidiFileTransportCompa
 
 # Real resource ownership is independent of the temporary CPU adapter.
 target_sources(ksLib PRIVATE ksControllerDeviceState.h)
+
+# Shared authenticated-image policy has no compatibility CPU dependency.
+target_sources(ksLib PRIVATE ksControllerImageValidation.h)
