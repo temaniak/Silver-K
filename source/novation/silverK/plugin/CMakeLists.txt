@@ -3493,3 +3493,8 @@ if(NOT TARGET ksNativeControllerExecutor_test)
  add_test(NAME ksNativeControllerExecutor COMMAND ksNativeControllerExecutor_test)
  set_tests_properties(ksNativeControllerExecutor PROPERTIES TIMEOUT 300 SKIP_RETURN_CODE 77)
 endif()
+
+# Standalone resampler callback regression; deliberately after the H8 reference scan.
+add_executable(silverResamplerRealtime_test silverResamplerRealtime_test.cpp)
+target_link_libraries(silverResamplerRealtime_test PRIVATE synthLib)
+add_test(NAME silver_resampler_realtime COMMAND silverResamplerRealtime_test)

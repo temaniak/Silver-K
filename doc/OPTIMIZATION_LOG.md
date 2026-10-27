@@ -5307,3 +5307,990 @@ placement, buffers/rates and Windows policy unchanged. Main checkout/host preset
 manager untouched. Private ROM/banks/traces/audio/binaries/reports stay outside
 Git. Next action is a bounded read-only architectural/status analysis and user
 decision; do not resume migration or automatically add H8 fallback.
+
+
+## 2026-10-23 — KS timer IRQ/clock and State channel services, same research branch
+
+User requested continued I/O/State migration on codex/ks-controller-resume-20261023
+with H8 verification at every step and no main changes. Source base 92eb704.
+All new builds and working evidence are separate from main. Main code, working
+files and installed/released products remain untouched. This local diary entry
+and private reports are not part of the source checkpoint/publication.
+
+Step 1b: TimerInterruptTask, ControllerClockReadTask and ClockAccumulatorTask
+replace 55 IO bodies. Native state owns acknowledgement, optional board scan,
+half-rate divider, counter/decay cadence, both modular phase accumulators, MIDI
+F8 carry decision, late run flags and wrapping timeout semantics. Temporary
+TimerServiceCalls supplies the caller/IRQ/RTE projection, both return formats
+and original admission intervals. No CPU register/flag/stack/PC exists in tasks.
+Independent direct-H8 proof: 7424 full calls /351964 original boundaries /
+876 selected IRQ points /19076 metric resets /40 nested calls, exact live
+accesses/order/time/state/full memory, zero interpreter/recovery/native new.
+Properties and task-only ASan/UBSan: 589824 policies /12225536 intervals,
+divider/flags/timeout byte pairs and selected 16/32-bit wrap edges.
+This step separately passes all nine full musical command/audio/state cases
+before the following State step is admitted (frozen interim binary hashes kept).
+
+Step 1c: StateChannelTask owns mode/status message selection, global channel
+mirroring and selected-part channel lookup/late observation; 20 State bodies
+retired. StateChannelCalls retains only temporary caller/IRQ projections and
+native publication pairing costs. Independent direct-H8 proof: 393816 complete
+calls /3280792 original boundaries /456 IRQ points /525386 metric resets /
+72 nested calls /131504 paired publications; all mode/status and part/channel
+byte pairs, exact clocks/accesses/state/full memory and zero interpreter,
+recovery or native new. Properties and task-only sanitizers: 393216 policies /
+2619396 intervals, all byte pairs and both publication costs.
+
+Final coherent arm64 Release AppleClang21/C++17, macOS27.2, pinned dependencies,
+profiling OFF: runtime admission441248 boundaries/4128reset/80IRQ/1216HDI and
+86016 control deadline cases pass. Timer and previous Flash regressions pass.
+Production rejects test-only partial recovery and H8. Public CTest3pass/2explicit
+ROM skips; both actual private-ROM fixtures pass separately. Four cold variants
+Single/Multi/irregular/mapped each compare full boot/IO/IRQ/state/Flash/port tapes
+and24000audible24-streamframes, native H8 steps0. Final nine four-second music
+scenarios match frozen original H8 byte-for-byte:8085451portevents and1632258
+PCMframes x24streams per side; state/Flash/MIDI/counters also match. Actual final
+passage calls:246257 timer jobs and134077 State channel jobs, balanced lifetimes
+and zero recovery. The interim/final identical-scenario matrices are separate,
+not pooled as broader coverage. No sonic change intended or observed here.
+
+DSP/JIT, guest clocks/boundaries/IRQ/serial B-A order, worker waits/priorities/
+placement, buffers and resampling are unchanged. Full model removal is unfinished:
+remaining fixed IO2256 +State2357 =4613, not a completion percentage. Synthetic
+Flash/zeroWave and finite scenario limits remain. No new Windows/Intel/DAW/plugin/
+physical hardware or sampled-bank claim. Native task-only sanitizer coverage and
+per-step new/new[] accounting are not whole-product realtime certification.
+Console MMU fallback messages remain private; CPU savings were not measured.
+
+Evidence: private/ks-controller-services-20261023/{validation.json,PROGRESS_RU.md},
+source/binary hashes, frozen baseline/interim binaries, complete tapes/PCM/logs.
+Retain initial compiler fixture/tokenization failures. Main is unchanged. Next:
+continue the remaining background panel/control and edit/store services before
+typed whole-controller scheduling/IRQ/data integration and CPU-frame removal.
+
+## 2026-10-23 — KS panel input rings, edit addresses and store UI, same research branch
+
+User continued panel/control services, then edit/store, with H8 admission at
+all steps and no main changes. Source base3c55e9f, research branch
+codex/ks-controller-resume-20261023; Release/C++17/AppleClang21/macOS27.2 arm64,
+pinned JUCE/DSP/AsmJit and profiling OFF. Main code/worktree and installed or
+published products unchanged. This diary/report is local-only, outside source
+commits. DSP/JIT, original guest clocks/IRQ, serial B-A order, worker waits,
+priority/placement, buffers and resampling unchanged. No CPU performance claim.
+
+PanelInputTask retires101 IO bodies: reset/pop/push for button and control rings,
+live ID maps, wrap/empty semantics and control child dispatch. Direct independent
+stock-H8 fixture:664664 calls/10452134 boundaries/5130IRQ/1975056 resets/630nested.
+First odd-index access-cost mismatch corrected; all event-word odd/even paths
+then exact. Task properties and ASan/UBSan:458752 policies/4882432 intervals.
+
+StateEditAddressTask retires25 State bodies: indexed/direct/global descriptor
+resolution, sentinel255, live indexed observation and late second base read.
+Independent H8:394400calls/3287472boundaries/944IRQ/657272resets/120nested exact.
+Task-only property/sanitizer:196608policies/1636608intervals, full selector/index
+bytes and selected32-bit wraps. No CPU state exists in either new task.
+
+StateStoreUiTask retires40 State bodies: Program/Performance commit orchestration,
+page1/2/3 admission, write protection, category, display/reload and tail lifetime.
+Independent H8:1172calls/33498460boundaries/358IRQ/6391526resets/60nested/194paired
+writes, exact data/stack/order/time/flags/PC/full memory. This direct mock explicitly
+supplies HDI Ready and reply bytes; initial H8/native waiting captures retained.
+Task-only property/sanitizer:327680policies/2553088intervals and both publication
+costs. All three groups reject fixed16-call overflow without CPU mutation and
+track0 ordinary new/new[] in checked native runtime steps; not blanket callback
+or full DSP sanitizer certification. Comparison factory absent in direct tests.
+
+Each group separately passes the same nine4s engine command/PCM/state/MIDI cases:
+8085451portevents/1632258frames x24int32 streams per side per matrix. Do not pool
+identical matrices as wider coverage. Actual panel-input jobs134061 each; edit
+jobs1320 after edit admission. Standard MIDI matrix does not press Store, so add
+panel-store-single/multi probe scenarios: derive Store key from authenticated
+ROM descriptors, explicitly allow synthetic writes, inject translated press/
+release events into active SRAM button ring between frames; never force CPU
+entry to a save routine. These retain actual H8/C++ UI, real DSP and Flash.
+Program pages0-1-2-3-0,4newstorejobs,Flashrevision1; Performance0-1-2-0,3jobs,
+revision4. Full port tape/PCM/state/Flash/MIDI exact;0native interpreter/recovery.
+Initial wrong low-memory-alias injections retained as rejected fixtures, not
+product regressions. No physical GPIO/button-scanning validation is claimed.
+
+Final four cold variants single/multi/irregular/mapped pass full reset/memory/
+Flash/IO/IRQ/port tapes and24000audible24-streamframes each, nativeH8steps0.
+Full runtime441248 boundaries/4128reset/80IRQ/1216HDI and86016control deadline
+cases passed at every production step. Public CTest4pass/3explicit ROM skips;
+all3 actual private-ROM fixtures passed separately. Intermediate binaries/hashes,
+all raw tapes/PCM/logs and failed compiler/fixture attempts retained privately.
+
+Remaining IO2155+State2292=4447 old fixed bodies, not a completion percentage.
+Digital/analog panel scan, pedal/encoder, other background/UI/edit/store branches,
+typed scheduling/IRQ and complete CPU frame removal remain. Finite synthetic
+Flash/zeroWave tests on Mac arm64 only; no Windows/Intel/DAW/plugin/physical-board
+or sampled-bank claim. Local evidence private/ks-controller-panel-edit-20261023/
+{PROGRESS_RU.md,validation.json,archive-index.json,evidence.tar.gz}. No push,
+install, public report, private-asset upload or release.
+
+Local source checkpoint: f330c70a2d7abb76d9863e4c786fae2638789431;26 source hashes verified. Private evidence/journal excluded from commit.
+
+
+## 2026-10-23 — local KS semantic panel scan, pedal, encoder and ADC samples
+
+User resumed this bounded step on codex/ks-controller-resume-20261023 from
+f330c70a2d7abb76d9863e4c786fae2638789431, preserving clean main4baaead.
+Four fixed-capacity pure C++ Tasks own six-row active-low button scanning/init,
+physical pedal polarity/edge decisions, wrapping timer encoder acceleration/
+reversal and four-channel ADC half-product smoothing. Calls bridges preserve
+live observation points and compatibility CPU projection/timing. Retired140
+IO fixed N bodies (56/24/38/22); originals moved to test-only partial adapters.
+No DSP/JIT/IRQ/guest clock/serial B-to-A/buffer/resampler/wait/priority change.
+No intended sonic change or CPU performance claim.
+
+Independent stock-H8 fixtures, synchronized factory absent, passed536220
+complete calls /65274240 original boundaries /10104 IRQ points /384 nested,
+with live data/stack/order/value/clock and CPU projection exact, final16MiB
+memory exact, zero interpreter/partial recovery/ordinary new in native steps.
+Fixed16 capacity overflow rejection checked outside allocation accounting.
+All4 fixtures rerun after final integration. Pure-task1704449 policy cases
+and all4 ASan/UBSan runs passed; not a whole H8/DSP sanitizer/allocator proof.
+
+At each of4 production stages,9 musical cases separately match frozen original
+H8: full KST,8085451 DSP events and1632258 frames x24 xint32 PCM per side,
+DSP clocks/state/Flash/MIDI/serial exact. Repeated matrices do not broaden
+coverage. Final virtual-pin Board tests exercise real scan-to-Store dispatch:
+Single0->1->2->3->0 Flash revision1, Multi0->1->2->0 revision4;4 pedal edges,
+56 encoder changes/reversal and732 ADC changes each. No queue injection or
+forced entry; explicit fixture Flash permission. Full tape/PCM/state/clocks/
+Flash/MIDI/reads exact (517100/309473 events). Not physical-hardware validation.
+
+Final cold single/multi/irregular/mapped match memory/state/Flash/IO/IRQ/ports
+and24000 audible24-streamframes each, native interpreter0. Runtime441248
+boundaries/4128reset/80IRQ/1216HDI and86016deadline cases pass. CTest5pass,
+4explicit private-ROM skips; all4 actual ROM tests passed separately. Initial
+matrix capacity fixture used PanelInputCalls by copy error; corrected type,
+full rerun/final rerun pass. Failed log retained; no production defect found.
+
+Remaining IO2015+State2292=4307 fixed bodies, not a completion percentage.
+ADC IRQ/cadence parents, thresholds/calibration/scaling, other I/O/State,
+typed scheduling/IRQ and complete CPU frame removal remain. Mac arm64 only,
+private OS/synthetic Flash/zeroWave; no Windows/Intel/DAW/physical-board/
+sampled-bank claim. Evidence private/ks-controller-scan-20261023/ includes
+PROGRESS_RU.md, validation.json, source/binary/input identities, all logs,
+frozen baseline/intermediate/final binaries and verified388-member raw
+capture archive. No private ROM included; no push/install/release. Keep
+private evidence and this journal outside the public source commit.
+
+Local source checkpoint: 4c1c97b1e735983e9d18ada3cd033f698c47c878;31 committed source hashes,12 final binary hashes and durable archive SHA verified. Main remains clean4baaead; only this local journal is dirty.
+
+
+## 2026-10-23 — local KS ADC IRQ, thresholds, calibration and scan
+
+User authorized bounded continuation on codex/ks-controller-resume-20261023
+from4c1c97b1e735983e9d18ada3cd033f698c47c878; main4baaead kept clean.
+Pure fixed-capacity Tasks now own three integer ADC scaling curves,36-channel
+reference snapshot/threshold arming and indexed bias read, ADC completion IRQ
+with settling/hysteresis/preview, and16-pass warmup/live group polling/mux/
+conversion start/shared reset-last. Retired223 IO fixed N bodies (50/26/101/46),
+originals test-only. Preserve CPU ABI/RuntimeBoundary while Task decisions
+use native state/arithmetic; full CPU-frame removal remains unfinished.
+No DSP/JIT/IRQ clock/order/B-to-A serial/buffer/resampler/wait/priority change.
+No intended sonic change or CPU performance claim.
+
+Final independent stock-H8 fixtures, synchronized factory absent, pass1078624
+complete calls /367156010 boundaries /14116 IRQ points /756 nested. CPU,live
+access/stack/value/order/clocks and final16MiB exact; zero interpreter/partial/
+ordinary new in checked native steps. Fixed16 overflow checked separately.
+Pure Task2755912 policy/deadline cases and4 ASan/UBSan tests pass; not whole
+H8/DSP sanitizer or unrestricted allocation proof. Scan-only completion is
+fixture-supplied; real ADC IRQ cadence tested with actual Board below.
+
+Each admitted stage separately passes9 standard MIDI music cases: full KST,
+8085451 events and1632258 frames x24 xint32 PCM per side, DSP clocks/state/
+Flash/MIDI/serial exact. Repeated matrices not broader coverage. Static ADC
+pins mean post-metric Scale/Calibration calls0; arithmetic covered by direct
+fixtures and moving input/cold coverage. Final virtual-pin Single/Multi match
+full tape/PCM/state/Flash/MIDI/cycles/reads:517100/309473 events. Real native
+IRQ7020/7110, accepted189/217, preview168/192, special21/25, Scale357/409,
+restarts624/632, Scan780/790; Store pages0->1->2->3->0 /0->1->2->0,
+Flash revisions1/4. No queue injection/forced PC; explicit fixture Flash
+permission; virtual external contacts, not physical hardware validation.
+
+Final cold Single/Multi/irregular/mapped exact memory/state/Flash/IO/IRQ/ports
+and24000 audible24-streamframes each. Require Calibration and Scan/IRQ execute.
+Partial guards checked at every cold boundary and before any probe metric reset;
+interpreter/partial0. Runtime441248 boundaries/4128reset/80IRQ/1216HDI and
+86016deadline cases pass. Public CTest5pass+4explicit ROM skips; all4 actual
+private-ROM tests run and pass separately.
+
+Rejected attempts retained: Scale missed2 internal long-branch clocks; corrected
+cost/projection, full rerun exact. Runtime first-boundary synthetic IRQ trials
+needed fresh ADC contexts between independent trials; production unchanged.
+Physical validator incorrectly demanded Calibration calls after metric reset;
+cold test now explicitly verifies real execution. Most importantly Scan missed
+independent shared156e reset-last entry from StateGlobals6ae0. Cold/state partial
+guards rejected it. Added native ResetLast entry and H8/deadline cases, strengthened
+pre-reset guard; all final music/physical/cold rerun. Earlier Scan/physical candidate
+captures do not establish native-only startup even where PCM matched. Temporary
+fprintf diagnostics removed. No fallback admitted as a workaround.
+
+Remaining IO1792+State2292=4084 bodies, not a completion percentage. Other I/O/
+State, typed scheduling/IRQ and full CPU frame removal remain. Mac arm64 Release
+C++17 AppleClang21 profiling OFF, private OS/synthetic Flash/zeroWave only;
+no Windows/Intel/DAW/plugin install/physical-board/sampled-bank claim. Local
+private/ks-controller-adc-20261023/{PROGRESS_RU.md,validation.json,archive-index.json,
+evidence.tar.gz} holds hashes/commands/all logs/frozen executables and477 verified
+raw capture members. No ROM in archive. Prior temporary capture copies freed
+only after matching saved prior archive/index SHA; durable evidence retained.
+No push/install/release. Exclude journal and private evidence from source commit.
+
+Local source checkpoint: 3772ef0228ff10c903fcef3b0cdf93c9997e2464;30 source hashes verified against commit/worktree,12 final binaries and durable477-member archive SHA verified. Main remains clean4baaead; only local journal dirty.
+
+
+## 2026-10-23 — local KS internal MIDI I/O and foreground State services
+
+User resumed the next bounded I/O and upper State step on the same research
+branch codex/ks-controller-resume-20261023 from3772ef0. Clean main4baaead
+unchanged; no push/install/release. Five pure Tasks retire394 fixed N bodies:
+InternalMidiQueue44, MidiOutput162, InternalMidiService79, StateForeground74,
+StateButtonDispatch35. Two immediate shared continuation steps are additionally
+owned by InternalMidiService without stealing the ordinary MidiDecode context.
+
+Independent stock-H8 fixtures:374680 complete calls/handoffs,64879053 original
+boundaries,14836IRQ points,1058nested; exact regs/flags/PC/stack/live data/order/
+clocks/final16MiB. Comparison factory absent. Zero interpreter/partial recovery/
+ordinary new/new[] in checked native steps; fixed16 capacity exception separately
+rejected before CPU mutation. Call completions include explicit tail delegation.
+Pure Task1699840 policy/20447908deadline cases and all5 ASan/UBSan pass; not
+whole-DSP/H8 sanitizer certification. Button fixture controls descriptor data;
+active panel behavior is separately covered below, not inferred from idle tests.
+
+After each accepted group, the same9 music scenarios separately match full KST,
+8085451 DSP events and1632258frames x24int32 per side, state/Flash/MIDI/serial/
+DSP clocks. Repeated matrices are not wider coverage; standard MIDI mostly
+exercises empty button pop. Final virtual physical contacts keep actual Board,
+IRQ/UI/DSP/Flash and exercise Store/pedal/encoder/ADC: Single517100/Multi309473
+DSP events, full PCM/tape/state/Flash/MIDI/cycles/reads exact, pages0-1-2-3-0 /
+0-1-2-0 and Flash revisions1/4. All five new groups execute with partial0 and
+balanced lifetimes, including one active output job at the final frame. No
+queue injection/forced PC; fixture Flash permission explicit, not physical board.
+
+Final cold single/multi/irregular/mapped exact complete memory/state/Flash/IO/
+IRQ/port tapes and24000audible24-stream frames each, H8candidate0. Partial
+counts checked at every cold boundary and probe before metric reset. Full
+runtime441248 boundaries/4128reset/80IRQ/1216HDI/86016deadline cases exact;
+production adapter-free fixture passes. Public CTest6pass+5ROM skips; all5 actual
+private-ROM fixtures separately pass. Final fixture coverage uses334-byte part
+stride and all UART status bytes. Initial compile/fixture failures retained:
+2000 reset limit too short for original4part clearing; freshness guard rejected
+precreated cold directories; summary writer shadowed matrix name. Corrected
+fixtures/metadata, reconstructed all9 per-stage summaries from reports and
+verified archived raw hashes; no production behavior fitted to the tests.
+
+Remaining IO1507+State2183=3690 fixed bodies, not a percentage. Other panel/
+service/startup/diagnostic and clock I/O, remaining screen/edit/menu State,
+typed scheduling/IRQ and full CPU-frame removal remain. Calls/RuntimeBoundary
+compatibility ABI persists. Mac arm64 Release/C++17 AppleClang21 profiling OFF,
+private OS/synthetic Flash/zeroWave only; no Windows/Intel/DAW/plugin install/
+physical-board/sampled-bank or CPU gain claim. No intended sonic change;
+DSP/JIT, original guest clocks/IRQ/order, serial B-A, buffers/resampling,
+waits/priority/placement unchanged. Local-only evidence and reports under
+private/ks-controller-io-state-20261023; exclude this diary and private files
+from source commit. Verified lossless raw archives preserve all captures.
+
+Local source checkpoint: 037d0ccc93910d4ccd9fb3ad7038664c0efb5c5c;37 source SHA verified against commit/worktree,14 final binaries and durable670-member lossless archive verified. Main remains clean4baaead; only local diary dirty.
+
+
+### 2026-10-23 — KS panel analog, clock synchronization and State screens (local semantic research)
+
+Source basis `037d0ccc93910d4ccd9fb3ad7038664c0efb5c5c`, same branch `codex/ks-controller-resume-20261023`. macOS arm64 Release C++17/AppleClang21, profiling OFF, same authenticated OS/Flash/zero-wave fixtures and pinned JUCE/DSP56300/AsmJit. Main remains clean at4baaead06e23e2358729cca32b6b511c72022318. This user-authorized continuation supersedes the historical pause for this isolated branch; no main merge or release.
+
+Extracted five independent policies: PanelAnalog (99 fixed bodies), ClockSync (88), ClockPulse (90), ClockDisplay (31), StateScreen (117). Total425; I/O1199 and State2066 fixed bodies remain, total3265, not a completion percentage. Tasks own descriptor/page/label, signed fixed-point feedback and source decisions; Calls retain exact boundary/timing/ABI projection.
+
+Final independent stock-H8 differential tests: 1372195 complete calls, 216735788 original boundaries, 26349 IRQ points, 43288897 metric resets, 1062 nested calls. Exact register/CCR/PC/stack/live bus values/order/clocks and final16MiB memory; both mapped and clock-only fetch; no synchronized reference factory/interpreter/recovery or ordinary new/new[] in checked native steps. Fixed16-call capacity rejects overflow before CPU mutation. Five Task property tests pass ASan+UBSan; no claim of whole-engine sanitizer or leak coverage.
+
+After each group9 identical4s musical scenarios independently pass full DSP command tape/PCM/state/Flash/MIDI/clocks:8,085,451 DSP events and1,632,25824-stream frames per side per matrix. Four final cold variants single/multi/irregular/mapped pass with24,000 audible24-stream frames each and full memory/bus/state/Flash/IO/IRQ checks. Runtime and production guards pass. Public CTest6pass/5 private-ROM skips; actual private direct fixtures ran separately.
+
+Final virtual Store/pedal/encoder/ADC Single/Multi paths pass exact PCM/tape/state and Flash saves. Separate descriptor-derived physical Edit/Next/Previous routes reach pages0,1,2,3,4,5,4,5 and execute active ClockDisplay in both modes; pure virtual contacts, no queue/PC injection, encoder/ADC neutral for this isolated screen case. No physical-board validation.
+
+First screen Task budget incorrectly used12 clocks instead of6 for fixed internal32-bit access; direct H8 rejected at5846. Corrected only new budgets; repeated final tests pass. Retain rejected checkpoint, partial matrix, unsupported LeakSanitizer option, test compile errors, inactive-group parser assertion, combined fast screen profile that matched H8 but missed tempo coverage, and six-second trace overflow. Final four-second isolated screen profile stays within original capacities. ClockSync direct DSP-ready/reply mock and controlled screen descriptor-data fixture are explicit; evolving integration uses authentic tables.
+
+No intended sonic change and no CPU gain claim. DSP/JIT, guest timing/order/IRQ, serial B-A, resampling/buffers, wait/priority/placement unchanged. Windows, physical Intel, DAW/installed plugin, sampled banks and physical controls not validated. Remaining: panel settings/calibration wrappers and system/startup/diagnostic/transport I/O, further State edit/menu handlers, typed scheduler/IRQ integration and full CPU frame removal.
+
+Private evidence `private/ks-controller-panel-sync-20261023/PROGRESS_RU.md`, validation/source identities and lossless indexed archive.196 old ADC temporary raw paths were removed only after authenticating saved archive, member SHA and byte size; manifest retained. This diary/evidence is local-only, excluded from source commit. No push/install/publication.
+
+
+### 2026-10-23 — KS panel settings, edit context, screen edit and menu format (local semantic research)
+
+Same branch `codex/ks-controller-resume-20261023`, source basis `bbd54e1dd3e0e90cb23ccddf8a100c551d8fb9ea`. Main remains
+clean4baaead06e23e2358729cca32b6b511c72022318. macOS arm64 Release C++17 /
+AppleClang21 profiling OFF, same authenticated OS/synthetic Flash/zero-wave
+and pinned JUCE/DSP56300/AsmJit. No main merge/push/install/release.
+
+Four policy Tasks retire456 fixed bodies: PanelSettings122, StateEditContext46,
+StateScreenEdit57, StateMenuFormat231. Remaining I/O1077, State1732,total2809,
+not a completion percentage. Settings covers calibration copy/Flash lifecycle,
+notice/mode, ranges and duty clamp. State covers context selection, retained
+reference comparison, wrapped/signed/bit/tri editing, numeric/text/off/note
+presentation. Calls retain compatible ABI and exact original boundaries/clocks.
+
+Independent stock-H8: 942396 complete calls,
+674292826 original boundaries, 7818 IRQ,
+134760467 metric resets, 590 nested. Exact regs/CCR/PC/
+stack/live access values/order/clocks and final16MiB memory, mapped/clock-only
+fetch, fixed16 capacity rejection before CPU mutation; synchronized reference
+factory absent, interpreter/partial recovery0 and ordinary new/new[]0 in checked
+native steps. Controlled descriptor/parameter234/dynamic-text-table fixtures
+are explicitly component coverage, not authentic all-patch validation.
+
+Four pure tests:2969856 policies /116262382 intervals, all ASan+UBSan pass.
+After each of4 groups the same9 music scenarios separately pass exact full KST/
+PCM/state/Flash/MIDI/clocks:8085451 DSP events and163225824-stream frames per
+side per matrix. Cold single/multi/irregular/mapped exact full memory/state/
+Flash/IO/IRQ/tapes and24000 audible24-stream frames each. Runtime/production
+pass. Public CTest5pass/4private-ROM skips; real direct fixtures separately pass.
+
+Virtual Store/pedal/encoder/ADC Single/Multi exact with Flash revisions1/4.
+Virtual menu contacts reach0,1,2,3,4,5,4,5 and active tempo. New active-edit
+contacts+encoder execute45 ScreenEdit calls per mode, Context159/171 and
+MenuFormat34/37, exact full tapes/PCM/state/clocks. Actual Board/IRQ, no queue
+or PC injection; active-edit ADC neutral, no Flash permission override. Settings
+may have0 calls after metrics reset in these routes; direct and cold tests cover
+its actual behavior. This is not physical hardware testing.
+
+Retain rejected attempts: duplicate generated enum, unserviced synthetic UART
+ring blocking both implementations at112c (reset only between independent
+cases), format whole-call fixture30000 ceiling insufficient at886 (test-only
+300000 ceiling), missing final edit FX capture found on resume and completed
+with frozen checkpoint, resume freshness-parser error. No production behavior
+or capacity fitted to tests. Final ScreenEdit/MenuFormat direct successful runs
+already use final production library and their binaries are not relinked by
+final-build; after-run SHA observation explicitly documented. Fast Settings/
+Context repeated after shared library changes. No unnecessary607M repeat.
+
+No intended sonic change or CPU improvement claim. DSP/JIT, guest IRQ/time/order,
+serial B-A, buffers/resampling and wait/priority/placement unchanged. No Windows,
+physical Intel, DAW/installed plugin, sampled bank or physical panel validation.
+Remaining: system/diagnostic/transport I/O, further State action/menu/edit,
+typed scheduler/IRQ and complete compatibility CPU-frame removal.
+
+Local private evidence `private/ks-controller-settings-edit-20261023/PROGRESS_RU.md`,
+validation/source identities,12 frozen binaries and lossless verified archive.
+This diary/private reports excluded from source commit.
+
+
+## 2026-10-23 — semantic KS system I/O and State actions (local arm64)
+
+Same research branch, base68ba21ca7aa779726dd2544fffb5075b9262c6cb; main
+clean4baaead06e23e2358729cca32b6b511c72022318. Same Release/AppleClang21,
+C++17, arm64/macOS12 target, profiling OFF and authenticated fixtures/pins.
+No main merge, push, install or publication.
+
+Retired412 fixed IO/State bodies: SystemServices111, KeyboardEvents120,
+StatePartSelection100, StateMenuActions81. Remaining IO846/State1551,total2397;
+not a completion percentage. Pure tasks own startup/key map/glyph/bar/Flash
+signature lifecycle, keyboard transitions/velocity/ring, part masks/held parts/
+removed-part resets and menu dispatch/toggle/navigation/repeat/Store routes.
+The compatibility register/flags/stack/PC/scheduler ABI remains in Calls.
+
+Independent stock H8:1490600 full calls /60513926 original boundaries /
+15248 IRQ points /11938980 metric resets /1128 nested. Exact accesses, timing,
+ABI and final16MiB; both fetch modes, native ordinary new/new[]0, interpreter0,
+partial recovery0; fixed16 context overflow rejected before CPU mutation.
+Menu direct tests isolate external child contracts through stock RTS and paired
+flags; full descendants checked in engine/panel scenarios. Part tests use
+synthetic data/DSP-ready/immediately drained UART fixtures. Pure policies:
+1948928 cases /43886251 intervals; ASan+UBSan all4 pass (detect_leaks=0).
+Runtime/production pass; CTest5pass/4ROM skips, four real ROM tests separately pass.
+
+Four repeated nine-scenario matrices each exactly compare full KST/PCM/state/
+Flash/MIDI/clocks:8085451 events,1632258 frames x24 int32 per side. System and
+Keyboard share one frozen post-I/O checkpoint (repeat, not independent coverage).
+Parts and Actions have separate checkpoints; Actions is the final Probe binary.
+Cold single/multi/irregular/mapped exact memory/state/Flash/IO/IRQ/transport plus
+24000 audible24-stream frames each; candidate H8-step0. Eight virtual-contact
+Single/Multi scenarios (Store/ADC/pedal/encoder, menus, active edit, part selection)
+exact. Store Flash revisions1/4; MenuActions16/12 for Store,32/32 screens/edit.
+PartSelection28/28; Multi masks1->2->1, Single correctly remains1. Actual Board
+scan/IRQ/transport, no PC or panel-event queue injection; not physical hardware.
+
+Rejected evidence retained: new MMIO cost3 instead of1 at keyboard port (fixed
+new bridge helper only); synthetic UART without consumer; test20000-boundary
+ceiling (300000 now); menu fixture hex-token typo; Single part-mask expectation;
+metadata-script assertion correction. No production queue/timing fitted to tests.
+Final part/menu tests observed after run with frozen binary SHA, no later relink;
+System/Keyboard repeated after final shared-library changes.
+
+No intended sonic change or measured CPU gain. DSP/JIT, guest timing/IRQ/order,
+B-A, buffers/resampling, waits/priority/placement unchanged. No Windows/physical
+Intel/DAW/installed plugin/real panel/real keyboard/all-bank claim. Further IO
+startup banner/diagnostics/keyboard scan and update transport boundary; further
+State screens/edit/menu; typed scheduler/IRQ and CPU-frame removal remain.
+Private evidence: private/ks-controller-system-actions-20261023/PROGRESS_RU.md,
+validation/source identities,12 frozen binaries and verified lossless archive.
+Journal and private evidence excluded from source commit.
+
+
+## 2026-10-23 — keyboard/diagnostics and large State screen/edit stage (local arm64)
+
+Same research branch, source base6f82387147bb9d4e44ad7ee05546da339d2db431;
+main clean4baaead06e23e2358729cca32b6b511c72022318. Same Release C++17 /
+AppleClang21 arm64/macOS12 target, profiling OFF, fixtures and dependency pins.
+No main integration, push, installation or publication.
+
+Nine Tasks retire1010 fixed bodies: KeyboardScan256, DiagnosticCodec64,
+DiagnosticTransfer89, MemoryDiagnostics61, StartupBanner40,
+StateScreenActions130, StatePanelModes145, StateFunctionKeys72,
+StateEditWorkflow153. Remaining I/O336 (firmware-update loader only),State1051,
+total1387; not a completion percentage. Logical policies cover eight keyboard
+pages/contact order, diagnostic encoding/dump/RAM/banner, UI lifecycle,
+octave/transpose, function/calibration chords, edit/encoder/parameter dispatch
+and audition. Calls retain the temporary compatibility CPU/scheduler ABI.
+
+Independent stock H8:663976 complete calls /96721992 boundaries /20234 IRQ
+points /19235222 metric resets /804 nested. Both fetch modes, exact accesses,
+in-flight context, timing, ABI and final16MiB. Interpreter/partial recovery0,
+ordinary new/new[]0 in checked native steps. Fixed16 overflow rejected before
+CPU mutation. Additional512 bounded fault loops/1536 exact H8 steps. State
+external children use authenticated RTS/paired contract fixtures; full children
+also execute in engine/panel scenarios. Destructive outer RAM rounds isolated;
+actual Pair/Pass/mismatch and bounded halt checked, ready/drained UART synthetic.
+
+Pure Tasks:1860621 policies /102115013 intervals; all9 ASan+UBSan pass,
+detect_leaks=0. CTest10pass/9private-ROM skips; all9 actual ROM tests separately
+pass. Runtime/production guards pass. Four repeated nine-case music matrices
+scan/io/state/final each full KST/PCM/state/Flash/MIDI/clocks exact:
+8085451 DSP events /1632258frames x24 int32 per side. Final matches frozen
+Probe SHA; repeats are not36 independent scenario types. Four final cold modes
+single/multi/irregular/mapped exact memory/state/Flash/IO/IRQ/transport and24000
+audible24-stream frames each; candidate H8-step0.
+
+Fourteen final virtual-contact cases Single/Multi: Store/pedal/ADC/encoder,
+menus, active edit, parts plus new actions/functions/keyboard. Actions execute
+PanelModes106/51 calls; function profiles FunctionKeys14/14. Keyboard injects12
+two-contact transitions across pages0/3/7 through pins/mux, Board schedules
+scan/IRQs/events itself; Scan8020, Events13288/7309. Exact full sound/commands/
+state/timing; no PC or prebuilt event-queue injection. Not physical hardware.
+
+Rejected checkpoints/logs retained: generator/fixture syntax/type issues;
+missing shared4eaa automatic edit entry from StatePanelRefresh (startup rejected
+partial before metric reset), corrected with explicit typed entry/direct and
+property regression;1d18 arbitrary24-bit cursor clock budget (general runtime
+admission rejected), corrected new helper address masking and scan word target;
+metadata checker initially assumed legacy counters share uniform returns,
+corrected known contract set without changing actual equivalence assertions.
+Temporary test-only trap removed. Final9 direct/runtime/production,4 cold,
+9 music and14 panel cases rerun after the address fix, SHA-pinned22 binaries.
+
+No intended sonic change, no CPU gain claim. DSP/JIT/guest IRQ/time/order,
+B-A, buffers/resampling and wait/priority/placement unchanged. No exhaustive
+24-bit data-address/2^32 codec/all-bank sweep, Windows/physical Intel/DAW/
+installed plugin/real panel/keyboard claim. State4f0c:52ac,530e:582a,
+5db2:6198/61ec:628c remain, then typed scheduler/IRQ and complete CPU-frame
+removal and final product/Windows/CPU checks. Firmware-update loader remains
+outside normal playback extraction contract pending explicit scope decision.
+Private evidence: private/ks-controller-diagnostics-screens-20261023/
+PROGRESS_RU.md, validation/source identities,22 frozen binaries, lossless archive.
+Journal and private evidence excluded from source commit.
+
+
+##2026-10-23 —KS firmware-loader I/O extraction (local arm64)
+
+Работа выполнена в`codex/ks-controller-resume-20261023`, исходная точка`2335129d61119f723567a889f7dc4c58a412c9bb`. Основной checkout/main сохранён чистым на`4baaead06e23e2358729cca32b6b511c72022318`. Только локальная исследовательская разработка; без установки,публикации,push или интеграции в main.
+
+Перенесены все336 фиксированных тел диапазона`0xc0e:0xfbc`:
+
+| Служба | Тел |
+|---|---:|
+| LoaderInputs —4 банка,стабилизация,нажатие/отпускание,подтверждение |101|
+| LoaderCodec —префикс,14/32-битные значения,группы,блоковая сумма |57|
+| LoaderPackets —заголовок/блок/окончание,модель/устройство/номер блока |55|
+| LoaderProgram —размер,страницы,прогресс,ошибки Flash |48|
+| LoaderSession —вход,отмена,UART,приём,контроль суммы,защитные слова |75|
+
+Политики содержат логические данные/ветвления и отложенные чтения/записи. Регистры,флаги,стек и адреса продолжения остаются в отдельном временном ABI-мосте. В`RuntimeIo` удалён опустевший N-диспетчер. Копии старых тел доступны только тестовой H8-сборке; производственные частичные входы отклоняются без изменения CPU.
+
+Независимый stock H8: **35206 полных вызовов /214935043 границ /2236 точек IRQ /43000161 сбросов метрик**. Наблюдены и сравнены все336 границ. Совпали регистры,флаги,PC/SP,такты,порядок/значения/моменты обращений,IRQ и финальные16MiB памяти в обоих режимах fetch. Обычных native new/new[] и interpreter/partial recovery —0; переполнение16 контекстов отвергается до изменения CPU. Отдельный FlashPage тест:2940 вызовов,4154970 шагов,844 IRQ,20 вложений.
+
+Чистые политики: **178437 случаев /49170636 интервалов**; все5 прошли ASan+UBSan с`detect_leaks=0`. CTest:6 passed и5 явных private-ROM skips; все5 ROM-зависимых тестов отдельно выполнены с исходным частным OS. Runtime/Production guards также прошли.
+
+Полный сеанс на стенде: реальные дочерние panel/UART/packet/codec; успешное обновление,отмена,повтор заголовка,два блока,ненулевая сумма,ошибки индекса/блоковой/итоговой суммы/окончания. Терминальные циклы ошибки H8 сравниваются один раз,после чего тест явно завершает fixture через исходный RTS. Flash на уровне direct fixture —байтовая mock-память; физическая перепрошивка не проверялась.
+
+Девять4-секундных original/native музыкальных сценариев: PCM и полный DSP bus trace совпали побайтно; состояния,Flash,MIDI,serial,такты и метрики также точны. Четыре cold reset варианта —single,multi,irregular,mapped— прошли,включая startup partial guards до сброса метрик. Сжатые PCM/KST проверены побайтно перед удалением временных raw копий.
+
+Сохранены первоначальные отклонённые проверки: собственное удержание слова кодека,неверная модель LCD-busy в стенде и стоимость записи32-битной суммы во внешнюю область. Исправления повторно проверены окончательными тестами. См.`validation.json`,логи,команды,source-identities.json и final-binaries.
+
+Остаток: **I/O0; State1051 фиксированное тело**. Далее State,затем удаление CPU-каркаса/совместимого scheduler и итоговые product/Windows/CPU проверки. Намеренного изменения звука нет; производительность,Windows,DAW и физическое устройство в этой работе не подтверждаются.
+
+Private evidence: private/ks-controller-loader-20261023/validation.json and PROGRESS_RU.md. This local journal remains excluded from the source-only commit.
+
+
+## 2026-10-23 —KS remaining State extraction (local arm64)
+
+Рабочая ветка:`codex/ks-controller-resume-20261023`, база:`a46a08db566db37444da47384d8d22268e6651c6`. Основной checkout/main чистый и сохранён на`4baaead06e23e2358729cca32b6b511c72022318`. Работа локальная: без push,установки,публикации и автоматического объединения.
+
+Перенесены все1051 фиксированное тело старого State-диспетчера в10 семантических C++-служб:
+
+| Служба | Тел |
+|---|---:|
+|StateValueBounds|71|
+|StateEditLabel|77|
+|StateFieldActions|165|
+|StateBankNavigation|201|
+|StateStatusDisplay|157|
+|StateStoredValue|29|
+|StateBrowseWorkflow|126|
+|StateProgramBrowse|97|
+|StateProgramDisplay|79|
+|StateProgramEvent|49|
+
+В`RuntimeState` удалён пустой N-диспетчер. Во всех`ksRuntime*.cpp` старых N-тел теперь0,включая I/O0/State0. Семантические политики хранят логические данные и решения; доступы отложены до соответствующих моментов. Регистры,CCR/EXR,стек,PC и совместимый scheduler ещё остаются в ABI-мостах. Полное удаление CPU-каркаса —следующий этап,этот отчёт не утверждает его завершение.
+
+Независимый stock H8: **390884 полных вызова /31732090 границ /25248 точек IRQ /6336894 сброса метрик /1472 вложенных вызова**. Наблюдены и сравнены все1051 граница. Совпали все регистры,флаги,PC/SP,такты,история шины,IRQ,глубина возвратов и значения/порядок/время/контекст обращений. Финальные16MiB памяти точны. Оба fetch-режима,чётные/нечётные и помеченные указатели,произвольные флаги/значения. Ordinary native new/new[] и interpreter/partial recovery —0; переполнение16 контекстов отвергается до изменения CPU.
+
+Компонентные проверки явно изолируют внешние дочерние контракты через исходный RTS и согласованные ответы; это не fallback в production. В окончательных **23 full-engine случаях** работают реальные дочерние службы,каждый из10 новых блоков действительно вызван. Девять музыкальных и14 виртуальных панельных сценариев дали побайтно одинаковые PCM и полные DSP bus traces,точные state/Flash/MIDI/serial/guest clocks. Отдельно прошли четыре cold reset режима:single,multi,irregular,mapped; startup partial guards проверены до сброса метрик. Каждый случай рендера содержит181362 кадра по24 потока.
+
+Чистые политики: **592140 случаев /8117976 интервалов**,все10 прошли ASan+UBSan с`detect_leaks=0`,включая недостаточные бюджеты без побочных эффектов. CTest:11 passed/10 явных private-ROM skips; все10 ROM-зависимых тестов выполнены отдельно с исходным частным OS. Runtime/Production guards прошли. Звук,DSP,JIT,политика guest timing,буферы и приоритеты намеренно не менялись.
+
+Сохранены отклонённые проверки и исправления: направление классификации сохранённого поля; явный результат alternate-child; исходная ASCII-семантика фазы второй цифры; ошибка генератора metric-key в первом extra-panel runner. Аудит внешних/динамических входов также выполнен; StateInit->5666 принят как явный Schedule root. Финальные проверки проведены после исправлений; метаданные/SHA подтверждают окончательные бинарники.
+
+Частные входы:KS OS2.1.02,существующий init Flash и zero Wave ROM —SHA/размеры/пути в`validation.json`. Зависимости закреплены как ранее:JUCE2a8699d,DSP56300 44353be,AsmJit3577608. Платформа:macOS arm64,AppleClang21,C++17 Release,macOS12 target. Windows,реальный DAW,физическая панель/устройство и CPU-performance здесь не проверялись.
+
+Следующее: убрать временную регистровую/флаговую/стековую/PC-модель и совместимый scheduler,затем окончательные product/Windows/CPU проверки. Отчёты,исходные private inputs,записи,первоначальные отклонения и24 итоговых исполняемых файла сохранены локально;не включать их в публичные коммиты/пакеты.
+
+Private evidence: private/ks-controller-state-final-20261023/validation.json and PROGRESS_RU.md. This accumulated local journal remains outside the source-only commit.
+
+
+## 2026-10-23 — Closed KS IRQs without CPU frames (local arm64)
+
+Пять путей Mode 2 теперь исполняются через `InterruptService` без CPU-регистров, CCR, SP, PC, instruction fetch и записей CPU-стека:
+
+- SCI error, vector 88;
+- SCI transmit с байтом и переносом индекса очереди, vector 90;
+- пустая очередь SCI transmit, vector 90;
+- пустое завершение TPU1 overflow, vector 42;
+- пустое завершение SCI transmit-end, vector 91.
+
+Фиксированные семь C++-контекстов содержат задачу, предыдущий приоритет и уровень вложенности для стыка с оставшимися compatibility-службами. CPU-кадр для этих IRQ не создаётся. Логическая задача не включает ControllerCpu и не зависит от его layout. Сохранены исходные credits и прерываемые наблюдения: Mode 2 entry 28 тактов, return 23, обращения к UART/очереди в точные моменты H8. Состояние читается в соответствующей фазе, а не снимком заранее. Некорректный индекс очереди или нештатный stack context остаются в явно ограниченном native Calls-мосте; это не интерпретаторный fallback.
+
+В test-only переключении H8/hybrid незавершённый native IRQ доживает в том же 128-тактовом срезе. Запрос не вызывает добавочный advance; отмена переключения сохраняет native-контекст. Владельцы задач не уничтожаются внутри рендеринга. Очищены пустой N-макрос/ссылка на регистры Extended и ненужные CPU-boundary include в Io/State/Extended.
+
+## Проверка
+
+- Независимый stock H8, без synchronized factory: **131893 полных IRQ / 1851942 границы**, 171 вложенный случай, включая 78 native/native и 52 полных TPU0 со scan/clock/decay/latch. Произвольные CCR, EXR upper bits, все допустимые пары приоритета/маски, все статусы ошибки и пары индексов очереди; живые изменения ресурсов и 131317 сбросов метрик. Новые native-пути: allocations/interpreter/CPU stack writes — **0**.
+- Новые closed jobs: все ресурсные byte transfers/значения/порядок/такты точны. Уже существующие вложенные compatibility-службы имеют fast RAM без callbacks: для них отдельно сверяются MMIO, время, evolving RAM и финальные 16 МиБ за исключением точно выделенного 256-байтового scratch-окна теста. Это не утверждение о наличии RAM callbacks там, где fast path их устраняет.
+- Чистая служба: **196608 случаев / 1897728 фаз** и столько же отказов по недостаточному бюджету без побочных эффектов; ASan+UBSan прошли (`detect_leaks=0`).
+- **9 музыкальных сценариев**: по 181362 кадра ×24, PCM/KST побайтно точны, state/Flash/MIDI/serial/guest clocks совпали. Эти обычные сценарии не вызывали редкие новые IRQ: они являются регрессией остальных путей.
+- Поэтому отдельно выполнены **5 принудительных IRQ timelines**: 20480 звуковых кадров ×24 и 127413 DSP events точны; реальные native error/TX/unused вызовы **1/2/2**, ресурсная RAM/state/Flash/MIDI/такты точны, interpreter после handoff 0.
+- Выбор H8/hybrid/отмена прямо внутри IRQ: **12288 звуковых кадров ×24** точны; добавочного продвижения guest time нет.
+- **4 cold reset**: single/multi/irregular/mapped, полный DSP trace точен, по 24000 звуковых кадров ×24. Сравнивается вся память кроме выделенного firmware CPU scratch stack `0xfff000..0xfffc00`, который новые IRQ намеренно больше не материализуют. Во время active closed IRQ внутренние CPU-регистры/PC не являются oracle; priority/pending/IO/resource state и время остаются проверяемыми. После возврата обычный ABI снова сравнивается.
+- Старые SerialIrq/SerialTransmit/ExceptionReturn ROM-зависимые проверки пройдены отдельно; Runtime guard: 441248 границ, 80 mask/tie entries и 1216 HDI jobs; Production guard прошёл. CTest **6 passed / 7 private-fixture skips / 0 failed**, пропущенные ROM-тесты реально запускались с fixture отдельно.
+- SHA конечных исполняемых файлов зафиксированы. После удаления мёртвых include/пустого диспетчера все 15 обычных конечных бинарников остались побайтно теми же. Sanitizer binary сохранён отдельно.
+
+## Предел результата и следующий этап
+
+**Глобальный CPU-каркас ещё не удалён.** ControllerCpu по-прежнему 16777472 байта; pending/mask, bus history и глубина на стыке ещё принадлежат compatibility scheduler. Полные обработчики TPU0 (32), ADC (28), SCI receive (89), включая F8/ClockPulse, и вызовы остальных State/voice служб всё ещё используют Calls с регистрами/CCR/стеком/PC. Старые диагностические/partial-frame мосты сохранены явно. Переименование этого каркаса завершением переноса не считается.
+
+Далее: составить полный native TPU0 из BoardScan → ClockAccumulator → SerialTransmit и PanelDecay → latch; затем ADC и SCI receive/F8, после этого выносить общую IRQ admission/return и остальные caller continuations из ControllerCpu. Финальные продуктовые/Windows/CPU-проверки остаются отдельным этапом.
+
+Платформа: macOS 27.2 arm64, AppleClang21 C++17 Release, macOS12 target, profiling off. DSP/JIT, slice targets, B/A order, serial clocks, буферы и приоритеты потоков не менялись; Windows/DAW/физическое устройство/CPU performance не проверялись. Звуковые отличия в проверенных сценариях не обнаружены. Private inputs и declared dependency pins перечислены в validation.json; фактические dependency source trees, включая build-private JUCE, запечатаны SHA. Исходные зависимости — подготовленные archive copies без собственного .git; родительский Git HEAD не выдаётся за их revision.
+
+Ранние неуспешные логи CMake и диагностического harness сохранены. Контент private firmware/банков сюда не копируется. Отчёты, PCM/KST, binaries и manifest только локальные и ignored; в source commit они не входят.
+
+Private evidence: private/ks-controller-native-irq-20261023/validation.json and PROGRESS_RU.md. This local journal is excluded from the source-only commit.
+
+
+## 2026-10-23 — Full TPU0 graph without CPU frames (local arm64)
+
+Замкнут весь граф TPU0: Timer → Scan → Contacts → KeyEvent → Velocity; Clock → MIDI; Decay → Latch → Poll → PanelByte. Дочерние задачи возвращают логические результаты владельцу; фиксированные optional-контексты не используют CPU-регистры/CCR/SP/PC, RuntimeBoundary, Calls, instruction fetch, CPU-стек или динамические очереди. Сохранены последовательность наблюдений H8, clock credits, вложенность и окно MIDI с приоритетом 7. Runtime признаёт vector32/12b0 в проверенном native Mode2 и исполняет всю цепочку без CPU-кадра.
+
+Граница с оставшимся контроллером по-прежнему использует глобальные pending/mask, bus history и indent. Обычный чётный SP нужен лишь для соответствия старых временных credits; новые байты стека не создаются. Нештатный SP/режим/образ или malformed UART producer остаются в явном native compatibility Calls-мосте — это не возврат к H8-интерпретатору. Старые Calls сохранены для диагностики и ещё не объединённых владельцев.
+
+## Проверено
+
+- Независимый stock H8 без synchronized factory: **8999 полных TPU0, 19395200 фаз, 4255 вложенных прерываний**. Все 11 компонентов (`0x7ff`), каждый ресурсный byte transfer/value/order/timestamp, evolving RAM, возвращённое состояние и приоритет совпали. CPU-регистры/CCR/SP/PC/scratch новой цепочки неизменны на каждой фазе. Native allocations/interpreter/stack writes — 0.
+- LCD busy→ready: 4 случая/11 busy reads с IRQ7; 18 изменений живых ресурсов между фазами, включая нечётный индекс keyboard queue, уже сохранённые и повторно читаемые значения.
+- Регрессия предыдущих closed IRQ: **131893 вызова / 1851942 фазы**, 171 вложенный случай, в том числе 52 полных TPU0. Прежний фильтр fast-RAM callbacks убран: теперь вся новая вложенная цепочка сравнивается по обращениям полностью.
+- Чистая CPU-independent служба: **2791 случай / 1018613 фаз / 2037226 отказов по бюджету** без мутации и 0 аллокаций. UART full/release, LCD busy/release, velocity/порядок клавиш/wrap очереди. ASan+UBSan и `-Wall -Wextra -Werror` прошли; `detect_leaks=0`.
+- **9 музыкальных сценариев**, каждый по **181362 кадра ×24**: PCM, все поля DSP events и slices, clocks, serial, MIDI, State, Flash совпали. В каждом реально работает новый TPU0. Добавленные digest сверяют все 16 МиБ вне firmware CPU scratch `[0xfff000,0xfffc00)` до и после сценария.
+- Исходные KST replay checkpoint/digest различаются там, где checksum включает намеренно отсутствующий старый CPU-стек. Обе исходные суммы и raw tapes сохранены. Заголовок кроме этих двух полей и весь payload точны; производственный replay guard не ослаблен. Это не побайтная идентичность целого KST-файла.
+- **6 forced IRQ timelines**: **24576 кадров ×24 / 153875 DSP events** точны; 1085 native TPU0, все 11 компонентов, hardware/RAM/State/Flash/MIDI/guest time точны, H8 после handoff 0.
+- **9 handoff**: H8/hybrid/cancel на TX entry, внутри TPU0 Velocity и в собственном MIDI critical section; **36864 кадра ×24** точны. В критической точке независимо подтверждены original H8 PC113c/EXR7; дополнительного guest advance нет.
+- **4 cold reset** (single/multi/irregular/mapped), каждый по 24000 кадров ×24, полный DSP trace точен. SHA тестового бинарника совпадает с конечным. Во время нового IRQ сравниваются resource/time/pending/priority/IO, CPU-проекция не требуется; после возврата старый ABI снова сверяется. CPU scratch исключён явно, persistent RAM включена.
+- 15 конечных исполняемых тестов запущены явно и прошли, включая Runtime guards и все старые Calls цепочки. CTest: **2 passed / 13 private-fixture skips / 0 failed**; все 13 ROM-зависимых тестов действительно запущены с fixture отдельно.
+
+## Что осталось
+
+Глобальный CPU-каркас ещё существует; ControllerCpu остаётся 16777472 байта. Следующие связанные цепочки — ADC и SCI receive/F8/ClockPulse, затем оставшиеся State/voice caller continuations и общая IRQ admission/return. Полное удаление CPU-каркаса и конечные продуктовые/Windows/CPU проверки ещё впереди.
+
+Платформа: macOS arm64, AppleClang21 C++17 Release, macOS12 target, profiling off. DSP/JIT, guest cadence, DSP ordering, serial clocks, буферы и приоритеты потоков не менялись. Проверенные звуковые результаты совпали с H8. Windows, DAW, физическое устройство и CPU performance не проверены.
+
+Исходные private OS/Flash/Wave не копируются в evidence; их SHA, declared pins и фактические dependency tree SHA записаны. Зависимости — подготовленные archive copies без собственного .git; parent Git не выдаётся за их revision. Ранние неуспешные compile/harness логи сохранены. Все отчёты, PCM/KST, binaries и manifests локальные ignored; source commit содержит только исходники и CMake. Предыдущий незакоммиченный локальный журнал сохранён.
+
+Private evidence: private/ks-controller-tpu0-20261023/validation.json and PROGRESS_RU.md. Local journal excluded from source-only commit.
+
+
+## 2026-10-23 — Full ADC and SCI receive/F8 without CPU frames (local arm64)
+
+Замкнуты две полные типизированные цепочки. ADC vector28/165c: Interrupt → Samples → OrdinaryScale/SpecialScale → ControlPush → Mux. Включены settling/quick return, четыре пороговых решения, сглаживание, сохранение истории/armed, preview/accepted scaling, три integer curves, mapping/event queue и следующая конверсия. SCI vector89/1072: Receive → Latched → Edge → Counter. Включены обычные байты, wrap/full ring/error, F8 latch/reset, signed24 phase, wrapping sample count, исходные packed divisions и adaptive integral/gain.
+
+В новых службах нет CPU-регистров/CCR/SP/PC, RuntimeBoundary/Calls, instruction fetch, CPU-стека или динамической очереди. Используются фиксированные optional-задачи и явные результаты дочерних вызовов. Сохранены исходные такты каждой наблюдаемой операции, включая GPIO high/low+postincrement, low-RAM even/odd transfers и source-flag RMW.
+
+Runtime включает новые виды IRQ и typed diagnostics текущей дочерней задачи. Cold/Probe проверки учитывают новые lifecycle counters. Прежние Calls остаются для foreground/диагностики и ещё не объединённых владельцев. Entry/return credits28/23, pending/EXR/indent/history и проверка обычного compatibility SP остаются на общем стыке. Malformed SCI producer оставлен в явно ограниченном native Calls-мосте, интерпретаторный fallback отсутствует.
+
+## Проверено
+
+- Независимый stock H8 без synchronized factory: **ADC132846 вызовов /35848733 фазы /884 вложенных полных TPU0**; все6components (`0x3f`), 13 живых изменений. Все signed/wrapping delta words×armed, settling counts, group edges, curves/raw/mapping и нечётная очередь.
+- Независимый H8: **SCI200310 вызовов /5279623 фазы /90 вложенных полных TPU0**; все4components (`0xf`),8 живых изменений. Все bytes/ring positions/full queue, reset/source, feedback, signed24/pulse/sample wrap, average/integral/gain/clamp/divzero.
+- На каждой фазе совпали все ресурсные byte values/order/timestamps и admission/priority; после возврата CPU-visible caller state. Регистры/CCR/SP/PC/scratch новой цепочки неизменны в ходе всего IRQ. Native allocations/interpreter/CPU stack writes — **0**. Исключены только instruction fetch/vector reads и точное256-байтовое окно CPU scratch оригинального H8; ресурсные обращения не нормализуются.
+- Pure ADC: **81923 случая /1176292 фазы /1176292 отказа по бюджету**. Pure SCI: **199964 случая /5248533 фазы /10497066 отказов**, отдельный scalar resource oracle. ASan+UBSan и `-Wall -Wextra -Werror` прошли; `detect_leaks=0`.
+- **9 музыкальных сценариев** по **181362 кадра×24**: PCM, каждый DSP event/slice, guest clocks, serial, MIDI, State, Flash точны. Реально исполнены **72000 TPU0 /123035 ADC /10361 SCI receive**. Все16МиБ вне firmware CPU scratch `[0xfff000,0xfffc00)` сравниваются digest до и после сценария.
+- KST whole-file checksum включает намеренно отсутствующий CPU scratch; исходные checkpoints/digests/raw tapes сохранены, заголовок кроме этих двух полей и весь payload точны. Производственный replay guard не ослаблен. Побайтная идентичность целого KST не заявляется.
+- **16 forced IRQ timelines**: **65536 кадров×24 /417298 DSP events**, реальные TPU0/ADC/RX2888/4604/102, masks7ff/3f/f. Настоящее поступление UART, full-ring, F8 reset/short/full feedback. PCM/DSP/IO/RAM/State/Flash/MIDI/время/pending/priorities точны; post-handoff H8=0.
+- **21 handoff** H8/hybrid/cancel: **86016 кадров×24** точны, дополнительного guest advance нет. Точка определяется текущей typed-задачей; независимо проверены входы H8 в ordinary/special scale, ControlPush и F8 Counter. Сохранены прежние TX/TPU0 сценарии.
+- **4 cold reset** single/multi/irregular/mapped: полные trace и по24000 звуковых кадров×24 точны; конечный бинарник SHA тот же. Во время active native IRQ CPU-проекция отличается по определению; время/pending/priority/ресурсы/IO сверяются, после возврата старый caller ABI снова точен.
+- Прежние IRQ/TPU0, Runtime guards, production no-interpreter/default-C++ guard и все прежние Calls ADC/clock/queue прошли.17 финальных регрессий плюс два прямых H8 теста и handoff исполнены явно. CTest **5passed /15private-fixture skips /0failed**; все15 ROM-зависимых checks реально запущены отдельно с fixture. Нормализация CMake paths не изменила ни один конечный бинарник.
+
+## Что осталось
+
+Глобальный CPU-каркас ещё не удалён; ControllerCpu по-прежнему16777472 байта. Обычные аппаратные IRQ, выдаваемые Board, теперь имеют закрытые native цепочки в проверенном Mode2. Следующий этап — убрать общий IRQ/caller стык из CPU-модели и продолжить composition State/voice/MIDI foreground без регистров/CCR/стека/PC. Нештатные frame/mode диагностические пути и финальные product/Windows/CPU проверки ещё впереди.
+
+Платформа: macOS arm64, AppleClang21 C++17 Release, macOS12 target, profiling off. DSP/JIT, guest cadence, DSP ordering, serial clocks, буферы и приоритеты потоков не менялись. Проверенные звуковые результаты совпали с H8. Windows/DAW/физическое устройство/CPU performance не проверены.
+
+Private inputs не копируются в evidence; SHA OS/Flash/Wave и фактических dependency trees сохранены. Dependencies — prepared archive copies без собственного .git, parent Git не выдаётся за revision. Первые CMake/compile ошибки сохранены. Отчёты, PCM/KST, binaries и manifests локальные ignored; source commit содержит только код/CMake. Предыдущий локальный журнал сохранён незакоммиченным.
+
+Private evidence: private/ks-controller-adc-rx-20261023/validation.json and PROGRESS_RU.md. Local journal excluded from source-only commit.
+
+
+## 2026-10-23 — три последовательных этапа CPU-frame removal: IRQ scheduler, foreground UART, State reset
+
+По явному запросу пользователя выполнены три этапа подряд в `codex/ks-controller-resume-20261023`; main `4baaead06e23e2358729cca32b6b511c72022318` чист и не изменён. Source-only checkpoints: `4717e0427b59c450862642a6fd6eeaa0c7c8d74f`, `4da62123b20cb8a251f58e54731452700342e83d`, `0b518cc11676fb233bdc8af4e756a1599f7afccd`.
+
+1. Независимый фиксированный InterruptScheduler: native priorities/nesting/critical/budget, 7 уровней. Pure ASan+UBSan: 848640 selections; H8 IRQ и Runtime, 16 timelines/21 handoffs/4 cold/2 music PASS. Внешние EXR/pending/depth/clock projections остаются в compatibility edge.
+2. Пять полных foreground UART graphs ResetRx/PopRx/Receive/ResetTx/Transmit, включая blocking retries/full TX. Без внутренних regs/CCR/SP/PC/stack; только narrow outer caller edge с живым return frame. H8 203357 calls/4672989 phases/93 nested/46 guards; pure197625/4540772 phases +ASan/UBSan PASS. 17 timelines/30 handoffs/4 cold/9 music PASS.
+3. Полный State→Buttons→Controls→Keyboard reset плюс3 самостоятельных входа. H8 271605 calls/2910934 phases/240 IRQ/40 guards/4 live changes; pure4096/40960 +ASan/UBSan PASS. Natural pre-warmup State1/componentsf/all6indices cleared. 17 timelines/547457 DSP events/69632×24 frames и39 H8/hybrid/cancel handoffs/159744×24 frames PASS; cold4/9 music PASS.
+
+Итоговая macOS arm64 Release матрица: 1632258 frames×24,8085451 DSP events; точные PCM, KST event/slice payload, state/Flash/MIDI/serial/DSP cycles и non-scratch до/после resource digests. Отсутствующие CPU stack bytes отражаются в отдельных KST checkpoint/header hashes, replayguard не ослаблен. В музыке новые foregroundcalls77198=77153PopRx+45TX; State reset0 после прогрева, его фактическое покрытие — H8/natural/cold/handoff. Все новые jobs без аллокаций и интерпретатора; общая CPU-модель/ABI остальных State/MIDI/voice остаётся.
+
+CTest8 PASS/18 explicitfixture SKIP; все18 fixturetargets отдельно реально выполнены с приватными входами. Зависимости не менялись:16117 actual tree files сверены SHA256. CompilerAppleClang21,C++17,arm64,minmacOS12,profilingOFF. Нет Windows/DAW/physical hardware/CPU performance claim, установки, push или релиза. Private evidence/report: `private/ks-controller-three-stages-20261023/PROGRESS_RU.md`, `validation.json`, архив с member-level SHA256. Старые неудачные build и stderr сохранены. Следующий связанный участок: обычные foreground State scan/event-drain цепочки и их дочерние службы, затем остальные MIDI/voice зависимости.
+
+
+## 2026-10-23 — следующие три этапа: panel scan, pedal/encoder/ADC, State event consumption
+
+В `codex/ks-controller-resume-20261023` от0b518cc выполнены три этапа подряд. Main4baaead чист и не изменён. Source-only commits: `e9d60cab821a0090e32249d798d009de9e495b5d`, `eb74d414957b1e20ef1c45806b7a8c10627ecdeb`, `82f16fc8f9d5c8528059cb888788028823840f62`.
+
+1. Полный Matrix Initialize→Scan→ButtonPush/ButtonReset и standalone Push: H8 156284calls/11170767phases/2788IRQ/45guards; pure149761+ASan/UBSan.18timelines/42handoffs/4cold/single+physicalpanel PASS.
+2.7normal roots Switches/PedalReset/Pedal/Encoder/AdcStart→Mux/Mux/ResetLast: H8 892464/21422791/546IRQ/70guards/17live; pure621314+ASan/UBSan.18timelines/51handoffs/4cold/physicalpanel single+multi PASS. ADC Initialize152e остаётся старой warmup-оболочкой.
+3.9State event/analog roots: ButtonPop/ControlPop→Convert→Scale/Square/ControlPeek/KeyboardPop плюс standalone Convert/Scale/Square/Coefficients/Range. H8 217437/4943703/2034IRQ/108guards/5live; pure581633+ASan/UBSan и65536pairedbytecases. Логические children не используют CPU-регистры/CCR/SP/PC/stack; внешний ABI сохраняется только на входе/выходе. Dynamic adjacent byte-write clocks учитывают IRQ. Независимое ревью без замечаний.
+
+Итог20timelines:81920frames×24/625096DSPevents;66H8/hybrid/cancel requests:270336frames×24;4cold и13music/physicalpanel/keyboard single+multi сценариев PASS (2357706frames×24/10647035DSPevents). PCM, полныйDSPevent/slicepayload, State/Flash/MIDI/serial/clocks иnon-scratch16MiB before/afterdigests точны. CPU-scratch/KSTcheckpoint differences отдельно сохранены, productionreplayguard не ослаблен. В13music реально1845Scan+102099Controls+289706StateEvents calls; одинStateEvents initial-active job дал289707returns, balances точны. Не выдаём standalone calibration/Initialize coverage за musical counters.
+
+CTest11PASS/26explicitprivatefixtureSKIP, все26targets отдельно запущены сprivateinputs. Все36final frozenexecutableSHA сверены сactualbuild; finalsource SHA вmanifest. macOSarm64/AppleClang21/ReleaseC++17/minmacOS12/profilingOFF.16117dependencyfiles повторно SHA-verified; inputs не копируются/не публикуются. No Windows/DAW/physicalhardware/CPUperformance claim; no installation/push/release/mainintegration.
+
+Остаются верхние State Tick/Controls/Encoder/Refresh/ButtonDispatch и actions/menu/MIDI/voice descendants, полныйADCwarmupInitialize и globalCPU/callerABI. Следующий связанный участок — верхние State цепочки с уже закрытыми источниками событий и дальнейшим обновлением панели. Полный report/private evidence: `private/ks-controller-panel-state-20261023/PROGRESS_RU.md`, validation.json, source/dependency/binary manifests и lossless verified archive. Локальный optimization journal сохранён незакоммиченным; source commits не содержат private reports/assets.
+
+
+## 2026-10-23 — финальный аудит и исправление alias CPU scratch
+
+После трёх этапов обнаружен край диагностических coefficients/history pointers: при SP `fff400` старый Scale pushL менял `fff3fc..fff3ff`, а чистый граф уже не писал этот стек. Отрицательный пример подтверждает H8/native `86/97` и `d9/97`; исходники и прежний PASS сохранены в `events/guard-alias-before` и `stage3-before-guard`. Первоначальное независимое ревью этот край пропустило.
+
+Локальный source-only fix `1bede5cbc2bc440999569b8b7d2fc5528d444030` сужает high dataPair до `a<ffefff`: последняя разрешённая пара `ffeffe/ffefff`, пара с началом `ffefff` уже пересекает scratch. Все 3 073 начала пары до `fffbff` ×4 роли =12 292 новых отказа без ownership/изменений; четыре допустимые граничные пары отдельно совпали с H8. Итоговый H8:217441 calls/4943757 phases/2034 IRQ/217441 metric resets/5 live changes/12400 guards,0 allocation/interpreter/inner stack writes. Исправление прошло отдельное read-only review.
+
+После исправления заново выполнены все36 итоговых targets,20 timelines/625096 DSP events/81920 frames×24,66 H8/hybrid/cancel requests/270336 frames×24,4 cold и13 music/panel/keyboard single/multi scenarios. Итоговые PCM и полный DSP event/slice payload, state/Flash/MIDI/serial/clocks/non-scratch before/after digests точны:2357706 frames×24/10647035 DSP events,0 post-handoff H8 steps. CTest11 PASS/26 explicit private-fixture SKIP; все26 fixture-dependent targets фактически выполнены отдельно. Все36 current/frozen executable SHA и source SHA совпали; итоговая сборка не требует работы.16117 dependency tree files снова сверены.
+
+Работа осталась в `codex/ks-controller-resume-20261023`; чистый main `4baaead06e23e2358729cca32b6b511c72022318` не изменён. Три этапа и дополнительный узкий guard fix сохранены четырьмя source-only коммитами. Верхние State и ADC warmup Initialize152e, глобальная CPU-модель и внешние ABI остаются следующими участками. Только macOS arm64; Windows/DAW/физическое устройство/производительность не проверены. Нет установки, push или публикации. Полный финальный отчёт и проверенный приватный архив: `private/ks-controller-panel-state-20261023/PROGRESS_RU.md` и `validation.json`.
+
+## 2026-10-24 — три этапа: верхний State Controls, menu/edit context, store preparation
+
+В `codex/ks-controller-resume-20261023`, worktree `/Users/evgeniystrukov/.codex/worktrees/ks-controller-resume/Silver-K`, от `1bede5c` завершены три этапа подряд (начало23/окончание24 октября). Source-only commits: `5fab36f30825e4ff5a27543b70c7ccd2c135b6e3`, `b08ec71060df1829792ea5f39ab5b3279c13117d`, `0a447ff38c7038f8c332f0707973e385d8fcfd26`. Main `4baaead06e23e2358729cca32b6b511c72022318` чист и не изменён.
+
+1. Полный Controls4406→KeyboardPop→press/release→MIDI routes/packets/local/channel/part→internal queue/UART, включая все packet tails и full UART wait/release. H8:74980calls/11383534phases/950IRQ/17guards/159fullUART; pure72715/10501588phases/21003176budgetrejects +ASan/UBSan.38checks/22timelines/75handoffs/4cold/4music PASS.
+2. Navigation/repeat→EditActive→RepeatArm→Clock; Toggle/Auxiliary, Context Bind/Clear и3EditAddress roots.14kinds/6components. Все CALL children замкнуты; исходящие Name/Special/Edit/Program — явные typed tail actions на внешний legacy ABI, а не законченные CPU-free handlers. Arbitrary Dispatch4698 и MenuFormat/LCD остались. H8:128630/1903277/774IRQ/124534metricresets/78live/165guards; pure60928/467778 +ASan/UBSan.40checks/25timelines/90handoffs/4cold/8music PASS. Сохранены исправленный isolated tail-history failure и fixture-only pinned-ABI mismatch.
+3. Полный MultiSerialize71ba→PartReference→PackAll/One→6packing recipes и8name-copy roots6e42..6eba, включая6e7a/6e8a.17kinds/11components. H8:407772/20700325/11598IRQ/407772metricresets/37live/688guards; pure396032/5064621 +ASan/UBSan. Data-span/CPU-scratch/odd/high/overlap/live pointers/caller проверены. Recipe decode только в edge, сервис содержит типизированные recipes. Это сериализация/подготовка; верхние Store UI/Flash programming/engine reload ещё не освобождены полностью.
+
+Итог42основныхchecks PASS; CTest14PASS/29explicitprivatefixtureSKIP, все29fixturetargets отдельно исполнены.27timelines:110592capturedframes×24 +24000online-compared preparationframes/865135DSPevents;102H8/hybrid/cancel:417792audibleframes×24 +216000modepreparationframes.4cold и25music/panel/store/edit/actions/functions/keyboard single/multi:4534050frames×24/21011357DSPevents. PCM, весь DSP event/slice payload сPC/time, State/Flash/MIDI/serial/clocks и16MiB before/after digest кроме CPU scratch точны,0post-handoff H8. Оба исходных KST header/checkpoint hash сохранены; production replay guard не ослаблен. Natural Board fixtures используют input/UI/host state, не PC/SP.
+
+В музыке новые graphs: Controls212888calls=212888returns/components1ff; Menu465768calls=465767returns+1active/components3f; Store176calls=176returns/components7ff. Все balances сinitial/current-active точны, musical component coverage не выдаётся за все32standalone entries. Каждый standalone entry отдельно проверен H8. Независимые read-only reviews без оставшихся actionable замечаний. Все42current/frozen executable SHA и все sourceSHA совпали, finalbuild no work;16117 dependencyfiles повторно SHA-verified.
+
+Остаются Tick/Encoder/Refresh/ButtonDispatch, полноценный MenuFormat/LCD и применение edit-значений, Store UI/Flash/engine reload, ADC warmup и остальные MIDI/voice/parameter/startup цепочки, глобальные ControllerCpu/RuntimeBoundary/regs/CCR/SP/PC/stack. Только macOS arm64/AppleClang21/ReleaseC++17/minmacOS12/profilingOFF; нет Windows/DAW/physicalhardware/CPUperformance claim. DSP/JIT/guesttiming targets/order/buffers/priorities не менялись, no install/push/release. Полный приватный отчёт/метаданные/проверенный архив: `private/ks-controller-upper-state-20261023/PROGRESS_RU.md`, `validation.json`, source/dependency/binary identities и member-level archive SHA. Локальный optimization journal сохранён незакоммиченным; приватные материалы не включены в source commits.
+
+
+## 2026-10-24 — menu format, edit apply, full Flash save без CPU-кадров
+
+Три этапа завершены в codex/ks-controller-resume-20261023 от0a447ff. Source-only commits04bb263/3bf5640/2c22e4d. Menu5 roots/H8 75068calls; Apply7/H8 116573; Save14/H8 4238whole+20001Page, включая full4partReload и11normal zero-request panel bindings. Pure+ASan/UBSan и независимые reviews PASS. Финал54checks/31timelines/138handoffs/4cold/26music PASS:4715412×24frames/21624714DSPevents, точные PCM/ресурсные bytes/order/time/slices/state/Flash/MIDI/serial/non-scratch memory,0post-handoffH8. Save10calls=10returns; снимки Menu1/Apply2active учтены lifetimebalance. CTest18PASS/35explicitprivateSKIP; все35 фактически исполнены отдельно. 54current/frozen binarySHA и34sourceSHA сверены; finalbuild no work;16117dependencyfiles unchanged.
+
+Raw DSP PC diagnostic metadata nativeSave47D6 заменяет13 внутреннихH8sites:338music/133timelineevents, обеrawтрассы сохранены; исключение только для13пар, все реальные DSP transfers иslices точны. Production trace/replayguard не менялся. Исправленныеalias/history/FormatPart/Apply/cache/panel findings, invalid0000Store-destination fixture и Handoff selector/compile failures сохранены. Full138 rerun PASS; после этого core не менялся.
+
+Глобальные CPU/ABI, верхние State/edit/menu entry actions, ADC warmup и остальные MIDI/voice/startup остаются. Только macOSarm64; нет Windows/DAW/hardware/CPUperformance claim. Main4baaead clean/unchanged; no installation/push/release/mainintegration. Полный private report/evidence: private/ks-controller-menu-edit-flash-20261024/PROGRESS_RU.md, validation.json и lossless verified archive.
+
+
+### 2026-10-24 — KS semantic panel settings, calibration and ADC warmup (local research)
+
+Stage 1 of panel/screen/field batch, test id ks-controller-panel-screen-field-20261024. Same isolated codex/ks-controller-resume-20261023 worktree; source base 2c22e4d. Thirteen complete roots now execute native typed jobs: nine panel settings/calibration services, warmup, Analog Initialize/Duty/Level, with real LCD, range/coefficients, Flash and ADC scan/snapshot/reset children. Independent stock-H8 gate: 5172 calls +768 LCD roots, 30501866 phases, 211 IRQ injections, 25 live changes and130 admission guards; all resource bytes/time and full caller ABI exact, zero heap/interpreter/internal CPU scratch. Pure ASan/UBSan:3076 graphs +1280 LCD helpers,2886277 phases and rejected budgets,6 real resource guards. Expanded tests caught legacy 01FF saturation result and corrected only the outer projection. Shared Release arm64 matrix56 checks passed, including31 timelines,138 handoffs,four cold starts and26 musical scenarios with exact24-stream PCM and timed DSP resources. Cold initial run rejected an obsolete legacy scan counter; assertion now requires actual typed Warmup/AdcStart+IRQ execution and all four variants reran successfully. Failed logs retained privately. Private evidence scratch /private/tmp/ks-controller-panel-screen-field-20261024/stage1; final durable report to follow. No DSP/JIT/guest clock/buffer/thread policy changes. Global compatibility frame removal, product/Windows/physical hardware and CPU comparison remain pending. No main integration/install/push/publication.
+
+
+### 2026-10-24 — KS semantic screen navigation, display and edit (local research)
+
+Stage2, test id ks-controller-panel-screen-field-20261024, source base5c28fc6. Ten Screen roots (descriptor,set,next,previous,refresh,gate,render,label,edit,value) run complete typed native graphs with Menu/Apply/Display/Settings children. Independent stock-H8:16430 calls,23046716 phases,202 IRQ cases including4 nested,6 live changes,237 initial and6 live resource guards; full caller registers/CCR/EXR/history and byte/order/time exact, no native heap/interpreter/internal CPU frames. Pure ASan/UBSan:3832 graphs,5041354 phases,10082708 insufficient budgets,77 evolving guards,3 real UART-full releases. Corrections retained: Edit final V-bit store behavior, initial recipe schema, exact UART-enable endpoint and dynamic ABI upper words. Shared Release arm64 matrix58 checks passed with31 timelines,138 handoffs,four cold starts and26 exact musical cases (4715412 frames per each24 streams;21624714 timed DSP events). Diagnostic selectors now locate the same independently checked H8 phase inside the Screen typed graph, retaining actual H8 PC/clocks/resources checks; no production PC projection was added. Private evidence stage2 andscreen/validation.json. No DSP/JIT/guest clock/buffer/thread policy changes. Global model removal, complete Scene voice reupload, product/Windows/physical hardware and CPU comparison pending. No main integration/install/push/publication.
+
+
+## 2026-10-24 — панель/ADC, Screen и Field без внутренних CPU-кадров
+
+Три этапа от2c22e4d выполнены в codex/ks-controller-resume-20261023. Source-only commits5c28fc6/068ea07/5fce409. Panel13roots/H8 5172+768calls/30501866phases; Screen10roots/H8 16430/23046716; Field25roots/H8 3316/4426426 +independent UI4253/21822181. Pure+ASan/UBSan/IRQ/resource/ABI guards PASS,0heap/interpreter/internalCPUframes. Общие матрицы56/58/60checks, каждая31timelines/138handoffs/4cold/26music PASS. Final4715412×24frames/21624714DSPevents: точные PCM/ресурсы/порядок/время/state/Flash/MIDI/serial/non-scratchmemory,0post-handoffH8. Initial obsolete ADC scan assertion replaced by actual Warmup/AdcStart+IRQ; failed logs retained. Source/frozen/current binarySHA и16117dependencyfilesverified.
+
+Scene/category8/key28/Knob B554 и полныйVoiceRefresh9662 сознательно вне admission и следуют отдельным следующим этапом. Внутри admitted Field legacyfallback нет; Clear очищает16792, evolving unsupported refresh guarded. Global CPU/ABI и оставшиеся State/MIDI/voice/startup ещё есть. Только macOSarm64, без Windows/DAW/hardware/CPUperformance claim. DSP/JIT/clocks/order/buffers/priorities unchanged. Main4baaead clean/unchanged; no install/push/release/integration. Private report/evidence:private/ks-controller-panel-screen-field-20261024/PROGRESS_RU.md иvalidation.json.
+
+
+## 2026-10-24 — Scene, полное обновление голосов и SceneEdit
+
+Три этапа от5fce409 завершены в codex/ks-controller-resume-20261023. Source-only commits:84b1a616689ed3b63c655f113943c6fa47bfb6d8/a62454d18d7df76d67a9415c82d2ee34f14db741/c8f9b60067d01ea83e7e308ec0eecef20f54e21b. Main4baaead06e23e2358729cca32b6b511c72022318 чист и не изменён.
+
+1. Scene11 roots с полным замыканием Knob/SelectBank→Voice/Parameter/Global/UI/Automatic. H8:2881calls/7991382phases/19IRQ/32actualNestedAutomatic. Исправлены signed DEC row128 и потерянный Scheduled action5006; первоначальные неудачные прогоны сохранены, после core-fix вся62 матрица выполнена заново.
+2. Самостоятельные полные ParameterUpload7DE4/GlobalUpdate96D6/VoiceRefresh9662 с Tracking и typed DSP/coefficient children. Изолированные H8:3433/499/237calls соответственно; финальные68checks PASS. Word2520 не увеличивает адрес; финальные CPU/CCR projections только на внешней границе.
+3. SceneEdit15 roots: Scene rows/values и редактирование/копирование/кодирование имени; внешний Field category8 теперь замкнут для AutomaticEdit/AutomaticEvent/ManualEdit/DirectEdit, включая dynamic key31→28. H8 SceneEdit3929calls/11766505phases/43IRQ/32actualNestedAutomatic; H8 Field4226/9851869/601IRQ/128actualDoubleVoice,0allocations. Independent current whole-host pure+ASan/UBSan944graphs/1736116phases/224actualAutomatic/depth7/0allocations PASS. sizeofRuntime889816, fixedField280064; Board уже размещает Runtime в heap, три тестовых Runtime fixture перенесены в setup до allocation tracking. Исходные и текущие копии тестов, coherence-build и дополнительный повтор тех же3frozen H8tests подтверждены; свежий снимок не выдан за снимок до заморозки.
+
+Каждый этап:31timeline/138handoff/4cold/26music PASS; итоговые62/68/72checks. В каждом музыкальном прогоне4715412frames×24/21624714DSPevents: PCM, реальные resource bytes/order/time/slices/state/Flash/MIDI/serial/non-scratch memory точны, post-handoff H8 steps0. В Stage3 music фактически Field8964starts=8962returns+2active, Scene4starts, SceneEdit8starts только ReadName/DecodeName; полное mutation/recursive покрытие SceneEdit — отдельные H8 tests, не придуманные musical counters.
+
+Raw CPU-PC/checkpoint metadata сохранены. Только offline diagnostic сравнение допускает проверенные пары:Stage1 57; Stage2 public/private93; Stage3 public Runtime93 и private music98 (ровно5 дополнительных Word2520→outer4EB0). Все payload/clock/slice проверки строгие; production recorder/replay guard не менялся. Первоначальные71/72 Stage3 и music-only отказ сохранены,71dictionary-identical checks и все72frozen/current binaries неизменны при private music recheck. Stage2 сохраняет исходные68 binaries/65 неизменных checks и2 test-only diagnostic overrides. Финальный аудит повторно прочитал все16117 dependencyfiles и все capture members, подтвердил3linear source-only commits и main.
+
+Только macOSarm64/AppleClang21/Release/C++17/minmacOS12/profilingOFF. Нет Windows/DAW/physical-hardware/CPU-performance/realtime claim. DSP/JIT/clocks/order/buffers/priorities не менялись; установки/push/release/mainintegration нет. Глобальные ControllerCpu/compatibility ABI и остальные State/MIDI/startup handlers ещё остаются. Следующая связанная область: оставшиеся Scene Toggle B83C→Flash668C и name/category/action branches, затем остальные внешние CPU/ABI зависимости; этот отчёт не объявляет полный перенос завершённым.
+
+Private report/evidence:private/ks-controller-scene-voice-chain-20261024/PROGRESS_RU.md,validation.json,audit-final.json,archive-verification.json. Архив0828f68b2f63b7e22a145d9f3c096cf5d4c3190f758b03c64f76e958fc04261c:3355members (2255data/1100hardlinks), обе копии и каждый member повторно прочитаны/SHA-verified, original inputs не копировались. Приватные отчёты и локальный optimization journal не включены в source commits.
+
+
+## 2026-10-24 — Name5, Scene Toggle/Flash и Edit actions
+
+В той же изолированной ветке завершены три блока от c8f9b60067d01ea83e7e308ec0eecef20f54e21b. Source-only commits:074b8dd36890897edc3256e2d1ca8c3575b5698a/d880d49040cc6387af65a69343e9b9698bbaf0e8/62b1c890c68e4b5c34f94eb7e8e4e8b5bc3694c5. Name5 H8:6437calls/24083293phases/121IRQ; SceneToggle/Commit H8:3802/21857540/133IRQ плюс Save15:4521/32016177/475IRQ; EditAction7 H8:2163/3236910/79IRQ,40 POP.W boundary cases,1actual Signal/DSP fault. Pure+actual W ASan/UBSan PASS,0allocations. Матрицы72/74/76 PASS, каждая31timeline/138handoff/4cold/26music:4715412frames×24/21624714DSPevents, точные PCM/resources/order/time/slices/state/Flash/MIDI/serial/non-scratch memory,0post-handoff interpreter.
+
+Найден и исправлен final-only ClearDigits POP.W CCR defect; исходный failure сохранён, добавлены40 savedword/CCR/upperER0 cases. CTest77/240 properties исправлены, initial2failed сохранены, final2purePASS/2explicitprivateSKIP и отдельные realOS H8PASS. Нет расширения public93/private98 PC policy или production replay guard. Natural coverage:Name Begin4/Category1/остальные3zero; SceneToggleouter0 отдельно H8-proven, Notice7; EditAction104calls сSelectEdit0 отдельно H8-proven. Runtime fixed1536184bytes (предыдущее документированное889816), setup heap/0processing allocations; performance не измерялся.
+
+ENOSPC firstfreeze до тестов сохранён; старые scratch копии удалены только после SHA сверки с сохранёнными durable архивами. Recoverymap и точный historical dependency JSON включены в новое private evidence; original inputs не удалялись/не копировались. Подробный отчёт:private/ks-controller-scene-actions-20261024/PROGRESS_RU.md,validation.json,audit-final.json и verified archive index. Main4baaead чист/неизменен, нет install/push/release/mainintegration. Только Mac arm64, без Windows/DAW/hardware/CPU-performance/realtime claim. Global ControllerCpu/ABI и Single/Multi/program-load/routing/reset, browse/MenuStore/factory/SysEx и остальные внешние зависимости ещё остаются; полный перенос не объявлен завершённым.
+
+
+## 2026-10-24 - ProgramLoad / Single-Multi / PartNavigation
+
+Source-only commits: 7f581e0b71fa516fcdb1c857aa6b93e05afbf78f, 0e4690c3725e2f6e8d559d80f6b3339721a61254, 39f6fcc8f5020a2cce7d0f2f71c9f90e9dd43999. Same isolated branch; stable main4baaead remains clean. Three complete native graphs cover3/10/5 roots and their actual typed children, with final-only caller ABI. Full matrices78/80/82 PASS, each31timeline/138handoff/4cold; music26/28/32 with exact24-stream PCM, resources/state/Flash/MIDI, event order/time and slices; zero post-handoff interpreter activity. Final batch audit PASS:3original inputs and16117dependency files rehashed. All integrated H8, actual private SAN and frozen source/binary/commit identities checked.
+
+H8 ProgramLoad1290calls/9358263phases/153IRQ; Playback1721/5110336/325IRQ; Navigation3361/15755549/115IRQ. Actual pure ASan/UBSan:192/864706,94/281611,2447/6740724; zero supported-phase allocations. CTest3purePASS/3expected private-OS skip77; separate real-OS H8 tests executed. Runtime fixed2130552bytes; performance not measured. Natural zero kind counts retained; nested PartStep is not an outer admission.
+
+Fixed final R4 alias projection, late routing comparison observation and legacy StoreUI-to48BE retirement before Mode admission in both Runtime loops. Last fix preserves every old/fixed raw KST+PCM byte; returns/active now balance. Probe index6 coverage accepts only actually completed typed Voices work; other7gates and raw legacy counters retained. First failures/guards/syntax attempts preserved. Finite test-only PC policies public93->129->165->165 and private98->134->170->170 admit72 observed pairs only; no new2425/word-site pairs. Production record/replay guard unchanged.
+
+Local macOS arm64 functional simulation only. Global ControllerCpu/compatibility ABI, MenuStore472C, browse/factory/SysEx and remaining external dependencies persist. No global-completion, Windows, DAW, hardware, CPU-performance or realtime claim. DSP/JIT/guest clocks/order/buffers/priorities unchanged. No installation/push/publication/main integration. Durable report: private/ks-controller-program-modes-20261024/PROGRESS_RU.md. Final archive receipt is recorded separately after actual verification. Old scratch/preflight duplicates retired only after exact lossless archive verification; recovery maps retained.
+
+Archive completion: f6743832e21e6f0eafc894936717ca998bb25a5f382d83b80c7902066aff703e, 4831 members individually reread verified. Private archive receipts and delivery completion remain outside the archived source tree; no original private inputs included.
+
+
+## 2026-10-25 — KS native: Program Browser, Store Menu, Factory
+
+User-authorized continuation on `codex/ks-controller-resume-20261023`, source-only commits `5e82560246f8`, `7066f54fb85f`, `152ddc958b69`. Stable main remains clean at `4baaead06e23e2358729cca32b6b511c72022318`. No main integration, installation, push or publication.
+
+Closed14 Program Browser roots,4 Store Menu roots with complete save/calibration/Factory/DumpSelect/direct-UART children, and7 Factory/Globals/DSP Reset/Upload/Poll/Stream roots. Internal continuations use typed jobs; outer final caller ABI remains. No DSP/JIT, guest clocks/order, buffers or priority change.
+
+Actual macOS arm64 Release matrices: 84 checks / 35 musical pairs, 88 checks / 39 musical pairs, 90 checks / 39 musical pairs, each31 timeline /138 handoff /4 cold. Every PCM byte, timed non-PC DSP event, slice, resource and state exact; post-handoff interpreter counters0 in every music report. Cold Factory positive all4; independent original-H8 and ASan/UBSan proofs retained. No Windows, DAW, physical hardware, blanket realtime or CPU-performance claim.
+
+Preserved failures: initial diagnostic-PC comparisons, incorrect test-only GlobalSave offset gate, Runtime test-fixture stack overflow (fixed only by pre-render fixture allocation), and all earlier graph investigations. Exact finite PC admissions reviewed against unchanged semantic evidence; production recorder/replay guards unchanged. Main, original inputs,16117 dependency files and source/binary identities verified.
+
+Evidence: `private/ks-controller-browse-store-factory-20261025/PROGRESS_RU.md`, `validation.json`. Full archive/index are produced after this append; their actual completion is confirmed only by the separate `archive-verification.json` receipt. General ControllerCpu/compatibility ABI and other main-loop/MIDI/incoming-SysEx chains remain. Next connected scope: ClockSync267A / DeferredParts737A / Refresh437A, then Encoder443A / Tick4494.
+
+
+## 2026-10-25 — native KS ClockSync / DeferredParts / periodic Refresh
+
+Выполнены в `codex/ks-controller-resume-20261023`, macOS arm64. Основная ветка main сохранена без изменений. Исходная точка — `152ddc958b697109f951ba302afe160f99191eab`.
+
+1. **Синхронизация ClockSync267A** — `170229b6f1f426a4b9efd2693027714b229c05b6`. Матрица: 92 успешных проверок, 39 пар музыкальных сценариев H8/C++, 31 сценарий прерываний, 138 переключений контроллера и четыре холодных запуска. Все завершились успешно.
+
+2. **Отложенное обновление партий DeferredParts737A** — `e07512b5bd03c31bf24c1cf07d37bf2063930fee`. Матрица: 94 успешных проверок, 39 пар музыкальных сценариев H8/C++, 31 сценарий прерываний, 138 переключений контроллера и четыре холодных запуска. Все завершились успешно.
+
+3. **Общий периодический цикл Refresh437A** — `04596761ca6bc3c6be5b633eb9ebb4974e2b45b6`. Матрица: 96 успешных проверок, 39 пар музыкальных сценариев H8/C++, 31 сценарий прерываний, 138 переключений контроллера и четыре холодных запуска. Все завершились успешно.
+
+Синхронизация включает коэффициент, адрес/значение периода и DSP retry/fault. Отложенные партии включают полный дочерний refresh голосов, загрузку параметров, tracking/global/DSP и восстановление выбранной партии. Периодический Refresh включает начальную DSP-команду, условный ReloadPanel, DeferredParts и ClockSync. Внутренние продолжения этих цепочек используют типизированное состояние; окончательная проекция ABI вызывающей стороны сохраняется.
+
+Всего выполнено 282 проверки общей матрицы, 117 пар музыкальных сценариев и 12 холодных запусков. Это число запусков, а не уникальных тестов. Для каждого блока отдельно выполнены поблочные сравнения с оригинальным H8 и реальные ASan/UBSan запуски. На музыкальных сценариях побайтно совпадают 24-канальные PCM, время и содержимое DSP-команд, срезы контроллера, ресурсы и состояние. Различия диагностических PC допускаются только конечным списком реально наблюдённых, отдельно проверенных пар. Исторические warm checkpoint metadata не объявляются побайтно одинаковыми; cold checkpoints совпадают.
+
+Дополнительно выполнены девять реальных Board-сценариев переключения native→H8, native→hybrid и отмены запроса во время вложенных Clock/Deferred/Panel цепочек. Проверены завершение владельца перед переключением, прерывания, память/аппаратура/состояние и точный слышимый PCM. Дополнительная проверка собрана из окончательной общей библиотеки третьего блока; исходники и зависимости проверены до и после.
+
+Дополнительный стенд до выполнения контроллера останавливался на строгом учёте CMake glob, переноса quoted include-контекста и входов линкера Apple. Эти попытки сохранены. Исправления касались только приватного стенда и учёта зависимостей; общая сборка и её исходники оставались неизменными.
+
+В третьем блоке до интеграции исправлены две реальные находки: единицы начальной DSP-команды и внешний read endpoint для поддерживаемых Flash-патчей голосов. Обе исходные ошибки и исправления сохранены вместе с H8-repro. Flash разрешён только при соответствующем текущем дочернем Voice-компоненте; разрешение записей не расширялось. После исправления выполнены полные H8 и ASan/UBSan проверки, затем общая матрица третьего блока. Также сохранены исправленные ошибки тестовых fixture и неподдерживаемый на macOS запуск LeakSanitizer; успешные ASan/UBSan проверки не означают проверку LSan.
+
+Нулевые счётчики самостоятельных Clock/Deferred после их поглощения Refresh сохранены: реальные завершения вложенных служб учитываются родителем. Нулевые выделения памяти относятся к фактически измеренным участкам. В pure Deferred тесте создание/удаление внешнего host make_unique было вне allocation tracking; реальный Fore/H8 трекинг охватывает внутренние emplace/reset/destruction.
+
+Полное удаление CPU-каркаса ещё не завершено. Остаются другие State/MIDI/main-цепочки, Encoder/Tick и общий ControllerCpu/совместимый ABI. Не выполнялись Windows, DAW, физическое оборудование или оценка realtime/производительности. DSP/JIT, гостевые часы/порядок, буферы и приоритеты не менялись. Установки, push, публикации и интеграции в main не было.
+
+Предварительные raw-трассы сохранены во вложенных `retired-discovery*/discovery-raw.tar.gz` с собственными SHA-индексами. Для исторического повторного анализа их нужно восстановить по точным исходным относительным путям из этих индексов. Итоговые матрицы, замороженные бинарники, исходники и оригинальные входные файлы сохранены.
+
+Доказательства: `validation.json`, `evidence-index.json`, `archive-verification.json` и `evidence.tar.gz` в этой приватной папке. Индекс архива подтверждается только после реального повторного чтения всех его элементов. Оригинальные приватные входные firmware/bank/audio не публикуются.
+
+
+## 2026-10-25 — complete upper-panel native controller graph
+
+Source-only commit fe93b18c55d5b59237b199f08d52af25e36a804d, isolated codex/ks-controller-resume-20261023 from04596761. Completed entire agreed Stage1: Controls4406/Reset4486 reused, full Encoder443A and Tick4494 with all typed children including PedalOutput2A76/Byte2AEA. Final-only outer compatibility ABI explicitly remains Stage3; central Main4338 Stage2 not started. Full build102 and102 actual checks PASS:98 completed actual exits/PASS logs recovered after interruption,4 fresh resumed on exact frozen identities; recovered elapsed=null.31timeline,138handoff,9supplemental nested Board switches,4cold,39music:7073118frames per24streams/32377923DSP events, exact PCM/timed non-PC payload/slices/resources/state/Flash/MIDI/serial, native interpreter0. Cold checkpoints exact; warm CPU-scratch hashes not uniformly identical, raw metadata retained. Finite18 observed4494 diagnostic PC pairs only; test public313/private318, production replay unchanged. New normal processing allocation checks0; separately actual ASan/UBSan passed (Mac leak detection off).1803source/102frozen+current executable/16runner/3originalfixture/16117dependency SHA verified. Initial ENOSPC cold failure/truncated EditDecision and interrupted handoff preserved, actual successful reruns recorded. Prior481079-byte journal prefix preserved. Only macOS arm64/AppleClang21/Release/C++17/macOS12/profilingOFF; no Windows/DAW/hardware/realtime/performance claim. DSP/JIT/guest clocks/order/IRQ/buffers/priorities unchanged; no sonic change intended, no install/push/release/main integration. main4baaead06e23e2358729cca32b6b511c72022318 clean. Next: entire Stage2 central cycle, do not reopen completed Stage1 without concrete regression. Private report/evidence: private/ks-upper-panel-20261025/PROGRESS_RU.md,validation.json and losslessly verified archive.
+
+
+## 2026-10-25 — full central service cycle started, Stage2 still open
+
+Basefe93b18 on existing isolated codex/ks-controller-resume-20261023. Stage1 upper panel remains closed. User requests whole next fixed stage: Main4338 and all17 ordered services plus every required ordinary MIDI/SysEx/note/voice/arp/State child. ActualFunctionKeys also reaches B17C filetransport and18F8 diagnosticdump; both included, not silently excluded as bootloader. Private authenticated inventories and native graph development are ongoing in /private/tmp/ks-central-cycle-20261025. Small PanelMasks/VoiceFeedback/PartFeedback/MidiPacket closures have actual stockH8/pure/SAN evidence; common Runtime integration and whole-cycle validation remain pending. Do not claim Stage2 complete after a child proof or opaque coordinator test. Keep no internal CPU bank/fallback, guest clocks/order/IRQ/DSP/JIT/buffers/priorities unchanged. macOSarm64 only; no Windows/DAW/physical/performance claim. Main4baaead unchanged; no installation/push/publication. Current private continuity:private/ks-controller-central-cycle-20261025/PROGRESS_IN_PROGRESS.md.
+
+
+### 2026-10-25 central Main stage2 checkpoint (in progress)
+
+Source-only wave1 is2700ee6; completion-only observed-zero-glide fix is99eff7e (5113 H8 graphs/16089980 phases/1892 IRQ/860 nested, allocations0). Wave2 ten graphs are integrated locally, twenty direct checks passed, and four cold pairs matched actual timed resources, slices, PCM and checkpoints. Independent raw audits admitted exactly41 observed diagnostic PC pairs; the strict four-case repeat passed. A subsequently expanded gated Square modulation corpus found a separate completion-only carry flag edge; v2 correction is pending and wave2 is not yet committed. Native PanelMonitor3864 H8 graphs/678 IRQ plus actual SAN768 graphs passed; StateStatus2048 H8 graphs and SAN512 graphs passed; DiagnosticCodec2240 initial whole H8 graphs passed. Timer callbacks, DiagnosticTransfer, MIDI-file transport, incoming SysEx/MIDI/Arp closures and full Main WorkGraph remain required. No Stage2 completion, Windows/DAW/realtime/performance or publication claim. See private/ks-controller-central-cycle-20261025/PROGRESS_IN_PROGRESS.md; preserve all original failed capsules. main unchanged.
+
+
+### 2026-10-25 — KS semantic controller, central-cycle child wave in progress
+
+Isolated codex/ks-controller-resume-20261023 only, source checkpoint7b58b28 plus current Root child-wave sources; stable main4baaead unchanged. macOS arm64 AppleClang21 ReleaseO3/C++17, fixed fe93b18 source/runtime oracle and pinned libksLib02c1879e. Full Main4338 Stage2 remains IN_PROGRESS. New private whole-H8 closures: Monitor3873/1887240, Status5134/3848672, DiagnosticCodec3025/5279968/769IRQ, DiagnosticTransfer2086/34487937/988IRQ (entire authenticated195-block OS image included), canonical MidiFileTime3106/183446/533IRQ. Pure ASan/UBSan whole-object underbudget/zero-allocation checks passed. Five-module common integration is currently building; no integrated wave result claimed yet. SysEx/UI/MIDI/arp and timer work remains within this same Stage2 scope. Actual data bindings and pending Mono35FA/deadline3632 edge are tracked in the private progress note. No DSP/JIT/guest-timing/buffer/priority policy changes; no Windows/DAW/performance claim or installation/publication. Verified private Root proof archive and receipts: private/ks-controller-central-cycle-20261025/root-child-services-checkpoint-20261025-1800.{zip,json}. Next: complete Main and all ordinary child closures, verify common evolving timelines, preserve raw evidence, then assess Stage2 completion.
+
+
+### 2026-10-25 - central-cycle shared waves4/5 verified, fullStage2 stillopen
+
+Isolated codex/ks-controller-resume-20261023 only. Root status/diagnostic/time wave committed d074b2d after15direct+4strictcoldPASS;16rawfiles matchpreviouswave exactly. New source-only checkpoints c2d892a (110paths,38direct+4strictcold) and777f194 (40paths,15direct+4strictcold) include finite MIDI/arp, complete timer callbacks/all10actions, Aux, Ordered andRun graphs. All actual timed resources, slices, checkpoint andPCM bytes exact; independently reconstructed exact41+12 diagnostic-PC pairs admitted only to testcomparators (public443/private448). Two oldstacktest failures wereactual Runtime sizeof9.08MB versus8176KiB stack, fixed withconstructor-preallocated storage fornewlargejobs; unchangedtests nowpass, no processingallocation. Originalcold null-stream ROMheaderread isnow narrowreadonly[0,4) inBootstrap/Reset afterwholeH8proofs, no general codedomain expansion. Root complete8root file-event graph hasH82208/101594, SAN192/28010/994wholeobjectrejects, IRQ706/336576/660IRQ/4nested/2late, allocations/interpreter0 andpairedNoop exact; finalsharedMIDI overlay/wholeparentintegration remainpending. Unbounded queuegraphs useoptionalEXTERNAL voidcompletion accounting, neverinternal7registerbank orABIreadback; actualCpu helduntiloutercompletion, externalABI removal remainsStage3. FullMain4338 isnotyetverified/admitted, Stage2 remainsopen; actualMIDI metadata/NRPN andmalformedMono codewrite findings arebeingresolved withpreservedfailedproofs. macOSarm64 only; noWindows/DAW/hardware/realtime/performance/productcompletion claim. DSP/JIT/guesttiming/IRQ/order/buffers/priorities unchanged. Main4baaead clean, noinstall/push/publication. Privateprogress andverifiedlosslessarchives remainlocalignored.
+
+
+### 2026-10-25 - explicitly stopped by user; central stage2 unfinished
+
+User requested stop+handoff. All owned development/build/test processes stopped. HEAD7e4febbd,46uncommittedsourcepaths preserved withexactSHA+patch+copies; interruptedcommonWave6 near332/338 isNOTaccepted. ActualprivateMain577/663292/309IRQ andlatestNoopSAN3/4643/8113notifications/alloc0passed finitecorpora, butpositiveTransport leavesUIcompleted/Mainchildactive atcost0; nofix afterstop. FinalArpOwned/zero-derivednative186ticks andfinalstreamspan38Fnotimplemented, TransportSANinterrupted143 andexpandedForetestgeneratorcompilefailure retained. GlobalCPUremoval andWindows/DAW/realtime/performance remainfuturestages. Main4baaead clean; noinstall/push/publication. Stop handoff/privatearchives localignored: private/ks-controller-central-cycle-20261025/HANDOFF_STOP_RU.md andstop-20261025/. Do notresume withoutnewexplicituserrequest.
+
+
+## 2026-10-26: explicit resumption of isolated semantic controller Stage 2
+
+User resumed work after the saved stop. Same branch codex/ks-controller-resume-20261023 at 7e4febbd; stable main untouched. Restored all 83,933 private scratch files from the lossless stop archive with per-file SHA-256 checks and verified pinned external dependency source trees. Rebuilt four non-KS supporting libraries under AppleClang 21 / arm64 / Release / macOS 12 / profiling OFF. The old common Wave6 build was intentionally incomplete; new build and independent Main, Mono/Arp, Transport proof attempts are in progress. Stage 2 is not complete; no new Windows, DAW, realtime or CPU performance claim. No DSP/JIT/timing/IRQ/buffer/priority changes, installation, publication or main merge. Private evidence: private/ks-controller-central-cycle-20261025/resume-20261026 and /private/tmp/ks-central-cycle-20261025/*resume*20261026*.
+
+
+### 2026-10-26: accepted Stage 2 Wave6 MIDI and file-event closure
+
+Source-only commit bc954262be3f419678dfa0374092926da66f2027 on the same isolated branch; 47source/test/CMake files, no private assets or reports in Git. Coherent new 21target build,19direct checks and4strict cold variants PASS on macOS arm64. Real MIDI pipeline3711calls/6670312phases/1610IRQs/4nested/8reentry/8reset/10guards/interpreter0/alloc0; FileEvent8roots2272calls/110898phases and256native-onlypairedNoop cases/37314phases/1324wholeobjectbudgetrejects/alloc0 passed current shared dependencies. Existing private actual FileEventSAN is retained as separate evidence.
+
+Two independent raw readers (record-wise Python and separate C++ with both FNV checksums) confirmed exact resources/time/slices/checkpoints/PCM and precisely29 observed H8PC-to-native2A2A metadata pairs. Only test policy changed(public472/private477); all16 raw KST/PCM files before/after policy admission are byteidentical. Production recording/replay not changed. Stable main clean at4baaead; no install/push/publication. Stage2 remains OPEN: private Main return fix/wholegraphSAN progressed, Arp/Mono typed lowROM stream ownership still under proof, Transport finalshared gates pending, final Main Runtime integration and full regression pending.
+
+
+2026-10-26 — полный центральный цикл KS: этап 2 завершён
+
+Этап 2 — полный центральный рабочий цикл KS — завершён 2026-10-26.
+
+Ветка codex/ks-controller-resume-20261023. Проверенный source-only commit 2a819abeec892f5770b877c480350f7c4aa90b01; предыдущий принятый блок MIDI/file-event — bc954262be3f419678dfa0374092926da66f2027. Стабильный main остаётся чистым на 4baaead06e23e2358729cca32b6b511c72022318. Приватные материалы в коммиты не вошли. Установки, push, слияния и публикации не выполнялись. Reasoning всех агентов ограничен high.
+
+Полностью замкнут обычный Main4338: все 17 служб в исходном порядке и необходимые дочерние цепочки таймеров, панели, State, MIDI/SysEx, нот/голосов, арпеджиатора/Mono, файлового проигрывателя/транспорта и достижимой диагностики. Main единолично владеет обычными дочерними графами. Внутренние решения используют типизированное состояние и семантические результаты; внутреннего CPU-frame или скрытого H8 fallback нет. Окончательная внешняя проекция ABI и глобальные владельцы устройства явно остаются этапом 3.
+
+| Проверка | Результат |
+|---|---|
+| Общая сборка | 171 цель, coherent macOS arm64 Release |
+| Прямые тесты | 167 PASS, 0 пропусков: 153 в итоговой матрице + 14 ранее выполненных на побитно тех же итоговых бинарниках |
+| Прерывания | 31 сценарий, 126 976 точных аудиокадров и 935 724 передачи DSP |
+| Переключения | 138 реальных H8 phase landings, 3 режима × 46 фаз; 565 248 кадров + 360 000 кадров подготовки |
+| Холодный запуск | 4 строгих варианта, включая irregular/mapped; время, ресурсы, slices, checkpoint и PCM точны |
+| Музыкальные сценарии | 39 пар / 78 выполнений на одной Probe-сборке, 7 073 118 кадров, 32 377 923 события DSP, 29 098 488 slices |
+| Автономный цикл | 16 последовательных Noop-циклов / 46 080 фаз; следующий вход строится только из чистого предыдущего результата |
+
+Во всех 39 сценариях точны все 24 физических поля отчёта, каждый байт PCM, реальные ресурсы, гостевое время и порядок обмена. Независимый C++ reader проверил обе FNV каждого raw trace. Все 17 детей реально возвращались; всего 345 328 входов и 345 328 возвратов Main. Счётчик старых обработчиков после входа в Main равен нулю в каждом проверенном интервале; post-handoff H8 равен нулю. Источник и четыре итоговых специальных бинарника независимо повторно проверены: 2151 файлов исходников без изменений.
+
+Области вывода ограничены фактически выполненными тестами. Допущены только конечные независимо восстановленные пары диагностических PC; никакие реальные данные или временные отличия не скрываются. Холодные checkpoints совпадают строго; warm checkpoint с историческим CPU stack сохраняется как диагностическое различие и не объявляется равным. Новые 30 пар PC→4338 приняты только в тестовых компараторах; все 16 cold KST/PCM до и после принятия побитно одинаковы.
+
+Исправлены реальный возврат внешнего Transport/Diagnostic ребёнка Main в той же уже оплаченной фазе, полная Arp/Mono цепочка и корректная передача узкой read-only возможности Mono ROM stream в FileEvent/Time. Область записи не расширена. Все 33 аутентичных заводских паттерна и 186 native/H8 тиков прошли. Синтетический повреждённый F0/F7 поток, пытающийся направить запись в исполняемую область, явно отклоняется защитой; скрытого интерпретатора нет, эта несовместимая самозапись не объявляется поддержанной.
+
+Обновлены только диагностические свидетельства реального владельца дочерних задач: Main/UI, Serial, Tick, PartSelection. Прежние счётчики самостоятельных Foreground остаются реальными, в том числе нулевыми. Для GlobalSave короткий финальный Action завершается между аудиоснимками: бит Action не выдумывается. Ограниченная проверка требует непосредственно завершённый GlobalSave9, Page/Commit/Compare, Notice14 Display/Timer, реально вернувшийся Main-родитель и точное изменение Edit1→Edit0/Latch0. Старый строгий путь и все остальные маски/физические проверки сохранены; независимый обзор проверил 22 отрицательных случая. Исходный неудачный прогон, все старые снимки и последующая валидация сохранены.
+
+Отдельные O3 и фактические ASan/UBSan O1 проверки чистых графов подтвердили бюджеты cost−1 без мутации, одинаковое исполнение с Noop и внешним observer, нулевые processing allocations. LSan на этой macOS недоступен и не заявляется. Большие fixed-capacity графы создаются заранее при конструировании Runtime; Main занимает 72 630 176 байт в текущей доказательной конфигурации. Это ещё не оценка памяти/CPU окончательного продукта и не обещание ускорения. DSP/JIT, реальные guest clocks/IRQ/порядок, resampler, буферы и приоритеты не менялись. Звуковых изменений в сравнённом PCM нет.
+
+Дальше по зафиксированному порядку остаются два крупных этапа:
+
+1. Этап 3: штатный холодный/тёплый запуск, сброс/overlay/pre-Main, Board/ControllerCpu как владелец clocks/resources/IRQ mask, Runtime/Live Calls и PC dispatch, внешние ABI-проекции и IRQ admission/return, lifecycle/readiness и диагностический batching/trace. Уже закрытые Main/State/IRQ/DSP/Flash/очереди повторно не переносить. Конкретный read-only список восьми корней и файлов сохранён в stage3-readonly-inventory.json; 70 projection headers и 214 Calls headers — статическая зависимость, не указание удалять всё вслепую. Оригинальный H8 уже test-only и сохраняется как эталон.
+2. Этап 4: окончательная продуктовая сборка/интеграция и длительные проверки состояния/звука, реальные DAW на macOS и Windows, realtime/CPU/память. Текущие результаты относятся к macOS arm64 и не подтверждают Windows, DAW либо готовность релизного контроллера без CPU-каркаса.
+
+Этап 1 остаётся завершённым на fe93b18. Этап 2 завершён на 2a819abeec892f5770b877c480350f7c4aa90b01. Этапы 3/4 ещё не реализованы. main, установка и выпуск не входят в текущую контрольную точку.
+
+Машинный итог: validation.json. Полное новое доказательство сохраняется в ../stage2-complete-evidence.zip с manifest и проверкой SHA каждого распакованного элемента и исходного файла. Для восстановления исторических путей использовать последовательно STOP archive, Wave6 accepted archive и этот delta archive. Все прежние неудачные эксперименты сохранены; исходные файлы не удаляются.
+
+
+2026-10-26 — этап3, начало удаления глобальной CPU-границы
+
+Этап 3 начат по явному запросу пользователя 2026-10-26.
+
+Ветка codex/ks-controller-resume-20261023, исходный принятый HEAD 2a819abeec892f5770b877c480350f7c4aa90b01. Этапы 1/2 закрыты, этап 4 ожидает. main не менять, ничего не устанавливать/публиковать/push/сливать. Агентам reasoning <= high.
+
+Ограничение пользователя: следить за доступным остатком лимита Codex. При remaining <=60% (used >=40%) немедленно остановить новую разработку/новые длительные запуски, согласованно завершить или остановить активные процессы, сохранить исходники/результаты/неудачи и точный handoff, затем остановиться. Исходный остаток82%, последний81%; credits/reset не расходовать.
+
+Внутренний порядок этапа3: (a) выделить физическое состояние памяти/часов/ресурсов/IRQ безCPU; (b) замкнуть cold/warm/overlay/SystemInitialize/StateInit и точные ready/firstMain границы; (c) чистый native исполнитель Main+IRQ без регистров/PC/SP/Compatibility; (d) переключить Board/lifecycle и production source closure, сохранить H8/адаптеры в тестовом эталоне; (e) общая H8 регрессия и исходниковая проверка отсутствияCPU в production. Эти подпункты не новые крупные этапы и не критерий полного завершения по одному.
+
+Сейчас кодproduction ещё не изменён: приватный кандидат resource split подготовлен, независимый differential идёт. ControllerCpu временно наследует реальное состояние только как переходной comparison/startup adapter; это не окончательное удаление CPU и таковым не объявляется. Приватные новые Main/IRQ и startup owners разрабатываются параллельно. Гостевые часы/IRQ/ресурсы, DSP/JIT, буферы, resampling, очереди, worker priorities не менять. Никакой opcode dispatcher/реплей/скрытый H8 fallback внутри native владельцев не допустим.
+
+Рабочие доказательства /private/tmp/ks-controller-owner-20261026; baseline2151источников и5соответствующих библиотек заморожен. Не смешивать старую libksLib с новым ControllerCpu layout. После принятия resource split нужен coherent rebuild всех потребителей CPUheader перед actual H8 linked runs.
+
+
+2026-10-26 — этап3a принят, этап3 продолжается.
+
+Source-only commit d3c60cef7c8a6fc83780ed0d83fc2d87165dd70c. Физическое состояние памяти/часов/истории шины/IRQ/маппинга выделено в ControllerDeviceState; ControllerCpu пока остаётся явным производным переходным адаптером. Полное удаление CPU из Board/Runtime ещё не завершено.
+
+Независимое сравнение:36725old/new compatibility случаев,36722pureDevice случаев,26189совпадающихbuscallbacks;12методов перенесены буквально, кроме имени хранения bus_. Новаяresourceшина не требуетCPU. Общая9target/324stepпересборка соответствуетновомуlayout иH8object. 7прямыхтестов+4строгихcoldварианта PASS,безпропусков:150100операцийпамяти,11520timing,131893IRQ/1851942H8границы/171nested;622Maincases и6pureMaingraphs. Все16coldKST/PCMфайлов точны кпринятомуэтапу2;компараторы/PCpolicyнеизменялись. macOSarm64Release,неWindows/DAW/CPUbenchmark.
+
+Параллельно: новыйCPU-freeMain/IRQexecutor уже проходит124цикла/124221фазу/113IRQ/8nested относительноheader-onlyH8; итоговыйROMspanIRQguard иO3/SANещёпроверяются. Typedstartup/SystemInitialize/StateInit разрабатывается, ready-atDispatchHardware иfirstMainAvailable разделены. НовыйproductionBoard/sourceclosure остаётсяприватнымкандидатом до готовности владельцев. Не выдавать этичастныерезультаты зазавершениеэтапа3.
+
+Последнийдоступныйлимит: used22%, remaining78%;остановкаприremaining<=60%. Reasoningагентов<=high. Никакихreset/credits. mainчистый4baaead;нетустановки/push/публикации/слияния.
+
+
+2026-10-26 — общийimageadmission принят в 1af892aa8ada262c2c80017438ff72f2dc0b3dea.
+
+CPU-freehelper проверяет прежнийFNV87360 итеже3кодовыедиапазона. 4свежихпрямых+3побитнотождественныхbinaryreuse и4cold PASS;все16rawточныкэтапу2. Независимо46158кодовыхбайтмутацийотклонены,16777273physical/taggedaddressклассификацийточны; O3/actualASanUBSan1073негативныхspan/imageguardchecksPASS,валидныйпуть64повтора/alloc0. LSan/Windows/DAWнепроверены. Source2153frozen,coherent9targets12steps. ПроизводственныйBoardещёстарый;этап3НЕзавершён.
+
+ПриватныйMain/IRQcandidate3O3+SAN:124цикла/124221фаз/113IRQ/8nested/1criticalhold,всеcost−1wholeROrejects,alloc0,7earlyROMIRQguardcases;публичныйportabletestготовится. PrivstartupPreMain2путей/150307фазPASSпослеправильногопрямогоLoadSingle/SelectedMulti;полнаяcoldSystem/ResetImageсборкаещёвработе,точныйнезависимыйmemorypartitionуточняется. Boardcandidate2толькоcompile/ownershipscaffoldбезlinkedstub,legacybackend/CMakeизоляциявработе.
+
+Последнийлимитused24%,remaining76%;stopприremaining<=60%. Main4baaeadнеизменён;никакихinstall/push/release.
+
+
+2026-10-26 — сохранность временных продуктов и место для продолжения.
+
+704старыхtemporaryMachOEXECUTABLEкопииизпредыдущегоэтапа удаленыТОЛЬКОпослеповторнойпроверкиSHAсодержимогосуществующихSTOP/Wave6/Stage2archives. Ниодинисходник/RAW/log/archive/активныйStage3/входнойassetнеудалён;4каноническихStage2specialбинарникаоставлены. Полнаяпоимённаяквитанцияcompiled-copy-compaction.json,точечноевосстановлениеpython3restore_compiled_copies.py--member<путьвнутриархива>. Нужно2.6GiB→9.3GiBместадляпродолжения,никакойбезвозвратнойпотеридоказательствнет. Старыеcommand.jsonпоудалённымкопиямтребуютrestoreпередповтором.
+
+Последнийлимитused26%,remaining74%;разработкаэтапа3продолжается,stopremaining<=60%. НовыйMainheaderещёНЕдобавленвW:Rootнашёлслишкомширокийфильтрvector/stackвпубличномharness;сейчасужесточаетсякфактическимIRQvector/fetch/SP-кадрам,coreнеизменён. Startupcandidate2замороженNOTGO;полныйstandalonecoldупёрсявотсутствующуюфизикуADC,новыйBoard/NativeOwnerсобираетсясреальнымtick/DSP. Legacybackend3компилируется,поведение138ещёнеповторено. НикакогоStage3completionclaim.
+
+
+2026-10-26 — принят самостоятельный исполнитель Main/IRQ; проверена чистая сборка кандидата платы.
+
+Source-only HEAD 28510f3c927889e1c870b764e4668c5a9ae9913f: NativeControllerExecutor исполняет семантические Main и IRQ через ControllerDeviceState, без CPU, регистров, PC/SP, Runtime/Live/ABI. Строгий публичный тест прошёл 124 цикла, 124221 фазу, 113 IRQ, 8 вложенных IRQ; все четыре RAW-файла и лог побитно совпали с независимой приватной проверкой. Каждый бюджет cost−1 проверен на неизменность владельца/памяти; валидный путь alloc0. Исходниковый тестовый эталон H8 отделён от нового исполнителя. Разделение callback-следа основано на реально выбранном векторе, фактических opcode-fetch и наблюдённых SP/кадрах, широких масок RAM нет.
+
+Приватный кандидат Board/source partition отдельно собран из 10 реальных CPP и 1340 фактических зависимостей. Native ksLib и итоговый smoke-бинарник не содержат ControllerCpu/Runtime/Live/Reference и старых ABI/Foreground/Calls, H8 object или compatibility archive не линкуются. Конструктор и 1000 тактовых срезов выполнились (129745 циклов, interpreted0); это проверка владения/сборки, НЕ доказательство полного запуска. Результат /private/tmp/ks-controller-owner-20261026/pure-partition/validation-final.json.
+
+Реальная новая Board на миллионе фаз дошла до копирования 70536/87360 байт образа, выполнила 485 IRQ. Оригинальный H8 на том же количестве фаз дал ровно те же 6281141 циклов и все 10 промежуточных отсечек. Полная RAM отличается лишь 36 байтами реальных стековых областей; независимое доказательство по фактическим SP/записям ещё идёт, эти байты пока НЕ исключены автоматической маской. Бюджетный предел первого прогона не означает зависание. До firstMain/ready и полного audio/state сравнения ещё не дошли. Startup/новая Board остаются приватными кандидатами, production Board в W пока прежняя.
+
+Подготовлен отдельный семантический music-probe для всех 39 физических сценариев; только syntax/9 negative-comparator checks, запуск заблокирован до реального cold GO. Старые compatibility-тесты не выдавать за тест нового владельца. Этап 3 продолжается; этап 4 (полный продукт/DAW/Windows/CPU) ещё не начат.
+
+Лимит: used31%, remaining69%; при remaining<=60% прекратить новую разработку/длительные проверки, сохранить точный handoff и остановиться. main4baaead не изменён, нет установки/push/слияния/публикации. macOS arm64 Release; нет Windows/DAW/performance claim.
+
+
+2026-10-26 - Stage3 update: preserved old comparison tests; source-target partition configured.
+
+Private actual root/Standalone/full-ksLib-subtree configure: all3 PASS. Native ksLib has10CPP; comparison target has306CPP. Fixed concrete missing registration for Board/Device tests and static-link dependencies for raw H8 object consumers. 14 conditional names,11 actual configured targets. Native Executor remains baseLib-only. Configure GO only, no full product build claim;14683 original source/dependency files unchanged. See /private/tmp/ks-controller-owner-20261026/main/partition-review/.
+
+Explicit test-only adapter preserves12 old Board API consumers. New Board(nativeStartup=true) remains semantic; old tests use makeLegacyBoard + exact old Entry::Reset comparison setup. Independent inverse transform recovers all12 original files byte-exact, including assertions/scenarios. Actual13object compile passed with2246 dependencies and one coherent new Board header. All4 old strict cold variants PASS; all16 rawKST/PCM byte-exact to acceptedStage2. This preserves the old oracle; it is NOT semantic cold GO. First mixed-header compile failure and first wrong-baseline-path comparison retained alongside corrected passes. See /private/tmp/ks-controller-owner-20261026/legacy-tests/validation-final.json.
+
+Actual new Native Board and original H8 both reached4M phases /25546421 cycles. Native1091085 DEVICE callbacks,3465completed IRQs,interpreted0; Original14488387 total callbacks. Independent all-phase/device/RAM/IRQ-sidecar classification pending. Pure10CPP native-only link separately matched first1M physical callbacks and all16MiB RAM exactly. Full ready/firstMain NOT yet reached. Production W Board unchanged; Stage3 IN_PROGRESS.
+
+Private diagnostic capsule5 changes only recorder MaxSlices1M->5M for advance(1) traces. Earlier overflow is retained incomplete/NOTGO. Controller kernel,guest clocks/IRQ/resources,DSP/JIT and audio policy unchanged. No W diagnostic-cap change. Model-capacity service failures interrupted one agent twice; Root resumed its actual runs with preserved evidence.
+
+Limit used34%,remaining66%; stop remaining<=60%. Main4baaead unchanged; no install/push/merge/publication. Next: genuine startup to firstMain, validated Board/CMake integration, semantic functional matrix. Stage4 pending.
+
+
+2026-10-26 - Stage3 core integration applied and native library verified; global Stage3 still IN_PROGRESS.
+
+Applied exact50-path integration candidate2 to SAME branch, baseline28510f3, after independent full cold functional GO and pure native-only linked firstMain GO. No diagnostic trace-cap extensions imported: production remains original1M recorder cap. Added13 immutable startup2 headers, pure Board/Device/NativeOwner/resource-checkpoint/comparison boundary, test-only legacy backend/replay, explicit12 legacy API adapters, native-only production guard + retained old compatibility rejection companion. Four frontend availability calls now use CPU-free boardComparisonAvailable; legacy UI expected backend strings explicitly distinguish old live compatibility from new semantic cold restore.
+
+Independent actual H8 reset through natural Relocated/Warm/System/StateInit and first completeMain:8,540,772phases,46,015,071cycles,1,659,039 exact DEVICEcallbacks from27,051,809originalcallbacks. All5102IRQselections independently predicted, everybefore/afterclock/pending/mask/mode/priority exact. All16MiB except38bytes equal; everydifference is exact observed retired-frame provenance and native never reads/writes those38bytes after genuineinitialclear. OriginalfirstMain threefields and native typedproducer exactly match: phase8,538,626/cycle45,996,278,presentation1539,activation0,expressionSource6291726. Proof SHA f5920fe7eda37a3848b74fc5aec9e3da60590c00acf520ed5d41b6f152b124d9 at startup/actual-fullcold-review1/validation-final.json. No fake registerbank input or broad RAM exclusion.
+
+Actual W coherent native build PASS. Actual native library has10archive members,1338 actual dependencies, zero ControllerCpu/Runtime/Live/Reference/Abi/Calls/Foreground headers or symbols. Actual production guard PASS, actual pure native-only cold firstMain PASS at samephase/cycle, actual executor124cycles/124221phases/113IRQs/8nested/all124221cost-minus1rejects/600wholeSnapshots/alloc0 PASS; executor binary is byte-identical accepted standaloneproof. Source/deps/symbol receipts in integration/native-closure-validation.json. Test-only old compatibility guard separately compiles/links/runs withoutH8object and preserves alloldassertions; legacy4cold16rawfiles remain byte-identical acceptedStage2.
+
+Full Standalone plus explicitlegacy targets build currently RUNNING (owned process metadata integration/active-build-process.json; result goes product-legacy-build-result.json). New39semantic music probe is being linked/preflighted separately; PCM/state/Flash/allRAM admission still PENDING, not implied by cold GO. No globalStage3/Stage4 completion, Windows/DAW/performance/SANwholecold claim. main4baaead remains untouched; no install/push/merge/release.
+
+Account used37%,remaining63%; stop newdevelopment/longruns atremaining<=60%, preserve allcode/results/failures/exacthandoff. No reset/credits. Agents<=high. Latest accepted sourceHEAD28510f3; appliedsource50 not committed yet while wholebuildpending. Source candidate and exactpatch retained privately, outside publicreports.
+
+
+2026-10-26 final source checkpoint398045c9e6f95993a35c1276b70b5be223d1917a. CPU frame removed from production, native10CPP/library1338deps+Standalone noKSCPU symbols; coherent564-stepbuild0. Actualnativecold/Main/IRQ and retained4cold/31timeline/138handoff PASS; all16oldcoldRAWfiles byte-exact. All39new semantic physical/24PCM/state/Flash/UART cases PASS, 156fullRAMsnapshots retained; RAM admission remains PENDING (41..66exactdiffbytes/pair, no geometry mask). This is the sole Stage3 remaining gate; Stage4 not started. Private read-only RAM observer prototype compiled only, sink/classification/end-point mapping unfinished; see HANDOFF_RU.md and ROOT_REVIEW_OBSERVER_BLOCKERS.md. Source-onlycommit excludes internal reports; doc journal kept local. Mainunchanged,no install/push/merge/publication. Evidence/archives/manifests/restorehelpers verified; largecompletedcoldRAW and musicalPCM/KST copies losslessly compacted, allRAMsnapshots kept. Lastaccount39used/61remaining; stopnewworkatremaining<=60, no reset/credits, agents<=high. Preparing final checkpoint with1percentheadroom before a larger audit.
+
+2026-10-26 checkpointstop: source398045c,39used61remaining,1percentheadroom. Nativeproduction/source/Standalone passed;39physical24PCM passed; RAM provenance/liveness pending. Private HANDOFF_RU.md contains exact evidence/restoration/nextstep. Main unchanged; no installation/publication.
+
+
+2026-10-27 - Private finite KS native RAM gate complete. Source398045c, branch codex/ks-controller-resume-20261023, macOS arm64 O3/macOS12; production sources unchanged. All39 actual H8/native pairs,24PCMstreams,33018324DSPevents,29755462absolute slices PASS. 78endpoint+75naturalMain+39tail full16MiB pairs checked;4257endpoint differences individually proven saves, no geometric mask. Native106candidateaddresses only genuine orderedinitial4096clear, no subsequent use. Three genuine UART waits explicitly mapped to actual retained native parents; one real TPU0 preemption returned naturally. No Main-return/dead-byte/arbitraryfuture/forcedunblock claim for persistent waits. 35realH8 decodercases+226ASanUBSan negatives;76final independent negativeguards PASS. Shared historical UARTwait is preserved for Stage4 product investigation; not a new migration divergence. Stage4/Windows/DAW/realtime/CPU/memory not validated by this step. No install/push/merge/publication. Private report: private/ks-controller-ram-20261027/REPORT_RU.md; evidence and archive receipt alongside.
+
+
+## 2026-10-27 — global automated product validation after native CPU-frame removal
+
+Source: local codex/ks-controller-resume-20261023, base398045c plus nine narrow source/test/build changes. macOS27.2, actual Universal2 Release; arm64 and x86_64/Rosetta, no Windows/physicalIntel claim. Available automatic runs completed; human listening explicitly deferred. Main/released bundles untouched; no commit/push/install/publication.
+
+Measured: production native archive CPU-free closure/guards botharches; final Mono-fixed Clock/Persistence/Latency/HostClock/custom5/5 perarch with0offline losses/current-thread C++ allocations; UI Editor/Performance botharches PASS. Fixed authentic historical-state VLQ SRAM read rejection without widening writes/time records;6144pure/4705H8calls/1008IRQ and6srawPCM+Multi/Flash exact. ASan+UBSan pure PASS, leak detector unavailable. Transferred only existing stable macOSPrefetch full-speed mapping and two resampler callback LOG removals; resampler300s/arch4->0C++alloc, identical14,583,334samples/hash4808750466345540368/latency56/0. Latestactual SDK/wrapper/DAW receipts separate from earlier longruns; no general realtime/CPU-saving claim.
+
+Open: paced Rosetta realtime worker throughput fails acrossdirectProcessor/AU/VST3 despite priority/settling; specific forced-live-project offline pair NONEXACT, explicit48k/defaulttrack copy exact (cause not isolated). Windows and subjective listening pending. Guest clocks/IRQ/DSP/JIT/buffers/priorities unchanged. Next: profile isolated Rosetta throughput, investigate project-render control case, then external-platform and listening validation; no re-port of already closedIO/State graphs. Private report/evidence: private/ks-controller-global-auto-20261027/REPORT_RU.md, validation.json, FINAL_RECEIPT.json.
