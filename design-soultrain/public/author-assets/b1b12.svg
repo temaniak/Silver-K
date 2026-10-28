@@ -1,0 +1,15 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="LED Button">
+<g id="Ellipse 14">
+<circle cx="6" cy="6" r="6" fill="#525F70" fill-opacity="0.8"/>
+<circle cx="6" cy="6" r="6" fill="url(#paint0_radial_0_301)" fill-opacity="0.15"/>
+<circle cx="6" cy="6" r="5.5" stroke="#3E4A5F" stroke-opacity="0.3"/>
+</g>
+</g>
+<defs>
+<radialGradient id="paint0_radial_0_301" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(5 5) rotate(47.6838) scale(6.96993)">
+<stop stop-color="white"/>
+<stop offset="0.826923" stop-color="white" stop-opacity="0"/>
+</radialGradient>
+</defs>
+</svg>

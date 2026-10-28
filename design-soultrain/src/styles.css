@@ -1,0 +1,296 @@
+*{box-sizing:border-box} :root{font-family:Arial,Helvetica,sans-serif;color:#171b20;background:#20252b;font-synthesis:none}body{margin:0}button,select,input{font:inherit}button{cursor:pointer}button,select{background:#26303c;color:#f1f4f7;border:1px solid #526273;border-radius:4px}button:hover,select:hover{background:#344153}button:focus-visible,select:focus-visible,input:focus-visible,[role=slider]:focus-visible{outline:2px solid #087fe5;outline-offset:2px}button:disabled{opacity:.35;cursor:default}
+.stand-toolbar{height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;color:#edf2f7;background:#20252b;font-size:13px;gap:12px}.stand-toolbar strong{font-weight:400;color:#71b7ee;margin-left:10px}.stand-toolbar small{color:#a8b3bf;margin-left:18px;font-size:12px}.stand-toolbar>div{display:flex;align-items:center;gap:8px}.stand-toolbar button,.stand-toolbar select{height:28px;padding:0 10px}.stand-toolbar button[aria-pressed=true]{background:#087fe5}.stand-canvas{min-height:calc(100vh - 48px);padding:14px 16px 20px;overflow:auto}.scale-box{position:relative;margin:0 auto}
+.skin{--knob-size:80px;width:1440px;height:1120px;padding:12px;background:#e5e9ed;transform-origin:top left;border:1px solid #94a3b2;border-radius:8px;position:relative}.skin-header{display:flex;align-items:center;gap:20px;background:#0878ce;height:64px;padding:10px 16px;border-radius:3px;color:white}.skin-header h1{font-size:38px;font-weight:700;margin:0 20px 0 0;width:220px;letter-spacing:-.8px}.model-picker{width:270px;height:34px;padding:0 10px;font-size:14px}.part-tabs{display:flex;gap:8px}.part-tabs button{width:50px;height:34px;background:#0874bf;border-color:#3f8bbd}.part-tabs button[aria-pressed=true]{color:#171b20;background:#e5eaef;border-color:#1a2733}.skin-header nav{margin-left:auto;display:flex;gap:8px}.skin-header nav button{width:94px;height:34px;font-size:13px;font-weight:700}.skin-header nav button[aria-current=page]{background:#088df0}
+.main-grid{height:776px;margin-top:12px;display:grid;grid-template-columns:618px 172px 310px 296px;grid-template-rows:232px 174px 358px;gap:6px}.module{position:relative;min-width:0;background:#e9edf0;border:1px solid #bdc7cf;border-radius:3px}.module-heading{position:absolute;top:8px;left:10px;right:10px;height:28px;display:flex;align-items:center;gap:12px;z-index:2}h2{margin:0;font-size:17px;line-height:22px;font-weight:700;white-space:nowrap}.module-heading .extra-button{margin-left:auto}.extra-button{height:28px;min-width:62px;font-size:12px;font-weight:700;padding:0 10px}
+.oscillator-stack{grid-column:1;grid-row:1/4;display:grid;grid-template-rows:256px 256px 264px}.osc-toolbar{position:absolute;right:78px;top:30px;display:grid;grid-template-columns:116px 96px 116px;gap:12px;align-items:start}.menu-field{display:flex;flex-direction:column;gap:4px;font-size:12px;min-width:0}.menu-field>span{line-height:16px}select{height:28px;padding:2px 7px;font-size:12px;min-width:0;width:100%}.menu-field.inline{display:flex;flex-direction:row;align-items:center;gap:8px}.menu-field.inline>span{flex:0 0 auto}.menu-field.inline select{flex:1}
+.lamps{display:flex;align-items:center;gap:12px}.lamps.vertical{flex-direction:column;align-items:stretch;gap:0}.lamp-button{display:inline-flex;align-items:center;gap:8px;border:none;background:transparent;color:inherit;padding:0 2px;height:22px;font-size:12px;white-space:nowrap;border-radius:3px}.lamp-button:hover{background:#087fe518}.lamp-button img{width:14px;height:14px;filter:grayscale(1) brightness(.3)}.lamp-button.selected img{filter:none}
+.six-knobs{position:absolute;top:86px;left:8px;right:8px;display:grid;grid-template-columns:repeat(6,1fr);justify-items:center}.knob-control{width:100px;height:120px;display:flex;flex-direction:column;align-items:center;position:relative}.dial{width:var(--knob-size);height:var(--knob-size);position:relative;flex:0 0 var(--knob-size);cursor:ns-resize;touch-action:none;user-select:none}.dial img{position:absolute;width:92px;height:92px;left:-6px;top:-6px;pointer-events:none}.knob-label{width:100%;text-align:center;font-size:12px;line-height:20px;margin-top:3px;white-space:nowrap}.knob-value{width:64px;height:20px;border:none;background:transparent;color:inherit;text-align:center;font-size:13px;border-radius:2px;padding:0}.knob-value::-webkit-inner-spin-button{display:none}.knob-value:focus{background:#ffffff70}
+.seam{position:absolute;left:250px;bottom:-13px;z-index:5;background:#e9edf0;padding:0 6px}.seam>button{height:28px;width:74px;font-size:12px}.seam .lamp-button{height:28px;min-width:80px}.mixer{grid-column:2;grid-row:1/4}.mixer-knob{position:absolute;left:50%;transform:translateX(-50%)}.filter{grid-column:3/5;grid-row:1}.filter-switches{position:absolute;top:44px;left:12px;display:flex;gap:40px}.filter-switches .lamps{gap:18px}.fixed-filter{width:205px;line-height:22px;font-size:12px}
+.envelope-stack{grid-column:3;grid-row:2/4;display:grid;grid-template-rows:repeat(2,1fr);position:relative}.faders{position:absolute;top:48px;left:6px;right:6px;bottom:16px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.fader-control{display:flex;flex-direction:column;align-items:center;min-width:0;font-size:12px}.fader-control>label{height:22px}.fader-body{position:relative;height:192px;width:64px}.fader-track{position:absolute;width:106px;height:210px;left:-21px;top:-6px}.fader-cap{position:absolute;width:48px;height:20px;left:50%;transform:translate(-50%,-50%);pointer-events:none}.fader-body input{position:absolute;inset:0;writing-mode:vertical-lr;direction:rtl;width:64px;height:192px;margin:0;opacity:0;cursor:ns-resize}.fader-body:focus-within{outline:2px solid #087fe5;outline-offset:2px}.fader-control output{margin-top:6px;height:18px;font-size:13px}
+.fm-envelope{grid-column:4;grid-row:2}.two-knobs{position:absolute;top:48px;left:8px;right:8px;display:grid;grid-template-columns:repeat(2,1fr);justify-items:center}.lfo{grid-column:4;grid-row:3}.lfo-wave{position:absolute;top:40px;left:10px;right:10px}.lfo-knobs{position:absolute;top:80px;left:8px;right:8px;display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,120px);gap:4px 0;justify-items:center}.lfo-bottom{position:absolute;bottom:5px;left:10px;right:10px;display:flex;align-items:flex-end;justify-content:space-between;gap:12px}.lfo-bottom .menu-field{width:130px}.lfo-bottom .lamps{height:28px;gap:12px}
+.lower-panel{height:230px;margin-top:12px;display:grid;grid-template-columns:128px 374px 376px 518px;gap:6px;background:#c4c8ce;color:#171b20}.lower-panel .module{background:#c4c8ce}.volume .module-heading{left:8px;right:6px;gap:3px}.volume h2{font-size:14px}.volume .extra-button{min-width:48px;padding:0 5px}.lower-knobs{position:absolute;top:60px;left:50%;transform:translateX(-50%)}.arp h2{font-size:16px}.arp-knobs{position:absolute;top:60px;left:10px;display:flex;gap:0}.arp-switches{position:absolute;top:72px;left:235px;display:flex;flex-direction:column;gap:20px}.arp-menus{position:absolute;left:10px;right:10px;bottom:10px;display:grid;grid-template-columns:1fr 1fr;gap:12px}.arp-menus .menu-field>span{font-size:11px}
+.lcd{position:absolute;left:14px;right:14px;top:56px;height:88px;background:#0955be;color:#f1f4f7;border:5px solid #19242f;border-radius:3px;padding:10px 12px;font:18px/24px ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-line;display:flex;align-items:center}.program-actions{position:absolute;left:14px;right:14px;top:164px;display:flex;gap:12px}.program-actions button{flex:1;height:34px;font-size:13px;font-weight:700}.effects .module-heading select{width:190px;margin-left:auto}.effects .module-heading .extra-button{margin-left:0}.fx-knobs{position:absolute;top:60px;left:38px;display:flex}.fx-menus{position:absolute;left:12px;right:12px;bottom:10px;display:flex;gap:20px}.fx-menus>label{flex:1}
+.k-model .lower-panel,.k-model .lower-panel .module{background:#292c32;color:#f1f4f7}.k-model .lower-panel .module{border-color:#555e67}.k-model .lower-panel .knob-value:focus{background:#ffffff18}
+.extra-panel{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;background:#e0e5ea;color:#171b20;border-radius:3px;padding:8px}.extra-heading{display:flex;align-items:center;gap:8px;height:30px;flex:0 0 30px}.extra-heading h2{font-size:15px;overflow:hidden;text-overflow:ellipsis;min-width:0}.extra-heading button{margin-left:auto;height:28px;padding:0 10px;font-size:12px;flex-shrink:0}.extra-content{overflow:auto;margin-top:8px;display:grid;grid-template-columns:1fr;gap:10px;padding:2px}.oscillator .extra-content,.filter .extra-content{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px}.extra-row{display:flex;flex-direction:column;gap:5px;min-width:0}.extra-row>span{font-size:12px;line-height:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.extra-number{display:flex;align-items:center;gap:6px;height:28px}.extra-number input[type=range]{min-width:0;flex:1;accent-color:#087fe5}.extra-number input[type=number]{width:46px;height:26px;text-align:center;padding:0;border:1px solid #b6c0ca;border-radius:3px;color:#171b20;background:#f4f7fa;font-size:12px}.extra-number input::-webkit-inner-spin-button{display:none}.k-model .lower-panel .extra-panel{color:#f1f4f7;background:#292c32}
+.show-grid .knob-control,.show-grid .fader-control{outline:1px solid #087fe58c}.show-grid .module{outline:1px solid #087fe5}.reference-overlay{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;opacity:.4;z-index:40;pointer-events:none}.demo-scrim{position:absolute;inset:76px 12px 12px;z-index:30;background:#e5e9edee;display:flex;align-items:center;justify-content:center}.demo-page{width:500px;background:#e0e5ea;border:1px solid #aab5c0;border-radius:5px;padding:18px}.demo-page p{font-size:14px;line-height:22px}.demo-patch{display:block;width:100%;margin-top:8px;padding:12px;text-align:left}.demo-parts{display:flex;gap:12px}.demo-parts button{padding:12px;flex:1}
+@media(max-width:1000px){.stand-toolbar small{display:none}.stand-toolbar{padding:0 10px;font-size:12px}.stand-toolbar strong{margin-left:5px}.stand-toolbar>div{gap:4px}}
+/* Shared dimensions; selectors, captions and numeric fields have distinct rows. */
+.skin{height:1134px}.main-grid{height:790px;grid-template-rows:232px 174px 372px}.oscillator-stack{grid-template-rows:256px 256px 278px}.osc-toolbar>.lamps{margin-top:-16px}.knob-label{line-height:18px;margin-top:2px}.faders{top:42px}.fader-body,.fader-body input{height:174px}.fader-track{height:190px;top:-6px}.lfo-knobs{top:74px;gap:0}.stand-toolbar select{width:auto}
+/* Panel and control finishes follow the selected Silver-K mockup. */
+.skin-header{background:linear-gradient(#088feb,#00559c)}
+.module{background:linear-gradient(125deg,#eef1f5,#e4eaf0)}
+button,select{background:linear-gradient(#364557,#202b3a);box-shadow:inset 0 1px 0 #ffffff18}
+.lamp-button{background:transparent;box-shadow:none}
+.skin-header nav button[aria-current=page]{background:linear-gradient(#129aef,#006bc2)}
+.part-tabs button{background:linear-gradient(#167cca,#0862a6)}
+.part-tabs button[aria-pressed=true]{background:linear-gradient(#fafcfe,#dfe5eb)}
+.lcd{background:linear-gradient(#0867df,#004fbc)}
+.lower-panel{background:#dce3e9}
+.lower-panel .module{background:linear-gradient(125deg,#e4eaf0,#d4dce4)}
+.k-model .lower-panel,.k-model .lower-panel .module{background:#292c32}
+
+/* Transparent heading space must not intercept the PWM LEDs. */
+.module-heading{pointer-events:none}.module-heading>button,.module-heading>select{pointer-events:auto}
+/* Review feedback: centered seams, both K LFOs, and Extra without scrolling. */
+.seam{left:50%;transform:translateX(-50%)}
+.k-lfos{position:absolute;top:40px;left:8px;right:8px;bottom:10px;display:grid;grid-template-rows:1fr 1fr;gap:12px}
+.k-lfo{position:relative;min-height:0}
+.k-lfo+.k-lfo{border-top:1px solid #bdc7cf;padding-top:6px}
+.k-lfo-menus{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.k-lfo-menus .menu-field{gap:4px;font-size:11px}
+.k-lfo-menus select{height:24px;padding:0 3px;font-size:11px}
+.k-lfo-knobs{position:absolute;top:30px;left:0;right:0;display:grid;grid-template-columns:1fr 1fr;justify-items:center}
+.k-lfo+.k-lfo .k-lfo-knobs{top:36px}
+.extra-content{overflow:visible;min-height:0;flex:1;display:grid;grid-template-columns:1fr;grid-auto-rows:min-content;align-content:start;gap:7px;padding:0;margin-top:8px}
+.extra-row{gap:3px;min-width:0}
+.extra-row>span{font-size:11px;line-height:12px;white-space:normal;overflow:visible;text-overflow:clip}
+.extra-row select{height:24px;min-width:0;width:100%;font-size:11px}
+.oscillator .extra-content,.filter .extra-content{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 12px}
+.program .extra-content,.arp .extra-content{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 10px}
+.k-model .lfo .extra-content{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 10px}
+/* Small trim pots keep the Extra grid compact, with the value to the right. */
+.trimmer-control{--knob-size:28px;width:100%;height:28px;flex-direction:row;justify-content:flex-start;gap:8px}
+.trimmer-control .dial img{width:32.2px;height:32.2px;left:-2.1px;top:-2.1px}
+.trimmer-value{min-width:32px;font:12px/20px ui-monospace,SFMono-Regular,Menlo,monospace;font-variant-numeric:tabular-nums;color:inherit;text-align:right}
+
+/* Trim pots only in Arp / Options; other Extra panels use horizontal sliders. */
+.extra-slider{display:flex;align-items:center;gap:8px;height:28px;min-width:0;width:100%}
+.extra-slider input{flex:1;min-width:0;width:0;height:24px;margin:0;accent-color:#087fe5;cursor:ew-resize}
+.extra-slider output{flex:0 0 32px}
+/* Review: keep the seam controls outside the oscillator Extra faces. */
+.oscillator>.extra-panel{bottom:18px}
+.oscillator:nth-child(n+2)>.extra-panel{top:18px}
+.oscillator:nth-child(3)>.extra-panel,.mixer>.extra-panel{bottom:60px}
+/* KS selects LFO in the header and waveform at bottom left. */
+.lfo .module-heading{gap:10px}
+.lfo .module-heading .lamps{pointer-events:auto;gap:8px;margin-left:4px}
+.lfo-knobs{top:60px}
+.lfo-bottom .menu-field{width:130px}
+/* Each K LFO has a vertical Rate / Delay stack. */
+.k-lfos{top:40px;bottom:8px;grid-template-columns:1fr 1fr;grid-template-rows:1fr;gap:12px}
+.k-lfo+.k-lfo{border-top:0;border-left:1px solid #bdc7cf;padding:0}
+.k-lfo-title{position:absolute;top:0;left:0;right:0;text-align:center;font-size:12px;line-height:14px;margin:0}
+.k-lfo-knobs,.k-lfo+.k-lfo .k-lfo-knobs{top:18px;grid-template-columns:1fr;grid-template-rows:120px 120px}
+.k-lfo-menus{position:absolute;top:266px;left:0;right:0;grid-template-columns:1fr;gap:6px}
+/* Widen Effects to the left edge of Amp Env; raise the left three sections. */
+.lower-panel{grid-template-columns:128px 294px 362px 614px}
+.lower-panel>.volume,.lower-panel>.arp,.lower-panel>.program{height:290px;top:-60px}
+.lower-knobs,.arp-knobs{top:120px}
+.arp-knobs{left:50%;transform:translateX(-50%);gap:0}
+.arp-sync-menu{position:absolute;top:46px;left:14px;right:14px}
+.arp-switches{top:84px;left:14px;right:14px;flex-direction:row;justify-content:space-between;gap:8px}
+.arp-menus{bottom:10px;gap:10px}
+.arp h2{font-size:14px}
+.program .lcd{top:52px;height:118px}
+.preset-nav{position:absolute;top:188px;left:14px;right:14px;display:flex;gap:12px}
+.preset-nav button{height:28px;flex:1;font-size:12px}
+.program-actions{top:238px}
+.fx-knobs{left:50%;right:auto;transform:translateX(-50%);width:500px;display:grid;grid-template-columns:repeat(5,100px)}
+.unused-effect{opacity:.24;user-select:none}
+.unused-effect .dial{cursor:default}
+.unused-effect .dial img{filter:grayscale(1)}
+.trimmer-control .dial img{width:32.2px;height:32.2px;left:-2.1px;top:-2.1px}
+.lower-panel{grid-template-rows:230px}
+.module>div[inert]{visibility:hidden}
+/* Structural layout: real panel bounds, one shared six-pixel gutter. */
+.skin{--panel-gap:6px;height:1122px}
+.skin-body{height:1026px;position:relative;margin-top:var(--panel-gap)}
+.main-grid{margin-top:0;gap:var(--panel-gap)}
+.oscillator-stack,.envelope-stack{background:linear-gradient(125deg,#eef1f5,#e4eaf0);border:1px solid #bdc7cf;border-radius:3px}
+.oscillator-stack{height:730px;align-self:start;grid-template-rows:256px 256px 216px}
+.oscillator-stack>.oscillator,.envelope-stack>.envelope{border:0;border-radius:0;background:transparent}
+.oscillator:not(:first-child)::before,.envelope:not(:first-child)::before{content:"";position:absolute;top:0;left:8px;right:8px;height:1px;background:#bdc7cf}
+.mixer{height:730px;align-self:start}
+.seam{bottom:-14px}
+.oscillator:nth-child(3)>.extra-panel{bottom:0}
+.mixer>.extra-panel{bottom:1px}
+.oscillator .extra-content{gap:7px 12px}
+.envelope-stack>.extra-panel{inset:1px}
+/* Lower panels occupy their actual rows, without moving over their neighbours. */
+.lower-panel{position:absolute;left:0;right:0;bottom:0;height:290px;margin:0;grid-template-columns:428px 362px 612px;grid-template-rows:290px;gap:var(--panel-gap);pointer-events:none}
+.k-model .lower-panel,.ks-model .lower-panel{background:transparent}
+.lower-panel>.module{top:0;pointer-events:auto}
+.lower-panel>.arp,.lower-panel>.program{height:290px}
+.lower-panel>.effects{height:230px;align-self:end}
+.master-module h2{font-size:16px}
+.master-knobs{position:absolute;top:40px;left:10px;display:grid;grid-template-columns:repeat(2,100px);grid-template-rows:repeat(2,120px)}
+.master-controls{position:absolute;top:48px;left:224px;right:12px;display:flex;flex-direction:column;gap:12px}
+.master-switches{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.master-controls .menu-field>span{font-size:11px}
+.master-controls .menu-field.inline{gap:6px}
+.master-controls .menu-field>span{width:54px;flex:0 0 54px}
+/* Filter and Effects share their six-column control grid. */
+.fx-knobs{left:8px;right:8px;width:auto;transform:none;grid-template-columns:repeat(6,minmax(0,1fr));justify-items:center}
+.fx-menus{display:grid;gap:12px;align-items:center}
+.fx-menus .menu-field>span{width:60px;flex:0 0 60px}
+.six-knobs{grid-template-columns:repeat(6,minmax(0,1fr))}
+
+/* Place separators halfway between the preceding knob row and the next header. */
+.oscillator-stack{--osc-divider-lift:21px}
+.oscillator:not(:first-child)::before{top:calc(-1 * var(--osc-divider-lift))}
+.seam{bottom:calc(-14px + var(--osc-divider-lift))}
+.oscillator:not(:last-child)>.extra-panel{bottom:calc(18px + var(--osc-divider-lift))}
+.master-knobs [data-param="volume"]{background:linear-gradient(#088feb,#00559c);color:#fff;border-radius:4px}
+
+/* Compact study: same topology and six-pixel gutters, less dead space. */
+.compact-skin{width:1280px;height:1000px;--knob-size:72px}
+.compact-skin .skin-header{gap:12px}
+.compact-skin .skin-header h1{font-size:32px;width:178px;margin-right:12px}
+.compact-skin .model-picker{width:220px}
+.compact-skin .part-tabs{gap:6px}
+.compact-skin .part-tabs button{width:44px}
+.compact-skin .skin-header nav{gap:6px}
+.compact-skin .skin-header nav button{width:80px}
+.compact-skin .skin-body{height:904px}
+.compact-skin .main-grid{height:700px;grid-template-columns:552px 136px 280px 268px;grid-template-rows:210px 154px 324px}
+.compact-skin .oscillator-stack{height:644px;grid-template-rows:224px 224px 194px;--osc-divider-lift:12px}
+.compact-skin .mixer{height:644px}
+.compact-skin h2{font-size:15px}
+.compact-skin .module-heading{left:8px;right:8px;gap:8px}
+.compact-skin .extra-button{min-width:54px;padding:0 8px}
+.compact-skin .osc-toolbar{right:68px;top:30px;grid-template-columns:104px 82px 112px;gap:10px}
+.compact-skin .six-knobs{top:84px}
+.compact-skin .knob-control:not(.trimmer-control){width:88px;height:106px}
+.compact-skin .knob-control:not(.trimmer-control) .dial img{width:82.8px;height:82.8px;left:-5.4px;top:-5.4px}
+.compact-skin .knob-label{font-size:11.5px;line-height:16px;margin-top:2px}
+.compact-skin .knob-value{font-size:12px;height:16px}
+.compact-skin .faders{top:40px;bottom:10px}
+.compact-skin .fader-body,.compact-skin .fader-body input{height:145px}
+.compact-skin .fader-track{height:161px}
+.compact-skin .two-knobs{top:42px}
+.compact-skin .lfo-knobs{top:44px;grid-template-rows:repeat(2,106px);gap:0}
+.compact-skin .lfo-bottom{bottom:8px;left:8px;right:8px;gap:10px}
+.compact-skin .lfo-bottom .menu-field{width:calc((100% - 10px)/2);gap:4px}
+.compact-skin .lfo-bottom .menu-field>span{font-size:11px}
+.compact-skin .lfo-bottom select{padding-left:4px;font-size:11px}
+.compact-skin .k-lfos{top:40px;bottom:6px;gap:10px}
+.compact-skin .k-lfo-knobs,.compact-skin .k-lfo+.k-lfo .k-lfo-knobs{top:8px;grid-template-rows:106px 106px}
+.compact-skin .k-lfo-menus{top:228px;gap:6px}
+.compact-skin .k-lfo-menus .menu-field{gap:4px}
+.compact-skin .k-lfo-menus select{height:22px}
+.compact-skin .lower-panel{height:254px;grid-template-columns:380px 308px 554px;grid-template-rows:254px}
+.compact-skin .lower-panel>.arp,.compact-skin .lower-panel>.program{height:254px}
+.compact-skin .lower-panel>.effects{height:198px}
+.compact-skin .master-knobs{top:40px;left:10px;grid-template-columns:repeat(2,88px);grid-template-rows:106px 106px}
+.compact-skin .master-controls{top:44px;left:196px;right:10px;gap:10px}
+.compact-skin .master-controls .menu-field>span{width:50px;flex-basis:50px}
+.compact-skin .master-switches{gap:4px}
+.compact-skin .master-switches .lamp-button{gap:5px;font-size:11px}
+.compact-skin .program .lcd{top:44px;height:100px;font-size:16px;line-height:22px}
+.compact-skin .preset-nav{top:160px;gap:10px}
+.compact-skin .program-actions{top:206px;gap:10px}
+.compact-skin .program-actions button{height:32px;font-size:12px}
+.compact-skin .fx-knobs{top:46px}
+.compact-skin .fx-menus{bottom:10px;gap:10px}
+.compact-skin .fx-menus .menu-field{gap:6px}
+.compact-skin .fx-menus .menu-field>span{font-size:11px;width:52px;flex-basis:52px}
+.compact-skin .effects .module-heading select{width:174px}
+.compact-skin .extra-heading{height:28px;flex-basis:28px}
+.compact-skin .extra-content{margin-top:6px;gap:6px}
+.compact-skin .mixer .extra-panel{padding:7px}
+.compact-skin .mixer .extra-content{gap:5px}
+.compact-skin .mixer .extra-slider{height:25px;gap:5px}
+.compact-skin .mixer .extra-slider output{flex-basis:25px}
+.compact-skin .oscillator .extra-content{gap:6px 10px}
+.compact-skin .program .extra-content,.compact-skin .arp .extra-content{gap:6px 8px}
+.compact-skin .trimmer-control{--knob-size:28px}
+@media(max-width:1150px){.stand-toolbar small{display:none}.stand-toolbar{font-size:12px;padding:0 10px}.stand-toolbar>div{gap:5px}.stand-toolbar button,.stand-toolbar select{padding:0 6px}}
+
+.compact-skin .k-lfo-title{display:none}
+.compact-skin .fader-control{height:100%}
+.compact-skin .fader-control>label{flex:0 0 22px}
+.compact-skin .fader-body{flex:1;min-height:0;height:auto}
+.compact-skin .fader-body input{height:100%}
+.compact-skin .fader-track{height:calc(100% + 16px)}
+.compact-skin .fader-control output{flex:0 0 18px}
+
+.compact-skin .oscillator .extra-content{gap:4px 10px}
+.compact-skin .oscillator .extra-slider{height:24px}
+.compact-skin .oscillator .extra-row>span{white-space:nowrap}
+
+/* Performance draft: four complete, aligned mixer strips on one screen. */
+.performance-page{position:absolute;inset:88px 12px 12px;display:grid;grid-template-rows:60px minmax(0,1fr);gap:6px}
+.compact-skin .performance-page{top:82px}
+.performance-heading{display:flex;align-items:center;justify-content:space-between;padding:0 20px}
+.performance-heading>div{display:flex;align-items:baseline;gap:16px}
+.performance-heading h2{font-size:20px}
+.performance-heading span{font-size:12px;color:#617080}
+.performance-power,.part-power{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;height:32px;padding:0 12px}
+.performance-power i,.part-power i{width:10px;height:10px;border-radius:50%;background:#171c22;border:1px solid #080c11;box-shadow:inset 0 1px 2px #ffffff33}
+.performance-power[aria-pressed=true] i,.part-power[aria-pressed=true] i{background:#ed3027;box-shadow:inset 1px 1px 2px #ffaaaa,0 0 4px #e6312755}
+.performance-channels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;min-height:0}
+.performance-channel{padding:16px 20px;display:flex;flex-direction:column;min-height:0}
+.performance-channel.selected-part{border-color:#4189c4;box-shadow:inset 0 3px 0 #087fe5}
+.channel-heading{display:flex;align-items:center;justify-content:space-between;flex:0 0 40px;margin-bottom:12px}
+.channel-number{display:flex;align-items:center;gap:10px;border:0;color:inherit;background:transparent;box-shadow:none;padding:0;font-size:17px;font-weight:700}
+.channel-number b{display:grid;place-items:center;width:34px;height:34px;border:1px solid #a7b5c1;border-radius:3px;background:linear-gradient(#f5f8fa,#d7e0e8);font-size:18px;font-weight:400}
+.channel-number[aria-pressed=true] b{background:linear-gradient(#088feb,#00559c);border-color:#075591;color:#fff}
+.channel-number:hover{background:transparent;color:#005b9e}
+.part-power{width:66px}
+.channel-controls{border:0;margin:0;padding:0;min-width:0;flex:1;min-height:0;display:grid;grid-template-rows:76px 80px 100px 146px 48px minmax(130px,1fr) 34px;gap:14px}
+.channel-controls:disabled{opacity:.4;pointer-events:none}
+.part-off .channel-preset,.part-off .channel-level{opacity:.45}
+.channel-preset{border:4px solid #1c2a38;border-radius:3px;background:linear-gradient(#0867df,#004fbc);color:#fff;padding:8px 10px;display:flex;align-items:center;gap:10px}
+.channel-preset label{flex:1;min-width:0;font-size:11px;line-height:16px;display:flex;flex-direction:column;gap:3px;color:#bedcfa}
+.channel-preset select{font:16px/24px ui-monospace,SFMono-Regular,Menlo,monospace;color:white;border:0;background:transparent;box-shadow:none;padding:0;width:100%;height:26px}
+.channel-preset select option{background:#15334d}
+.channel-preset-nav{display:flex;flex-direction:column;gap:4px}
+.channel-preset-nav button{width:25px;height:22px;font-size:10px;padding:0;background:#004c9b;border-color:#4984bb;box-shadow:none}
+.channel-section{border-bottom:1px solid #bdc7cf;padding-bottom:12px;min-width:0}
+.channel-section h3{margin:0 0 9px;font-size:12px;line-height:16px;color:#596879;font-weight:400}
+.channel-pair{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.channel-pair .menu-field,.channel-velocity .menu-field{gap:4px;font-size:12px}
+.channel-pair select,.channel-velocity select{height:28px;font-size:12px}
+.note-range{position:relative;height:8px;border-radius:2px;margin-top:12px;background:#c5cdd6;overflow:hidden}
+.note-range span{position:absolute;height:100%;background:repeating-linear-gradient(90deg,#1682d2 0,#1682d2 5px,#0560a2 5px,#0560a2 6px)}
+.channel-tuning .channel-pair{justify-items:center}
+.channel-tuning .knob-control{height:110px;width:100px}
+.channel-level{position:relative;display:flex;justify-content:center;min-height:0;padding:5px 0 2px;border-top:1px solid #bdc7cf}
+.performance-page .channel-level .fader-control{height:100%;width:100px}
+.performance-page .channel-level .fader-control>label{flex:0 0 22px;font-size:12px}
+.performance-page .channel-level .fader-body{height:auto;min-height:0;flex:1}
+.performance-page .channel-level .fader-body input{height:100%}
+.performance-page .channel-level .fader-track{height:calc(100% + 16px)}
+.performance-page .channel-level .fader-control output{flex:0 0 18px;font-size:14px;font-variant-numeric:tabular-nums}
+.channel-level-scale{position:absolute;top:29px;bottom:24px;left:calc(50% + 48px);display:flex;flex-direction:column;justify-content:space-between;font:11px/12px ui-monospace,SFMono-Regular,Menlo,monospace;color:#687684}
+.channel-edit{font-size:12px;font-weight:700;height:34px;width:100%}
+@media(max-width:700px){.stand-toolbar{height:auto;min-height:48px;flex-wrap:wrap;padding:8px 10px}.stand-toolbar>div{flex-wrap:wrap}.stand-canvas{padding-top:10px}}
+
+/* Note menus offer manual selection and one-shot MIDI Learn in the same strip. */
+.channel-range{position:relative}
+.note-trigger{display:flex;justify-content:space-between;align-items:center;gap:6px;width:100%;height:28px;text-align:left;padding:2px 7px;font-size:12px}
+.note-trigger[aria-expanded=true]{border-color:#087fe5}
+.note-popover{position:absolute;top:26px;left:0;right:0;z-index:25;background:linear-gradient(125deg,#eef1f5,#e4eaf0);border:1px solid #758ba0;border-radius:4px;box-shadow:0 6px 16px #16263844;padding:12px;color:#171b20}
+.note-popover-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px}
+.note-popover-heading h4{margin:0;font-size:13px;line-height:20px}
+.note-popover-heading button{width:24px;height:24px;padding:0;font-size:18px}
+.note-learn-separator{margin:12px 0;color:#617080;font-size:11px;text-align:center}
+.note-learn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:32px;font-size:12px;font-weight:700}
+.note-learn i{width:9px;height:9px;border-radius:50%;background:#111a23;border:1px solid #070d14}
+.note-learn.learning{background:linear-gradient(#088feb,#00559c)}
+.note-learn.learning i{background:#ee352c;box-shadow:0 0 5px #f33426}
+.note-learn-status{font-size:11px;line-height:16px;margin:10px 0 0;min-height:32px}
+.note-learn-status.error{color:#92321d}
+.note-learn-status.learned{color:#005995;font-weight:700}
+
+/* Novation-inspired low oval caps: the cap itself lights, no separate LED. */
+.lamp-button{gap:6px;padding:0 2px;height:22px;border:0;border-radius:3px;background:transparent;box-shadow:none;color:inherit}
+.lamp-button:hover{background:#087fe510;box-shadow:none}
+.lamp-button img.hardware-button-cap,.hardware-button-cap{display:block;width:26px;height:11px;flex:0 0 26px;object-fit:contain;filter:none;pointer-events:none;user-select:none;transition:filter 90ms ease,transform 60ms ease}
+.lamp-button.selected img.hardware-button-cap,.lamp-button[aria-pressed=true] img.hardware-button-cap{filter:drop-shadow(0 0 2px #e8352345)}
+.lamp-button:active .hardware-button-cap,.part-power:active .hardware-button-cap,.performance-power:active .hardware-button-cap{transform:translateY(1px)}
+.lamps.vertical{gap:0}
+.seam .fm-button{display:flex;justify-content:center;gap:6px;min-width:80px;width:auto;background:transparent;box-shadow:none}
+.lfo .module-heading .lamps{gap:6px}
+.master-switches .lamp-button,.compact-skin .master-switches .lamp-button{gap:4px}
+.master-switches .hardware-button-cap{width:22px;flex-basis:22px;height:10px}
+.part-power{width:76px}
+.performance-power,.part-power{background:transparent;border:0;color:inherit;box-shadow:none;padding:0 4px}
+.performance-power:hover,.part-power:hover{background:#087fe510}
+.performance-power[aria-pressed=true] .hardware-button-cap,.part-power[aria-pressed=true] .hardware-button-cap{filter:drop-shadow(0 0 2px #e8352345)}
+
+/* Approved revision: FM opens Extra; a whole Performance strip selects its part. */
+.seam .fm-button{display:block;width:74px;min-width:0;height:28px;background:linear-gradient(#364557,#202b3a);border:1px solid #526273;color:#f1f4f7;border-radius:4px;box-shadow:inset 0 1px 0 #ffffff18}
+.seam .fm-button:hover{background:#344153}
+.channel-title{margin:0;font-size:17px;line-height:34px;font-weight:700}
+.performance-channel:focus-visible{outline:2px solid #087fe5;outline-offset:1px}
