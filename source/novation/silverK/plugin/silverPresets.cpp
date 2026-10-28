@@ -16,7 +16,7 @@ void Processor::buildLibrary(){
  }
  for(unsigned n=0;n<100;++n){const auto* p=flash.data()+0x45800+n*1024;if(std::any_of(p,p+1024,[](uint8_t v){return v>=128;}))continue;
   Performance preset;preset.name=juce::String(n).paddedLeft('0',2)+"  "+nameAt(p,192);
-  preset.data={0xf0,0,0x20,0x29,1,0x42,0x7f,2,0,0x11,2,0,0};std::copy_n(p,1024,preset.data.begin()+13);preset.data.back()=0xf7;performanceLibrary.push_back(std::move(preset));
+  preset.data={0xf0,0,0x20,0x29,1,0x42,0x7f,2,0,0x11,2,1,uint8_t(n)};std::copy_n(p,1024,preset.data.begin()+13);preset.data.back()=0xf7;performanceLibrary.push_back(std::move(preset));
  }
  libraryBaseCount=library.size();performanceBaseCount=performanceLibrary.size();
 }
@@ -36,7 +36,7 @@ juce::String Processor::currentName()const{if(isFirmwareLoading())return "Loadin
 bool Processor::queueState(const ks::State& state,bool selectMode,juce::String& error){
  std::vector<uint8_t> bytes;
  if(selectMode){for(unsigned ch=0;ch<16;++ch)for(uint8_t cc:{uint8_t(64),uint8_t(123),uint8_t(120)})bytes.insert(bytes.end(),{uint8_t(0xb0|ch),cc,0});
-  const auto channel=controlChannel.load();bytes.insert(bytes.end(),{uint8_t(0xb0|channel),32,uint8_t(state.performance?65:33),uint8_t(0xc0|channel),0});}
+  auto select=ks::singleSelection(state.parts[0].data(),controlChannel.load());if(state.performance){select[2]=65;select[4]=0;}bytes.insert(bytes.end(),select.begin(),select.end());}
  const auto dump=ks::stateMessage(state);bytes.insert(bytes.end(),dump.begin(),dump.end());
  if(!state.performance){const auto metadata=ks::singleMetadata(state.parts[0].data(),controlChannel.load());bytes.insert(bytes.end(),metadata.begin(),metadata.end());}
  if(!queueUiMidi(bytes.data(),bytes.size())){error="Preset queue is full";return false;}resetPending();return true;

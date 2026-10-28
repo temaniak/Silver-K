@@ -5,6 +5,7 @@
 #include "ksMidiFileEventService.h"
 #include "ksNativeMidiDomainBindings.h"
 namespace ks {
+class NativeArpMainService;
 // The shared production host used by both central scheduling and transport.
 // Every ordinary mono/file request executes a real native child here.
 template<class Core>class NativeMonoArpOwnedGraph final {
@@ -17,10 +18,29 @@ public:
  unsigned nextClocks(int previous=-1,int previousRead=-1)const{if(complete())return 0;return component_==Component::Arp?arp_.nextClocks(previous,previousRead):component_==Component::Internal?internal_->nextClocks(previous):file_->nextClocks(previous,previousRead);}
  template<class R,class W,class Resolver>unsigned advanceBefore(unsigned b,R&&r,W&&w,Resolver&&resolve,int previous=-1,int previousRead=-1){return advanceObservedBefore(b,r,w,resolve,Noop{},previous,previousRead);}
  template<class R,class W,class Resolver,class O,std::enable_if_t<!std::is_integral_v<std::decay_t<O>>,int> =0>unsigned advanceBefore(unsigned b,R&&r,W&&w,Resolver&&resolve,O&&observer,int previous=-1,int previousRead=-1){return advanceObservedBefore(b,r,w,resolve,observer,previous,previousRead);}
- template<class R,class W,class Resolver,class O>unsigned advanceObservedBefore(unsigned budget,R&&read,W&&write,Resolver&&resolve,O&&observe,int previous=-1,int previousRead=-1){const auto cost=nextClocks(previous,previousRead);if(!cost||cost>budget)return 0;effect_={};const auto notify=[&](Notice n){static_assert(std::is_void_v<decltype(observe(n,*this))>);observe(n,*this);};
+ template<class R,class W,class Resolver,class O>unsigned advanceObservedBefore(unsigned budget,R&&read,W&&write,Resolver&&resolve,O&&observe,int previous=-1,int previousRead=-1){const auto cost=nextClocks(previous,previousRead);if(!cost||cost>budget)return 0;return advancePlannedPhase(cost,read,write,resolve,observe,previous,previousRead);}
+private:
+ template<class,class,class,class>friend class ServiceCycleService;
+ // The owner synchronously passes this phase's admitted nonzero cost.
+ template<class R,class W,class Resolver,class O>unsigned advancePlannedPhase(unsigned cost,R&&read,W&&write,Resolver&&resolve,O&&observe,int previous=-1,int previousRead=-1){beginPhase();const auto notify=[&](Notice n){static_assert(std::is_void_v<decltype(observe(n,*this))>);observe(n,*this);};
  if(component_==Component::Internal){internal_->advanceBefore(cost,read,write,resolve,previous);effect_={internal_->effect().read,internal_->effect().write};if(internal_->complete()){const auto&r=internal_->result();const auto transfer=internalMidiExpressionTransfer(*internal_);NativeMonoArpCoordinator::ChildResult result;result.outcome=0;result.expressionSource=transfer.value;result.expressionSourceMask=transfer.mask;result.activationKnown=r.activationKnown;result.activation=r.activation;notify(Notice::InternalComplete);if(!arp_.resumeInternal(result))throw std::logic_error("Arp internal child ownership");component_=Component::Arp;}return cost;}
  if(component_==Component::File){file_->advanceBefore(cost,read,write,resolve,observe,previous,previousRead);effect_={file_->effect().read,file_->effect().write};if(file_->complete()){const auto&r=file_->result();NativeMonoArpCoordinator::ChildResult result;result.outcome=0;result.stream=r.stream;result.record=r.record;result.recordKnown=true;result.expressionSource=r.expressionSource;result.expressionSourceMask=r.expressionSourceMask;result.activationKnown=true;result.activation=r.activation;notify(Notice::FileComplete);if(!arp_.resumeFile(result))throw std::logic_error("Arp file child ownership");component_=Component::Arp;}return cost;}
- arp_.advanceObservedBefore(cost,read,write,observe,previous,previousRead);effect_=arp_.effect();using Q=NativeMonoArpCoordinator::Request;if(arp_.request()!=Q::None){const auto&i=arp_.childInput();if(arp_.request()==Q::InternalDecode){internal_.emplace(NativeInternalMidiService::Input{i.byte,i.stream,i.context.activation,i.context.expressionSource});component_=Component::Internal;notify(Notice::InternalBegin);}else{file_.emplace(arp_.request()==Q::FileStart?MidiFileEventService::Kind::Start:MidiFileEventService::Kind::Continue,MidiFileEventService::Input{i.stream,i.byte,i.context.activation,i.record,MidiFileEventCoordinator::StreamReadDomain::MonoBootRomData});component_=Component::File;notify(Notice::FileBegin);}}if(complete())notify(Notice::Finished);return cost;}
+ arp_.advancePlannedPhase(cost,read,write,observe,previous,previousRead);finishArpPhase(observe);return cost;}
+ // Stack-only path; no typed route is retained by this owner.
+ struct ArithmeticRoute {Core*core=nullptr;NativeArpMainService*leaf=nullptr;explicit operator bool()const{return leaf!=nullptr;}};
+ ArithmeticRoute prepareArithmeticRoute(){if(component_!=Component::Arp||complete())return{};auto*leaf=arp_.arithmeticLeaf();return leaf?ArithmeticRoute{&arp_,leaf}:ArithmeticRoute{};}
+ unsigned arithmeticClocks(const ArithmeticRoute&r)const{return r.core->arithmeticClocks(r.leaf);}
+ void beginPhase(){effect_={};}
+ template<class O>void finishArpPhase(O&observe){
+  static_assert(std::is_void_v<decltype(observe(Notice::InternalBegin,*this))>);
+  static_assert(std::is_void_v<decltype(observe(Notice::FileBegin,*this))>);
+  static_assert(std::is_void_v<decltype(observe(Notice::Finished,*this))>);
+  effect_=arp_.effect();using Q=NativeMonoArpCoordinator::Request;if(arp_.request()!=Q::None){const auto&i=arp_.childInput();if(arp_.request()==Q::InternalDecode){internal_.emplace(NativeInternalMidiService::Input{i.byte,i.stream,i.context.activation,i.context.expressionSource});component_=Component::Internal;observe(Notice::InternalBegin,*this);}else{file_.emplace(arp_.request()==Q::FileStart?MidiFileEventService::Kind::Start:MidiFileEventService::Kind::Continue,MidiFileEventService::Input{i.stream,i.byte,i.context.activation,i.record,MidiFileEventCoordinator::StreamReadDomain::MonoBootRomData});component_=Component::File;observe(Notice::FileBegin,*this);}}if(complete())observe(Notice::Finished,*this);
+ }
+ template<class R,class W,class Resolver,class O>unsigned advanceArithmeticPhase(const ArithmeticRoute&r,unsigned cost,R&&read,W&&write,Resolver&&,O&&observe,int previous,int previousRead){
+  beginPhase();r.core->advanceArithmeticPhase(r.leaf,cost,read,write,observe,previous,previousRead);finishArpPhase(observe);return cost;
+ }
+public:
  uint32_t expressionSourceAfter(uint32_t prior)const{return arp_.expressionSourceAfter(prior);}uint8_t activationAfter(uint8_t prior)const{return arp_.activationAfter(prior);}
 private:
  Core arp_;Component component_=Component::Arp;Effect effect_{};std::optional<NativeInternalMidiService>internal_;std::optional<MidiFileEventService>file_;

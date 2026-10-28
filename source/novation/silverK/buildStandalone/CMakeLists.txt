@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.22)
-project(SilverK VERSION 0.2.4 LANGUAGES C CXX)
-set(CMAKE_OSX_DEPLOYMENT_TARGET 12.0 CACHE STRING "Deployment target")
+include("${CMAKE_CURRENT_LIST_DIR}/../../../../cmake/MacOSDefaults.cmake")
+project(SilverK VERSION 0.4.4 LANGUAGES C CXX)
+# This directory can also be configured directly, without the root CMake file.
+if(MSVC)
+    add_compile_options(/utf-8)
+endif()
 enable_testing()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -73,6 +77,13 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeVoices.c
 target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksRuntimeExtended.cpp")
 
 target_link_libraries(ksLib PUBLIC baseLib dsp56kEmu)
+add_executable(ksDemo_test "${ROOT}/source/novation/ks/ksLib/ksDemo_test.cpp")
+target_link_libraries(ksDemo_test PRIVATE ksLib)
+add_test(NAME ks_demo_data COMMAND ksDemo_test)
+add_executable(ksDrumEdit_test "${ROOT}/source/novation/ks/ksLib/ksDrumEdit_test.cpp")
+target_link_libraries(ksDrumEdit_test PRIVATE ksLib)
+add_test(NAME ks_drum_edit COMMAND ksDrumEdit_test)
+set_tests_properties(ks_drum_edit PROPERTIES SKIP_RETURN_CODE 77)
 # Frequency tracing is a separate diagnostic build; no per-boundary profile
 # checks or storage are present in an ordinary Release controller.
 option(SILVER_KS_CONTROLLER_PROFILING "Compile KS boundary-frequency diagnostics" OFF)
@@ -687,3 +698,4 @@ target_sources(ksLib PRIVATE "${ROOT}/source/novation/ks/ksLib/ksMidiFileGlobals
 # Apply after the complete target graph, including later Plugin/source additions.
 include("${ROOT}/source/novation/ks/ksLib/ksControllerSourcePartition.cmake")
 ks_schedule_controller_source_partition("${ROOT}/source/novation/ks/ksLib")
+add_subdirectory("${ROOT}/source/novation/waveRomBuilder" waveRomBuilder)

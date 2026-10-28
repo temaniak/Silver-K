@@ -4,6 +4,16 @@
 #include <cstdint>
 
 namespace silverK {
+enum class ClockSource { Host, Internal, Midi };
+
+// Copy the policy once per audio block. UI changes never touch the running
+// clock or send MIDI from the message thread.
+inline int firmwareClockSource(ClockSource source,bool hostOwnsTransport){
+ return source==ClockSource::Internal?1:source==ClockSource::Midi || hostOwnsTransport?2:0;
+}
+inline bool acceptsExternalTransport(ClockSource source,bool hostOwnsTransport){
+ return source!=ClockSource::Internal && !hostOwnsTransport;
+}
 // Audio-thread-owned MIDI clock. No storage grows with the block size.
 class HostClock {
 public:

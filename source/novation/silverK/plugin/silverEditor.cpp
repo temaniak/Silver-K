@@ -1,7 +1,8 @@
 #include "silverEditor.h"
 #include "silverBrowser.h"
 #include "silverPerformance.h"
-#include "BinaryData.h"
+#include "silverSkin.h"
+#include "silverImageScale.h"
 #include <cmath>
 #include <set>
 
@@ -10,42 +11,21 @@ namespace silverK
 namespace
 {
 using Spec = ksPlugin::Control;
-bool validSkin(const juce::var& v)
-{
-    const bool studio=v["layout"].toString()=="studio";
-    return v.isObject() && v["controls"].isArray() && v["effects"].isArray()
-        && (studio ? ((int(v["width"])==1440 && int(v["height"])==1122) || (int(v["width"])==1280 && int(v["height"])==1000)) && v["studioRegions"].isObject()
-                       && v["studioModels"]["K"].isArray() && v["studioModels"]["KS"].isArray()
-                   : int(v["width"])==1280 && int(v["height"])==752);
-}
-const juce::Colour silver(0xffced1d5), ink(0xff171b20), blue(0xff087fe5), dark(0xff24262a), light(0xfff1f4f7);
 juce::Rectangle<int> rect(const juce::var& v)
 {
     auto* a=v.getArray();
     return a && a->size()==4 ? juce::Rectangle<int>(int((*a)[0]),int((*a)[1]),int((*a)[2]),int((*a)[3])) : juce::Rectangle<int>{};
 }
-juce::var skinData(Processor& p)
-{
-    int size=0;const auto* bytes=BinaryData::getNamedResource("silverk_json",size);
-    auto skin=juce::JSON::parse(juce::String::fromUTF8(bytes,size));
-    if(p.skinChoice=="Custom" && juce::File(p.customSkin).existsAsFile()){
-      auto custom=juce::JSON::parse(juce::File(p.customSkin));
-      if(validSkin(custom))skin=custom;
-    }
-    return skin;
-}
-class SilverLook final : public juce::LookAndFeel_V4
+class SilverLook final : public SkinLookAndFeel
 {
     juce::Image knob,grip,standBase,volumeBase,buttonOff,buttonOn;
+    ImageScaleCache imageScaleCache;
 public:
-    SilverLook()
+    explicit SilverLook(const SkinPackage& package):SkinLookAndFeel(package)
     {
-        int size=0; const auto* data=BinaryData::getNamedResource("silverkknobbody_png",size);
-        knob=juce::ImageFileFormat::loadFrom(data,size);
-        data=BinaryData::getNamedResource("silverkknobgrip_png",size);
-        grip=juce::ImageFileFormat::loadFrom(data,size);
-        data=BinaryData::getNamedResource("silverkstandknobbase_png",size);
-        standBase=juce::ImageFileFormat::loadFrom(data,size);
+        knob=image("knobBody");grip=image("knobGrip");standBase=image("knobBase");
+        volumeBase=image("volumeBase");
+        if(!volumeBase.isValid()){
         volumeBase=standBase.createCopy();
         if(volumeBase.isValid()) {
             juce::Image::BitmapData pixels(volumeBase,juce::Image::BitmapData::readWrite);
@@ -58,26 +38,18 @@ public:
                 pixels.setPixelColour(x,y,juce::Colour::fromFloatRGBA(.025f+l*.3f,.13f+l*.75f,juce::jmin(1.f,.28f+l*.9f),c.getFloatAlpha()));
             }
         }
-        data=BinaryData::getNamedResource("silverkbuttonoff_png",size);buttonOff=juce::ImageFileFormat::loadFrom(data,size);
-        data=BinaryData::getNamedResource("silverkbuttonon_png",size);buttonOn=juce::ImageFileFormat::loadFrom(data,size);
-        setColour(juce::PopupMenu::backgroundColourId,juce::Colour(0xff202a34));
-        setColour(juce::PopupMenu::textColourId,light);
-        setColour(juce::PopupMenu::highlightedBackgroundColourId,blue);
-        setColour(juce::Slider::textBoxOutlineColourId,juce::Colours::transparentBlack);
-        setColour(juce::Slider::textBoxBackgroundColourId,juce::Colours::transparentBlack);
-        setColour(juce::ComboBox::textColourId,light);
-        setColour(juce::ToggleButton::textColourId,ink);
-        setColour(juce::ToggleButton::tickColourId,blue);
-        setColour(juce::ToggleButton::tickDisabledColourId,ink.withAlpha(.4f));
+        }
+        buttonOff=image("buttonOff");buttonOn=image("buttonOn");
+
     }
     juce::Label* createSliderTextBox(juce::Slider& slider) override
     {
         auto* field=LookAndFeel_V4::createSliderTextBox(slider);
-        field->setColour(juce::Label::outlineColourId,juce::Colours::transparentBlack);
-        field->setColour(juce::Label::outlineWhenEditingColourId,juce::Colours::transparentBlack);
-        field->setColour(juce::TextEditor::outlineColourId,juce::Colours::transparentBlack);
-        field->setColour(juce::TextEditor::focusedOutlineColourId,juce::Colours::transparentBlack);
-        field->setColour(juce::TextEditor::backgroundColourId,juce::Colours::transparentBlack);
+        setSkinColour(*field,juce::Label::outlineColourId,juce::Colours::transparentBlack);
+        setSkinColour(*field,juce::Label::outlineWhenEditingColourId,juce::Colours::transparentBlack);
+        setSkinColour(*field,juce::TextEditor::outlineColourId,juce::Colours::transparentBlack);
+        setSkinColour(*field,juce::TextEditor::focusedOutlineColourId,juce::Colours::transparentBlack);
+        setSkinColour(*field,juce::TextEditor::backgroundColourId,juce::Colours::transparentBlack);
         return field;
     }
     void drawRotarySlider(juce::Graphics& g,int x,int y,int w,int h,float pos,float start,float end,juce::Slider& slider) override
@@ -85,54 +57,77 @@ public:
         const float available=float(juce::jmin(w,h))-4;
         const float requested=slider.getProperties().contains("rotaryDiameter")?float(slider.getProperties()["rotaryDiameter"]):available;
         const float d=juce::jmin(available,requested),cx=x+w*.5f,cy=y+h*.5f;
-        const float position=juce::jlimit(0.f,1.f,pos);
+        float position=juce::jlimit(0.f,1.f,pos);
+        const bool bipolar=slider.getProperties().contains("bipolarZero");
+        if(bipolar){
+            const float zero=float(slider.getProperties()["bipolarZero"]);
+            position=position<=zero?.5f*position/zero:.5f+.5f*(position-zero)/(1.f-zero);
+        }
+        const auto ledLit=[position,bipolar](int step){
+            const float point=float(step)/20.f;
+            return bipolar?(point>=juce::jmin(.5f,position) && point<=juce::jmax(.5f,position)):point<=position;
+        };
         const float angle=start+position*(end-start);
+        if(drawKnobStrip(g,slider,{cx-d*.5f,cy-d*.5f,d,d},position))return;
+        if(isFlat())
+        {
+            const float radius=d*.43f;
+            juce::Path track;track.addCentredArc(cx,cy,radius,radius,0,start,end,true);
+            g.setColour(skinColour(slider,0xffbdc7cf));g.strokePath(track,juce::PathStrokeType(3.f));
+            juce::Path value;const float origin=bipolar?start+(end-start)*.5f:start;
+            value.addCentredArc(cx,cy,radius,radius,0,juce::jmin(origin,angle),juce::jmax(origin,angle),true);
+            g.setColour(skinColour(slider,0xff087fe5));g.strokePath(value,juce::PathStrokeType(3.f));
+            g.setColour(skinColour(slider,0xff171b20));
+            g.drawLine(cx+std::sin(angle)*d*.13f,cy-std::cos(angle)*d*.13f,cx+std::sin(angle)*d*.33f,cy-std::cos(angle)*d*.33f,2.f);
+            return;
+        }
         if(bool(slider.getProperties()["standKnob"]) && standBase.isValid())
         {
-            // This artwork never rotates: material, ribs and the upper-left light
+            // This artwork never rotates: material, ribs and the upper-left lighting
             // stay fixed. Only the live indicator and the lit arc change.
             const float imageDiameter=d*1.15f;
-            const auto& artwork=bool(slider.getProperties()["blueVolume"])?volumeBase:standBase;
+            const auto artwork=imageScaleCache.forDrawing(g,bool(slider.getProperties()["blueVolume"])?volumeBase:standBase,imageDiameter,imageDiameter);
             g.drawImage(artwork,cx-imageDiameter*.5f,cy-imageDiameter*.5f,imageDiameter,imageDiameter,0,0,artwork.getWidth(),artwork.getHeight());
             if(slider.getProperties()["rotaryStyle"].toString()!="classic")for(int i=0;i<21;++i)
             {
                 const float a=start+(end-start)*i/20.f,r=d*.45f,dot=juce::jmax(2.f,d*.037f);
                 const float dx=cx+std::sin(a)*r,dy=cy-std::cos(a)*r;
-                const bool lit=float(i)/20.f<=position;
-                if(lit){g.setColour(juce::Colour(0xff008bff).withAlpha(.16f));g.fillEllipse(dx-dot,dy-dot,dot*2,dot*2);}
-                g.setColour(lit?juce::Colour(0xff25c3ff):juce::Colour(0xff26303b));g.fillEllipse(dx-dot*.5f,dy-dot*.5f,dot,dot);
+                const bool lit=ledLit(i);
+                if(lit){g.setColour(skinColour(slider,0xff008bff).withAlpha(.16f));g.fillEllipse(dx-dot,dy-dot,dot*2,dot*2);}
+                g.setColour(lit?skinColour(slider,0xff25c3ff):skinColour(slider,0xff26303b));g.fillEllipse(dx-dot*.5f,dy-dot*.5f,dot,dot);
             }
             const float markerWidth=juce::jmax(1.5f,d*.026f);
             juce::Path marker;marker.addRoundedRectangle(-markerWidth*.5f,-d*.31f,markerWidth,d*.15f,markerWidth*.5f);
-            g.setColour(light);g.fillPath(marker,juce::AffineTransform::rotation(angle).translated(cx,cy));
+            g.setColour(skinColour(slider,0xfff1f4f7));g.fillPath(marker,juce::AffineTransform::rotation(angle).translated(cx,cy));
             return;
         }
         if(slider.getProperties()["rotaryStyle"].toString()=="classic")
         {
             // The same cap size as the main knobs, with a smooth bevel instead
             // of the rubber grip and LED surround. Its lighting remains fixed.
-            g.setGradientFill(juce::ColourGradient(juce::Colour(0xff737a82),cx-d*.3f,cy-d*.4f,
-                juce::Colour(0xff10141a),cx+d*.3f,cy+d*.4f,false));
+            g.setGradientFill(juce::ColourGradient(skinColour(slider,0xff737a82),cx-d*.3f,cy-d*.4f,
+                skinColour(slider,0xff10141a),cx+d*.3f,cy+d*.4f,false));
             g.fillEllipse(cx-d*.5f,cy-d*.5f,d,d);
             const float faceDiameter=d*.91f,cap=faceDiameter/.674f;
             if(knob.isValid())
             {
+                const auto artwork=imageScaleCache.forDrawing(g,knob,cap,cap);
                 juce::Graphics::ScopedSaveState saved(g);
                 juce::Path face;face.addEllipse(cx-faceDiameter*.5f,cy-faceDiameter*.5f,faceDiameter,faceDiameter);g.reduceClipRegion(face);
-                g.drawImageTransformed(knob,juce::AffineTransform::scale(cap/knob.getWidth(),cap/knob.getHeight())
+                g.drawImageTransformed(artwork,juce::AffineTransform::scale(cap/artwork.getWidth(),cap/artwork.getHeight())
                     .followedBy(juce::AffineTransform::translation(cx-cap*.5f,cy-cap*.5f)));
             }
             const float markerWidth=juce::jmax(1.5f,d*.025f);
             juce::Path marker;marker.addRoundedRectangle(-markerWidth*.5f,-d*.39f,markerWidth,d*.17f,markerWidth*.5f);
-            g.setColour(light);g.fillPath(marker,juce::AffineTransform::rotation(angle).translated(cx,cy));
+            g.setColour(skinColour(slider,0xfff1f4f7));g.fillPath(marker,juce::AffineTransform::rotation(angle).translated(cx,cy));
             return;
         }
-        g.setColour(juce::Colour(0xff10151c));g.fillEllipse(cx-d*.5f,cy-d*.5f,d,d);
+        g.setColour(skinColour(slider,0xff10151c));g.fillEllipse(cx-d*.5f,cy-d*.5f,d,d);
         for(int i=0;i<21;++i)
         {
             const float a=start+(end-start)*i/20.f,r=d*.45f;
             // Do not illuminate a step beyond the pointer by rounding upwards.
-            g.setColour(float(i)/20.f<=position?juce::Colour(0xff4cb2ff):juce::Colour(0xff27303b));
+            g.setColour(ledLit(i)?skinColour(slider,0xff4cb2ff):skinColour(slider,0xff27303b));
             const float dot=juce::jmax(2.f,d*.036f);
             g.fillEllipse(cx+std::sin(a)*r-dot*.5f,cy-std::cos(a)*r-dot*.5f,dot,dot);
         }
@@ -143,10 +138,11 @@ public:
         ring.setUsingNonZeroWinding(false);
         if(grip.isValid())
         {
+            const auto artwork=imageScaleCache.forDrawing(g,grip,cap,cap);
             juce::Graphics::ScopedSaveState saved(g);
             g.reduceClipRegion(ring);
             // Rotate neutral rubber geometry, then light it in panel space.
-            g.drawImageTransformed(grip,juce::AffineTransform::scale(cap/grip.getWidth(),cap/grip.getHeight())
+            g.drawImageTransformed(artwork,juce::AffineTransform::scale(cap/artwork.getWidth(),cap/artwork.getHeight())
                 .followedBy(juce::AffineTransform::translation(-cap*.5f,-cap*.5f))
                 .followedBy(juce::AffineTransform::rotation(angle))
                 .followedBy(juce::AffineTransform::translation(cx,cy)));
@@ -156,50 +152,80 @@ public:
         }
         if(knob.isValid())
         {
+            const auto artwork=imageScaleCache.forDrawing(g,knob,cap,cap);
             juce::Graphics::ScopedSaveState saved(g);
             juce::Path face;face.addEllipse(cx-cap*.337f,cy-cap*.337f,cap*.674f,cap*.674f);g.reduceClipRegion(face);
-            g.drawImageTransformed(knob,juce::AffineTransform::scale(cap/knob.getWidth(),cap/knob.getHeight())
+            g.drawImageTransformed(artwork,juce::AffineTransform::scale(cap/artwork.getWidth(),cap/artwork.getHeight())
                 .followedBy(juce::AffineTransform::translation(cx-cap*.5f,cy-cap*.5f)));
         }
         // The face and scene lighting stay fixed; grip and marker turn together.
         const float markerWidth=juce::jmax(1.5f,cap*.021f);
         juce::Path marker;
         marker.addRoundedRectangle(-markerWidth*.5f,-cap*.32f,markerWidth,cap*.14f,markerWidth*.5f);
-        g.setColour(juce::Colour(0xfff4f5f7));
+        g.setColour(skinColour(slider,0xfff4f5f7));
         g.fillPath(marker,juce::AffineTransform::rotation(angle).translated(cx,cy));
     }
     void drawLinearSlider(juce::Graphics& g,int x,int y,int w,int h,float pos,float,float,juce::Slider::SliderStyle style,juce::Slider& s) override
     {
-        if(style!=juce::Slider::LinearVertical){LookAndFeel_V4::drawLinearSlider(g,x,y,w,h,pos,0,0,style,s);return;}
+        if(isFlat() && (style==juce::Slider::LinearVertical || style==juce::Slider::LinearHorizontal)){
+            const bool vertical=style==juce::Slider::LinearVertical;
+            const float cx=x+w*.5f,cy=y+h*.5f;
+            g.setColour(skinColour(s,0xffbdc7cf));
+            if(vertical)g.fillRect(cx-2,float(y),4.f,float(h));else g.fillRect(float(x),cy-2,float(w),4.f);
+            g.setColour(skinColour(s,0xff087fe5));
+            if(vertical){g.fillRect(cx-2,pos,4.f,y+h-pos);g.fillRect(cx-11,pos-3,22.f,6.f);}
+            else{g.fillRect(float(x),cy-2,pos-x,4.f);g.fillRect(pos-3,cy-8,6.f,16.f);}
+            return;
+        }
+        const auto appearance=s.getProperties()["silverSkinStyle"];
+        const auto& track=image(appearance.getProperty("faderTrack","faderTrack").toString());
+        const auto& thumb=image(appearance.getProperty("faderThumb","faderThumb").toString());
+        if(style!=juce::Slider::LinearVertical){
+            if((track.isValid()||thumb.isValid()) && style==juce::Slider::LinearHorizontal){
+                if(track.isValid())g.drawImage(track,{float(x),float(y),float(w),float(h)},juce::RectanglePlacement::stretchToFit);
+                else{g.setColour(s.findColour(juce::Slider::trackColourId));g.fillRoundedRectangle(float(x),y+h*.5f-2,float(w),4,2);}
+                if(thumb.isValid()){const float tw=juce::jmin(float(w),float(thumb.getWidth())),th=juce::jmin(float(h),float(thumb.getHeight()));g.drawImage(thumb,{pos-tw*.5f,y+(h-th)*.5f,tw,th},juce::RectanglePlacement::stretchToFit);}
+                else{g.setColour(s.findColour(juce::Slider::thumbColourId));g.fillEllipse(pos-4,y+h*.5f-4,8,8);}return;
+            }
+            LookAndFeel_V4::drawLinearSlider(g,x,y,w,h,pos,0,0,style,s);return;
+        }
         const float cx=x+w*.5f;
-        g.setColour(ink.withAlpha(.4f));
+        if(track.isValid())g.drawImage(track,{float(x),float(y),float(w),float(h)},juce::RectanglePlacement::stretchToFit);
+        else{
+        g.setColour(skinColour(s,0xff171b20).withAlpha(.4f));
         for(int i=0;i<=10;++i){float yy=y+h*i/10.f;g.drawLine(cx-w*.32f,yy,cx+w*.32f,yy,1.f);}
-        g.setColour(juce::Colour(0xff0b0d10));g.fillRoundedRectangle(cx-3,float(y),6,float(h),2);
-        g.setGradientFill(juce::ColourGradient(juce::Colour(0xff5b6068),cx,pos-8,juce::Colour(0xff11151b),cx,pos+9,false));
+        g.setColour(skinColour(s,0xff0b0d10));g.fillRoundedRectangle(cx-3,float(y),6,float(h),2);
+        }
+        if(thumb.isValid()){const float tw=juce::jmin(float(w),float(thumb.getWidth())),th=juce::jmin(float(h),float(thumb.getHeight()));g.drawImage(thumb,{cx-tw*.5f,pos-th*.5f,tw,th},juce::RectanglePlacement::stretchToFit);return;}
+        g.setGradientFill(juce::ColourGradient(skinColour(s,0xff5b6068),cx,pos-8,skinColour(s,0xff11151b),cx,pos+9,false));
         g.fillRoundedRectangle(cx-18,pos-8,36,16,5);
-        g.setColour(light.withAlpha(.8f));g.drawLine(cx-12,pos-5,cx+12,pos-5,1.5f);
+        g.setColour(skinColour(s,0xfff1f4f7).withAlpha(.8f));g.drawLine(cx-12,pos-5,cx+12,pos-5,1.5f);
     }
-    static juce::Font selectorFont(const juce::Button& b)
+    juce::Font selectorFont(const juce::Button& b)
     {
         const bool compact=bool(b.getProperties()["compact"])||(b.getParentComponent()&&bool(b.getParentComponent()->getProperties()["compact"]));
-        return juce::Font(compact||bool(b.getProperties()["small"])?11.f:13.f,juce::Font::bold);
+        return skinFont(b,compact||bool(b.getProperties()["small"])?11.f:13.f,juce::Font::bold);
     }
-    static float capWidth(const juce::Button& b)
+    float capWidth(const juce::Button& b)
     {
         return juce::jlimit(14.f,26.f,float(b.getWidth())-selectorFont(b).getStringWidthFloat(b.getButtonText())-10.f);
     }
     void drawCap(juce::Graphics& g,bool on,juce::Rectangle<float> r,bool enabled,bool down)
     {
-        const auto& image=on?buttonOn:buttonOff;
+        if(isFlat()){g.setColour(colour(on?0xff087fe5:0xffbdc7cf).withMultipliedAlpha(enabled?1.f:.4f));g.fillRect(r.reduced(0,2));return;}
+        const auto image=imageScaleCache.forDrawing(g,on?buttonOn:buttonOff,r.getWidth(),r.getHeight());
         g.setOpacity(enabled?1.f:.4f);g.drawImage(image,r.translated(0,down?1.f:0.f),juce::RectanglePlacement::stretchToFit);g.setOpacity(1.f);
     }
     void drawButtonBackground(juce::Graphics& g,juce::Button& b,const juce::Colour&,bool hover,bool down) override
     {
         auto bounds=b.getLocalBounds().toFloat().reduced(1);
+        const auto style=b.getProperties()["silverSkinStyle"];
+        const auto& custom=image(style[b.getToggleState()?"buttonOn":"buttonOff"].toString());
+        if(custom.isValid()){const auto artwork=imageScaleCache.forDrawing(g,custom,bounds.getWidth(),bounds.getHeight());g.setOpacity(b.isEnabled()?1.f:.4f);g.drawImage(artwork,bounds,juce::RectanglePlacement::stretchToFit);g.setOpacity(1.f);return;}
         const bool on=b.getToggleState();
         if(b.getProperties().contains("waveform"))
         {
-            if(on||hover){g.setColour(blue.withAlpha(on?.13f:.07f));g.fillRoundedRectangle(bounds,3);}
+            if(on||hover){g.setColour(skinColour(b,0xff087fe5).withAlpha(on?.13f:.07f));g.fillRoundedRectangle(bounds,isFlat()?0.f:3.f);}
             const float cx=bounds.getCentreX();
             drawCap(g,on,{cx-10,2,20,8},b.isEnabled(),down);
             const float left=4,right=float(b.getWidth()-4),top=14,bottom=24;
@@ -208,45 +234,77 @@ public:
             else if(wave==1){shape.startNewSubPath(left,bottom);shape.lineTo((left+right)*.5f,top);shape.lineTo(right,bottom);}
             else if(wave==2){shape.startNewSubPath(left,bottom);shape.lineTo(right,top);shape.lineTo(right,bottom);}
             else{shape.startNewSubPath(left,bottom);shape.lineTo(left,top);shape.lineTo((left+right)*.5f,top);shape.lineTo((left+right)*.5f,bottom);shape.lineTo(right,bottom);}
-            g.setColour(b.isEnabled()?ink:ink.withAlpha(.4f));g.strokePath(shape,juce::PathStrokeType(1.6f));return;
+            g.setColour(b.isEnabled()?skinColour(b,0xff171b20):skinColour(b,0xff171b20).withAlpha(.4f));g.strokePath(shape,juce::PathStrokeType(1.6f));return;
+        }
+        if(isFlat()){
+            auto fill=skinColour(b,on?0xff087fe5:0xffe0e5ea);
+            if(down)fill=fill.darker(.1f);else if(hover)fill=fill.interpolatedWith(skinColour(b,0xff087fe5),.15f);
+            g.setColour(fill.withMultipliedAlpha(b.isEnabled()?1.f:.5f));g.fillRect(bounds);
+            g.setColour(skinColour(b,b.hasKeyboardFocus(true)?0xff087fe5:0xffbdc7cf));g.drawRect(bounds,1.f);
+            return;
         }
         if(bool(b.getProperties()["partTab"])){
             juce::Path tab;tab.addRoundedRectangle(bounds.getX(),bounds.getY(),bounds.getWidth(),bounds.getHeight(),5,5,true,true,false,false);
-            g.setGradientFill(juce::ColourGradient(on?juce::Colour(0xffe8ebef):juce::Colour(0xff666d78),0,bounds.getY(),on?juce::Colour(0xffbec3cb):juce::Colour(0xff343a43),0,bounds.getBottom(),false));g.fillPath(tab);g.setColour(juce::Colour(0xff243041));g.strokePath(tab,juce::PathStrokeType(1));if(on){g.setColour(blue);g.fillRect(bounds.removeFromBottom(3));}return;
+            g.setGradientFill(juce::ColourGradient(on?skinColour(b,0xffe8ebef):skinColour(b,0xff666d78),0,bounds.getY(),on?skinColour(b,0xffbec3cb):skinColour(b,0xff343a43),0,bounds.getBottom(),false));g.fillPath(tab);g.setColour(skinColour(b,0xff243041));g.strokePath(tab,juce::PathStrokeType(1));if(on){g.setColour(skinColour(b,0xff087fe5));g.fillRect(bounds.removeFromBottom(3));}return;
         }
         if(bool(b.getProperties()["led"]))
         {
-            if(hover){g.setColour(blue.withAlpha(.08f));g.fillRoundedRectangle(bounds,3);}
+            if(hover){g.setColour(skinColour(b,0xff087fe5).withAlpha(.08f));g.fillRoundedRectangle(bounds,3);}
             const float width=capWidth(b);drawCap(g,on,{3,bounds.getCentreY()-width/4.8f,width,width/2.4f},b.isEnabled(),down);
             return;
         }
-        const auto top=on?juce::Colour(0xff1695ee):juce::Colour(0xff434a54);
-        const auto bottom=on?juce::Colour(0xff0752a7):juce::Colour(0xff171e28);
+        const auto top=on?skinColour(b,0xff1695ee):skinColour(b,0xff434a54);
+        const auto bottom=on?skinColour(b,0xff0752a7):skinColour(b,0xff171e28);
         g.setGradientFill(juce::ColourGradient(hover?top.brighter(.12f):top,0,bounds.getY(),down?bottom.darker(.2f):bottom,0,bounds.getBottom(),false));
-        g.fillRoundedRectangle(bounds,4);g.setColour(juce::Colour(0xff10151c));g.drawRoundedRectangle(bounds,4,1);
-        g.setColour(light.withAlpha(.22f));g.drawLine(bounds.getX()+3,bounds.getY()+2,bounds.getRight()-3,bounds.getY()+2);
+        g.fillRoundedRectangle(bounds,4);g.setColour(skinColour(b,0xff10151c));g.drawRoundedRectangle(bounds,4,1);
+        g.setColour(skinColour(b,0xfff1f4f7).withAlpha(.22f));g.drawLine(bounds.getX()+3,bounds.getY()+2,bounds.getRight()-3,bounds.getY()+2);
     }
     void drawButtonText(juce::Graphics& g,juce::TextButton& b,bool,bool) override
     {
         if(b.getProperties().contains("waveform"))return;
         const bool compact=bool(b.getProperties()["compact"]) || (b.getParentComponent()&&bool(b.getParentComponent()->getProperties()["compact"]));
-        const auto textColour=(bool(b.getProperties()["partTab"])&&b.getToggleState())?ink:(bool(b.getProperties()["led"])&&!bool(b.getProperties()["dark"])?ink:light);
+        const auto textColour=isFlat()?skinColour(b,b.getToggleState()?0xfff1f4f7:0xff171b20):(bool(b.getProperties()["partTab"])&&b.getToggleState())?skinColour(b,0xff171b20):(bool(b.getProperties()["led"])&&!bool(b.getProperties()["dark"])?skinColour(b,0xff171b20):skinColour(b,0xfff1f4f7));
         g.setColour(b.isEnabled()?textColour:textColour.withAlpha(.4f));
-        g.setFont(juce::Font((compact||bool(b.getProperties()["small"]))?11.f:13.f,juce::Font::bold));
+        g.setFont(skinFont(b,(compact||bool(b.getProperties()["small"]))?11.f:13.f,juce::Font::bold));
         auto area=b.getLocalBounds().reduced(3);
-        if(bool(b.getProperties()["led"]))area.removeFromLeft(juce::roundToInt(capWidth(b))+5);
+        if(!isFlat() && bool(b.getProperties()["led"]))area.removeFromLeft(juce::roundToInt(capWidth(b))+5);
         g.drawFittedText(b.getButtonText(),area,juce::Justification::centred,1);
     }
     void drawComboBox(juce::Graphics& g,int w,int h,bool,int,int,int,int,juce::ComboBox& c) override
     {
-        if(!bool(c.getProperties()["performancePreset"])) {
-        g.setGradientFill(juce::ColourGradient(juce::Colour(0xff344150),0,0,juce::Colour(0xff1a242e),0,float(h),false));
-        g.fillRoundedRectangle(0,0,float(w),float(h),3);
-        g.setColour(juce::Colour(0xff657180));g.drawRoundedRectangle(.5f,.5f,float(w)-1,float(h)-1,3,1);
+        if(isFlat()){
+            g.setColour(skinColour(c,0xffe0e5ea));g.fillRect(0,0,w,h);
+            g.setColour(skinColour(c,c.hasKeyboardFocus(true)?0xff087fe5:0xffbdc7cf));g.drawRect(0,0,w,h);
+            g.setColour(skinColour(c,0xff171b20));juce::Path arrow;arrow.addTriangle(float(w-14),h*.43f,float(w-6),h*.43f,float(w-10),h*.62f);g.fillPath(arrow);return;
         }
-        g.setColour(light);juce::Path arrow;arrow.addTriangle(float(w-15),h*.43f,float(w-7),h*.43f,float(w-11),h*.62f);g.fillPath(arrow);
+        if(!bool(c.getProperties()["performancePreset"])) {
+        g.setGradientFill(juce::ColourGradient(skinColour(c,0xff344150),0,0,skinColour(c,0xff1a242e),0,float(h),false));
+        g.fillRoundedRectangle(0,0,float(w),float(h),3);
+        g.setColour(skinColour(c,0xff657180));g.drawRoundedRectangle(.5f,.5f,float(w)-1,float(h)-1,3,1);
+        }
+        g.setColour(skinColour(c,0xfff1f4f7));juce::Path arrow;arrow.addTriangle(float(w-15),h*.43f,float(w-7),h*.43f,float(w-11),h*.62f);g.fillPath(arrow);
     }
-    juce::Font getComboBoxFont(juce::ComboBox& c) override{if(bool(c.getProperties()["performancePreset"]))return juce::Font(juce::Font::getDefaultMonospacedFontName(),16.f,juce::Font::plain);return juce::Font(bool(c.getProperties()["compact"])?11.5f:12.5f);}
+    juce::Font getComboBoxFont(juce::ComboBox& c) override{if(bool(c.getProperties()["performancePreset"]))return (package.typeface || package.theme["font"]["family"].toString().isNotEmpty()?skinFont(c,16.f):juce::Font(juce::Font::getDefaultMonospacedFontName(),16.f*float(package.theme["font"]["scale"]),juce::Font::plain));return skinFont(c,bool(c.getProperties()["compact"])?11.5f:12.5f);}
+    void drawTableHeaderBackground(juce::Graphics& g,juce::TableHeaderComponent& header) override
+    {
+        if(!isFlat()){LookAndFeel_V4::drawTableHeaderBackground(g,header);return;}
+        g.fillAll(header.findColour(juce::TableHeaderComponent::backgroundColourId));
+        g.setColour(header.findColour(juce::TableHeaderComponent::outlineColourId));
+        g.drawHorizontalLine(header.getHeight()-1,0.f,float(header.getWidth()));
+        for(int i=0;i<header.getNumColumns(true);++i)g.fillRect(header.getColumnPosition(i).removeFromRight(1));
+    }
+    void drawLabel(juce::Graphics& g,juce::Label& label) override
+    {
+        if(label.getComponentID()!="setupHelp" || label.isBeingEdited()){LookAndFeel_V4::drawLabel(g,label);return;}
+        // Keep explicit data-folder help lines readable, fitting long user
+        // paths and file names independently.
+        g.fillAll(label.findColour(juce::Label::backgroundColourId));g.setFont(label.getFont());
+        g.setColour(label.findColour(juce::Label::textColourId));
+        auto area=label.getBorderSize().subtractedFrom(label.getLocalBounds());
+        const int lineHeight=juce::roundToInt(label.getFont().getHeight()*1.2f);
+        for(const auto& line:juce::StringArray::fromLines(label.getText()))
+            g.drawFittedText(line,area.removeFromTop(lineHeight),juce::Justification::centredLeft,1,.7f);
+    }
 };
 struct ControlSlider final : juce::Slider
 {
@@ -266,30 +324,31 @@ struct LfoIndicator final : juce::Label
     {
         const bool on=bool(getProperties()["selected"]);
         const float y=getHeight()*.5f-6;
-        g.setColour(on?juce::Colour(0xffb21718):juce::Colour(0xff26292d));g.fillEllipse(0,y,12,12);
-        g.setColour(on?juce::Colour(0xffff5450):juce::Colour(0xff6b7076));g.fillEllipse(3,y+2,5,3);
+        g.setColour(on?skinColour(*this,0xffb21718):skinColour(*this,0xff26292d));g.fillEllipse(0,y,12,12);
+        g.setColour(on?skinColour(*this,0xffff5450):skinColour(*this,0xff6b7076));g.fillEllipse(3,y+2,5,3);
         juce::Label::paint(g);
     }
 };
-struct Control final : juce::Component
+struct Control final : juce::Component, private juce::Timer
 {
     juce::RangedAudioParameter& parameter;
     const Spec& spec;
     juce::Label label;
-    juce::Label valueLabel;
     ControlSlider slider;
     juce::ComboBox menu;
     juce::TextButton button;
     std::vector<std::unique_ptr<juce::TextButton>> lamps;
     juce::String kind;
+    juce::String caption;
+    bool transientValue=false,showingValue=false;
     bool gesture=false;
     std::function<void(const juce::String&,bool)> report;
     Control(juce::RangedAudioParameter& p,const Spec& s,juce::String caption,juce::String type,bool isDark,
-            std::function<void(const juce::String&,bool)> changed):parameter(p),spec(s),kind(type),report(std::move(changed))
+            std::function<void(const juce::String&,bool)> changed):parameter(p),spec(s),kind(type),caption(caption),report(std::move(changed))
     {
         setComponentID(juce::String("control:")+s.id);
-        addAndMakeVisible(label);label.setText(caption,juce::dontSendNotification);
-        label.setFont(juce::Font(12.5f));label.setColour(juce::Label::textColourId,isDark?light:ink);
+        addAndMakeVisible(label);label.setText(caption,juce::dontSendNotification);label.setComponentID(juce::String("caption:")+s.id);
+        label.setFont(juce::Font(12.5f));setSkinColour(label,juce::Label::textColourId,isDark?juce::Colour(0xfff1f4f7):juce::Colour(0xff171b20));
         label.setJustificationType(juce::Justification::centred);
         setTooltipForControls(juce::String(s.group)+" / "+s.section+" / "+s.label);
         if((kind=="lamps" || kind=="waveButtons") && s.enumCount)
@@ -329,32 +388,39 @@ struct Control final : juce::Component
             slider.setSliderStyle(row?juce::Slider::LinearHorizontal:(kind=="fader"?juce::Slider::LinearVertical:juce::Slider::RotaryVerticalDrag));
             slider.setRotaryParameters(juce::MathConstants<float>::pi*4.f/3.f,juce::MathConstants<float>::pi*8.f/3.f,true);
             slider.setTextBoxStyle(row?juce::Slider::TextBoxRight:juce::Slider::TextBoxBelow,false,row?56:64,row?24:18);
-            if(kind=="mixer")slider.setTextBoxStyle(juce::Slider::NoTextBox,false,0,0);
-            if(kind=="panelKnob" || kind=="miniKnob")
+            if(s.minimum+s.displayOffset<0 && s.maximum+s.displayOffset>0)
+                slider.getProperties().set("bipolarZero",slider.valueToProportionOfLength(-s.displayOffset));
+            transientValue=!row && kind!="fader";
+            if(transientValue)
             {
                 slider.setTextBoxStyle(juce::Slider::NoTextBox,false,0,0);
-                addAndMakeVisible(valueLabel);valueLabel.setComponentID(juce::String("value:")+s.id);
-                valueLabel.setJustificationType(juce::Justification::centred);valueLabel.setFont(juce::Font(13.f));
-                valueLabel.setColour(juce::Label::textColourId,isDark?light:ink);
-                valueLabel.setColour(juce::Label::outlineWhenEditingColourId,blue);
-                valueLabel.setColour(juce::TextEditor::backgroundColourId,isDark?dark:light);
-                valueLabel.setColour(juce::TextEditor::textColourId,isDark?light:ink);
-                valueLabel.setEditable(false,kind!="miniKnob",false);valueLabel.setTooltip(juce::String(s.label)+" — double-click to enter a value");
-                valueLabel.onTextChange=[this]
+                setSkinColour(label,juce::Label::outlineWhenEditingColourId,juce::Colour(0xff087fe5));
+                setSkinColour(label,juce::TextEditor::backgroundColourId,isDark?juce::Colour(0xff24262a):juce::Colour(0xfff1f4f7));
+                setSkinColour(label,juce::TextEditor::textColourId,isDark?juce::Colour(0xfff1f4f7):juce::Colour(0xff171b20));
+                label.setEditable(true,false,false);label.setTooltip(juce::String(s.label)+juce::String::fromUTF8(" \xe2\x80\x94 click the name to enter a value"));
+                label.onEditorShow=[this]{
+                    stopTimer();showingValue=true;
+                    if(auto* editor=label.getCurrentTextEditor()){editor->setText(valueText(),false);editor->selectAll();}
+                };
+                label.onEditorHide=[this]{startTimer(1200);};
+                label.onTextChange=[this]
                 {
-                    const int value=juce::jlimit(int(spec.minimum),int(spec.maximum),valueLabel.getText().getIntValue()-spec.displayOffset);
+                    const auto text=label.getText().trim();auto digits=text;
+                    if(digits.startsWithChar('-') || digits.startsWithChar('+'))digits=digits.substring(1);
+                    if(digits.isEmpty() || !digits.containsOnly("0123456789")){revealValue();return;}
+                    const int value=int(juce::jlimit(double(spec.minimum),double(spec.maximum),text.getDoubleValue()-spec.displayOffset));
                     parameter.beginChangeGesture();setValue(value);parameter.endChangeGesture();refresh();notify();
                 };
             }
-            slider.setColour(juce::Slider::textBoxTextColourId,isDark?light:ink);
-            slider.setColour(juce::Slider::textBoxOutlineColourId,juce::Colours::transparentBlack);
-            slider.setColour(juce::Slider::textBoxBackgroundColourId,juce::Colours::transparentBlack);
-            slider.setColour(juce::Slider::trackColourId,blue);
+            setSkinColour(slider,juce::Slider::textBoxTextColourId,isDark?juce::Colour(0xfff1f4f7):juce::Colour(0xff171b20));
+            setSkinColour(slider,juce::Slider::textBoxOutlineColourId,juce::Colours::transparentBlack);
+            setSkinColour(slider,juce::Slider::textBoxBackgroundColourId,juce::Colours::transparentBlack);
+            setSkinColour(slider,juce::Slider::trackColourId,juce::Colour(0xff087fe5));
             slider.setDoubleClickReturnValue(true,s.defaultValue);slider.setPopupDisplayEnabled(false,false,nullptr);
             slider.textFromValueFunction=[this](double v){return juce::String(juce::roundToInt(v)+spec.displayOffset);};
             slider.valueFromTextFunction=[this](const juce::String& t){return t.getDoubleValue()-spec.displayOffset;};
             slider.onDragStart=[this]{gesture=true;parameter.beginChangeGesture();notify();};
-            slider.onDragEnd=[this]{parameter.endChangeGesture();gesture=false;if(slider.wheelGesture)notify();else report({},false);};
+            slider.onDragEnd=[this]{parameter.endChangeGesture();gesture=false;revealValue();if(slider.wheelGesture)notify();else report({},false);};
             slider.onValueChange=[this]
             {
                 if(!gesture)parameter.beginChangeGesture();
@@ -368,10 +434,15 @@ struct Control final : juce::Component
     }
     ~Control() override{if(gesture)parameter.endChangeGesture();}
     void setValue(int v){parameter.setValueNotifyingHost(parameter.convertTo0to1(float(v)));}
+    juce::String valueText()const{return juce::String(int(std::round(parameter.convertFrom0to1(parameter.getValue())))+spec.displayOffset);}
+    void revealValue(){if(!transientValue || (skinIsFlat(*this) && slider.getTextBoxPosition()!=juce::Slider::NoTextBox))return;showingValue=true;if(!label.isBeingEdited())label.setText(valueText(),juce::dontSendNotification);startTimer(1200);}
+    void timerCallback()override{if(gesture || label.isBeingEdited())return;stopTimer();showingValue=false;label.setText(caption,juce::dontSendNotification);}
+    void mouseDown(const juce::MouseEvent& e)override{if(transientValue && e.eventComponent==&slider && !e.mods.isPopupMenu())revealValue();}
     void mouseExit(const juce::MouseEvent&) override{if(!gesture)report({},false);}
     void setTooltipForControls(const juce::String& t){label.setTooltip(t);slider.setTooltip(t);menu.setTooltip(t);button.setTooltip(t);}
     void notify()
     {
+        revealValue();
         const auto v=int(std::round(parameter.convertFrom0to1(parameter.getValue())));
         report(juce::String(spec.label)+"\n"+(spec.enumCount?juce::String(spec.enumLabels[juce::jlimit(0,int(spec.enumCount)-1,v)]):juce::String(v+spec.displayOffset)),gesture);
     }
@@ -388,62 +459,75 @@ struct Control final : juce::Component
                 if(auto* field=dynamic_cast<juce::Label*>(slider.getChildComponent(i)))editing|=field->isBeingEdited();
             if(!editing){slider.setValue(v,juce::dontSendNotification);slider.updateText();}
         }
-        if((kind=="panelKnob" || kind=="miniKnob") && !valueLabel.isBeingEdited())valueLabel.setText(juce::String(v+spec.displayOffset),juce::dontSendNotification);
+        if(transientValue && showingValue && !label.isBeingEdited())label.setText(valueText(),juce::dontSendNotification);
     }
     void resized() override
     {
         auto area=getLocalBounds();
         if(kind=="panelKnob")
         {
+            if(skinIsFlat(*this)){
+                // Keep the parameter name visible while its editable value
+                // occupies a separate field beneath the vector dial.
+                if(slider.getTextBoxPosition()!=juce::Slider::TextBoxBelow)slider.setTextBoxStyle(juce::Slider::TextBoxBelow,false,64,18);
+                label.setBounds(0,0,getWidth(),18);label.setFont(juce::Font(12.f));label.setBorderSize(juce::BorderSize<int>(0));
+                slider.setBounds(0,20,getWidth(),getHeight()-20);applySkin(*this,false);return;
+            }
             if(bool(getProperties()["compact"])){
                 slider.setBounds(0,0,getWidth(),76);label.setFont(juce::Font(11.5f));label.setBorderSize(juce::BorderSize<int>(0));label.setBounds(0,76,getWidth(),16);
-                valueLabel.setFont(juce::Font(12.f));valueLabel.setBounds(0,92,getWidth(),18);return;
+                applySkin(*this,false);return;
             }
             slider.setBounds(0,0,getWidth(),84);label.setBounds(0,84,getWidth(),18);
-            valueLabel.setBounds(0,102,getWidth(),20);return;
+            applySkin(*this,false);return;
         }
         if(kind=="extraRow")
         {
             label.setFont(juce::Font(11.f));label.setJustificationType(juce::Justification::centredLeft);
-            label.setBounds(0,0,getWidth(),12);slider.setBounds(0,15,getWidth(),getHeight()-15);menu.setBounds(0,15,getWidth(),juce::jmin(24,getHeight()-15));return;
+            label.setBounds(0,0,getWidth(),12);slider.setBounds(0,15,getWidth(),getHeight()-15);menu.setBounds(0,15,getWidth(),juce::jmin(24,getHeight()-15));applySkin(*this,false);return;
         }
         if(kind=="waveButtons"){
             label.setJustificationType(juce::Justification::centredLeft);label.setBounds(area.removeFromTop(20));
-            for(size_t i=0;i<lamps.size();++i)lamps[i]->setBounds(int(i)*getWidth()/int(lamps.size()),20,getWidth()/int(lamps.size())-2,28);return;
+            for(size_t i=0;i<lamps.size();++i)lamps[i]->setBounds(int(i)*getWidth()/int(lamps.size()),20,getWidth()/int(lamps.size())-2,28);applySkin(*this,false);return;
         }
-        if(kind=="lamps"){for(size_t i=0;i<lamps.size();++i)lamps[i]->setBounds(int(i)*getWidth()/int(lamps.size()),0,getWidth()/int(lamps.size()),getHeight());return;}
+        if(kind=="lamps"){for(size_t i=0;i<lamps.size();++i)lamps[i]->setBounds(int(i)*getWidth()/int(lamps.size()),0,getWidth()/int(lamps.size()),getHeight());applySkin(*this,false);return;}
         if(kind=="miniKnob")
         {
             label.setFont(juce::Font(11.f));label.setJustificationType(juce::Justification::centredLeft);
-            label.setBounds(0,0,getWidth(),20);slider.setBounds(0,23,36,32);valueLabel.setBounds(42,23,42,32);return;
+            label.setBounds(0,0,getWidth(),16);
+            if(skinIsFlat(*this)){
+                if(slider.getTextBoxPosition()!=juce::Slider::TextBoxRight)slider.setTextBoxStyle(juce::Slider::TextBoxRight,false,52,20);
+                slider.setBounds(0,18,getWidth(),getHeight()-18);
+            }else slider.setBounds(0,18,36,32);
+            applySkin(*this,false);return;
         }
         if(kind=="panelMenu")
         {
-            label.setJustificationType(juce::Justification::centredLeft);label.setBounds(area.removeFromTop(20));menu.setBounds(area);return;
+            label.setJustificationType(juce::Justification::centredLeft);label.setBounds(area.removeFromTop(20));menu.setBounds(area);applySkin(*this,false);return;
         }
         if(kind=="inline" || kind=="rhythm")
         {
             label.setFont(juce::Font(11.f));label.setBorderSize(juce::BorderSize<int>(0));
             label.setJustificationType(juce::Justification::centredLeft);label.setBounds(area.removeFromLeft(getProperties().contains("captionWidth")?int(getProperties()["captionWidth"]):54));
-            menu.setBounds(area.reduced(0,2));return;
+            menu.setBounds(area.reduced(0,2));applySkin(*this,false);return;
         }
-        if(kind=="led"){button.setBounds(area);return;}
+        if(kind=="led"){button.setBounds(area);applySkin(*this,false);return;}
         if(kind=="row")
         {
             label.setJustificationType(juce::Justification::centredLeft);label.setBounds(area.removeFromLeft(166));
-            slider.setBounds(area);menu.setBounds(area.reduced(0,5));return;
+            slider.setBounds(area);menu.setBounds(area.reduced(0,5));applySkin(*this,false);return;
         }
         if(kind=="mixer")
         {
-            label.setJustificationType(juce::Justification::centredLeft);label.setBounds(area.removeFromLeft(51));slider.setBounds(area);return;
+            label.setJustificationType(juce::Justification::centredLeft);label.setBounds(area.removeFromLeft(51));slider.setBounds(area);applySkin(*this,false);return;
         }
         if(kind=="compact")
         {
-            label.setFont(juce::Font(11.f));label.setBounds(area.removeFromLeft(39));slider.setBounds(area);return;
+            label.setFont(juce::Font(11.f));label.setBounds(area.removeFromLeft(39));slider.setBounds(area);applySkin(*this,false);return;
         }
         label.setBounds(area.removeFromTop(22));
         if(spec.enumCount)menu.setBounds(area.removeFromTop(juce::jmin(28,area.getHeight())).reduced(2,0));
         else slider.setBounds(area);
+        applySkin(*this,false);
     }
 };
 struct Panel final : juce::Component
@@ -453,42 +537,55 @@ struct Panel final : juce::Component
     int rowHeight=40;
     void paint(juce::Graphics& g) override
     {
-        g.setColour(ink.withAlpha(.1f));g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(.5f),4,1);
-        g.setColour(ink);g.setFont(juce::Font(14.f,juce::Font::bold));g.drawText(title,12,6,getWidth()-24,24,juce::Justification::centredLeft);
+        if(paintSkinBackground(*this,g) || !skinDrawPanels(*this))return;
+        g.setColour(skinColour(*this,0xff171b20).withAlpha(.1f));g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(.5f),4,1);
+        g.setColour(skinColour(*this,0xff171b20));g.setFont(skinFont(*this,14.f,juce::Font::bold));g.drawText(title,12,6,getWidth()-24,24,juce::Justification::centredLeft);
     }
-    void resized() override{int y=34;for(auto& c:controls){c->setBounds(12,y,getWidth()-24,rowHeight);y+=rowHeight;}}
+    void resized() override{int y=34;for(auto& c:controls){c->setBounds(12,y,getWidth()-24,rowHeight);y+=rowHeight;}applySkin(*this,false);}
 };
 struct LocalExtra final : juce::Component
 {
     juce::TextButton back{"Back"};
     juce::Component content;
+    juce::Component clockRow;
+    juce::Label clockLabel;
+    juce::ComboBox clockSelect;
     juce::String title;
     std::vector<std::unique_ptr<Control>> controls;
-    juce::Colour background=light;
+    juce::Colour background=skinColour(*this,0xfff1f4f7);
     bool dark=false,compact=false;
     int columns=1,rowHeight=43,gap=7;
     std::function<void()> onClose;
     LocalExtra()
     {
-        setComponentID("localExtra");addAndMakeVisible(back);addAndMakeVisible(content);
+        setComponentID("localExtra");content.setComponentID("extraContent");clockLabel.setComponentID("clockSourceLabel");addAndMakeVisible(back);addAndMakeVisible(content);
+        addChildComponent(clockRow);clockRow.addAndMakeVisible(clockLabel);clockRow.addAndMakeVisible(clockSelect);
+        clockRow.setComponentID("programClock");clockSelect.setComponentID("clockSource");
+        clockLabel.setText("Clock source",juce::dontSendNotification);clockLabel.setFont(juce::Font(11.5f));setSkinColour(clockLabel,juce::Label::textColourId,juce::Colour(0xff171b20));
+        clockSelect.addItem("Host",1);clockSelect.addItem("Internal",2);clockSelect.addItem("MIDI Clock",3);
+        clockSelect.setTooltip("Timing source for all parts. Internal ignores host and MIDI clock; MIDI Clock follows incoming MIDI. Saved with the plugin state.");
         back.setComponentID("extraBack");back.onClick=[this]{setVisible(false);if(onClose)onClose();};setVisible(false);
     }
     void paint(juce::Graphics& g) override
     {
-        g.fillAll(background);g.setColour(dark?light:ink);g.setFont(juce::Font(15.f,juce::Font::bold));
+        if(paintSkinBackground(*this,g) || !skinDrawPanels(*this))return;
+        g.fillAll(skinColour(*this,background));g.setColour(dark?skinColour(*this,0xfff1f4f7):skinColour(*this,0xff171b20));g.setFont(skinFont(*this,15.f,juce::Font::bold));
         g.drawText(title,8,8,getWidth()-80,28,juce::Justification::centredLeft);
     }
     void resized() override
     {
-        back.setBounds(getWidth()-62,8,54,28);content.setBounds(8,compact?42:46,getWidth()-16,getHeight()-(compact?50:54));
+        back.setBounds(getWidth()-62,8,54,28);content.setBounds(8,compact?42:46,getWidth()-16,getHeight()-(compact?50:54)-(clockRow.isVisible()?36:0));
+        clockRow.setBounds(8,getHeight()-40,getWidth()-16,32);clockLabel.setBounds(0,0,88,28);clockSelect.setBounds(92,0,clockRow.getWidth()-92,28);
         const int width=(content.getWidth()-(columns-1)*12)/columns;
         for(size_t n=0;n<controls.size();++n)controls[n]->setBounds(int(n)%columns*(width+12),int(n)/columns*(rowHeight+gap),width,rowHeight);
+        applySkin(*this,false);
     }
 };}
 
 struct Editor::Surface final : juce::Component, private juce::Timer
 {
     Processor& processor;
+    SkinPackage package;
     juce::var skin;
     SilverLook look;
     juce::TooltipWindow tooltip{this,750};
@@ -502,9 +599,18 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     juce::ComboBox firmwareSelect,skinSelect,bufferSelect,controllerSelect;
     juce::TextButton rescanRoms{"Rescan ROMs"};
     juce::TextButton diagnostics{"Performance diagnostics"};
-    juce::TextButton waveRom{"Wave ROM"},factory{"KS factory data"},customSkin{"Load skin JSON"};
+    juce::TextButton demoSong{"Demo Song"};
+    juce::TextButton waveRom{"Wave ROM"},factory{"KS factory data"},customSkin{"Load skin..."};
+    juce::TextButton reloadSkin{"Reload"},exportSkin{"Export template"},openSkins{"Skins folder"};
+    std::vector<std::pair<juce::String,juce::File>> skinEntries;
+    std::vector<std::unique_ptr<SkinDecoration>> decorations;
+    std::function<void(juce::File,juce::String)> requestSkin;
     juce::ToggleButton performanceMode{"Performance (4 parts)"},partActive{"Part active"};
+    juce::ToggleButton twoCoreProcessing{"KS: use two CPU cores (experimental)"};
+    juce::Label twoCoreNotice;
     juce::TextButton performanceSwitch{"Performance"};
+    juce::TextButton drumEdit{"Drum Edit"};
+    juce::Label drumDisplay;
     Browser browser;
     std::unique_ptr<PerformancePanel> performancePanel;
     bool displayedK=false,displayedPerformance=false;
@@ -533,9 +639,11 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     bool displayHeld=false;
     int firmwareLoadPage=0;
     double displayUntil=0;
-    explicit Surface(Processor& p):processor(p),skin(skinData(p)),browser(p)
+    explicit Surface(Processor& p,SkinPackage loaded):processor(p),package(std::move(loaded)),skin(package.layout),look(package),browser(p)
     {
-        setLookAndFeel(&look);
+        setComponentID("surface");setLookAndFeel(&look);
+        status.setComponentID("setupStatus");latency.setComponentID("setupLatency");help.setComponentID("setupHelp");
+        loadRom.setComponentID("loadFirmware");folder.setComponentID("dataFolder");loadProgram.setComponentID("patchBrowserButton");panic.setComponentID("panic");waveRom.setComponentID("waveRom");factory.setComponentID("factoryData");content.setComponentID("advancedContent");
         performancePanel=std::make_unique<PerformancePanel>(processor,browser);addAndMakeVisible(*performancePanel);
         performancePanel->onEdit=[this](unsigned part){processor.selectPart(part);refreshModel();showPage(0);};
         performancePanel->onModeChanged=[this]{performanceSwitch.setToggleState(processor.performanceMode(),juce::dontSendNotification);for(unsigned i=0;i<4;++i){const bool available=i==0||(!processor.isKStation()&&processor.performanceMode());parts[i].setEnabled(available);parts[i].setAlpha(available?1.f:.3f);}};
@@ -551,14 +659,40 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         addAndMakeVisible(performanceSwitch);performanceSwitch.setComponentID("performanceSwitch");performanceSwitch.getProperties().set("led",true);performanceSwitch.getProperties().set("dark",true);performanceSwitch.setClickingTogglesState(true);
         performanceSwitch.setTooltip("Enable or disable KS four-part Performance mode");
         performanceSwitch.onClick=[this]{juce::String error;if(!processor.setPerformanceMode(performanceSwitch.getToggleState(),error)){performanceSwitch.setToggleState(processor.performanceMode(),juce::dontSendNotification);showValue(error,false);}};
+        addAndMakeVisible(drumEdit);drumEdit.setComponentID("drumEdit");drumEdit.setClickingTogglesState(true);drumEdit.getProperties().set("led",true);drumEdit.getProperties().set("dark",true);
+        drumEdit.setTooltip("Select a drum for editing by playing its MIDI key. Changes are retained when selecting another drum.");
+        drumEdit.onClick=[this]{processor.setDrumEdit(drumEdit.getToggleState());refreshDrumEdit();};
+        addAndMakeVisible(drumDisplay);drumDisplay.setComponentID("drumEditDisplay");drumDisplay.setFont(juce::Font(13.f));setSkinColour(drumDisplay,juce::Label::textColourId,juce::Colour(0xfff1f4f7));setSkinColour(drumDisplay,juce::Label::backgroundColourId,juce::Colour(0xff075293));
         partActive.setBounds(330,96,200,34);partActive.setComponentID("partActive");partActive.onClick=[this]{juce::String error;processor.setPartActive(processor.currentPart(),partActive.getToggleState(),error);};
         browser.setComponentID("patchBrowser");browser.setBounds(24,86,1232,642);
-        skinSelect.setBounds(52,353,230,34);for(const auto& name:juce::StringArray{"Auto","Silver-K","KS Grey","Classic","Custom"})skinSelect.addItem(name,skinSelect.getNumItems()+1);skinSelect.setText(processor.skinChoice,juce::dontSendNotification);skinSelect.onChange=[this]{processor.skinChoice=skinSelect.getText();processor.savePreferences();skin=skinData(processor);if(resizeEditor)resizeEditor();rebuildMain();rebuildAdvanced();repaint();};
-        customSkin.setBounds(298,353,190,34);customSkin.onClick=[this]{chooseAsset(3);};
+        for(auto* c:{&reloadSkin,&exportSkin,&openSkins})addAndMakeVisible(*c);
+        skinSelect.setComponentID("skinSelect");customSkin.setComponentID("loadSkin");reloadSkin.setComponentID("reloadSkin");exportSkin.setComponentID("exportSkin");openSkins.setComponentID("openSkins");
+        skinSelect.setBounds(52,353,230,34);customSkin.setBounds(298,353,170,34);reloadSkin.setBounds(480,353,96,34);exportSkin.setBounds(588,353,170,34);openSkins.setBounds(770,353,140,34);
+        refreshSkinList();
+        skinSelect.onChange=[this]{
+            const int index=skinSelect.getSelectedId();
+            if(index>=1 && index<=4){if(requestSkin)requestSkin({},juce::StringArray{"Auto","Silver-K","KS Grey","Classic"}[index-1]);}
+            else if(index>=100 && index-100<int(skinEntries.size())){if(requestSkin)requestSkin(skinEntries[size_t(index-100)].second,{});}
+        };
+        customSkin.onClick=[this]{chooseAsset(3);};
+        reloadSkin.setTooltip("Reload the selected skin from disk and rescan Skins (F5)");
+        reloadSkin.onClick=[this]{refreshSkinList();if(requestSkin)requestSkin(package.manifest!=juce::File{}?package.manifest:juce::File(processor.customSkin),package.manifest==juce::File{}&&!processor.skinChoice.startsWith("Package:")&&processor.skinChoice!="Custom"?processor.skinChoice:juce::String{});};
+        exportSkin.onClick=[this]{juce::File exported;juce::String error;if(SkinPackage::exportTemplate(processor.skinsFolder(),exported,error)){refreshSkinList();status.setText("Template exported: "+exported.getParentDirectory().getFullPathName(),juce::dontSendNotification);}else status.setText(error,juce::dontSendNotification);};
+        openSkins.onClick=[this]{processor.skinsFolder().createDirectory();processor.skinsFolder().revealToUser();};
         rescanRoms.setBounds(450,245,150,38);rescanRoms.onClick=[this]{juce::String error;const bool ok=processor.setRomFolder(processor.dataFolder.getChildFile("ROMs"),error);refreshFirmwares();status.setText(ok?"ROM list updated":error,juce::dontSendNotification);};rescanRoms.setComponentID("rescanRoms");
         bufferSelect.setBounds(52,401,436,34);bufferSelect.setComponentID("audioBuffer");for(const auto& name:juce::StringArray{"Audio buffer: Low latency","Audio buffer: Balanced (recommended)","Audio buffer: Safe","Audio buffer: Maximum reserve"})bufferSelect.addItem(name,bufferSelect.getNumItems()+1);bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);bufferSelect.onChange=[this]{processor.setBufferProfile(bufferSelect.getSelectedId()-1);};bufferSelect.setTooltip("Internal audio buffering. The audio interface buffer is set in your DAW.");
         addAndMakeVisible(diagnostics);diagnostics.setBounds(510,401,270,34);diagnostics.setComponentID("performanceDiagnostics");
         diagnostics.setTooltip("Record optional performance measurements and save a JSON report for Windows or macOS.");
+        addAndMakeVisible(twoCoreProcessing);twoCoreProcessing.setBounds(52,590,1000,34);twoCoreProcessing.setComponentID("ksTwoCoreProcessing");
+        twoCoreProcessing.setTooltip("Experimental parallel KS DSP processing. Performance improvement is not guaranteed and total CPU usage may increase. Applies to KS only.");
+        twoCoreProcessing.setToggleState(processor.ksTwoCoreProcessing(),juce::dontSendNotification);
+        twoCoreProcessing.onClick=[this]{juce::String error;if(!processor.setKSTwoCoreProcessing(twoCoreProcessing.getToggleState(),error))juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,"KS two-core processing",error);twoCoreProcessing.setToggleState(processor.ksTwoCoreProcessing(),juce::dontSendNotification);};
+        addAndMakeVisible(twoCoreNotice);twoCoreNotice.setBounds(78,628,1050,26);twoCoreNotice.setComponentID("ksTwoCoreNotice");
+        twoCoreNotice.setText("Experimental: performance improvement is not guaranteed. CPU usage may increase.",juce::dontSendNotification);
+        setSkinColour(twoCoreNotice,juce::Label::textColourId,juce::Colour(0xff171b20));twoCoreNotice.setFont(juce::Font(15.f));
+        addAndMakeVisible(demoSong);demoSong.setBounds(510,449,270,34);demoSong.setComponentID("demoSong");
+        demoSong.setTooltip("Play / stop the original KS demo embedded in full KS Flash data. Factory MIDI banks do not contain the song.");
+        demoSong.onClick=[this]{juce::String error;if(!processor.setDemoSong(!processor.demoSongActive(),error))juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,"KS Demo Song",error);};
         addAndMakeVisible(controllerSelect);controllerSelect.setBounds(52,449,436,34);controllerSelect.setComponentID("ksController");
         if(ks::boardComparisonAvailable()){
             controllerSelect.addItem("KS controller: H8 (original)",1);controllerSelect.addItem("KS controller: C++ (experimental)",2);
@@ -612,7 +746,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         {
             auto& indicator=lfoIndicators[size_t(i)];main.addAndMakeVisible(indicator);
             indicator.setComponentID("lfoIndicator"+juce::String(i+1));indicator.setText(juce::String(i+1),juce::dontSendNotification);
-            indicator.setColour(juce::Label::textColourId,ink);indicator.setFont(juce::Font(12.f));indicator.setJustificationType(juce::Justification::centredRight);
+            setSkinColour(indicator,juce::Label::textColourId,juce::Colour(0xff171b20));indicator.setFont(juce::Font(12.f));indicator.setJustificationType(juce::Justification::centredRight);
             indicator.setInterceptsMouseClicks(false,false);indicator.setBounds(rect(selections["lfoIndicators"][i]));
         }
         main.addAndMakeVisible(pw);pw.setBounds(rect(selections["pw"]));pw.setComponentID("pwSource");
@@ -626,7 +760,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
             b->setBounds(fxRect.getX()+i*fxRect.getWidth()/fxArray->size(),fxRect.getY(),fxRect.getWidth()/fxArray->size()-2,fxRect.getHeight());
             b->setTooltip("Edit "+b->getButtonText()+". Other effects keep processing.");b->onClick=[this,i]{effect=i;rebuildEffects();};effects.push_back(std::move(b));
         }
-        lcd.setColour(juce::Label::backgroundColourId,juce::Colour(0xff0752ba));lcd.setColour(juce::Label::textColourId,light);
+        setSkinColour(lcd,juce::Label::backgroundColourId,juce::Colour(0xff0752ba));setSkinColour(lcd,juce::Label::textColourId,juce::Colour(0xfff1f4f7));
         lcd.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(),16.f,juce::Font::plain));lcd.setJustificationType(juce::Justification::centredLeft);
         lcd.setComponentID("programDisplay");showProgram();lcd.setBorderSize(juce::BorderSize<int>(8));lcd.setBounds(rect(skin["lcd"]));
         loadProgram.setBounds(rect(skin["actions"]["loadProgram"]));panic.setBounds(rect(skin["actions"]["panic"]));
@@ -638,17 +772,18 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         for(int i=0;i<groups.size();++i)group.addItem(groups[i],i+1);group.setSelectedId(2,juce::dontSendNotification);
         mode.onChange=[this]{rebuildSections();};group.onChange=[this]{rebuildSections();};section.onChange=[this]{rebuildAdvanced();};
         auto advanced=skin["advanced"];mode.setBounds(rect(advanced["mode"]));group.setBounds(rect(advanced["group"]));section.setBounds(rect(advanced["section"]));viewport.setBounds(rect(advanced["viewport"]));
-        auto setup=skin["setup"];status.setBounds(rect(setup["status"]));status.setFont(juce::Font(17.f));status.setColour(juce::Label::textColourId,ink);
-        status.setText(processor.status(),juce::dontSendNotification);latency.setBounds(rect(setup["latency"]));latency.setColour(juce::Label::textColourId,ink);
-        loadRom.setBounds(rect(setup["firmware"]));folder.setBounds(rect(setup["folder"]));channel.setBounds(510,353,270,34);channel.setComponentID("controlChannel");
+        auto setup=skin["setup"];status.setBounds(rect(setup["status"]));status.setFont(juce::Font(17.f));setSkinColour(status,juce::Label::textColourId,juce::Colour(0xff171b20));
+        status.setText(processor.status(),juce::dontSendNotification);latency.setBounds(rect(setup["latency"]));setSkinColour(latency,juce::Label::textColourId,juce::Colour(0xff171b20));
+        loadRom.setBounds(rect(setup["firmware"]));folder.setBounds(rect(setup["folder"]));channel.setBounds(922,353,270,34);channel.setComponentID("controlChannel");
         for(int i=1;i<=16;++i)channel.addItem("Editor MIDI channel "+juce::String(i),i);channel.setSelectedId(int(processor.editorChannel())+1,juce::dontSendNotification);channel.onChange=[this]{processor.setEditorChannel(uint8_t(channel.getSelectedId()-1));};
-        help.setBounds(52,494,1120,84);help.setColour(juce::Label::textColourId,ink);help.setFont(juce::Font(15.f));
-        help.setText("Silver-K folder contains ROMs and Patches. KS synthetic data is created in ROMs.\nWithout a wave ROM, sampled oscillators are silent. The zero bank adapter is disabled for a real ROM.\nPatch folders, model, tags, favourites and compatibility are available on Patches.",juce::dontSendNotification);
+        help.setBounds(52,494,1120,84);setSkinColour(help,juce::Label::textColourId,juce::Colour(0xff171b20));help.setFont(juce::Font(15.f));
+        help.setText("ROMs: firmware, required Wave ROM and KS All Data / compatible MIDI set.\nPatches: additional patch libraries. Skins: custom skins.\nThe zero Wave ROM is created automatically. Select your own KS Data before loading KS.",juce::dontSendNotification);
         const juce::StringArray domains{"osc1","osc2","osc3","mixer","filter","envelopes","lfo","voice","arp","fx"};
         for(size_t i=0;i<extraButtons.size();++i)
         {
-            auto& b=extraButtons[i];main.addAndMakeVisible(b);b.setButtonText("Extra");
+            auto& b=extraButtons[i];main.addAndMakeVisible(b);b.setButtonText(i==7?"Options":"O");
             b.setComponentID("extra:"+domains[int(i)]);b.getProperties().set("small",true);
+            b.setTooltip(juce::StringArray{"Oscillator 1","Oscillator 2","Oscillator 3","Mixer","Filter","Envelopes","LFO","Program","Volume / Arp / Glide","Effects"}[int(i)]+juce::String::fromUTF8(i==7?" \xe2\x80\x94 Options":" \xe2\x80\x94 Extra"));
             b.onClick=[this,domain=domains[int(i)]]{openExtra(domain);};
         }
         main.addAndMakeVisible(fmButton);fmButton.setComponentID("fmSettings");fmButton.getProperties().set("small",true);
@@ -672,20 +807,72 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         effectSelect.setSelectedId(effect+1,juce::dontSendNotification);
         effectSelect.onChange=[this]{effect=juce::jmax(0,effectSelect.getSelectedId()-1);rebuildEffects();};
         main.addChildComponent(localExtra);localExtra.onClose=[this]{updateExtraVisibility();repaint();};
+        localExtra.clockSelect.onChange=[this]{processor.setClockSource(ClockSource(localExtra.clockSelect.getSelectedId()-1));};
         addAndMakeVisible(previousPreset);addAndMakeVisible(nextPreset);
         previousPreset.setComponentID("previousPreset");nextPreset.setComponentID("nextPreset");
         previousPreset.getProperties().set("small",true);nextPreset.getProperties().set("small",true);
         previousPreset.onClick=[this]{stepPreset(-1);};nextPreset.onClick=[this]{stepPreset(1);};
         for(size_t n=0;n<unusedEffects.size();++n){auto& knob=unusedEffects[n];main.addChildComponent(knob);knob.setComponentID("unusedEffect"+juce::String(int(n)));knob.setSliderStyle(juce::Slider::RotaryVerticalDrag);knob.setTextBoxStyle(juce::Slider::NoTextBox,false,0,0);knob.setRotaryParameters(juce::MathConstants<float>::pi*4.f/3.f,juce::MathConstants<float>::pi*8.f/3.f,true);knob.getProperties().set("rotaryDiameter",80);knob.setEnabled(false);knob.setAlpha(.22f);auto& label=unusedEffectLabels[n];main.addChildComponent(label);label.setText("-",juce::dontSendNotification);label.setJustificationType(juce::Justification::centred);label.setAlpha(.25f);}
+        createDecorations();
         processor.refreshControls();main.setBounds(0,0,int(skin["width"]),int(skin["height"]));rebuildMain();rebuildSections();showPage(processor.firmwareReady()?0:4);timerCallback();startTimerHz(20);
     }
-    ~Surface() override{stopTimer();performancePanel.reset();viewport.setViewedComponent(nullptr,false);setLookAndFeel(nullptr);}
+    ~Surface() override{stopTimer();decorations.clear();performancePanel.reset();viewport.setViewedComponent(nullptr,false);setLookAndFeel(nullptr);}
+    void refreshSkinList()
+    {
+        skinSelect.clear(juce::dontSendNotification);
+        const juce::StringArray builtins{"Auto","Silver-K","KS Grey","Classic"};
+        for(int i=0;i<builtins.size();++i)skinSelect.addItem(builtins[i],i+1);
+        skinEntries=SkinPackage::discover(processor.skinsFolder());
+        int selected=builtins.indexOf(processor.skinChoice)+1;
+        for(size_t i=0;i<skinEntries.size();++i){skinSelect.addItem(skinEntries[i].first,int(i)+100);if(skinEntries[i].second==package.manifest)selected=int(i)+100;}
+        if(!selected && package.manifest!=juce::File{}){skinEntries.emplace_back(package.name,package.manifest);selected=int(skinEntries.size())+99;skinSelect.addItem(package.name,selected);}
+        skinSelect.setSelectedId(selected,juce::dontSendNotification);
+        if(!selected)skinSelect.setText("Unavailable skin",juce::dontSendNotification);
+    }
+    void createDecorations()
+    {
+        decorations.clear();
+        if(auto* list=skin["decorations"].getArray())for(const auto& d:*list){
+            const auto parentId=d["parent"].toString();
+            juce::Component* parent=parentId.isEmpty()?this:findComponent(*this,parentId);
+            if(!parent)throw std::runtime_error("Unknown skin decoration parent: "+parentId.toStdString());
+            auto decoration=std::make_unique<SkinDecoration>(d);parent->addAndMakeVisible(*decoration);decoration->toBack();decorations.push_back(std::move(decoration));
+        }
+    }
+    static juce::Component* findComponent(juce::Component& root,const juce::String& id)
+    {
+        if(root.getComponentID()==id)return &root;
+        for(auto* child:root.getChildren())if(auto* found=findComponent(*child,id))return found;
+        return nullptr;
+    }
+    void applyLayout()
+    {
+        applySkin(*this);
+        for(auto& d:decorations){const auto p=d->description["page"].toString();d->setVisible(p.isEmpty() || p==juce::StringArray{"Main","Extra","Perf","Patches","Setup"}[page]);}
+    }
+    void resized()override{applyLayout();}
     void showProgram()
     {
         displayHeld=false;displayUntil=0;
         auto name=processor.currentName();
         if(name.isEmpty()||name=="default")name="Init Program";
         lcd.setText("Preset\n"+name,juce::dontSendNotification);
+    }
+    void refreshDrumEdit(){
+        const auto info=processor.drumEditInfo();const bool available=info.bank!=0;
+        if(!available && processor.drumEditEnabled())processor.setDrumEdit(false);
+        drumEdit.setVisible(available);drumEdit.setEnabled(available);drumEdit.setToggleState(processor.drumEditEnabled(),juce::dontSendNotification);
+        drumDisplay.setVisible(available && processor.drumEditEnabled());
+        if(compactSkin()){
+            const auto base=rect(skin["studioHeader"]["performance"]);
+            performanceSwitch.setBounds(available?base.withWidth(110):base);
+            drumEdit.setBounds(base.getX()+116,base.getY(),110,base.getHeight());
+            drumDisplay.setBounds(231,64,1000,18);
+        }else{drumEdit.setBounds(675,64,160,20);drumDisplay.setBounds(30,64,635,20);}
+        for(auto* c:std::initializer_list<juce::Component*>{&performanceSwitch,&drumEdit,&drumDisplay})applySkin(*c);
+        if(!available){drumDisplay.setText({},juce::dontSendNotification);return;}
+        const auto text="Drum Edit / "+juce::String(info.bank*100+info.note-36)+" "+info.name+" / "+juce::MidiMessage::getMidiNoteName(info.note,true,true,3)+" / MIDI "+juce::String(info.note);
+        drumDisplay.setText(text,juce::dontSendNotification);drumDisplay.setTooltip(text);
     }
     void showValue(const juce::String& message,bool held)
     {
@@ -710,7 +897,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
             c->slider.getProperties().set("rotaryDiameter",skin[(kind=="classic" || kind=="miniKnob")?"classicDiameter":(id=="cutoff"?"cutoffDiameter":"knobDiameter")]);
             if(kind=="inline" || kind=="rhythm")c->getProperties().set("captionWidth",compactSkin()?(id.startsWith("lfo")?32:50):54);
             c->slider.getProperties().set("blueVolume",studioSkin() && semanticId(s->id)=="volume");
-            parent.addAndMakeVisible(*c);c->setBounds(bounds);list.push_back(std::move(c));
+            parent.addAndMakeVisible(*c);c->setBounds(bounds);applySkin(*c);list.push_back(std::move(c));
         }
     }
     void rebuildMain()
@@ -725,6 +912,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         }
         performanceSwitch.setVisible(compactSkin());
         performanceSwitch.setEnabled(!processor.isKStation()&&processor.firmwareReady());performanceSwitch.setToggleState(processor.performanceMode(),juce::dontSendNotification);
+        refreshDrumEdit();
         for(unsigned i=0;i<4;++i){const bool available=i==0||(!processor.isKStation()&&processor.performanceMode());parts[i].setEnabled(available);parts[i].setAlpha(available?1.f:.3f);parts[i].setToggleState(i==processor.currentPart(),juce::dontSendNotification);}
         for(auto& b:oscillators)b.setVisible(!studio);lfoSelect.setVisible(!studio);pw.setVisible(!studio);
         for(auto& b:lfoIndicators)b.setVisible(!studio);for(auto& b:effects)b->setVisible(!studio);
@@ -741,7 +929,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         lcd.setBounds(rect(skin["lcd"]));loadProgram.setBounds(rect(skin["actions"]["loadProgram"]));panic.setBounds(rect(skin["actions"]["panic"]));
         previousPreset.setBounds(rect(skin["actions"]["previous"]));nextPreset.setBounds(rect(skin["actions"]["next"]));
         previousPreset.setVisible(studio&&page==0);nextPreset.setVisible(studio&&page==0);
-        if(studio){rebuildStudioMain();return;}
+        if(studio){rebuildStudioMain();applyLayout();return;}
         showProgram();
         mainControls.clear();
         const juce::String sources[]{"pulse_width","lfo2_pwm","env_pwm"};
@@ -753,6 +941,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
             addControl(mainControls,main,id,caption,item["kind"].toString(),bool(item["dark"]),rect(item["rect"]));
         }
         for(int i=0;i<3;++i)oscillators[size_t(i)].setToggleState(osc==i+1,juce::dontSendNotification);
+        applyLayout();
         lfoSelect.setTooltip("Currently editing LFO "+juce::String(lfo)+". Click to select LFO "+juce::String(lfo==1?2:1)+".");
         for(int i=0;i<2;++i)
         {
@@ -824,7 +1013,10 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         const auto names=juce::StringArray{"osc1","osc2","osc3","mixer","filter","envelopes","lfo","voice","arp","fx","fm"};
         const auto regions=juce::StringArray{"Oscillator 1","Oscillator 2","Oscillator 3","Mixer","Filter","Envelopes","LFO","Program","Volume / Arp / Glide","Effects","FM"};
         const int n=names.indexOf(domain);if(n<0)return;
-        localExtra.title=domain=="fm"?"FM settings":domain=="voice"?"Options":regions[n];
+        localExtra.title=domain=="fm"?"FM settings":domain=="voice"?"Options":domain=="lfo"?((processor.isKStation()?juce::String("LFO 1 / LFO 2"):"LFO "+juce::String(lfo))+juce::String::fromUTF8(" \xe2\x80\x94 Extra")):regions[n];
+        localExtra.setTitle(localExtra.title);
+        localExtra.clockRow.setVisible(domain=="voice");
+        localExtra.clockSelect.setSelectedId(int(processor.clockSource())+1,juce::dontSendNotification);
         auto bounds=studioRegion(regions[n]);
         if(domain.startsWith("osc") || domain=="fm"){
             const int row=domain=="fm"?2:domain.substring(3).getIntValue();
@@ -837,6 +1029,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         localExtra.columns=(domain.startsWith("osc") || domain=="filter" || domain=="fm" || domain=="voice" || domain=="arp")?3:(domain=="lfo"&&processor.isKStation()?2:1);
         localExtra.rowHeight=(domain.startsWith("osc") || domain=="filter" || domain=="fm" || domain=="lfo")?43:55;
         localExtra.gap=7;
+        if(domain=="voice"){localExtra.rowHeight=51;localExtra.gap=4;}
         if(compactSkin()&&(domain.startsWith("osc")||domain=="fm"||domain=="filter"||domain=="lfo")){localExtra.rowHeight=39;localExtra.gap=4;}
         if(compactSkin()&&domain=="mixer")localExtra.rowHeight=43;
         for(const auto& spec:extraSpecs(domain))
@@ -848,7 +1041,16 @@ struct Editor::Surface final : juce::Component, private juce::Timer
             const auto kind=(domain=="voice" || domain=="arp") && !spec.enumCount?"miniKnob":"extraRow";
             addControl(localExtra.controls,localExtra.content,spec.id,caption,kind,localExtra.dark,{});
         }
-        localExtra.setBounds(bounds);localExtra.resized();localExtra.setVisible(!localExtra.controls.empty());localExtra.toFront(false);updateExtraVisibility();
+        if(look.isFlat()){
+            // A compact replacement layout may use a shorter module. Expand
+            // Extra over neighbouring modules so every control stays reachable.
+            if(domain=="envelopes" || domain=="lfo" || domain=="fx" || domain=="mixer")localExtra.columns=2;
+            const int rows=(int(localExtra.controls.size())+localExtra.columns-1)/localExtra.columns;
+            const int height=50+rows*(localExtra.rowHeight+localExtra.gap)-localExtra.gap+(localExtra.clockRow.isVisible()?36:0);
+            bounds.setSize(juce::jmax(bounds.getWidth(),localExtra.columns*174+40),juce::jmax(bounds.getHeight(),height));
+            bounds.setPosition(juce::jlimit(13,getWidth()-13-bounds.getWidth(),bounds.getX()),juce::jlimit(83,getHeight()-13-bounds.getHeight(),bounds.getY()));
+        }
+        localExtra.setBounds(bounds);localExtra.resized();localExtra.setVisible(!localExtra.controls.empty());localExtra.toFront(false);updateExtraVisibility();applyLayout();
     }
     void rebuildStudioMain()
     {
@@ -857,19 +1059,23 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         for(auto item:*skin["studioModels"][processor.isKStation()?"K":"KS"].getArray())
         {
             auto id=item["id"].toString().replace("{lfo}",juce::String(lfo));
-            if(id.contains("{pw}")){const int o=id.substring(3,4).getIntValue()-1;id=id.replace("{pw}",sources[pwmSource[size_t(juce::jlimit(0,2,o))]]);}
+            auto caption=item["label"].toString();
+            if(id.contains("{pw}")){
+                const int o=id.substring(3,4).getIntValue()-1,source=pwmSource[size_t(juce::jlimit(0,2,o))];
+                id=id.replace("{pw}",sources[source]);caption=juce::StringArray{"PW Position","LFO 2 PWM","Env PWM"}[source];
+            }
             auto kind=item["kind"].toString();if(kind=="menu")kind="panelMenu";
-            addControl(mainControls,main,id,item["label"].toString(),kind,bool(item["dark"]),rect(item["rect"]));
+            addControl(mainControls,main,id,caption,kind,bool(item["dark"]),rect(item["rect"]));
         }
         for(int o=0;o<3;++o)for(int n=0;n<3;++n){auto& b=pwmSelectors[size_t(o)][size_t(n)];b.setBounds(rect(skin["pwmSelectors"][o*3+n]));b.setToggleState(n==pwmSource[size_t(o)],juce::dontSendNotification);}
         for(int n=0;n<2;++n){auto& b=studioLfos[size_t(n)];b.setBounds(rect(skin["lfoSelectors"][n]));b.setToggleState(lfo==n+1,juce::dontSendNotification);b.setVisible(!processor.isKStation());}
         const juce::StringArray domains{"osc1","osc2","osc3","mixer","filter","envelopes","lfo","voice","arp","fx"};
         const juce::StringArray regions{"Oscillator 1","Oscillator 2","Oscillator 3","Mixer","Filter","Envelopes","LFO","Program","Volume / Arp / Glide","Effects"};
         rebuildEffects();
-        for(size_t n=0;n<extraButtons.size();++n){const auto r=studioRegion(regions[int(n)]);auto& b=extraButtons[n];b.setBounds(r.getRight()-72,r.getY()+8,62,28);b.setButtonText(n==7?"Options":"Extra");b.setVisible(!extraSpecs(domains[int(n)]).empty());}
+        for(size_t n=0;n<extraButtons.size();++n){const auto r=studioRegion(regions[int(n)]);auto& b=extraButtons[n];b.setBounds(r.getRight()-(n==7?72:40),r.getY()+8,n==7?62:30,28);b.setButtonText(n==7?"Options":"O");b.setVisible(!extraSpecs(domains[int(n)]).empty());}
         fmButton.setBounds(rect(skin["fmButton"]));effectSelect.setBounds(compactSkin()?rect(skin["effectSelect"]):juce::Rectangle<int>(1199,887,218,28));
         if(localExtra.isVisible())openExtra(extraDomain);else updateExtraVisibility();
-        main.setEnabled(processor.firmwareReady());
+        main.setEnabled(processor.firmwareReady());applyLayout();
     }
     void rebuildEffects()
     {
@@ -886,7 +1092,8 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         }
         if(!studioSkin())for(auto& c:effectControls)if(c->spec.enumCount){c->label.setVisible(false);c->menu.setBounds(c->getLocalBounds());}
         for(size_t n=0;n<effects.size();++n)effects[n]->setToggleState(int(n)==effect,juce::dontSendNotification);
-        for(size_t n=0;n<unusedEffects.size();++n){const bool visible=studioSkin()&&int(n)>=i;auto r=rect(skin["effectSlots"][int(n)]);const int knobHeight=compactSkin()?76:84;unusedEffects[n].getProperties().set("standKnob",compactSkin());unusedEffects[n].getProperties().set("rotaryDiameter",int(skin["knobDiameter"]));unusedEffects[n].setBounds(r.withHeight(knobHeight));unusedEffectLabels[n].setBounds(r.withY(r.getY()+knobHeight).withHeight(36));unusedEffectLabels[n].setColour(juce::Label::textColourId,greyLower()?ink:light);unusedEffects[n].setVisible(visible);unusedEffectLabels[n].setVisible(visible);}
+        for(size_t n=0;n<unusedEffects.size();++n){const bool visible=studioSkin()&&int(n)>=i;auto r=rect(skin["effectSlots"][int(n)]);const int knobHeight=compactSkin()?76:84;unusedEffects[n].getProperties().set("standKnob",compactSkin());unusedEffects[n].getProperties().set("rotaryDiameter",int(skin["knobDiameter"]));unusedEffects[n].setBounds(r.withHeight(knobHeight));unusedEffectLabels[n].setBounds(r.withY(r.getY()+knobHeight).withHeight(36));setSkinColour(unusedEffectLabels[n],juce::Label::textColourId,greyLower()?juce::Colour(0xff171b20):juce::Colour(0xfff1f4f7));unusedEffects[n].setVisible(visible);unusedEffectLabels[n].setVisible(visible);}
+        applyLayout();
         if(studioSkin()){extraButtons.back().setVisible(!extraSpecs("fx").empty());if(localExtra.isVisible()&&extraDomain=="fx")openExtra("fx");updateExtraVisibility();}
     }
     void showPage(int selected)
@@ -899,11 +1106,13 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         viewport.setVisible(isAdvanced);mode.setVisible(isAdvanced);group.setVisible(page==1);section.setVisible(page==1&&mode.getSelectedId()==2);mode.setVisible(page==1);browser.setVisible(page==3);performanceMode.setVisible(false);partActive.setVisible(false);performancePanel->setVisible(page==2);if(page!=2)performancePanel->closeNoteEditor();
         viewport.setBounds(page==2?juce::Rectangle<int>(24,146,int(skin["width"])-48,int(skin["height"])-170):rect(skin["advanced"]["viewport"]));
         for(juce::Component* c:std::array<juce::Component*,6>{&status,&latency,&loadRom,&folder,&channel,&help})c->setVisible(isSetup);
-        rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);waveRom.setVisible(isSetup);factory.setVisible(isSetup);skinSelect.setVisible(isSetup);customSkin.setVisible(isSetup);
+        rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);waveRom.setVisible(isSetup);factory.setVisible(isSetup);skinSelect.setVisible(isSetup);customSkin.setVisible(isSetup);reloadSkin.setVisible(isSetup);exportSkin.setVisible(isSetup);openSkins.setVisible(isSetup);
         diagnostics.setVisible(isSetup);controllerSelect.setVisible(isSetup);refreshControllerSelection();
+        twoCoreProcessing.setVisible(isSetup);twoCoreNotice.setVisible(isSetup);
+        demoSong.setVisible(isSetup && !processor.isKStation());
         loadRom.setBounds(52,245,200,38);folder.setBounds(266,245,170,38);
         if(page==1)rebuildSections();if(page==2)performancePanel->refresh();
-        if(studioSkin())updateExtraVisibility();repaint();
+        if(studioSkin())updateExtraVisibility();applyLayout();repaint();
     }
     void rebuildSections()
     {
@@ -921,18 +1130,24 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         {
             if(page==2){if(juce::String(s.group)!="Part" && juce::String(s.id)!="volume")continue;}else if(juce::String(s.group)=="Part" || group.getText()!=s.group||(mode.getSelectedId()==2&&section.getText()!=s.section))continue;
             Panel* panel=nullptr;for(auto& p:panels)if(p->title==s.section){panel=p.get();break;}
-            if(!panel){auto p=std::make_unique<Panel>();p->title=s.section;p->rowHeight=rowHeight;panel=p.get();content.addAndMakeVisible(*p);panels.push_back(std::move(p));}
+            if(!panel){auto p=std::make_unique<Panel>();p->title=s.section;p->setComponentID("advancedPanel:"+juce::String(s.section));p->rowHeight=rowHeight;panel=p.get();content.addAndMakeVisible(*p);panels.push_back(std::move(p));}
             addControl(panel->controls,*panel,s.id,s.label,"row",false,{});
         }
         std::array<int,3> ys{0,0,0};
         for(auto& p:panels){const auto col=size_t(std::min_element(ys.begin(),ys.end())-ys.begin());const int h=42+rowHeight*int(p->controls.size());p->setBounds(int(col)*(columnWidth+gap),ys[col],columnWidth,h);ys[col]+=h+gap;}
-        content.setSize(viewport.getWidth()-16,juce::jmax(viewport.getHeight(),*std::max_element(ys.begin(),ys.end())));viewport.setViewPosition(0,0);content.setEnabled(processor.firmwareReady());
+        content.setSize(viewport.getWidth()-16,juce::jmax(viewport.getHeight(),*std::max_element(ys.begin(),ys.end())));viewport.setViewPosition(0,0);content.setEnabled(processor.firmwareReady());applyLayout();
     }
     void paint(juce::Graphics& g) override
     {
-        g.setGradientFill(juce::ColourGradient(juce::Colour(0xffeef0f2),0,0,processor.skinChoice=="Classic"?juce::Colour(0xffd9d4c6):silver,0,float(getHeight()),false));g.fillAll();
-        const auto header=rect(skin["header"]).toFloat();g.setGradientFill(juce::ColourGradient(processor.skinChoice=="Classic"?juce::Colour(0xff438276):juce::Colour(0xff148de3),0,header.getY(),processor.skinChoice=="Classic"?juce::Colour(0xff1c5048):juce::Colour(0xff075293),0,header.getBottom(),false));g.fillRoundedRectangle(header,3);
-        g.setColour(light);g.setFont(juce::Font(compactSkin()?32.f:36.f,juce::Font::bold));g.drawText(skin["name"].toString(),studioSkin()?rect(skin["title"]):juce::Rectangle<int>(40,21,250,45),juce::Justification::centredLeft);
+        if(paintSkinBackground(*this,g))return;
+        if(!skinDrawPanels(*this)){g.fillAll(look.colour(0xffced1d5));return;}
+
+        const bool flat=look.isFlat();
+        if(flat)g.setColour(skinColour(*this,0xffced1d5));else g.setGradientFill(juce::ColourGradient(skinColour(*this,0xffeef0f2),0,0,processor.skinChoice=="Classic"?skinColour(*this,0xffd9d4c6):skinColour(*this,0xffced1d5),0,float(getHeight()),false));g.fillAll();
+        const auto header=rect(skin["header"]).toFloat();
+        if(flat){g.setColour(skinColour(*this,0xffeef1f5));g.fillRect(header);g.setColour(skinColour(*this,0xff087fe5));g.fillRect(header.getX(),header.getY(),3.f,header.getHeight());}
+        else{g.setGradientFill(juce::ColourGradient(processor.skinChoice=="Classic"?skinColour(*this,0xff438276):skinColour(*this,0xff148de3),0,header.getY(),processor.skinChoice=="Classic"?skinColour(*this,0xff1c5048):skinColour(*this,0xff075293),0,header.getBottom(),false));g.fillRoundedRectangle(header,3);}
+        g.setColour(skinColour(*this,flat?0xff171b20:0xfff1f4f7));g.setFont(skinFont(*this,float(skin.getProperty("titleSize",compactSkin()?32.f:36.f)),juce::Font::bold));g.drawText(skin["name"].toString(),studioSkin()?rect(skin["title"]):juce::Rectangle<int>(40,21,250,45),juce::Justification::centredLeft);
         if(page==0)
         {
             if(studioSkin())
@@ -940,40 +1155,42 @@ struct Editor::Surface final : juce::Component, private juce::Timer
                 for(auto sectionData:*skin["sections"].getArray()){
                     const auto* a=sectionData.getArray();const auto r=juce::Rectangle<int>(int((*a)[0]),int((*a)[1]),int((*a)[2]),int((*a)[3]));const auto title=(*a)[4].toString();
                     const bool low=title=="Volume / Arp / Glide"||title=="Program"||title=="Effects",black=low&&!greyLower();
-                    g.setGradientFill(juce::ColourGradient(black?juce::Colour(0xff292c32):juce::Colour(0xffeef1f5),r.getX(),r.getY(),black?juce::Colour(0xff292c32):juce::Colour(0xffe4eaf0),r.getRight(),r.getBottom(),false));g.fillRoundedRectangle(r.toFloat(),3);
-                    g.setColour((black?light:ink).withAlpha(.23f));g.drawRoundedRectangle(r.toFloat().reduced(.5f),3,1);
-                    g.setFont(juce::Font(16.f,juce::Font::bold));g.setColour(black?light:ink);
+                    if(flat)g.setColour(skinColour(*this,0xffeef1f5));else g.setGradientFill(juce::ColourGradient(black?skinColour(*this,0xff292c32):skinColour(*this,0xffeef1f5),r.getX(),r.getY(),black?skinColour(*this,0xff292c32):skinColour(*this,0xffe4eaf0),r.getRight(),r.getBottom(),false));g.fillRoundedRectangle(r.toFloat(),flat?0.f:3.f);
+                    g.setColour(flat?skinColour(*this,0xffbdc7cf):(black?skinColour(*this,0xfff1f4f7):skinColour(*this,0xff171b20)).withAlpha(.23f));g.drawRoundedRectangle(r.toFloat().reduced(.5f),flat?0.f:3.f,1);
+                    g.setFont(skinFont(*this,16.f,juce::Font::bold));g.setColour(black?skinColour(*this,0xfff1f4f7):skinColour(*this,0xff171b20));
                     if(title=="Oscillators"){
                         for(int o=0;o<3;++o){if(!(localExtra.isVisible()&&(extraDomain=="osc"+juce::String(o+1)||(extraDomain=="fm"&&o==1))))g.drawText("Oscillator "+juce::String(o+1),r.getX()+10,r.getY()+9+(compactSkin()?224:256)*o,200,22,juce::Justification::centredLeft);if(o){
                             const float y=float(r.getY()+1+(compactSkin()?224:256)*o-(compactSkin()?12:21));
                             auto gap=fmButton.getBounds().expanded(6,0);
                             if(o==1)for(const auto& c:mainControls)if(semanticId(c->spec.id)=="osc_sync"){gap=c->getBounds().expanded(6,0);break;}
-                            g.setColour(ink.withAlpha(.2f));g.drawLine(float(r.getX()+8),y,float(gap.getX()),y);g.drawLine(float(gap.getRight()),y,float(r.getRight()-8),y);g.setColour(ink);
+                            g.setColour(skinColour(*this,0xff171b20).withAlpha(.2f));g.drawLine(float(r.getX()+8),y,float(gap.getX()),y);g.drawLine(float(gap.getRight()),y,float(r.getRight()-8),y);g.setColour(skinColour(*this,0xff171b20));
                         }}
                     }else if(title=="Envelopes"){
-                        if(!(localExtra.isVisible()&&extraDomain=="envelopes")){g.drawText("Mod Env",r.getX()+10,r.getY()+8,r.getWidth()-90,22,juce::Justification::centredLeft);g.drawText("Amp Env",r.getX()+10,r.getY()+r.getHeight()/2+8,r.getWidth()-20,22,juce::Justification::centredLeft);g.setColour(ink.withAlpha(.2f));g.drawLine(float(r.getX()+8),float(r.getCentreY()),float(r.getRight()-8),float(r.getCentreY()));}
+                        if(!(localExtra.isVisible()&&extraDomain=="envelopes")){g.drawText("Mod Env",r.getX()+10,r.getY()+8,r.getWidth()-90,22,juce::Justification::centredLeft);g.drawText("Amp Env",r.getX()+10,r.getY()+r.getHeight()/2+8,r.getWidth()-20,22,juce::Justification::centredLeft);g.setColour(skinColour(*this,0xff171b20).withAlpha(.2f));g.drawLine(float(r.getX()+8),float(r.getCentreY()),float(r.getRight()-8),float(r.getCentreY()));}
                     }else g.drawText(title,r.getX()+10,r.getY()+8,r.getWidth()-85,22,juce::Justification::centredLeft);
                 }
-                if(processor.isKStation()){g.setColour(ink);g.setFont(juce::Font(12.f));const auto f=studioRegion("Filter");g.drawText("Low-pass",f.getX()+12,f.getY()+44,160,22,juce::Justification::centredLeft);}
-                if(processor.isKStation()&&!compactSkin())for(int n=0;n<2;++n){g.setColour(ink);g.setFont(juce::Font(12.f,juce::Font::bold));g.drawText("LFO "+juce::String(n+1),1141+n*140,541,126,14,juce::Justification::centred);}
+                if(processor.isKStation()){g.setColour(skinColour(*this,0xff171b20));g.setFont(skinFont(*this,12.f));const auto f=studioRegion("Filter");g.drawText("Low-pass",f.getX()+12,f.getY()+44,160,22,juce::Justification::centredLeft);}
+                if(processor.isKStation()&&!compactSkin())for(int n=0;n<2;++n){g.setColour(skinColour(*this,0xff171b20));g.setFont(skinFont(*this,12.f,juce::Font::bold));g.drawText("LFO "+juce::String(n+1),1141+n*140,541,126,14,juce::Justification::centred);}
             }
             else
             {
-                const int split=int(skin["split"]);g.setGradientFill(juce::ColourGradient(greyLower()?juce::Colour(0xffc4c7cc):juce::Colour(0xff303237),0,float(split),greyLower()?juce::Colour(0xffaeb2b9):juce::Colour(0xff1d2025),0,float(getHeight()),false));g.fillRect(18,split,getWidth()-36,getHeight()-split-16);
-                for(auto sectionData:*skin["sections"].getArray()){const auto* a=sectionData.getArray();const int x=int((*a)[0]),y=int((*a)[1]),w=int((*a)[2]),h=int((*a)[3]);const bool low=y>=split;g.setColour(low&&!greyLower()?light:ink);g.setFont(juce::Font(16.f,juce::Font::bold));g.drawText((*a)[4].toString(),x+5,y+4,w-10,24,juce::Justification::centredLeft);g.setColour((low&&!greyLower()?light:ink).withAlpha(.35f));g.drawLine(float(x+w+6),float(y),float(x+w+6),float(y+h),1);}
+                const int split=int(skin["split"]);g.setGradientFill(juce::ColourGradient(greyLower()?skinColour(*this,0xffc4c7cc):skinColour(*this,0xff303237),0,float(split),greyLower()?skinColour(*this,0xffaeb2b9):skinColour(*this,0xff1d2025),0,float(getHeight()),false));g.fillRect(18,split,getWidth()-36,getHeight()-split-16);
+                for(auto sectionData:*skin["sections"].getArray()){const auto* a=sectionData.getArray();const int x=int((*a)[0]),y=int((*a)[1]),w=int((*a)[2]),h=int((*a)[3]);const bool low=y>=split;g.setColour(low&&!greyLower()?skinColour(*this,0xfff1f4f7):skinColour(*this,0xff171b20));g.setFont(skinFont(*this,16.f,juce::Font::bold));g.drawText((*a)[4].toString(),x+5,y+4,w-10,24,juce::Justification::centredLeft);g.setColour((low&&!greyLower()?skinColour(*this,0xfff1f4f7):skinColour(*this,0xff171b20)).withAlpha(.35f));g.drawLine(float(x+w+6),float(y),float(x+w+6),float(y+h),1);}
             }
-            g.setColour(juce::Colour(0xff0b1320));g.fillRoundedRectangle(rect(skin["lcd"]).toFloat().expanded(5),3);
+            g.setColour(skinColour(*this,0xff0b1320));g.fillRoundedRectangle(rect(skin["lcd"]).toFloat().expanded(5),flat?0.f:3.f);
         }
         else if(page==4)
         {
-            g.setColour(ink);g.setFont(juce::Font(22.f,juce::Font::bold));g.drawText("Instrument setup",52,94,900,34,juce::Justification::centredLeft);
+            g.setColour(skinColour(*this,0xff171b20));g.setFont(skinFont(*this,22.f,juce::Font::bold));g.drawText("Instrument setup",52,94,900,34,juce::Justification::centredLeft);
         }
-        g.setColour(ink.withAlpha(.4f));g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(1),5,1);
+        g.setColour(skinColour(*this,0xff171b20).withAlpha(.4f));g.drawRoundedRectangle(getLocalBounds().toFloat().reduced(1),5,1);
     }
     void timerCallback() override
     {
         refreshControllerSelection();
+        twoCoreProcessing.setToggleState(processor.ksTwoCoreProcessing(),juce::dontSendNotification);twoCoreProcessing.setEnabled(!processor.isKStation()&&!processor.isFirmwareLoading());
         diagnostics.setButtonText(processor.performanceDiagnosticsMode()?"Diagnostics: recording":"Performance diagnostics");
+        demoSong.setButtonText(processor.demoSongActive()?"Stop Demo Song":"Demo Song");demoSong.setEnabled(!processor.isKStation() && processor.firmwareReady() && !processor.isFirmwareLoading());
         if(processor.isFirmwareLoading()){
             juce::String error;
             if(!processor.finishFirmwareLoad(error)){setEnabled(false);lcd.setText("Loading firmware...",juce::dontSendNotification);status.setText("Loading firmware...",juce::dontSendNotification);return;}
@@ -983,6 +1200,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         }
         if(!displayHeld&&juce::Time::getMillisecondCounterHiRes()>=displayUntil)showProgram();
         processor.refreshControls();
+        refreshDrumEdit();
         performancePanel->refresh();
         if(displayedK!=processor.isKStation() || displayedPart!=processor.currentPart() || displayedPerformance!=processor.performanceMode())refreshModel();
         performanceMode.setEnabled(!processor.isKStation() && processor.firmwareReady());performanceMode.setToggleState(processor.performanceMode(),juce::dontSendNotification);
@@ -991,9 +1209,13 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         for(unsigned i=0;i<4;++i){const bool available=i==0 || (!processor.isKStation() && processor.performanceMode());parts[i].setEnabled(available);parts[i].setAlpha(available?1.f:.3f);parts[i].setToggleState(i==processor.currentPart(),juce::dontSendNotification);}
         for(auto& c:mainControls)c->refresh();for(auto& c:effectControls)c->refresh();for(auto& p:panels)for(auto& c:p->controls)c->refresh();
         for(auto& c:localExtra.controls)c->refresh();
+        localExtra.clockSelect.setSelectedId(int(processor.clockSource())+1,juce::dontSendNotification);
         const bool ready=processor.firmwareReady();main.setEnabled(ready);content.setEnabled(ready);loadProgram.setEnabled(true);
         previousPreset.setEnabled(ready);nextPreset.setEnabled(ready);channel.setSelectedId(int(processor.editorChannel())+1,juce::dontSendNotification);
-        help.setText(processor.dataFolder.getFullPathName()+"\nROMs: firmware, KS Data and Wave ROM. Patches: automatically scanned patch banks.\nThe audio interface buffer is configured in your DAW.",juce::dontSendNotification);bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);const auto rate=processor.getSampleRate();latency.setText(rate>0?"Plugin latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
+        juce::StringArray dataNames,dataPaths;for(const auto& file:processor.ksDataFiles()){dataNames.add(file.getFileName());dataPaths.add(file.getFullPathName());}
+        const auto missing=[](const juce::File& file){return file.existsAsFile()?file.getFileName():juce::String("Not selected / missing");};
+        help.setText(processor.dataFolder.getFullPathName()+"\nROMs | Firmware: "+missing(processor.osFile)+" | Wave ROM: "+missing(processor.bankFile)+"\nKS Data: "+(dataNames.isEmpty()?juce::String("Required: select KS All Data or its MIDI files"):dataNames.joinIntoString(", "))+"\nPatches: additional sounds | Skins: custom skins",juce::dontSendNotification);
+        help.setTooltip("Firmware: "+processor.osFile.getFullPathName()+"\nWave ROM: "+processor.bankFile.getFullPathName()+"\nKS Data:\n"+dataPaths.joinIntoString("\n"));bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);const auto rate=processor.getSampleRate();latency.setText(rate>0?"Plugin latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
     }
     uint64_t lastFirmwareRevision=0;
     void refreshControllerSelection(){
@@ -1004,7 +1226,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         controllerSelect.setSelectedId(mode+1,juce::dontSendNotification);
         controllerSelect.setEnabled(ks::boardComparisonAvailable()&&!processor.isKStation()&&!processor.isFirmwareLoading());
     }
-    bool greyLower()const{return studioSkin()?!processor.isKStation():processor.skinChoice=="KS Grey" || (processor.skinChoice=="Auto"&&!processor.isKStation());}
+    bool greyLower()const{return look.isFlat() || (studioSkin()?!processor.isKStation():processor.skinChoice=="KS Grey" || (processor.skinChoice=="Auto"&&!processor.isKStation()));}
     void refreshFirmwares(){if(processor.isFirmwareLoading())return;firmwareSelect.clear(juce::dontSendNotification);for(size_t i=0;i<processor.firmwares.size();++i){const auto& f=processor.firmwares[i];firmwareSelect.addItem(juce::String(f.kStation?"K-Station: ":"KS: ")+f.file.getFileName(),int(i)+1);if(f.file==processor.osFile)firmwareSelect.setSelectedId(int(i)+1,juce::dontSendNotification);}if(!firmwareSelect.getSelectedId())firmwareSelect.setText(processor.osFile.existsAsFile()?juce::String(processor.isKStation()?"K-Station: ":"KS: ")+processor.osFile.getFileName():"Choose firmware",juce::dontSendNotification);}
     void startFirmwareLoad(const juce::File& file,int targetPage){
         if(!processor.beginFirmwareLoad(file))return;
@@ -1013,16 +1235,33 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     }
     void refreshModel(){displayedK=processor.isKStation();displayedPart=processor.currentPart();displayedPerformance=processor.performanceMode();group.clear(juce::dontSendNotification);juce::StringArray names;for(const auto& c:processor.visibleControls())if(juce::String(c.group)!="Part")names.addIfNotAlreadyThere(c.group);for(int i=0;i<names.size();++i)group.addItem(names[i],i+1);group.setSelectedId(2,juce::dontSendNotification);status.setText(processor.status(),juce::dontSendNotification);rebuildMain();rebuildSections();refreshFirmwares();repaint();}
     void selectFile(bool){chooseAsset(4);}
-    void chooseAsset(int role){const bool directory=role==0;chooser=std::make_unique<juce::FileChooser>(directory?"Select Silver-K folder":role==1?"Select KS wave ROM":role==2?"Select KS factory data":role==3?"Select skin JSON":"Load firmware",directory?processor.dataFolder:processor.romFolder,directory?"*":role==3?"*.json":role==2?"*.bin;*.mid;*.midi":"*.bin;*.syx;*.zip;*.os;*.OS");const juce::Component::SafePointer<Surface> self(this);chooser->launchAsync(juce::FileBrowserComponent::openMode|(directory?juce::FileBrowserComponent::canSelectDirectories:juce::FileBrowserComponent::canSelectFiles),[self,role](const juce::FileChooser& c){if(!self || self->processor.isFirmwareLoading())return;auto file=c.getResult();if(file==juce::File{})return;juce::String error;bool ok=true;if(role==0)ok=self->processor.setDataFolder(file,error);else if(role==1)ok=self->processor.setWaveRom(file,error);else if(role==2)ok=self->processor.setFlashRom(file,error);else if(role==3){auto data=juce::JSON::parse(file);if(!validSkin(data)){ok=false;error="Expected a Silver-K compact (1280 x 1000), studio (1440 x 1122), or legacy (1280 x 752) JSON skin";}else{self->processor.customSkin=file.getFullPathName();self->processor.skinChoice="Custom";self->skin=skinData(self->processor);if(self->resizeEditor)self->resizeEditor();self->skinSelect.setText("Custom",juce::dontSendNotification);self->rebuildMain();self->rebuildAdvanced();self->repaint();}}else{self->startFirmwareLoad(file,0);return;}
-        if(ok)self->processor.savePreferences();
-        if(ok&&(role==1||role==2)&&self->processor.osFile.existsAsFile()&&!self->processor.isKStation()){self->startFirmwareLoad(self->processor.osFile,4);return;}
+    void chooseAsset(int role){const bool directory=role==0;chooser=std::make_unique<juce::FileChooser>(directory?"Select Silver-K folder":role==1?"Select KS wave ROM":role==2?"Select KS factory data":role==3?"Select skin.json or Silver-K layout JSON":"Load firmware",directory?processor.dataFolder:role==3?processor.skinsFolder():processor.romFolder,directory?"*":role==3?"*.json":role==2?"*.bin;*.mid;*.midi":"*.bin;*.syx;*.zip;*.os;*.OS");const juce::Component::SafePointer<Surface> self(this);chooser->launchAsync(juce::FileBrowserComponent::openMode|(directory?juce::FileBrowserComponent::canSelectDirectories:juce::FileBrowserComponent::canSelectFiles)|(role==2?juce::FileBrowserComponent::canSelectMultipleItems:0),[self,role](const juce::FileChooser& c){if(!self || self->processor.isFirmwareLoading())return;auto file=c.getResult();if(file==juce::File{})return;juce::String error;bool ok=true;if(role==0)ok=self->processor.setDataFolder(file,error);else if(role==1)ok=self->processor.setWaveRom(file,error);else if(role==2)ok=self->processor.setFlashRoms(c.getResults(),error);else if(role==3){if(self->requestSkin)self->requestSkin(file,{});return;}else{self->startFirmwareLoad(file,0);return;}
+        if(ok){self->processor.savePreferences();if(role==0)self->refreshSkinList();}
+        if(ok&&(role==1||role==2)&&self->processor.osFile.existsAsFile()&&std::any_of(self->processor.firmwares.begin(),self->processor.firmwares.end(),[self](const auto& choice){return choice.file==self->processor.osFile && !choice.kStation;})){self->startFirmwareLoad(self->processor.osFile,4);return;}
         self->status.setText(ok?self->processor.status():error,juce::dontSendNotification);self->refreshFirmwares();if(ok&&role==4){self->refreshModel();self->showPage(0);}else self->showPage(4);});}
 
 };
-Editor::Editor(Processor& p):AudioProcessorEditor(p),m_processor(p),m_surface(std::make_unique<Surface>(p))
+Editor::Editor(Processor& p):AudioProcessorEditor(p),m_processor(p)
 {
-    addAndMakeVisible(*m_surface);setResizable(true,true);
-    addMouseListener(this,true);
+    auto package=SkinPackage::builtin();juce::String error;
+    if(p.skinChoice=="Custom" || p.skinChoice.startsWith("Package:")){
+        bool loaded=SkinPackage::load(juce::File(p.customSkin),package,error);
+        if(!loaded && p.skinChoice.startsWith("Package:"))for(const auto& entry:SkinPackage::discover(p.skinsFolder())){
+            SkinPackage candidate;juce::String ignored;
+            if(SkinPackage::load(entry.second,candidate,ignored) && p.skinChoice=="Package:"+candidate.id){package=std::move(candidate);loaded=true;error.clear();p.customSkin=entry.second.getFullPathName();break;}
+        }
+    }
+    m_surface=std::make_unique<Surface>(p,std::move(package));
+    setResizable(true,true);addMouseListener(this,true);connectSurface();
+    if(error.isNotEmpty())m_surface->status.setText("Skin: "+error,juce::dontSendNotification);
+}
+void Editor::connectSurface()
+{
+    setLookAndFeel(&m_surface->look);addAndMakeVisible(*m_surface);
+    m_surface->requestSkin=[this](juce::File file,juce::String choice){
+        const juce::Component::SafePointer<Editor> self(this);
+        juce::MessageManager::callAsync([self,file,choice]{if(!self)return;juce::String error;if(!self->selectSkin(file,choice,error)){self->m_surface->refreshSkinList();self->m_surface->status.setText("Skin: "+error,juce::dontSendNotification);}});
+    };
     m_surface->resizeEditor=[this]
     {
         const int width=int(m_surface->skin["width"]),height=int(m_surface->skin["height"]);
@@ -1033,7 +1272,39 @@ Editor::Editor(Processor& p):AudioProcessorEditor(p),m_processor(p),m_surface(st
     };
     m_surface->resizeEditor();
 }
-Editor::~Editor(){removeMouseListener(this);m_processor.savePreferences();}
+bool Editor::selectSkin(const juce::File& file,const juce::String& builtinChoice,juce::String& error)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    auto candidate=SkinPackage::builtin();
+    if(builtinChoice.isEmpty() && !SkinPackage::load(file,candidate,error))return false;
+    if(m_processor.isFirmwareLoading()){error="Wait for firmware loading to finish";return false;}
+    m_surface->browser.saveViewState();
+    const auto previousChoice=m_processor.skinChoice,previousFile=m_processor.customSkin;
+    const auto selected=builtinChoice.isNotEmpty()?builtinChoice:candidate.id=="legacy"?juce::String("Custom"):"Package:"+candidate.id;
+    m_processor.skinChoice=selected;m_processor.customSkin=builtinChoice.isNotEmpty()?juce::String{}:candidate.manifest.getFullPathName();
+    std::unique_ptr<Surface> next;
+    try{next=std::make_unique<Surface>(m_processor,std::move(candidate));}
+    catch(const std::exception& e){m_processor.skinChoice=previousChoice;m_processor.customSkin=previousFile;error=e.what();return false;}
+    const int page=m_surface->page;
+    next->osc=m_surface->osc;next->lfo=m_surface->lfo;next->pwmSource=m_surface->pwmSource;next->effect=juce::jlimit(0,next->skin["effects"].size()-1,m_surface->effect);
+    // Destroy the old browser before installing its replacement; its destructor
+    // persists the existing source/filter selection.
+    setLookAndFeel(nullptr);m_surface.reset();m_surface=std::move(next);connectSurface();
+    m_surface->effectSelect.setSelectedId(m_surface->effect+1,juce::dontSendNotification);
+    m_surface->rebuildMain();m_surface->showPage(page);m_processor.savePreferences();error.clear();return true;
+}
+bool Editor::loadSkin(const juce::File& file,juce::String& error){return selectSkin(file,{},error);}
+bool Editor::reloadSkin(juce::String& error)
+{
+    const bool external=m_processor.skinChoice=="Custom" || m_processor.skinChoice.startsWith("Package:");
+    return selectSkin(external?juce::File(m_processor.customSkin):juce::File{},external?juce::String{}:m_processor.skinChoice,error);
+}
+bool Editor::keyPressed(const juce::KeyPress& key)
+{
+    if(key.getKeyCode()!=juce::KeyPress::F5Key)return false;
+    m_surface->reloadSkin.onClick();return true;
+}
+Editor::~Editor(){removeMouseListener(this);m_processor.savePreferences();setLookAndFeel(nullptr);}
 double Editor::getUiScale() const{return double(getWidth())/int(m_surface->skin["width"]);}
 void Editor::setUiScale(double scale)
 {
@@ -1051,16 +1322,18 @@ void Editor::resized()
 }
 void Editor::mouseDown(const juce::MouseEvent& event)
 {
-    if(event.mods.isPopupMenu()&&!m_sizeMenuOpen)showSizeMenu();
+    if(event.mods.isPopupMenu()&&!m_sizeMenuOpen)showSizeMenu(event.getScreenPosition());
 }
-void Editor::showSizeMenu()
+void Editor::showSizeMenu(juce::Point<int> screenPosition)
 {
     m_sizeMenuOpen=true;
     juce::PopupMenu sizes,menu;
     for(int percent:{50,75,100})sizes.addItem(percent,juce::String(percent)+"%",true,std::abs(getUiScale()*100-percent)<.1);
-    sizes.addSeparator();sizes.addItem(1,"Custom…");menu.addSubMenu("Size",sizes);
+    sizes.addSeparator();sizes.addItem(1,juce::String::fromUTF8("Custom\xe2\x80\xa6"));menu.addSubMenu("Size",sizes);
     const juce::Component::SafePointer<Editor> self(this);
-    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this).withTargetScreenArea({juce::Desktop::getMousePosition(),{1,1}}),[self](int result){
+    // Rectangle(Point, Point) takes two corners, not a position and size.
+    const juce::Rectangle<int> target(screenPosition.x,screenPosition.y,1,1);
+    menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(this).withTargetScreenArea(target),[self](int result){
         if(!self)return;
         self->m_sizeMenuOpen=false;
         if(result==1)self->showCustomSize();else if(result>=50)self->setUiScale(result/100.);
@@ -1069,7 +1342,7 @@ void Editor::showSizeMenu()
 void Editor::showCustomSize()
 {
     if(m_sizeDialog)return;
-    m_sizeDialog=std::make_unique<juce::AlertWindow>("Plugin size","Scale: 50–150%",juce::MessageBoxIconType::NoIcon,this);
+    m_sizeDialog=std::make_unique<juce::AlertWindow>("Plugin size",juce::String::fromUTF8("Scale: 50\xe2\x80\x93" "150%"),juce::MessageBoxIconType::NoIcon,this);
     m_sizeDialog->addTextEditor("percent",juce::String(getUiScale()*100,1),"Size (%)");
     m_sizeDialog->addButton("Apply",1,juce::KeyPress(juce::KeyPress::returnKey));
     m_sizeDialog->addButton("Cancel",0,juce::KeyPress(juce::KeyPress::escapeKey));

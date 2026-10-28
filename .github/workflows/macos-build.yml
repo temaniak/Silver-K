@@ -1,0 +1,33 @@
+name: macOS Universal 2
+on:
+  workflow_call:
+permissions:
+  contents: read
+jobs:
+  universal:
+    strategy:
+      fail-fast: false
+      matrix:
+        runner: [macos-15]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Audit source-only repository
+        run: python3 tools/check_repository.py
+      - name: Configure both architectures for macOS 12
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
+      - name: Build applications, plugins and checks
+        run: cmake --build build --config Release --target silverK_Standalone silverK_VST3 silverK_AU silverWaveRomBuilder silver_check silverClock_test silverResamplerRealtime_test silverWorkflow_test silverPersistence_test silverDspThreads_test silverLatency_test silverSkin_test silverDiagnostics_test silverWorkerWakeup_test ksWorkerPlacement_test ksDspWorkers_test ksDspEquivalence_test ksControllerTrace_test ksPartMidi_test silverWaveBank_test dsp56kTestRunner --parallel 3
+      - name: Run checks on the runner's native architecture
+        env:
+          SILVER_K_DATA: '${{ runner.temp }}/silver-macos-tests'
+        run: ctest --test-dir build -C Release --output-on-failure --timeout 120 -R '^(silver_conversion|silver_host_clock|silver_resampler_realtime|silver_patch_workflow|silver_persistence_and_rescan|silver_dsp_threads|silver_latency_reentry|silver_skin_packages|silver_diagnostics|silver_worker_wakeup|ks_worker_placement|ks_dsp_workers|ks_dsp_equivalence|ks_controller_trace|ks_part_midi|silver_wave_bank|dsp56300_unitTests)$'
+      - name: Verify deployment targets and package Universal 2
+        run: python3 tools/package_release.py --products build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release --dependencies build/_deps --platform macOS-universal --output release-output
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Silver-K-macOS-universal-${{ matrix.runner }}
+          path: release-output/*
+          if-no-files-found: error
+          retention-days: 14

@@ -44,10 +44,29 @@ ks::nativeOracleTest::Before before(const Original&a,H8SDisassembler&decoder){
 bool ramEqual(const uint8_t*a,const uint8_t*b,const std::vector<uint8_t>&written,Tapes&t,uint64_t phase){bool same=true;for(uint32_t at=0;at<0x1000000;){if(a[at]==b[at]){++at;continue;}const auto first=at;const bool frame=(written[at/8]>>(at&7))&1;do{++at;}while(at<0x1000000&&a[at]!=b[at]&&bool((written[at/8]>>(at&7))&1)==frame);t.difference(phase,first,at-first,frame,a+first,b+first);if(!frame)same=false;}return same;}
 
 int main(int argc,char**argv){try{if(argc!=2&&argc!=3){std::cout<<"SKIP: authenticated controller ROM input required\n";return 77;}g_dasm=false;ks::Rom rom(argv[1]);check(rom.isValid(),"Authenticated controller ROM required");const auto&romData=rom.data();Tapes tapes(argc==3?argv[2]:nullptr);std::vector<uint8_t>frameWritten(0x1000000/8);std::array<uint64_t,4>meanings{};
- auto a=std::make_unique<Original>();OwnedStorage<ks::ControllerDeviceState>b;OwnedStorage<ks::NativeControllerExecutor>owner;auto decoder=std::make_unique<H8SDisassembler>();OriginalBus x;NativeBus y;x.events.reserve(256);y.events.reserve(256);a->memmap(&x,0,1<<24);b->attachResourceBus(&y);for(unsigned at:{0u,0xa00000u}){a->loadmem(romData.data(),romData.size(),at);b->loadmem(romData.data(),romData.size(),at);}decoder->loadmem(romData.data(),romData.size(),0);check(owner->bindVerifiedRom(romData.data()),"Metadata binding");
+ auto a=std::make_unique<Original>();OwnedStorage<ks::ControllerDeviceState>b;OwnedStorage<ks::NativeControllerExecutor>owner;auto decoder=std::make_unique<H8SDisassembler>();OriginalBus x;NativeBus y;x.events.reserve(256);y.events.reserve(256);a->memmap(&x,0,1<<24);b->attachResourceBus(&y);for(unsigned at:{0u,0xa00000u}){a->loadmem(romData.data(),romData.size(),at);b->loadmem(romData.data(),romData.size(),at);}decoder->loadmem(romData.data(),romData.size(),0);
  enum class K{Main};
  struct Config{K kind=K::Main;unsigned alias=0,key=0xa0,pattern=3,part=2,flags=0xa5,count=8,pointer=0,value=99,mode=0,hardware=4,inhibit=0,notify=0,edit=0,previous=16,patchFlags=0,expression=1,held=0,bank=1;unsigned probePhase=2,busy=0;bool live=false,caller=false,nested=false,reentry=false,reset=false;};Config cfg;
-std::vector<uint8_t>ownerSnapshot(sizeof(ks::NativeControllerExecutor)),deviceSnapshot(sizeof(ks::ControllerDeviceState));uint64_t snapshots=0;
+std::vector<uint8_t>ownerSnapshot(sizeof(ks::NativeControllerExecutor)),deviceSnapshot(sizeof(ks::ControllerDeviceState));uint64_t snapshots=0,freshPlanGuards=0,queryBeforeIrq=0,invalidForegroundMaskGuards=0;std::array<bool,2>maskGuardContexts{};std::array<uint64_t,8>emptyMainPriorities{};uint64_t emptyMainGuards=0,activeEmptyIrqGuards=0;bool oneShot=false;
+ // Unbound metadata must precede invalid mode, map and foreground masks.
+ b->interruptMode2=false;b->nativeLowBase=nullptr;b->nativeLowSize=0;
+ std::memcpy(ownerSnapshot.data(),owner.value,ownerSnapshot.size());std::memcpy(deviceSnapshot.data(),b.value,deviceSnapshot.size());
+ const auto unboundEvents=y.events.size();const auto unboundReads=y.statusReads;
+ const auto unboundUnchanged=[&]{return !std::memcmp(ownerSnapshot.data(),owner.value,ownerSnapshot.size())&&!std::memcmp(deviceSnapshot.data(),b.value,deviceSnapshot.size())&&unboundEvents==y.events.size()&&unboundReads==y.statusReads;};
+ check(owner->playbackBlocked(*b.value)==ks::NativeControllerExecutor::Blocked::Metadata&&!owner->nextClocks(*b.value)&&!owner->advanceBefore(*b.value,~0u)&&!owner->advanceNextPhase(*b.value)&&unboundUnchanged(),"Unbound playback metadata precedence/state");
+ for(const uint8_t mask:{uint8_t(0),uint8_t(8),uint8_t(255)})check(owner->interruptBlocked(*b.value,mask)==ks::NativeControllerExecutor::Blocked::Metadata&&!owner->interruptNextClocks(*b.value,mask)&&!owner->advanceInterruptBefore(*b.value,~0u,mask)&&unboundUnchanged(),"Unbound interrupt metadata precedence/state");
+ check(owner->bindVerifiedRom(romData.data()),"Metadata binding");
+ auto checkInvalidForegroundMasks=[&]{
+  const auto context=owner->activeInterrupt()?1u:0u;check(!maskGuardContexts[context],"Invalid foreground mask context repeated");
+  for(const uint8_t mask:{uint8_t(8),uint8_t(255)}){
+   std::memcpy(ownerSnapshot.data(),owner.value,ownerSnapshot.size());std::memcpy(deviceSnapshot.data(),b.value,deviceSnapshot.size());const auto events=y.events.size();const auto reads=y.statusReads;
+   const auto unchanged=[&]{return !std::memcmp(ownerSnapshot.data(),owner.value,ownerSnapshot.size())&&!std::memcmp(deviceSnapshot.data(),b.value,deviceSnapshot.size())&&events==y.events.size()&&reads==y.statusReads;};
+   tracking=true;const auto blocked=owner->interruptBlocked(*b.value,mask);tracking=false;check(blocked==ks::NativeControllerExecutor::Blocked::Mask&&unchanged(),"Invalid foreground mask query changed owner/device/resources");
+   tracking=true;const auto clocks=owner->interruptNextClocks(*b.value,mask);tracking=false;check(!clocks&&unchanged(),"Invalid foreground mask clocks changed owner/device/resources");
+   tracking=true;const auto used=owner->advanceInterruptBefore(*b.value,~0u,mask);tracking=false;check(!used&&unchanged(),"Invalid foreground mask advance changed owner/device/resources");++invalidForegroundMaskGuards;
+  }
+  maskGuardContexts[context]=true;
+ };
  uint64_t phases=0,cyclesDone=0,rejects=0,irqExpected=0,irqActual=0,nestedCases=0,criticalHeld=0;
  auto run=[&](unsigned scenario,unsigned vector=0,int child=-1,unsigned nestedVector=0,bool critical=false){
   std::fill(frameWritten.begin(),frameWritten.end(),uint8_t(0));
@@ -69,18 +88,48 @@ std::vector<uint8_t>ownerSnapshot(sizeof(ks::NativeControllerExecutor)),deviceSn
   if(scenario==1)for(auto*m:{a->memory,b->memory}){const uint32_t tick=1007;for(unsigned n=0;n<4;++n)m[0xffec10+n]=uint8_t(tick>>(24-8*n));m[0x1537a]=64;}
   // Initial operands are explicit fixture lifecycle values. Later inputs
   // come only from the pure result, never from the H8 oracle.
-  check(owner->beginPlayback({uint16_t((cfg.value<<8)|cfg.key),0xff,0x18000}),"Explicit lifecycle input");const auto returnsBefore=owner->metrics().mainReturns;const auto irqBefore=owner->metrics().interruptStarts,irqReturnedBefore=owner->metrics().interruptReturns;unsigned expectedHere=0;
+  check(owner->beginPlayback({uint16_t((cfg.value<<8)|cfg.key),0xff,0x18000}),"Explicit lifecycle input");
+  // Empty playback queries and rejected budgets must be pure, including when
+  // mode and mapping errors are combined or changed after a query.
+  check(!owner->activeMain()&&!owner->activeInterrupt()&&!b->pending_irqs&&!b->pending_irqs_high,"Empty Main fixture preconditions");
+  const auto emptyCost=owner->nextClocks(*b.value);check(emptyCost==ks::ServiceCycleTask{}.nextClocks(),"Empty Main initial cost");
+  std::memcpy(ownerSnapshot.data(),owner.value,ownerSnapshot.size());std::memcpy(deviceSnapshot.data(),b.value,deviceSnapshot.size());
+  const auto emptyEvents=y.events.size();const auto emptyReads=y.statusReads;
+  check(owner->nextClocks(*b.value)==emptyCost&&!owner->advanceBefore(*b.value,0)&&!owner->advanceBefore(*b.value,emptyCost-1),"Empty Main query/budget");
+  check(!std::memcmp(ownerSnapshot.data(),owner.value,ownerSnapshot.size())&&!std::memcmp(deviceSnapshot.data(),b.value,deviceSnapshot.size())&&emptyEvents==y.events.size()&&emptyReads==y.statusReads,"Empty Main rejection changed state/observer");
+  for(uint8_t mask=0;mask<8;++mask){
+   check(owner->interruptBlocked(*b.value,mask)==ks::NativeControllerExecutor::Blocked::None&&!owner->interruptNextClocks(*b.value,mask)&&!owner->advanceInterruptBefore(*b.value,~0u,mask),"Empty IRQ foreground mask selection");
+   check(!std::memcmp(ownerSnapshot.data(),owner.value,ownerSnapshot.size())&&!std::memcmp(deviceSnapshot.data(),b.value,deviceSnapshot.size())&&emptyEvents==y.events.size()&&emptyReads==y.statusReads,"Empty IRQ foreground query changed state/observer");
+  }
+  auto* const lowBase=b->nativeLowBase;const auto lowSize=b->nativeLowSize;
+  b->nativeLowBase=nullptr;b->nativeLowSize=0x1fffff;b->interruptMode2=false;
+  check(owner->playbackBlocked(*b.value)==ks::NativeControllerExecutor::Blocked::InterruptMode&&!owner->nextClocks(*b.value),"Mode must precede invalid map");
+  b->interruptMode2=true;check(owner->playbackBlocked(*b.value)==ks::NativeControllerExecutor::Blocked::ResourceMap&&!owner->nextClocks(*b.value),"Null map must block playback");
+  b->nativeLowBase=lowBase;check(owner->playbackBlocked(*b.value)==ks::NativeControllerExecutor::Blocked::ResourceMap&&!owner->nextClocks(*b.value),"Short map must block playback");
+  b->nativeLowSize=lowSize;check(owner->playbackBlocked(*b.value)==ks::NativeControllerExecutor::Blocked::None&&owner->nextClocks(*b.value)==emptyCost,"Restored map must replan playback");++emptyMainGuards;
+  // An external cost query retains no plan: changing interrupt mode before the
+  // one-shot call must block without touching controller or observed resources.
+  const auto queriedCost=owner->nextClocks(*b.value);check(queriedCost,"Fresh-plan fixture stalled");b->interruptMode2=false;
+  std::memcpy(ownerSnapshot.data(),owner.value,ownerSnapshot.size());std::memcpy(deviceSnapshot.data(),b.value,deviceSnapshot.size());const auto guardEvents=y.events.size();const auto guardReads=y.statusReads;
+  tracking=true;const auto guarded=owner->advanceNextPhase(*b.value);tracking=false;
+  check(!guarded&&!std::memcmp(ownerSnapshot.data(),owner.value,ownerSnapshot.size())&&!std::memcmp(deviceSnapshot.data(),b.value,deviceSnapshot.size())&&guardEvents==y.events.size()&&guardReads==y.statusReads,"One-shot reused an external query after resource mutation");b->interruptMode2=true;++freshPlanGuards;
+  if(!maskGuardContexts[0]){check(!owner->activeInterrupt(),"Inactive foreground mask fixture already owns an IRQ");checkInvalidForegroundMasks();}
+const auto returnsBefore=owner->metrics().mainReturns;const auto irqBefore=owner->metrics().interruptStarts,irqReturnedBefore=owner->metrics().interruptReturns;unsigned expectedHere=0;
   for(unsigned cycle=0;cycle<4;++cycle){unsigned count=0;bool injected=false,nestedInjected=false;do{
    const bool mainTarget=owner->main()&&owner->main()->coordinator().awaitingChild()&&int(owner->main()->childIndex())==child;
    const bool target=critical?(cycle==0&&owner->mainMask()==7):child<0?true:mainTarget;
    if(vector&&!injected&&target){
+    check(owner->nextClocks(*b.value),"Pre-IRQ query stalled");++queryBeforeIrq;
     for(auto*m:{a->memory,b->memory})if(vector==90){m[0xffed6c]=0;m[0xffed6d]=1;m[0xffed6e]=m[0xffed6f]=0;m[0xffed70]=0xf8;}
     const auto level=uint8_t(vector==32?6:1);a->interruptPriority[vector]=b->interruptPriority[vector]=level;a->interrupt(vector);b->interrupt(vector);injected=true;++expectedHere;
     if(critical){check(a->exr==7&&owner->semanticMask(owner->mainMask())==7,"Critical injection missing actual mask7");const auto prior=owner->metrics().interruptStarts;check(owner->nextClocks(*b.value)==owner->main()->nextClocks(b->lastwrite,b->lastread),"Masked IRQ replaced Main phase");check(owner->metrics().interruptStarts==prior,"Masked IRQ admitted early");++criticalHeld;}
    }
-   if(nestedVector&&injected&&!nestedInjected&&owner->interrupts().depth()==1&&owner->semanticMask(owner->mainMask())<7){const auto level=uint8_t(nestedVector==32?6:7);a->interruptPriority[nestedVector]=b->interruptPriority[nestedVector]=level;a->interrupt(nestedVector);b->interrupt(nestedVector);nestedInjected=true;++expectedHere;++nestedCases;}
+   if(nestedVector&&injected&&!nestedInjected&&owner->interrupts().depth()==1&&owner->semanticMask(owner->mainMask())<7){check(owner->nextClocks(*b.value),"Pre-nested-IRQ query stalled");++queryBeforeIrq;const auto level=uint8_t(nestedVector==32?6:7);a->interruptPriority[nestedVector]=b->interruptPriority[nestedVector]=level;a->interrupt(nestedVector);b->interrupt(nestedVector);nestedInjected=true;++expectedHere;++nestedCases;}
 
+   if(!maskGuardContexts[1]&&owner->activeInterrupt())checkInvalidForegroundMasks();
    const auto cost=owner->nextClocks(*b.value);check(cost,"Owner stalled");const auto eventSize=y.events.size();const auto reads=y.statusReads;
+   if(owner->activeInterrupt()&&!b->pending_irqs&&!b->pending_irqs_high){check(cost==owner->interruptNextClocks(*b.value,owner->mainMask()),"Active empty-pending IRQ must continue");++activeEmptyIrqGuards;}
+   if(owner->main()&&!owner->activeInterrupt()&&!b->pending_irqs&&!b->pending_irqs_high){const auto priority=owner->mainMask();check(priority<8,"Main priority outside legal range");++emptyMainPriorities[priority];}
    // Every phase rejects an insufficient budget. Whole object snapshots are
    // sampled here and checked byte-for-byte across the rejected call.
    const bool snapshot=phases%257==0||b->pending_irqs||b->pending_irqs_high;
@@ -88,21 +137,25 @@ std::vector<uint8_t>ownerSnapshot(sizeof(ks::NativeControllerExecutor)),deviceSn
    tracking=true;const auto rejected=owner->advanceBefore(*b.value,cost-1);tracking=false;
    if(snapshot)check(!std::memcmp(ownerSnapshot.data(),owner.value,ownerSnapshot.size())&&!std::memcmp(deviceSnapshot.data(),b.value,deviceSnapshot.size()),"Rejected phase changed whole native owner/device");
    check(!rejected&&eventSize==y.events.size()&&reads==y.statusReads,"Underbudget mutated external resource observer");++rejects;
-   x.events.clear();y.events.clear();const auto reference=before(*a,*decoder);const auto pc=uint32_t(a->getPC());a->step();tracking=true;const auto used=owner->advanceBefore(*b.value,cost);tracking=false;
+   x.events.clear();y.events.clear();const auto reference=before(*a,*decoder);const auto pc=uint32_t(a->getPC());a->step();tracking=true;const auto used=oneShot?owner->advanceNextPhase(*b.value):owner->advanceBefore(*b.value,cost);tracking=false;
    const auto part=ks::nativeOracleTest::partition(x.events,y.events,reference,a->getSP());
    for(unsigned i=0;i<x.events.size();++i){const auto m=unsigned(part.meaning[i]);++meanings[m];if(m==unsigned(ks::nativeOracleTest::Meaning::RetiredFrame)&&x.events[i].write){const auto at=x.events[i].address;frameWritten[at/8]|=uint8_t(1u<<(at&7));}}
    tapes.phase(phases,reference,a->getSP(),a->cycles,x.events,y.events,part,a->lastread,a->lastwrite,b->lastread,b->lastwrite);
    if(used!=cost||a->cycles!=b->cycles||part.device!=y.events){std::cerr<<"First divergence scenario="<<scenario<<" cycle="<<cycle<<" phase="<<count<<" H8pc="<<std::hex<<pc<<std::dec<<" clocks="<<a->cycles<<'/'<<b->cycles<<'\n';ramEqual(a->memory,b->memory,frameWritten,tapes,phases);tapes.flush();throw std::runtime_error("Native owner/H8 resources/time differ");}check(a->exr==owner->semanticMask(owner->mainMask()),"Semantic priority differs");++phases;check(++count<4000000,"Phase bound");
   }while(owner->metrics().mainReturns<returnsBefore+cycle+1);
    check(uint32_t(a->getPC())==0x4338&&!a->indent,"Original H8 did not wrap with native owner");check(!vector||injected||(critical&&cycle>0),"Requested real IRQ site not reached");
-   check(owner->metrics().mainReturns==returnsBefore+cycle+1&&!owner->activeMain(),"Cyclic owner return");check(ramEqual(a->memory,b->memory,frameWritten,tapes,phases),"Full RAM differs outside bytes actually written as retired frames");const auto&out=owner->result();check(out.expressionSource==uint32_t(a->regs[5].er)&&out.activation==uint8_t(a->regs[2].rh),"Genuine domain result differs");check(owner->nextInput().presentation==out.presentation&&owner->nextInput().activation==out.activation&&owner->nextInput().expressionSource==out.expressionSource,"Next input not pure result");std::cout<<"PASS owner H8 scenario="<<scenario<<" cycle="<<cycle<<" phases="<<count<<" irqVector="<<vector<<" child="<<child<<" nested="<<nestedVector<<" lastreadNative/H8="<<b->lastread<<'/'<<a->lastread<<std::endl;++cyclesDone;
+   check(owner->metrics().mainReturns==returnsBefore+cycle+1&&!owner->activeMain(),"Cyclic owner return");check(ramEqual(a->memory,b->memory,frameWritten,tapes,phases),"Full RAM differs outside bytes actually written as retired frames");const auto&out=owner->result();check(out.expressionSource==uint32_t(a->regs[5].er)&&out.activation==uint8_t(a->regs[2].rh),"Genuine domain result differs");check(owner->nextInput().presentation==out.presentation&&owner->nextInput().activation==out.activation&&owner->nextInput().expressionSource==out.expressionSource,"Next input not pure result");std::cout<<"PASS owner H8 api="<<(oneShot?"one-shot":"checked")<<" scenario="<<scenario<<" cycle="<<cycle<<" phases="<<count<<" irqVector="<<vector<<" child="<<child<<" nested="<<nestedVector<<" lastreadNative/H8="<<b->lastread<<'/'<<a->lastread<<std::endl;++cyclesDone;
   }
   check(owner->metrics().interruptStarts==irqBefore+expectedHere&&owner->metrics().interruptReturns==irqReturnedBefore+expectedHere&&!owner->activeInterrupt(),"Actual IRQ admission/return count differs");irqExpected+=expectedHere;irqActual+=owner->metrics().interruptReturns-irqReturnedBefore;check(a->pending_irqs==b->pending_irqs&&a->pending_irqs_high==b->pending_irqs_high,"Pending IRQ masks differ");
   owner->requestBoundaryStop();check(!owner->playbackEnabled(),"Boundary stop did not publish");
  };
+ for(bool useOneShot:{false,true}){oneShot=useOneShot;
  for(unsigned scenario:{0u,3u,1u,5u}){cfg=Config{};cfg.key=0;cfg.pattern=scenario==1?0:scenario;run(scenario);}check(!allocations,"Native owner allocated");for(unsigned vector:{28u,32u,42u,88u,89u,90u,91u}){cfg=Config{};cfg.key=0;cfg.pattern=0;run(0,vector);}
  for(int child=0;child<17;++child){cfg=Config{};cfg.key=0;cfg.pattern=0;const unsigned vectors[]{28,32,42,88,89,90,91};run(0,vectors[child%7],child);}
  for(auto pair:std::array<std::array<unsigned,2>,2>{{{{28,32}},{{32,89}}}}){cfg=Config{};cfg.key=0;cfg.pattern=0;run(0,pair[0],-1,pair[1]);}
  cfg=Config{};cfg.key=0;cfg.pattern=0;run(1,32,-1,0,true);
- check(!allocations&&irqExpected==irqActual,"Final IRQ/alloc accounting");for(auto n:owner->metrics().children)check(n==cyclesDone,"Actual child return count");std::cout<<"PASS actualH8/newDevice/nativeowner cycles="<<cyclesDone<<" phases="<<phases<<" portableCostMinus1Rejects="<<rejects<<" wholeObjectSnapshotRejects="<<snapshots<<" allocations="<<allocations<<" IRQactual="<<irqActual<<" nested="<<nestedCases<<" heldCritical="<<criticalHeld<<" comparedDevice="<<meanings[0]<<" verifiedFetch="<<meanings[1]<<" selectedVectorBytes="<<meanings[2]<<" actualFrameTransfers="<<meanings[3]<<" noControllerCpu/Compatibility/ksLib\n";tapes.flush();return 0;
+ }
+ check(maskGuardContexts[0]&&maskGuardContexts[1]&&invalidForegroundMaskGuards==4,"Invalid foreground mask active/inactive coverage missing");
+ check(emptyMainGuards&&activeEmptyIrqGuards&&emptyMainPriorities[0]&&emptyMainPriorities[7],"Empty playback/active IRQ priority coverage missing");
+ check(!allocations&&irqExpected==irqActual,"Final IRQ/alloc accounting");for(auto n:owner->metrics().children)check(n==cyclesDone,"Actual child return count");std::cout<<"PASS actualH8/newDevice/nativeowner cycles="<<cyclesDone<<" phases="<<phases<<" portableCostMinus1Rejects="<<rejects<<" wholeObjectSnapshotRejects="<<snapshots<<" freshPlanMutationGuards="<<freshPlanGuards<<" queryBeforeIrq="<<queryBeforeIrq<<" invalidForegroundMaskGuards="<<invalidForegroundMaskGuards<<" emptyMainGuards="<<emptyMainGuards<<" activeEmptyIrqGuards="<<activeEmptyIrqGuards<<" emptyMainPriority0/6/7="<<emptyMainPriorities[0]<<'/'<<emptyMainPriorities[6]<<'/'<<emptyMainPriorities[7]<<" allocations="<<allocations<<" IRQactual="<<irqActual<<" nested="<<nestedCases<<" heldCritical="<<criticalHeld<<" comparedDevice="<<meanings[0]<<" verifiedFetch="<<meanings[1]<<" selectedVectorBytes="<<meanings[2]<<" actualFrameTransfers="<<meanings[3]<<" noControllerCpu/Compatibility/ksLib\n";tapes.flush();return 0;
  }catch(const std::exception&e){tracking=false;std::cerr<<e.what()<<'\n';return 1;}}

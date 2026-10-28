@@ -39,6 +39,13 @@ public:
     template<class Reader,class Writer>
     unsigned advanceBefore(unsigned available,Reader&& read,Writer&& write) {
         const auto cost=nextClocks();if(!cost||cost>available)return 0;
+        return advancePlannedPhase(cost,read,write);
+    }
+private:
+    friend class InterruptService;
+    // The owner synchronously passes this phase's admitted nonzero cost.
+    template<class Reader,class Writer>
+    unsigned advancePlannedPhase(unsigned cost,Reader&& read,Writer&& write){
         // Transfers are observed at original clock offsets within the phase.
         const auto readWord=[&](uint32_t a,unsigned end){
             const auto gap=wordClocks(a)-byteClocks(a);
@@ -194,7 +201,6 @@ public:
         }
         return cost;
     }
-private:
     static unsigned byteClocks(uint32_t a){return a>=0xfffd10?1u:3u;}
     static unsigned wordClocks(uint32_t a){return a<0x400000?3u+3u*(a&1):6u;}
     static unsigned keyTransferClocks(const KeyboardEventsTask& t){

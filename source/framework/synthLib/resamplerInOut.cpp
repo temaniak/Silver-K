@@ -4,7 +4,6 @@
 #include <algorithm>
 
 #include "dsp56kBase/fastmath.h"
-#include "dsp56kBase/logging.h"
 
 #include <cstring>	// memset/memcpy
 
@@ -291,6 +290,8 @@ namespace synthLib
 			}
 
 			m_inputLatency += static_cast<uint32_t>(offset);
+			// Padding can recur long after prewarm. Retain its latency counter
+			// without formatting/logging (heap allocation and I/O) on the callback.
 		};
 
 		auto feedOutput = [&](const TAudioOutputs& _outs, const uint32_t _numProcessedSamples)

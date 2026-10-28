@@ -7,6 +7,7 @@ public:
  explicit Browser(Processor&);~Browser()override;
  void resized()override;
  void pollLibrary(){timerCallback();}
+ void saveViewState(){rememberView();}
  bool stepPatch(int direction,juce::String* error=nullptr);
  std::vector<pluginLib::patchDB::PatchPtr> filteredPrograms()const;
  bool activateProgram(unsigned,const pluginLib::patchDB::PatchPtr&,juce::String&);
@@ -15,10 +16,10 @@ private:
  Processor& p;
  juce::TableListBox table;
  juce::TextEditor search,tags,tagFilter;
- juce::ComboBox model,source;
+ juce::ComboBox model,source,ksBankSelect;
  juce::ToggleButton favourite{"Favourite"},onlyFavourites{"Favourites only"},showAllSlots{"Show all bank slots"};
  juce::TextButton addFolder{"Add folder"},addFile{"Add file"},refresh{"Rescan"},remove{"Remove source"},saveTags{"Save tags"},exportPatch{"Export .syx"},saveCurrent{"Save current"};
- juce::Label info;
+ juce::Label info,bankHint;
  std::unique_ptr<juce::FileChooser> chooser;
  std::vector<pluginLib::patchDB::PatchPtr> rows,searchRows;
  std::vector<pluginLib::patchDB::DataSourceNodePtr> sources;
@@ -30,6 +31,7 @@ private:
  pluginLib::patchDB::SearchHandle handle=pluginLib::patchDB::g_invalidSearchHandle;
  bool dirty=true,lastK=false,updatingRows=false,resultsDirty=true;
  int sortColumn=7;bool sortAscending=true;
+ void updateModel();
  void rememberView();
  pluginLib::patchDB::PatchPtr lastActivatedPatch;
  std::array<pluginLib::patchDB::PatchPtr,4> partPrograms{};

@@ -1,4 +1,4 @@
-# JUCE 7's CGWindowListCreateImage was removed from newer macOS SDKs.
+# macOS compatibility: JUCE 7 window capture and VST3 processing modes.
 # Patch a build-local source copy; never modify an external dependency checkout.
 if(APPLE)
     set(SILVER_JUCE_PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/private-juce")

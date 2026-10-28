@@ -73,4 +73,4 @@ dotnet publish launcher/XStation.Web.csproj -c Release -r win-x64 --self-contain
 
 Доказательства и ограничения: [template-protocol.md](docs/template-protocol.md), [synth-protocol.md](docs/synth-protocol.md).
 
-Источники: [Novation Downloads](https://downloads.novationmusic.com/novation/synthesisers-legacy/x-station-61), [MIDI Implementation Chart](https://fael-downloads-prod.focusrite.com/customer/prod/downloads/X-Station%20MIDI%20Implementation%20Chart.pdf), [X-Station FAQ](https://support.novationmusic.com/hc/en-gb/articles/206690209-Novation-X-Station-Troubleshooting-and-FAQs), [Web MIDI](https://www.w3.org/TR/webmidi/).
+Источники: [MIDI Implementation Chart](https://fael-downloads-prod.focusrite.com/customer/prod/downloads/X-Station%20MIDI%20Implementation%20Chart.pdf), [X-Station FAQ](https://support.novationmusic.com/hc/en-gb/articles/206690209-Novation-X-Station-Troubleshooting-and-FAQs), [Web MIDI](https://www.w3.org/TR/webmidi/).

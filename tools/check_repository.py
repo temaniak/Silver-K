@@ -7,11 +7,19 @@ files=subprocess.check_output(['git','ls-files','-z'],cwd=root).decode().split('
 errors=[]
 for name in filter(None,files):
     p=Path(name);data=(root/p).read_bytes()
+    if (p.name=='AGENTS.md' or name.startswith(('.codex/','.agents/','private/','reports/','design-stand/qa/'))
+        or name in {'design-stand/design-qa.md','doc/KS_CONTROLLER_TEST_WINDOWS_RU.md',
+                    'doc/KS_NATIVE_CONTROLLER.md','doc/OPTIMIZATION_LOG.md','doc/PERFORMANCE_DIAGNOSTICS.md',
+                    'doc/STABLE_BUILD_20261016_RU.md','doc/STABLE_PERFORMANCE_20261016_RU.md',
+                    'doc/WINDOWS_STABLE_HANDOFF_20261016_RU.md','doc/silver_k.md'}
+        or (name.startswith('design-stand/public/assets/') and p.name.endswith('-notes.md'))
+        or name.startswith('doc/releases/0.2')):
+        errors.append(name+': internal report or AI working context must remain local')
     if name=='assets/ks-init-flash.bin':
         if len(data)!=524288 or any(v!=255 for v in data[:0x1fc00]) or any(v!=255 for v in data[0x5e800:]):
             errors.append(name+': unexpected flash size or data in reserved/firmware regions')
         continue
-    if p.suffix.lower() in {'.wav','.aif','.aiff','.mp3','.flac','.bin','.rom','.os','.syx','.mid','.midi','.fxb','.fxp','.state','.zip','.gz','.7z','.dmg','.pkg','.o','.obj','.a','.lib','.so','.dylib','.dll','.exe'}:
+    if p.suffix.lower() in {'.wav','.aif','.aiff','.mp3','.flac','.bin','.rom','.os','.syx','.mid','.midi','.fxb','.fxp','.state','.skwave','.zip','.gz','.7z','.dmg','.pkg','.o','.obj','.a','.lib','.so','.dylib','.dll','.exe'}:
         errors.append(name+': forbidden artifact/data extension')
     if any(s.lower() in {'output','artifacts','temp','roms','_deps','cmakefiles'} or s.lower()=='build' or s.lower().startswith(('build-','cmake-build')) or s.lower().endswith(('.app','.vst3','.component','.dsym')) for s in p.parts[:-1]):
         errors.append(name+': forbidden artifact directory')

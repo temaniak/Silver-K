@@ -28,6 +28,13 @@ public:
     template<class Reader,class Writer>
     unsigned advanceBefore(unsigned available,Reader&& read,Writer&& write){
         const auto cost=nextClocks();if(!cost||cost>available)return 0;
+        return advancePlannedPhase(cost,read,write);
+    }
+private:
+    friend class InterruptService;
+    // The owner synchronously passes this phase's admitted nonzero cost.
+    template<class Reader,class Writer>
+    unsigned advancePlannedPhase(unsigned cost,Reader&& read,Writer&& write){
         const auto readWord=[&](uint32_t address,unsigned end){
             const auto high=uint8_t(read(address,end-wordClocks(address)+byteClocks(address)));
             return uint16_t((unsigned(high)<<8)|uint8_t(read(address+1,end)));
@@ -116,7 +123,6 @@ public:
         }
         return cost;
     }
-private:
     static unsigned byteClocks(uint32_t address){return address>=0xfffd10?1u:3u;}
     static unsigned wordClocks(uint32_t address){return address<0x400000?3u+3u*(address&1):6u;}
     void select(Component component){active_=component;components_|=1u<<unsigned(component);}

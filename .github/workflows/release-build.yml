@@ -4,6 +4,8 @@ on:
 permissions:
   contents: read
 jobs:
+  macos-universal:
+    uses: ./.github/workflows/macos-build.yml
   windows-x64:
     runs-on: windows-latest
     timeout-minutes: 45
@@ -14,18 +16,22 @@ jobs:
       - name: Configure release
         run: cmake -S . -B build -A x64
       - name: Build Windows release and checks
-        run: cmake --build build --config Release --target silverK_Standalone silverK_VST3 silver_check silverClock_test silverWorkflow_test silverPersistence_test silverLatency_test silverEditor_test silverPerformance_test silverDiagnostics_test silverWorkerWakeup_test ksWorkerPlacement_test ksDspWorkers_test ksDspEquivalence_test ksControllerTrace_test ksPartMidi_test dsp56kTestRunner silver_create_init_flash --parallel 4
+        run: cmake --build build --config Release --target silverK_Standalone silverK_VST3 silver_check silverClock_test silverResamplerRealtime_test silverWorkflow_test silverPersistence_test silverDspThreads_test silverLatency_test silverEditor_test silverSkin_test silverPerformance_test silverDiagnostics_test silverWorkerWakeup_test ksWorkerPlacement_test ksDspWorkers_test ksDspEquivalence_test ksControllerTrace_test ksPartMidi_test dsp56kTestRunner silver_create_init_flash --parallel 4
       - name: Validate without private firmware
         env:
           SILVER_K_DATA: '${{ runner.temp }}/silver-release-tests'
-        run: ctest --test-dir build -C Release --output-on-failure -R '^(silver_conversion|silver_host_clock|silver_patch_workflow|silver_persistence_and_rescan|silver_latency_reentry|silver_native_editor|silver_performance_editor|silver_diagnostics|silver_worker_wakeup|ks_worker_placement|ks_dsp_workers|ks_dsp_equivalence|ks_controller_trace|ks_part_midi|dsp56300_unitTests)$'
-      - name: Verify synthetic KS Data
+        run: ctest --test-dir build -C Release --output-on-failure -R '^(silver_conversion|silver_host_clock|silver_resampler_realtime|silver_patch_workflow|silver_persistence_and_rescan|silver_dsp_threads|silver_latency_reentry|silver_native_editor|silver_skin_packages|silver_performance_editor|silver_diagnostics|silver_worker_wakeup|ks_worker_placement|ks_dsp_workers|ks_dsp_equivalence|ks_controller_trace|ks_part_midi|dsp56300_unitTests)$'
+      - name: Verify test fixture reproducibility
         shell: pwsh
         run: |
           & build/Release/silver_create_init_flash.exe "$env:RUNNER_TEMP/ks-init-flash.bin"
           if ($LASTEXITCODE -ne 0) { throw 'Init Flash generation failed' }
           if ((Get-FileHash assets/ks-init-flash.bin).Hash -ne (Get-FileHash "$env:RUNNER_TEMP/ks-init-flash.bin").Hash) { throw 'Init Flash is not reproducible' }
-      - name: Package binaries, test Data, zero Wave ROM and instructions
+      - name: Build and test Wave ROM Builder
+        run: |
+          cmake --build build --config Release --target silverWaveRomBuilder silverWaveBank_test --parallel 4
+          ctest --test-dir build -C Release --output-on-failure -R '^silver_wave_bank$'
+      - name: Package binaries, zero Wave ROM and documentation
         run: python tools/package_release.py --products build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release --dependencies build/_deps --platform Windows-x64 --output release-output
       - uses: actions/upload-artifact@v4
         with:

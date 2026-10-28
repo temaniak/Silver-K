@@ -38,6 +38,7 @@ Testing/
 *.flac
 *.mp3
 *.state
+*.skwave
 # Firmware, sampled waves and external patches are always private
 *.[bB][iI][nN]
 *.rom
@@ -51,3 +52,27 @@ __pycache__/
 *.pyc
 .vscode/
 .idea/
+
+# Local development reports and AI working context
+/AGENTS.md
+**/AGENTS.md
+/.codex/
+/.agents/
+/reports/
+/design-stand/design-qa.md
+/design-stand/qa/
+/design-stand/public/assets/*-notes.md
+/doc/KS_CONTROLLER_TEST_WINDOWS_RU.md
+/doc/KS_NATIVE_CONTROLLER.md
+/doc/OPTIMIZATION_LOG.md
+/doc/PERFORMANCE_DIAGNOSTICS.md
+/doc/STABLE_BUILD_20261016_RU.md
+/doc/STABLE_PERFORMANCE_20261016_RU.md
+/doc/WINDOWS_STABLE_HANDOFF_20261016_RU.md
+/doc/silver_k.md
+/doc/releases/0.2.0-alpha.1.md
+/doc/releases/0.2.1-alpha.1.md
+/doc/releases/0.2.2-alpha.1.md
+/doc/releases/0.2.3-alpha.1.md
+/doc/releases/0.2.4-alpha.1.md
+/doc/releases/0.2.4.md

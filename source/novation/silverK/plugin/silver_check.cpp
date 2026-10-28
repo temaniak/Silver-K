@@ -78,7 +78,7 @@ static void checkLayerEdits(Processor& p,juce::AudioBuffer<float>& audio,juce::M
  midi.addEvent(juce::MidiMessage::noteOff(1,69),0);settle();for(unsigned part:{0u,2u,3u})set(part,"volume",45);settle();p.selectPart(1);
  auto editor=std::unique_ptr<juce::AudioProcessorEditor>(p.createEditor());auto* perf=dynamic_cast<juce::TextButton*>(find(*editor,"pagePerf"));check(perf!=nullptr,"Perf tab");perf->onClick();
  for(const char* id:{"performanceMode","partActive"}){auto* toggle=dynamic_cast<juce::ToggleButton*>(find(*editor,id));check(toggle && toggle->findColour(juce::ToggleButton::textColourId)==juce::Colour(0xff171b20),"Performance toggle has unreadable text");}
- auto* viewport=find(*editor,"controlViewport");check(viewport && viewport->isVisible() && find(*viewport,"control:volume"),"Perf part volume is missing");
+ auto* panel=find(*editor,"performancePanel");check(panel && panel->isVisible() && find(*panel,"performance:part2:volume:slider"),"Perf part volume is missing");
  auto file=testDirectory().getChildFile("Silver-K-Performance.png");file.deleteFile();auto stream=file.createOutputStream();juce::PNGImageFormat png;check(stream && png.writeImageToStream(editor->createComponentSnapshot(editor->getLocalBounds()),*stream),"Performance screenshot");
  std::cout<<"PASS: same-channel layer edits preserve neighbour tuning/volume and held notes, external CC/Note Off, per-part boost, readable Perf controls\n";
 }

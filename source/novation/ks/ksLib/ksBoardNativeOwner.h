@@ -13,6 +13,8 @@ public:
  BoardNativeOwner&operator=(const BoardNativeOwner&)=delete;
  unsigned nextClocks(const ControllerDeviceState&)const;
  unsigned advanceBefore(ControllerDeviceState&,unsigned available);
+ // Plan and execute exactly one admitted phase; no plan survives this call.
+ unsigned advanceNextPhase(ControllerDeviceState&);
  bool mainEntered()const;
  bool ready()const;
  bool protectedCode()const;
@@ -22,6 +24,9 @@ public:
  bool playbackPublished()const;
  uint64_t startupPhasesSinceReset()const;
 private:
+ friend class Board;
+ // Production-only, exactly one phase; public checked/query APIs stay generic.
+ unsigned advanceNextBoardPhase(ControllerDeviceState&);
  struct Impl;std::unique_ptr<Impl>impl_;
 };
 }

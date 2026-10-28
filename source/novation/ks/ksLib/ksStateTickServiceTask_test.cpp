@@ -39,7 +39,7 @@ void seed(Resource&r,const Config&c){std::fill(r.m.begin(),r.m.end(),0);r.previo
 
 int main(){try{
  auto resource=std::make_unique<Resource>();auto storage=std::make_unique<std::aligned_storage_t<sizeof(T),alignof(T)>>();std::vector<unsigned char>snapshot(sizeof(T));Resolver resolver;
- uint64_t graphs=0,phases=0,rejects=0,reads=0,writes=0,dueGraphs=0,earlyGraphs=0,outputs=0,voiceChildren=0,liveGraphs=0;uint32_t components=0;static_assert(sizeof(T)<1600000,"Tick fixedstorage unexpectedly grew");
+ uint64_t graphs=0,phases=0,rejects=0,reads=0,writes=0,dueGraphs=0,earlyGraphs=0,outputs=0,voiceChildren=0,liveGraphs=0;uint32_t components=0;std::array<unsigned,3>constructorCases{};static_assert(sizeof(T)<1600000,"Tick fixedstorage unexpectedly grew");
  auto run=[&](uint16_t elapsed,unsigned route,unsigned mode,bool evolving=false){Config c;c.kind=route;c.seed=mode;c.mode=mode&1;c.selected=mode%5;c.backward=mode&1;seed(*resource,c);auto&r=*resource;
   const uint16_t last=uint16_t(mode*1000u+0xfff0);const uint16_t counter=uint16_t(last+elapsed);r.wide(0xffec10,0xa5a50000u|counter);r.word(0x16780,last);
   r.byte(0x156e2,uint8_t(mode&1?33:32));r.byte(0xffff51,0);for(unsigned row=0;row<6;++row)r.byte(0x15400+row,uint8_t(mode&2?255:0));
@@ -50,7 +50,14 @@ int main(){try{
   // cases retain count0 to keep the parent coverage matrix focused.
   r.byte(0x174a6,uint8_t(mode==7?1:0));r.byte(0x17526,0);r.byte(0x17560+4,0);r.word(0x17560+8,1);
   check(T::admitted([&](uint32_t a){return r.m[a&0xffffff];},resolver),"Tick pure seed rejected");
-  tracking=true;auto*s=new(storage.get())T();tracking=false;unsigned count=0,mutations=0;
+  // Reconstruct in dirty storage: inactive child payload must never supply defaults.
+  constexpr std::array<unsigned char,6>poison{{0xa5,0x5a,0xcc,0x33,0xff,0x80}};
+  std::memset(storage.get(),poison[graphs%poison.size()],sizeof(T));
+  const auto constructor=unsigned(graphs%constructorCases.size());T*s=nullptr;tracking=true;
+  if(constructor==0)s=new(storage.get())T();
+  else if(constructor==1)s=new(storage.get())T(T::Kind::Tick);
+  else s=new(storage.get())T(T::Kind::Tick,T::Input{});
+  tracking=false;++constructorCases[constructor];unsigned count=0,mutations=0;
   while(!s->complete()){
    if(evolving)if(const auto*t=s->task<ks::StateForegroundTask>()){using S=ks::StateForegroundTask::Stage;auto once=[&](unsigned bit,auto&&change){if(!(mutations&bit)){change();mutations|=bit;}};
     if(t->stage()==S::ReadLastTick)once(1,[&]{r.word(0x16780,uint16_t(counter-25));});
@@ -72,6 +79,7 @@ int main(){try{
  for(uint16_t elapsed:{0u,1u,24u,25u,26u,0x7fffu,0x8000u,0xffffu})for(unsigned mode=0;mode<8;++mode)run(elapsed,0,mode);
  for(unsigned route=1;route<8;++route)run(25,route,route);
  run(0,0,0,true);
+ check(std::all_of(constructorCases.begin(),constructorCases.end(),[](unsigned n){return n!=0;}),"Tick constructor coverage");
  check(!allocations,"Tick pure allocated");check(components==255&&dueGraphs&&earlyGraphs&&outputs&&voiceChildren&&liveGraphs,"Tick actual component/child coverage");
- std::cout<<"PASS Tick pure graphs="<<graphs<<" phases="<<phases<<" budgetRejects="<<rejects<<" due="<<dueGraphs<<" early="<<earlyGraphs<<" pedalPackets="<<outputs<<" actualVoiceUploads="<<voiceChildren<<" live="<<liveGraphs<<" reads="<<reads<<" writes="<<writes<<" components="<<components<<" bytes="<<sizeof(T)<<" allocations="<<allocations<<'\n';return 0;
+ std::cout<<"PASS Tick pure graphs="<<graphs<<" phases="<<phases<<" budgetRejects="<<rejects<<" due="<<dueGraphs<<" early="<<earlyGraphs<<" pedalPackets="<<outputs<<" actualVoiceUploads="<<voiceChildren<<" live="<<liveGraphs<<" reads="<<reads<<" writes="<<writes<<" components="<<components<<" bytes="<<sizeof(T)<<" constructorModes="<<constructorCases.size()<<" poisonPatterns=6 allocations="<<allocations<<'\n';return 0;
 }catch(const std::exception&e){tracking=false;std::cerr<<e.what()<<'\n';return 1;}}

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "engine": "silver-k-juce",
+  "id": "silver-flat",
+  "name": "Silver Flat",
+  "author": "NK Stuff",
+  "layout": "layout.json",
+  "theme": "theme.json"
+}

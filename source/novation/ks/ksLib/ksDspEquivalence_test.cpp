@@ -12,7 +12,7 @@ void check(bool v,const char* message){if(!v)throw std::runtime_error(message);}
 std::vector<uint8_t> bytes(const char* name){std::ifstream f(name,std::ios::binary);return {(std::istreambuf_iterator<char>(f)),{}};}
 }
 int main(int argc,char** argv){try{
-    if(argc!=4){std::cout<<"SKIP: supply decoded KS OS/update, wave bank and Flash paths\n";return 77;}
+    if(argc!=4 && argc!=5){std::cout<<"SKIP: supply decoded KS OS/update, wave bank and Flash paths, optionally native\n";return 77;}
     ks::Rom os(argv[1]);check(os.isValid(),"Invalid KS OS");auto wave=bytes(argv[2]),flash=bytes(argv[3]);
     auto baseline=ks::test::makeLegacyBoard(os.data(),wave,flash,true);
     auto parallel=ks::test::makeLegacyBoard(os.data(),wave,flash,true);
@@ -21,6 +21,7 @@ int main(int argc,char** argv){try{
     uint64_t hash=14695981039346656037ull,frames=0;int64_t peak=0;
     auto send=[&](const std::vector<uint8_t>& m){check(baseline->enqueueMidi(m.data(),m.size()) && parallel->enqueueMidi(m.data(),m.size()),"MIDI overflow");};
     auto compare=[&](unsigned count){for(unsigned n=0;n<count;++n){
+        if(frames && (frames&4095)==0){if(frames&4096)parallel->disableDspWorkers();else parallel->enableDspWorkers(48000,64);}
         const auto a=baseline->renderSample(),b=parallel->renderSample();
         if(a!=b){std::cerr<<"Different audio at native frame "<<frames<<'\n';throw std::runtime_error("Audio mismatch");}
         for(auto value:a){hash^=uint32_t(value);hash*=1099511628211ull;peak=std::max(peak,int64_t(std::abs(int64_t(value))));}

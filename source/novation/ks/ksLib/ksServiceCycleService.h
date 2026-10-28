@@ -15,6 +15,7 @@
 #include <variant>
 #include <utility>
 namespace ks {
+class NativeControllerExecutor;
 struct NativeCompletionNoop final {template<class...T>void operator()(T&&...)const noexcept{}};
 // One fixed-order main iteration. Engine parameters are concrete native child
 // owners, not opcode/call dispatchers. Only one child occupies the reusable
@@ -38,7 +39,12 @@ template<class T>const T*task()const{if(complete())return nullptr;if constexpr(s
 unsigned priority()const{if(external_!=External::None)return std::visit([](const auto&s){return priorityOf(s);},externalEngine_);return std::visit([](const auto&s){return priorityOf(s);},engine_);}bool critical()const{return priority()==7;}
 unsigned nextClocks(int previous=-1,int previousRead=-1)const{if(complete())return 0;if(external_!=External::None)return std::visit([&](const auto&s){return clocks(s,previous,previousRead);},externalEngine_);if(!active_)return coordinator_.nextClocks(previous);return std::visit([&](const auto&s){return clocks(s,previous,previousRead);},engine_);}
 template<class R,class W,class Resolver,class Bindings>unsigned advanceBefore(unsigned budget,R&&read,W&&write,Resolver&&resolve,Bindings&&bindings,int previous=-1,int previousRead=-1){NativeCompletionNoop observer;return advanceBefore(budget,read,write,resolve,bindings,observer,previous,previousRead);}
-template<class R,class W,class Resolver,class Bindings,class Observer>unsigned advanceBefore(unsigned budget,R&&read,W&&write,Resolver&&resolve,Bindings&&bindings,Observer&&observer,int previous=-1,int previousRead=-1){const auto cost=nextClocks(previous,previousRead);if(!cost||cost>budget)return 0;effect_={};
+template<class R,class W,class Resolver,class Bindings,class Observer>unsigned advanceBefore(unsigned budget,R&&read,W&&write,Resolver&&resolve,Bindings&&bindings,Observer&&observer,int previous=-1,int previousRead=-1){const auto cost=nextClocks(previous,previousRead);if(!cost||cost>budget)return 0;return advancePlannedPhase(cost,read,write,resolve,bindings,observer,previous,previousRead);}
+private:
+friend class NativeControllerExecutor;
+friend struct ArpArithmeticRouteTestAccess;
+// Valid only within the caller's synchronous admission of this unchanged phase.
+template<class R,class W,class Resolver,class Bindings,class Observer>unsigned advancePlannedPhase(unsigned cost,R&&read,W&&write,Resolver&&resolve,Bindings&&bindings,Observer&&observer,int previous,int previousRead){beginPhase();
 if(!active_){const bool dispatch=coordinator_.policyStage()==ServiceCycleTask::Stage::Dispatch;coordinator_.advanceBefore(cost);effect_={coordinator_.effect().read,coordinator_.effect().write};if(dispatch){child_=coordinator_.child();index_=coordinator_.index();startChild();notify(observer,Notice::Dispatch);}else notify(observer,Notice::Complete);return cost;}
 if(external_!=External::None){bool done=false;std::visit([&](auto&s){using T=std::decay_t<decltype(s)>;if constexpr(!std::is_same_v<T,std::monostate>){if constexpr(std::is_same_v<T,TransportEngine>)s.advanceBefore(cost,read,write,resolve,observer,previous,previousRead);else s.advanceBefore(cost,read,write,previous);effect_={s.effect().read,s.effect().write};done=s.complete();}},externalEngine_);
 if(done){auto&f=externals_[externalSlot_];std::visit([&](const auto&s){using T=std::decay_t<decltype(s)>;if constexpr(!std::is_same_v<T,std::monostate>)f.after=bindings.after(s,f.before);},externalEngine_);f.complete=true;notify(observer,Notice::ExternalComplete);auto&ui=std::get<StateCentralActionsService>(engine_);typename StateCentralActionsService::Result r;r.presentation=f.after.presentation;r.event=r.presentation;r.outcome.value=externalSlot_+1;if(!ui.resume(r))throw std::logic_error("Main UI external child return ownership");external_=External::None;externalEngine_.template emplace<std::monostate>();if(ui.complete())finishChild(bindings,observer);}return cost;}
@@ -47,11 +53,32 @@ if constexpr(std::is_same_v<T,std::monostate>)throw std::logic_error("Missing ma
 else if constexpr(std::is_same_v<T,StatePanelService>){effect_.write=s.clearsWriteHistory();s.advanceBefore(cost,read,write,previous);effect_.read=s.complete();done=s.complete();}
 else{if constexpr(std::is_same_v<T,TimerEngine>||std::is_same_v<T,StateTickService>||std::is_same_v<T,StateCentralActionsService>)s.advanceBefore(cost,read,write,resolve,previous);
 else if constexpr(std::is_same_v<T,MidiEngine>)s.advanceBefore(cost,read,write,resolve,observer,previous);
-else if constexpr(std::is_same_v<T,ArpEngine>)s.advanceBefore(cost,read,write,resolve,observer,previous,previousRead);
-else s.advanceBefore(cost,read,write,previous);effect_={s.effect().read,s.effect().write};done=s.complete();}},engine_);notify(observer,Notice::ChildPhase);
-if(const auto*ui=std::get_if<StateCentralActionsService>(&engine_)){if(ui->request()!=StateCentralActionsService::Request::None){startExternal(*ui,bindings);notify(observer,Notice::ExternalBegin);}}
-if(done)finishChild(bindings,observer);return cost;}
+else if constexpr(std::is_same_v<T,ArpEngine>)s.advancePlannedPhase(cost,read,write,resolve,observer,previous,previousRead);
+else s.advanceBefore(cost,read,write,previous);effect_={s.effect().read,s.effect().write};done=s.complete();}},engine_);finishActivePhase(done,bindings,observer);return cost;}
 private:
+// These pointers live only from preparation to consumption of ONE phase.
+// Neither a query nor tick/IRQ can retain or publish the path.
+struct ArithmeticRoute {
+ ArpEngine*engine=nullptr;typename ArpEngine::ArithmeticRoute child{};
+ explicit operator bool()const{return engine&&bool(child);}
+ unsigned cost()const{return engine->arithmeticClocks(child);}
+};
+ArithmeticRoute prepareArithmeticRoute(){
+ if(!active_||external_!=External::None||child_!=Child::Arpeggiator||index_!=unsigned(Child::Arpeggiator)||complete()
+  ||!coordinator_.awaitingChild()||coordinator_.index()!=index_||coordinator_.child()!=child_)return{};
+ auto*engine=std::get_if<ArpEngine>(&engine_);if(!engine)return{};
+ const auto child=engine->prepareArithmeticRoute();return child?ArithmeticRoute{engine,child}:ArithmeticRoute{};
+}
+void beginPhase(){effect_={};}
+template<class Bindings,class Observer>void finishActivePhase(bool done,Bindings&bindings,Observer&observer){
+ notify(observer,Notice::ChildPhase);
+ if(const auto*ui=std::get_if<StateCentralActionsService>(&engine_)){if(ui->request()!=StateCentralActionsService::Request::None){startExternal(*ui,bindings);notify(observer,Notice::ExternalBegin);}}
+ if(done)finishChild(bindings,observer);
+}
+template<class R,class W,class Resolver,class Bindings,class Observer>unsigned advanceArithmeticPhase(const ArithmeticRoute&r,unsigned cost,R&&read,W&&write,Resolver&&resolve,Bindings&&bindings,Observer&&observer,int previous,int previousRead){
+ beginPhase();r.engine->advanceArithmeticPhase(r.child,cost,read,write,resolve,observer,previous,previousRead);
+ effect_={r.engine->effect().read,r.engine->effect().write};finishActivePhase(r.engine->complete(),bindings,observer);return cost;
+}
 // A completed external UI tail returns on its already-paid phase.
 // Share the ordinary child completion ordering without another guest phase.
 template<class Bindings,class Observer>void finishChild(Bindings&bindings,Observer&observer){Result after;std::visit([&](const auto&s){using T=std::decay_t<decltype(s)>;if constexpr(!std::is_same_v<T,std::monostate>){if constexpr(std::is_same_v<T,StateCentralActionsService>)after=bindings.after(s,coordinator_.result(),externals_);else after=bindings.after(s,coordinator_.result());}},engine_);typename Coordinator::ChildResult r;r.outcome=index_;r.presentationKnown=r.activationKnown=true;r.presentation=after.presentation;r.activation=after.activation;r.expressionSource=after.expressionSource;r.expressionSourceMask=~0u;

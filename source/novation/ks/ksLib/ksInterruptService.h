@@ -43,9 +43,16 @@ public:
     unsigned advanceBefore(unsigned available, Reader&& read, Writer&& write) {
         const auto cost = nextClocks();
         if (!cost || cost > available) return 0;
-        if (timer_) {const auto used=timer_->advanceBefore(available,read,write);complete_=timer_->complete();return used;}
-        if (adc_) {const auto used=adc_->advanceBefore(available,read,write);complete_=adc_->complete();return used;}
-        if (receive_) {const auto used=receive_->advanceBefore(available,read,write);complete_=receive_->complete();return used;}
+        return advancePlannedPhase(cost,read,write);
+    }
+private:
+    friend class InterruptScheduler;
+    // The owner synchronously passes this phase's admitted nonzero cost.
+    template<class Reader,class Writer>
+    unsigned advancePlannedPhase(unsigned cost,Reader&& read,Writer&& write){
+        if (timer_) {const auto used=timer_->advancePlannedPhase(cost,read,write);complete_=timer_->complete();return used;}
+        if (adc_) {const auto used=adc_->advancePlannedPhase(cost,read,write);complete_=adc_->complete();return used;}
+        if (receive_) {const auto used=receive_->advancePlannedPhase(cost,read,write);complete_=receive_->complete();return used;}
         if (kind_ == Kind::Unused) { complete_ = true; return cost; }
         const auto readWord = [&](uint32_t address) {
             const auto high = uint8_t(read(address, 12));
@@ -76,7 +83,6 @@ public:
         complete_ = serial_.stage() == SerialIrqTask::Stage::Complete;
         return used;
     }
-private:
     unsigned clockCost(SerialIrqTask::Clock clock) const {
         switch (clock) {
         case SerialIrqTask::Clock::Return: return 23;

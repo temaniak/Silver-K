@@ -981,7 +981,7 @@
         "label": "PW amount",
         "kind": "panelKnob",
         "rect": [
-          201,
+          379,
           166,
           88,
           110
@@ -994,7 +994,7 @@
         "label": "Mod env pitch",
         "kind": "panelKnob",
         "rect": [
-          290,
+          468,
           166,
           88,
           110
@@ -1003,11 +1003,11 @@
         "volume": false
       },
       {
-        "id": "osc1_lfo{lfo}_pitch",
+        "id": "osc1_lfo1_pitch",
         "label": "LFO 1 pitch",
         "kind": "panelKnob",
         "rect": [
-          379,
+          201,
           166,
           88,
           110
@@ -1020,7 +1020,7 @@
         "label": "Pitch bend",
         "kind": "panelKnob",
         "rect": [
-          468,
+          290,
           166,
           88,
           110
@@ -1059,7 +1059,7 @@
         "label": "PW amount",
         "kind": "panelKnob",
         "rect": [
-          201,
+          379,
           390,
           88,
           110
@@ -1072,7 +1072,7 @@
         "label": "Mod env pitch",
         "kind": "panelKnob",
         "rect": [
-          290,
+          468,
           390,
           88,
           110
@@ -1081,11 +1081,11 @@
         "volume": false
       },
       {
-        "id": "osc2_lfo{lfo}_pitch",
+        "id": "osc2_lfo1_pitch",
         "label": "LFO 1 pitch",
         "kind": "panelKnob",
         "rect": [
-          379,
+          201,
           390,
           88,
           110
@@ -1098,7 +1098,7 @@
         "label": "Pitch bend",
         "kind": "panelKnob",
         "rect": [
-          468,
+          290,
           390,
           88,
           110
@@ -1137,7 +1137,7 @@
         "label": "PW amount",
         "kind": "panelKnob",
         "rect": [
-          201,
+          379,
           614,
           88,
           110
@@ -1150,7 +1150,7 @@
         "label": "Mod env pitch",
         "kind": "panelKnob",
         "rect": [
-          290,
+          468,
           614,
           88,
           110
@@ -1159,11 +1159,11 @@
         "volume": false
       },
       {
-        "id": "osc3_lfo{lfo}_pitch",
+        "id": "osc3_lfo1_pitch",
         "label": "LFO 1 pitch",
         "kind": "panelKnob",
         "rect": [
-          379,
+          201,
           614,
           88,
           110
@@ -1176,7 +1176,7 @@
         "label": "Pitch bend",
         "kind": "panelKnob",
         "rect": [
-          468,
+          290,
           614,
           88,
           110
@@ -1802,7 +1802,7 @@
         "label": "PW amount",
         "kind": "panelKnob",
         "rect": [
-          201,
+          379,
           166,
           88,
           110
@@ -1815,7 +1815,7 @@
         "label": "Mod env pitch",
         "kind": "panelKnob",
         "rect": [
-          290,
+          468,
           166,
           88,
           110
@@ -1828,7 +1828,7 @@
         "label": "LFO 1 pitch",
         "kind": "panelKnob",
         "rect": [
-          379,
+          201,
           166,
           88,
           110
@@ -1841,7 +1841,7 @@
         "label": "Pitch bend",
         "kind": "panelKnob",
         "rect": [
-          468,
+          290,
           166,
           88,
           110
@@ -1880,7 +1880,7 @@
         "label": "PW amount",
         "kind": "panelKnob",
         "rect": [
-          201,
+          379,
           390,
           88,
           110
@@ -1893,7 +1893,7 @@
         "label": "Mod env pitch",
         "kind": "panelKnob",
         "rect": [
-          290,
+          468,
           390,
           88,
           110
@@ -1906,7 +1906,7 @@
         "label": "LFO 1 pitch",
         "kind": "panelKnob",
         "rect": [
-          379,
+          201,
           390,
           88,
           110
@@ -1919,7 +1919,7 @@
         "label": "Pitch bend",
         "kind": "panelKnob",
         "rect": [
-          468,
+          290,
           390,
           88,
           110
@@ -1958,7 +1958,7 @@
         "label": "PW amount",
         "kind": "panelKnob",
         "rect": [
-          201,
+          379,
           614,
           88,
           110
@@ -1971,7 +1971,7 @@
         "label": "Mod env pitch",
         "kind": "panelKnob",
         "rect": [
-          290,
+          468,
           614,
           88,
           110
@@ -1984,7 +1984,7 @@
         "label": "LFO 1 pitch",
         "kind": "panelKnob",
         "rect": [
-          379,
+          201,
           614,
           88,
           110
@@ -1997,7 +1997,7 @@
         "label": "Pitch bend",
         "kind": "panelKnob",
         "rect": [
-          468,
+          290,
           614,
           88,
           110
@@ -2755,5 +2755,157 @@
     798,
     174,
     28
-  ]
+  ],
+  "drawPanels": true,
+  "performanceCanvas": [
+    1254,
+    904
+  ],
+  "components": {
+    "setupStatus": {
+      "bounds": [
+        52,
+        144,
+        1120,
+        72
+      ]
+    },
+    "setupLatency": {
+      "bounds": [
+        52,
+        225,
+        1100,
+        30
+      ]
+    },
+    "loadFirmware": {
+      "bounds": [
+        52,
+        245,
+        200,
+        38
+      ]
+    },
+    "dataFolder": {
+      "bounds": [
+        266,
+        245,
+        170,
+        38
+      ]
+    },
+    "rescanRoms": {
+      "bounds": [
+        450,
+        245,
+        150,
+        38
+      ]
+    },
+    "waveRom": {
+      "bounds": [
+        52,
+        295,
+        180,
+        38
+      ]
+    },
+    "factoryData": {
+      "bounds": [
+        246,
+        295,
+        190,
+        38
+      ]
+    },
+    "skinSelect": {
+      "bounds": [
+        52,
+        353,
+        230,
+        34
+      ]
+    },
+    "loadSkin": {
+      "bounds": [
+        298,
+        353,
+        170,
+        34
+      ]
+    },
+    "reloadSkin": {
+      "bounds": [
+        480,
+        353,
+        96,
+        34
+      ]
+    },
+    "exportSkin": {
+      "bounds": [
+        588,
+        353,
+        170,
+        34
+      ]
+    },
+    "openSkins": {
+      "bounds": [
+        770,
+        353,
+        140,
+        34
+      ]
+    },
+    "controlChannel": {
+      "bounds": [
+        922,
+        353,
+        270,
+        34
+      ]
+    },
+    "audioBuffer": {
+      "bounds": [
+        52,
+        401,
+        436,
+        34
+      ]
+    },
+    "performanceDiagnostics": {
+      "bounds": [
+        510,
+        401,
+        270,
+        34
+      ]
+    },
+    "ksController": {
+      "bounds": [
+        52,
+        449,
+        436,
+        34
+      ]
+    },
+    "demoSong": {
+      "bounds": [
+        510,
+        449,
+        270,
+        34
+      ]
+    },
+    "setupHelp": {
+      "bounds": [
+        52,
+        494,
+        1120,
+        84
+      ]
+    }
+  },
+  "decorations": []
 }

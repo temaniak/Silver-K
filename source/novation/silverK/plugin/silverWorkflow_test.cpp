@@ -1,9 +1,10 @@
 // Explicit retained LEGACY comparison test; not a semantic NativeControllerExecutor proof.
-#include "ksBoardComparison_test.h"
+#include "ksLib/ksBoardComparison_test.h"
 #include "silverBrowser.h"
 #include "kstationLib/kstationRomLoader.h"
 #include "kstationLib/kstationMidiQueue.h"
 #include "ksLib/ksRom.h"
+#include "silverKCutoffMidi.h"
 #include <iostream>
 #include <stdexcept>
 #include <thread>
@@ -29,6 +30,104 @@ static std::vector<uint8_t> program(Model model){
  if(data.size()==270){const std::string name=model==Model::XStation?"Zulu X patch":"Alpha KS patch";std::fill(data.begin()+164,data.begin()+180,' ');std::copy(name.begin(),name.end(),data.begin()+164);}
  return data;
 }
+static std::vector<std::vector<uint8_t>> drumFrames(unsigned bank){
+ std::vector<std::vector<uint8_t>> frames;
+ for(unsigned n=0;n<50;++n){auto frame=program(Model::KS);frame[7]=1;frame[8]=1;frame[11]=uint8_t(bank);frame[12]=uint8_t(n);
+  std::fill_n(frame.begin()+164,16,' ');const auto name=n==49?std::string("Test Kit FX"):"Drum "+std::to_string(n);std::copy(name.begin(),name.end(),frame.begin()+164);
+  frame[13+168]=uint8_t(n==0?36:n==1?60:72);frame[13+173]=0;frame[13+62]=frame[13+65]=0;frame[13+64]=127;frame[13+100]=frame[13+107]=frame[13+110]=0;
+  frames.push_back(std::move(frame));
+ }return frames;
+}
+static void drumParserChecks(Library& library){
+ const auto frames=drumFrames(5);auto grouped=groupDrumMaps(frames);check(grouped.size()==1 && validPatch(grouped[0]) && drumMap(grouped[0].data(),grouped[0].size()),"Complete drum bank not recognized");
+ const auto& map=grouped[0];for(unsigned n=0;n<50;++n)check(std::equal(frames[n].begin(),frames[n].end(),map.begin()+n*270),"Drum map changed original data");
+ auto patch=library.createPatch(Data(map.begin(),map.end()),{});check(patch && patch->name=="Drum Map 5 - Test Kit FX" && patch->tags.containsAdded(TagType::Category,"Drum Map"),"Drum map name/type");
+ check(convertPatch(map,Model::KStation).data.empty() && convertPatch(frames[0],Model::KStation).data.empty(),"KS drums converted into K-Station");
+ auto broken=map;broken[270+12]=0;check(!validPatch(broken),"Duplicate drum slot accepted as complete map");broken=map;broken.back()=0;check(!validPatch(broken),"Damaged drum map accepted");
+ auto partial=frames;partial.pop_back();check(groupDrumMaps(partial).size()==49,"Incomplete bank synthesized missing effects");
+ auto duplicate=frames;duplicate.push_back(frames[0]);check(groupDrumMaps(duplicate).size()==51,"Duplicate banks silently discarded");
+ auto shuffled=frames;std::reverse(shuffled.begin(),shuffled.end());check(groupDrumMaps(shuffled)==grouped,"Drum slot order depends on file order");
+ DataList parsed;check(library.parseFileData(parsed,Data(map.begin(),map.end()),"kit.syx") && parsed.size()==1 && std::equal(parsed[0].begin(),parsed[0].end(),map.begin(),map.end()),"Drum map SysEx round trip");
+ juce::MidiMessageSequence track;for(const auto& frame:shuffled)track.addEvent(juce::MidiMessage(frame.data(),int(frame.size()),0));juce::MidiFile midi;midi.setTicksPerQuarterNote(96);midi.addTrack(track);juce::MemoryOutputStream stream;check(midi.writeTo(stream),"Drum MIDI fixture");const auto* bytes=static_cast<const uint8_t*>(stream.getData());parsed.clear();check(library.parseFileData(parsed,Data(bytes,bytes+stream.getDataSize()),"kit.mid") && parsed.size()==1,"Drum map MIDI import");
+ check(patchType(frames[0].data(),270)=="Drum sound" && patchType(frames[49].data(),270)=="Drum Map FX","Partial drum classification");
+ auto x=program(Model::XStation);x[7]=1;x[11]=5;check(!ksDrum(x.data(),x.size()) && ksBank(x.data(),x.size())==0,"X-Station treated as KS Drum Map");
+ std::cout<<"PASS: KS Drum Maps preserve 49 sounds/shared FX, SysEx/MIDI round trip, incomplete/duplicate banks, K conversion guard\n";
+}
+static void drumBrowserChecks(Processor& p,const juce::File& root){
+ p.browserState.clear();const auto folder=root.getChildFile(p.isKStation()?"Drums-K":"Drums-KS");check(folder.createDirectory().wasOk(),"Drum browser fixture folder");Data data;
+ for(unsigned bank:{1u,2u}){auto frame=program(Model::KS);frame[7]=1;frame[11]=uint8_t(bank);frame[12]=7;frame[13+7]=uint8_t(60+bank);data.insert(data.end(),frame.begin(),frame.end());}
+ for(unsigned bank:{5u,6u})for(const auto& frame:drumFrames(bank))data.insert(data.end(),frame.begin(),frame.end());
+ auto partial=drumFrames(7)[0];data.insert(data.end(),partial.begin(),partial.end());const auto file=folder.getChildFile("banks.syx");check(file.replaceWithData(data.data(),data.size()),"Write bank fixtures");p.patchLibrary.addPath(folder);const auto onlyDrums=root.getChildFile(p.isKStation()?"Only-drums-K.syx":"Only-drums-KS.syx");const auto kit=groupDrumMaps(drumFrames(8))[0];check(onlyDrums.replaceWithData(kit.data(),kit.size()),"Write drum-only source");p.patchLibrary.addPath(onlyDrums);
+ {
+  Browser browser(p);browser.setBounds(0,0,1280,600);auto* source=dynamic_cast<juce::ComboBox*>(find(browser,"patchSource"));auto* bank=dynamic_cast<juce::ComboBox*>(find(browser,"ksBank"));auto* table=dynamic_cast<juce::TableListBox*>(find(browser,"patchTable"));check(source&&bank&&table,"Bank controls missing");auto* rows=table->getTableListBoxModel();bool selected=false;
+  auto pump=[&]{browser.pollLibrary();std::this_thread::sleep_for(std::chrono::milliseconds(5));};
+  for(int n=0;n<800;++n){pump();if(!selected)for(int i=0;i<source->getNumItems();++i)if(source->getItemText(i)==folder.getFileName()){source->setSelectedId(source->getItemId(i),juce::dontSendNotification);source->onChange();selected=true;break;}if(selected && rows->getNumRows()==(p.isKStation()?2:5))break;}
+  check(selected && rows->getNumRows()==(p.isKStation()?2:5),"Model-specific bank rows");check(bank->isVisible()==!p.isKStation() && table->getHeader().isColumnVisible(8)==!p.isKStation(),"KS banks visible in wrong model");
+  if(!p.isKStation()){
+   bank->setSelectedId(11,juce::dontSendNotification);bank->onChange();for(int n=0;n<800 && rows->getNumRows()!=3;++n)pump();check(rows->getNumRows()==3,"All Drums filter");
+   bank->setSelectedId(6,juce::dontSendNotification);bank->onChange();for(int n=0;n<800 && rows->getNumRows()!=1;++n)pump();check(rows->getNumRows()==1 && rows->getCellTooltip(0,3)=="Drum Map" && rows->getCellTooltip(0,7)=="500-548","KS Drum Map filter/address");
+   check(rows->getCellTooltip(0,8)=="Bank 5 / Drums","KS bank column");bank->setSelectedId(3,juce::dontSendNotification);bank->onChange();for(int n=0;n<800 && !(rows->getNumRows()==1 && rows->getCellTooltip(0,7)=="207");++n)pump();check(rows->getNumRows()==1 && rows->getCellTooltip(0,7)=="207","KS address must use source bank/slot, not database row");
+   bank->setSelectedId(6,juce::dontSendNotification);bank->onChange();for(int n=0;n<800 && !(rows->getNumRows()==1 && rows->getCellTooltip(0,3)=="Drum Map");++n)pump();
+  }else for(int n=0;n<rows->getNumRows();++n)check(rows->getCellTooltip(n,3)=="Program","Drum entries exposed in K-Station");
+  for(int n=0;n<50;++n)pump();bool drumSource=false;for(int n=0;n<source->getNumItems();++n)drumSource|=source->getItemText(n)==onlyDrums.getFileName();check(drumSource==!p.isKStation(),"Drum-only bank source visible in wrong model");
+  const auto capture=juce::SystemStats::getEnvironmentVariable("SILVER_K_UI_CAPTURE",{});if(capture.isNotEmpty()){
+   const auto dir=juce::File(capture);dir.createDirectory();auto out=dir.getChildFile(p.isKStation()?"K-browser.png":"KS-browser.png").createOutputStream();juce::PNGImageFormat png;check(out && png.writeImageToStream(browser.createComponentSnapshot(browser.getLocalBounds()),*out),"Browser preview");
+  }
+ }
+ if(!p.isKStation()){Browser restored(p);auto* bank=dynamic_cast<juce::ComboBox*>(find(restored,"ksBank"));check(bank && bank->getSelectedId()==6,"KS bank preference lost");}
+ p.browserState.clear();std::cout<<"PASS: "<<(p.isKStation()?"K":"KS")<<" bank visibility, complete-map rows, original addresses and bank preference\n";
+}
+
+static void drumPlaybackChecks(Processor& p,const juce::File& root){
+ Library library(root.getChildFile("drum-playback-db"));auto grouped=groupDrumMaps(drumFrames(7));const auto& map=grouped[0];auto patch=library.createPatch(Data(map.begin(),map.end()),{});juce::String error;
+ check(p.setKSControllerMode(1,error),error.toRawUTF8());
+ check(!p.setDemoSong(true,error) && error.contains("does not contain") && !p.demoSongActive(),"Missing demo data guard");
+ p.setNonRealtime(true);juce::AudioBuffer<float> audio(4,256);juce::MidiBuffer midi;midi.ensureSize(1024);
+ audioAllocations=0;auto render=[&](int count){for(int n=0;n<count;++n){audio.clear();inAudio=true;p.processBlock(audio,midi);inAudio=false;}p.refreshControls();};
+ auto snapshot=[&]{juce::MemoryBlock state;p.getStateInformation(state);return juce::AudioProcessor::getXmlFromBinary(state.getData(),int(state.getSize()));};
+ check(p.activatePatch(patch,error),error.toRawUTF8());bool stored=false;
+ for(int n=0;n<60&&!stored;++n){render(100);auto xml=snapshot();juce::MemoryBlock flash;check(xml && flash.fromBase64Encoding(xml->getStringAttribute("userFlash")),"Drum Flash snapshot");const auto* bytes=static_cast<const uint8_t*>(flash.getData());const size_t offset=0x20000-0x1fc00+(400+2*50)*256;stored=flash.getSize()>=offset+50*256;for(unsigned i=0;i<50&&stored;++i)stored=bytes[offset+i*256+168]==map[i*270+13+168];}
+ check(stored,"Complete Drum Map not installed in instance Flash");render(100);
+ auto play=[&](int note){midi.addEvent(juce::MidiMessage::noteOn(1,note,uint8_t(100)),0);double peak=0;unsigned crossings=0;float previous=0;
+  for(int n=0;n<200;++n){render(1);if(n<100)continue;for(int i=0;i<256;++i){const auto sample=audio.getSample(0,i);check(std::isfinite(sample),"Nonfinite drum audio");peak=std::max(peak,double(std::abs(sample)));if(previous<0 && sample>=0)++crossings;previous=sample;}}
+  midi.addEvent(juce::MidiMessage::noteOff(1,note),0);midi.addEvent(juce::MidiMessage::controllerEvent(1,120,0),0);render(60);check(peak>1e-5 && crossings>5,"Silent drum key");return crossings;
+ };
+ const auto low=play(36),high=play(37);check(high>low*3 && high<low*5,"Drum keys did not select different stored sounds");
+ juce::MemoryBlock project;p.getStateInformation(project);p.setStateInformation(project.getData(),int(project.getSize()));render(200);const auto restoredLow=play(36),restoredHigh=play(37);check(restoredHigh>restoredLow*3 && restoredHigh<restoredLow*5,"Drum Map lost on DAW state restore");
+ auto melodic=program(Model::KS);auto melodicPatch=library.createPatch(Data(melodic.begin(),melodic.end()),{});check(p.activatePatch(melodicPatch,error),error.toRawUTF8());render(150);
+ check(p.setPerformanceMode(true,error),error.toRawUTF8());render(150);const auto before=snapshot();
+ check(p.activatePatchForPart(patch,1,error),error.toRawUTF8());render(200);auto after=snapshot();juce::MemoryBlock state;check(after && state.fromBase64Encoding(after->getStringAttribute("program")),"Read Drum Performance");auto* bytes=static_cast<const uint8_t*>(state.getData());check(state.getSize()==1038 && bytes[13+256+187]==7,"Drum bank reference lost in Performance");
+ // Route two parts to one user channel: selection must still affect only Part 2.
+ p.selectPart(1);auto* channel=p.uiParameter("part_channel");check(channel!=nullptr,"Part channel control");channel->setValueNotifyingHost(channel->convertTo0to1(0));render(100);
+ check(p.activatePatchForPart(patch,1,error),error.toRawUTF8());render(200);after=snapshot();check(state.fromBase64Encoding(after->getStringAttribute("program")),"Shared-channel snapshot");bytes=static_cast<const uint8_t*>(state.getData());check(bytes[13+187]!=7 && bytes[13+256+187]==7,"Drum selection changed another layered part");
+ p.selectPart(0);check(p.setPerformanceMode(false,error),error.toRawUTF8());render(150);auto normal=program(Model::KS);auto sound=library.createPatch(Data(normal.begin(),normal.end()),{});check(p.activatePatch(sound,error),error.toRawUTF8());render(150);const auto normalLow=play(36),normalHigh=play(37);check(std::abs(int(normalHigh)-int(normalLow))<int(normalLow)/3,"Normal Program retained Drum Map key mapping");
+ std::cout<<"PASS: original KS firmware installs complete map, keys 36/37 select different voices ("<<low<<"/"<<high<<"), DAW map restore, layered Performance part isolation, normal Program return\n";
+ check(p.activatePatch(patch,error),error.toRawUTF8());render(150);p.setDrumEdit(true);check(p.drumEditEnabled(),"Drum Edit cannot enable for a map");
+ // 64 ms includes the plugin reserve and snapshot publication. A one-second
+ // wait hid the serial-store/idle-boundary delay during the original checks.
+ auto selectDrum=[&](int note,int channel=1,int velocity=100){midi.addEvent(juce::MidiMessage::noteOn(channel,note,uint8_t(velocity)),0);midi.addEvent(juce::MidiMessage::noteOff(channel,note),128);render(12);};
+ selectDrum(36);check(p.drumEditInfo().note==36,"Drum Edit first key");
+ auto checkDrumUI=[&](int note){std::unique_ptr<juce::AudioProcessorEditor> editor(p.createEditor());auto* edit=dynamic_cast<juce::TextButton*>(find(*editor,"drumEdit"));auto* display=dynamic_cast<juce::Label*>(find(*editor,"drumEditDisplay"));auto* perf=find(*editor,"performanceSwitch");check(edit && edit->isVisible() && edit->getToggleState() && display && display->isVisible() && display->getText().contains("MIDI "+juce::String(note)),"Drum Edit button/display");check(perf && !perf->getBounds().intersects(edit->getBounds()),"Drum Edit overlaps Performance");const auto capture=juce::SystemStats::getEnvironmentVariable("SILVER_K_UI_CAPTURE",{});if(capture.isNotEmpty()){const auto dir=juce::File(capture);dir.createDirectory();auto out=dir.getChildFile("KS-DrumEdit-"+juce::String(note)+".png").createOutputStream();juce::PNGImageFormat png;check(out && png.writeImageToStream(editor->createComponentSnapshot(editor->getLocalBounds()),*out),"Drum Edit screenshot");juce::MemoryBlock wrapperState;p.getStateInformation(wrapperState);check(dir.getChildFile("KS-DrumEdit.state").replaceWithData(wrapperState.getData(),wrapperState.getSize()),"Save Drum Edit wrapper fixture");}};
+ checkDrumUI(36);
+ auto* cutoff=p.uiParameter("cutoff");check(cutoff!=nullptr,"Drum cutoff missing");const auto initialCutoff=int(cutoff->convertFrom0to1(cutoff->getValue()));
+ cutoff->setValueNotifyingHost(cutoff->convertTo0to1(31));
+ auto* delay=p.uiParameter("delay");check(delay!=nullptr,"Drum FX control missing");delay->setValueNotifyingHost(delay->convertTo0to1(99));
+ selectDrum(37);check(p.drumEditInfo().note==37,"Drum Edit second key");check(int(cutoff->convertFrom0to1(cutoff->getValue()))==initialCutoff,"Knobs did not refresh for selected drum");
+ checkDrumUI(37);
+ check(int(delay->convertFrom0to1(delay->getValue()))==99,"Shared FX lost during Drum Edit switch");
+ cutoff->setValueNotifyingHost(cutoff->convertTo0to1(52));selectDrum(36);check(int(cutoff->convertFrom0to1(cutoff->getValue()))==31,"First drum edit lost during immediate switch");
+ p.setDrumEdit(false);selectDrum(37);check(p.drumEditInfo().note==36,"Drum Edit off still selects keys");
+ p.setDrumEdit(true);selectDrum(35);selectDrum(85);selectDrum(37,2);selectDrum(37,1,0);check(p.drumEditInfo().note==36,"Out-of-range/channel/zero-velocity note selected a drum");
+ p.getStateInformation(project);p.setStateInformation(project.getData(),int(project.getSize()));render(150);p.setDrumEdit(true);selectDrum(37);check(p.drumEditInfo().note==37 && int(p.uiParameter("cutoff")->convertFrom0to1(p.uiParameter("cutoff")->getValue()))==52,"Drum edits lost after project restore");
+ selectDrum(36);check(int(p.uiParameter("cutoff")->convertFrom0to1(p.uiParameter("cutoff")->getValue()))==31,"First drum lost after restore");
+ const auto editedFile=root.getChildFile("edited-map.syx");check(p.saveCurrentPatch(editedFile,error),error.toRawUTF8());juce::MemoryBlock editedBytes;check(editedFile.loadFileAsData(editedBytes),"Read edited map");DataList editedMaps;const auto* edited=static_cast<const uint8_t*>(editedBytes.getData());check(library.parseFileData(editedMaps,Data(edited,edited+editedBytes.getSize()),"edited.syx") && editedMaps.size()==1 && editedMaps[0][13+46]==31 && editedMaps[0][270+13+46]==52 && editedMaps[0][49*270+13+100]==99,"Save current lost drum edits/shared FX");
+ check(p.setPerformanceMode(true,error),error.toRawUTF8());render(150);p.selectPart(1);auto* partChannel=p.uiParameter("part_channel");check(partChannel!=nullptr,"Part channel missing");partChannel->setValueNotifyingHost(partChannel->convertTo0to1(0));render(150);p.setDrumEdit(true);selectDrum(37,1);check(p.drumEditInfo().note==37,"Performance Drum Edit failed");
+ after=snapshot();check(state.fromBase64Encoding(after->getStringAttribute("program")),"Performance Drum Edit snapshot");bytes=static_cast<const uint8_t*>(state.getData());check(bytes[13+188]==0 && bytes[13+256+188]==1,"Drum Edit changed another Performance part");
+ p.selectPart(0);check(p.setPerformanceMode(false,error),error.toRawUTF8());render(150);check(p.activatePatch(sound,error),error.toRawUTF8());render(150);check(p.drumEditInfo().bank==0,"Ordinary program still exposes Drum Edit");
+ std::cout<<"PASS: Drum Edit MIDI selection, immediate knob edits retained on both keys, off/range/channel/velocity guards, DAW restore and Performance part isolation\n";
+ check(audioAllocations==0,"Drum Edit allocated on audio callback");
+}
+
 static void importChecks(Library& library){
  for(auto model:{Model::AStation,Model::KStation,Model::KS,Model::XStation}){
   auto bytes=program(model);check(validPatch(bytes) && modelOf(bytes)==model,"Source model identification");
@@ -112,14 +211,25 @@ static void cacheMigrationChecks(const juce::File& root){
  {
   Library library(db);library.addPath(file);auto patch=wait(library,false);TypedTags tags;tags.add(TagType::Favourites,"Favourite");check(library.modifyTags({patch},tags),"Favourite fixture");
   for(int n=0;n<30;++n){library.uiProcess();std::this_thread::sleep_for(std::chrono::milliseconds(10));}
-  patch->name=" 0";check(db.getChildFile("silver-import-version.txt").deleteFile(),"Reset disposable old-cache marker");
+  patch->name=" 0";check(db.getChildFile("silver-import-version.txt").replaceWithText("5\n"),"Mark disposable old import cache");
  }
  {
-  Library library(db);auto patch=wait(library,true);check(patch->getTags(TagType::Favourites).containsAdded("Favourite"),"Source migration lost favourites");check(db.getChildFile("silver-import-version.txt").loadFileAsString().trim()=="4","Migration completion not remembered");
+  Library library(db);auto patch=wait(library,true);check(patch->getTags(TagType::Favourites).containsAdded("Favourite"),"Source migration lost favourites");check(db.getChildFile("silver-import-version.txt").loadFileAsString().trim()=="6","Migration completion not remembered");
  }
  std::cout<<"PASS: old zero-name cache refreshed from source, favourites preserved, migration remembered\n";
 }
 static void queueChecks(){
+ KCutoffMidi cutoff;
+ const uint8_t first[]{0xb0,105,127},changed[]{0xb0,105,64},otherChannel[]{0xb1,105,64},clock[]{0xf8};
+ check(!cutoff.duplicate(first,3),"First cutoff was suppressed");cutoff.accepted(first,3);
+ for(int n=0;n<10000;++n){check(cutoff.duplicate(first,3),"Repeated cutoff reached UART");cutoff.accepted(clock,1);}
+ check(!cutoff.duplicate(changed,3),"Changed cutoff was suppressed");cutoff.accepted(changed,3);
+ check(!cutoff.duplicate(otherChannel,3),"Different MIDI channel was suppressed");
+ for(const auto& message:std::vector<std::vector<uint8_t>>{{0x90,60,100},{0x80,60,0},{0xb0,64,127},{0xb0,98,11},{0xb0,6,64},{0xc0,1},{0xf0,0,0xf7},{0xfa},{0xfc}}){
+  cutoff.accepted(changed,3);cutoff.accepted(message.data(),message.size());check(!cutoff.duplicate(changed,3),"Cutoff cache survived an intervening message");
+  check(!cutoff.duplicate(message.data(),message.size()),"Non-cutoff MIDI was suppressed");
+ }
+ cutoff.accepted(first,3);cutoff.reset();check(!cutoff.duplicate(first,3),"Rejected MIDI poisoned cutoff cache");
  kstation::MidiSerialQueue<1024,16> queue;
  const uint8_t cc[]{0xb0,72,42};for(int n=0;n<300;++n)check(queue.push(cc,3),"Controller queue");
  const uint8_t rt[]{0xfa,0xf8,0xfc};check(queue.push(rt,3),"Realtime queue");uint8_t b=0;
@@ -132,7 +242,7 @@ static void folderChecks(Processor& p,const juce::File& dir){
  const auto original=p.dataFolder;juce::String error;const auto folder=dir.getChildFile("Managed Silver-K");
  check(p.setDataFolder(folder,error),error.toRawUTF8());
  const auto zero=folder.getChildFile("ROMs/ks-wave-zero.bin"),init=folder.getChildFile("ROMs/ks-init-flash.bin");
- check(zero.getSize()==129024 && init.getSize()==524288 && p.patchesFolder().isDirectory(),"Managed folder layout/placeholders");
+ check(zero.getSize()==129024 && !init.exists() && p.patchesFolder().isDirectory() && p.skinsFolder().isDirectory(),"Managed folder layout, required zero wave, no synthetic Data");
  juce::MemoryBlock data;check(zero.loadFileAsData(data),"Read placeholder");check(std::all_of(static_cast<const uint8_t*>(data.getData()),static_cast<const uint8_t*>(data.getData())+data.getSize(),[](uint8_t b){return b==0;}),"Placeholder is not zero-filled");
  data[0]=19;check(zero.replaceWithData(data.getData(),data.getSize()),"Replace local Wave ROM");check(p.setDataFolder(folder,error),"Reopen managed folder");juce::MemoryBlock reread;zero.loadFileAsData(reread);check(reread[0]==19,"Existing Wave ROM overwritten");
  {Processor next;check(next.dataFolder==folder,"Main folder preference not remembered");}
@@ -141,7 +251,7 @@ static void folderChecks(Processor& p,const juce::File& dir){
  {Processor next;check(next.firmwares.size()==1 && next.firmwares[0].file.getFileName()=="cached-os.bin","Startup rescanned ROMs instead of restoring the saved index");juce::String invalid;check(!next.loadFirmware(next.firmwares[0].file,invalid),"Cached metadata bypassed firmware validation");}
  check(p.setRomFolder(folder.getChildFile("ROMs"),error)==false && p.firmwares.empty(),"Explicit ROM rescan did not replace the cached index");
  check(p.setDataFolder(original,error),"Restore test folder");
- std::cout<<"PASS: managed ROMs/Patches, synthetic data, remembered root, existing files preserved\n";
+ std::cout<<"PASS: managed ROMs/Patches/Skins, zero Wave ROM, no synthetic KS Data, remembered root, existing files preserved\n";
 }
 static void bufferChecks(Processor& p){
  std::unique_ptr<juce::AudioProcessorEditor> editor(p.createEditor());
@@ -231,28 +341,148 @@ static void vStationFolderPlayback(Processor& p,const juce::File& folder){
  for(const auto& file:files){DataList frames;check(p.patchLibrary.loadFile(frames,file.getFullPathName().toStdString()),"FXP playback parse");auto patch=p.patchLibrary.createPatch(Data(frames[0]),{});const auto category=juce::String(patch->name).upToFirstOccurrenceOf(" ",false,false);if(!categories.insert(category).second)continue;juce::String error;check(p.activatePatch(patch,error),"FXP activate");for(int n=0;n<40;++n)render();midi.addEvent(juce::MidiMessage::noteOn(1,60,uint8_t(100)),0);for(int n=0;n<188;++n)render();midi.addEvent(juce::MidiMessage::noteOff(1,60),0);midi.addEvent(juce::MidiMessage::controllerEvent(1,120,0),0);for(int n=0;n<40;++n)render();}
  p.setPlayHead(nullptr);check(categories.size()>=6 && peak>1e-4,"FXP category sound coverage");std::cout<<"PASS: "<<(p.isKStation()?"K":"KS")<<" recursive FXP rows="<<rows->getNumRows()<<", V-Station filter/click, categories played="<<categories.size()<<", finite sound/no allocations, peak="<<peak<<'\n';
 }
+// Optional private-ROM regression for filter-dependent arp phase. Measure every
+// attack against the sample grid: mean spacing alone hides accumulated drift.
+static void filterClock(Processor& p,const juce::File& dir){
+ PlayHead head;head.bpm=100;p.setPlayHead(&head);p.setNonRealtime(true);
+ const juce::ScopeGuard clearHead{[&]{p.setPlayHead(nullptr);}};
+ constexpr int rate=48000,block=256,steps=12,period=28800;
+ juce::AudioBuffer<float> audio(4,block);juce::MidiBuffer midi;midi.ensureSize(4096);
+ auto set=[&](const char* id,int value){auto* parameter=p.uiParameter(id);check(parameter!=nullptr,id);parameter->setValueNotifyingHost(parameter->convertTo0to1(float(value)));};
+ auto render=[&]{inAudio=true;p.processBlock(audio,midi);inAudio=false;check(audioAllocations==0,"Filter/clock audio callback allocated");head.ppq+=block*head.bpm/(60*rate);};
+ // A known dry program avoids threshold movement from tails, modulation or
+ // changing pulse width. Keep incoming host notes identical in each case.
+ auto message=program(p.isKStation()?Model::KStation:Model::KS);
+ auto patch=p.patchLibrary.createPatch(Data(message.begin(),message.end()),{});juce::String error;
+ check(p.activatePatch(patch,error),error.toRawUTF8());for(int n=0;n<100;++n)render();
+ for(auto item:{std::pair<const char*,int>{"arp_on",1},{"arp_sync",9},{"arp_gate",32},{"arp_keysync",1},{"arp_latch",0},{"arp_rate",36},{"amp_release",0},{"amp_attack",0},{"amp_sustain",127},{"delay_level",0},{"reverb_level",0},{"chorus_level",0},{"volume",127},{"osc1_wave",2},{"osc1_level",127},{"osc2_level",0},{"osc3_level",0},{"noise_level",0},{"ring_level",0},{"filter_env",64},{"filter_keytrack",0},{"resonance",0}})set(item.first,item.second);
+ bool passed=true;
+ for(auto source:{ClockSource::Internal,ClockSource::Host}){
+  p.setClockSource(source);head.ppq=0;for(int n=0;n<1200;++n)render();
+  for(int key:{36,60,84}){
+   std::vector<int> reference;
+   for(int variant=0;variant<3;++variant){
+    const int cutoff=variant==1?127:64;const bool sweep=variant==2;set("cutoff",cutoff);
+    const int channel=1+p.midiChannel();midi.addEvent(juce::MidiMessage::controllerEvent(channel,120,0),0);
+    for(int n=0;n<100;++n)render();
+    const auto snapshot=dir.getChildFile("filter-clock-current.syx");check(p.saveCurrentPatch(snapshot,error),error.toRawUTF8());juce::MemoryBlock saved;check(snapshot.loadFileAsData(saved) && saved.getSize()>59 && static_cast<const uint8_t*>(saved.getData())[59]==cutoff,"Cutoff did not reach the engine snapshot");
+    const auto missedBefore=p.underruns();
+    std::vector<float> samples(steps*period);midi.addEvent(juce::MidiMessage::noteOn(channel,key,uint8_t(100)),0);
+    for(int n=0;n<int(samples.size());n+=block){
+     if(sweep)set("cutoff",64+(n/block)%64);
+     render();std::copy_n(audio.getReadPointer(0),std::min(block,int(samples.size())-n),samples.begin()+n);
+    }
+    check(p.underruns()==missedBefore,"Missing audio frames invalidate filter/clock measurement");
+    midi.addEvent(juce::MidiMessage::noteOff(channel,key),0);midi.addEvent(juce::MidiMessage::controllerEvent(channel,120,0),0);for(int n=0;n<100;++n)render();
+    std::vector<int> attacks;
+    // Search each expected beat after a long silent gate. The threshold is
+    // relative to that beat's own peak, with a fixed -120 dBFS noise floor.
+    // This records audio onset, not a claim about the controller's note time.
+    for(int beat=1;beat<steps;++beat){
+     const int begin=beat*period-rate/5,end=beat*period+rate/5;
+     float peak=0;for(int n=begin;n<end;++n)peak=std::max(peak,std::abs(samples[n]));check(peak>1e-5f,"Filter/clock arp silent");
+     const float threshold=std::max(1e-6f,peak*.001f);int onset=begin;while(onset<end && std::abs(samples[onset])<=threshold)++onset;
+     check(onset>begin && onset<end,"Arp onset missing or outside the grid window");attacks.push_back(onset);
+    }
+    double minPhase=1e9,maxPhase=-1e9,maxReference=0;
+    for(size_t n=0;n<attacks.size();++n){const double phase=attacks[n]-(n+1)*period;minPhase=std::min(minPhase,phase);maxPhase=std::max(maxPhase,phase);if(!reference.empty())maxReference=std::max(maxReference,double(std::abs(attacks[n]-reference[n])));}
+    if(variant==0)reference=attacks;
+    const double drift=attacks.back()-attacks.front()-(steps-2)*period;
+    const bool ok=std::abs(drift)<=rate*.002 && maxPhase-minPhase<=rate*.004 && maxReference<=rate*.004;
+    passed=passed && ok;
+    std::cout<<"FILTER_CLOCK model="<<(p.isKStation()?"K":"KS")<<" source="<<(source==ClockSource::Internal?"internal":"host")<<" key="<<key<<" cutoff="<<cutoff<<" sweep="<<sweep<<" drift_ms="<<1000*drift/rate<<" phase_span_ms="<<1000*(maxPhase-minPhase)/rate<<" vs_cutoff64_ms="<<1000*maxReference/rate<<" result="<<(ok?"PASS":"FAIL")<<'\n'<<std::flush;
+    const auto name=juce::String(p.isKStation()?"K":"KS")+"-filter-"+(source==ClockSource::Internal?"internal":"host")+"-"+juce::String(key)+"-"+juce::String(cutoff)+(sweep?"-sweep":"")+".wav";
+    auto stream=dir.getChildFile(name).createOutputStream();juce::WavAudioFormat wav;std::unique_ptr<juce::AudioFormatWriter> writer(wav.createWriterFor(stream.release(),rate,1,24,{},0));const float* channels[]{samples.data()};check(writer && writer->writeFromFloatArrays(channels,1,int(samples.size())),"Filter/clock audio capture");
+   }
+  }
+ }
+ set("arp_on",0);check(passed,"Filter/clock phase regression; inspect FILTER_CLOCK measurements");
+}
+// Long external-preset probe for comparison with a tester's DAW captures.
+// Preserve the patch's envelopes, oscillator phase, arp division and keysync.
+static void filterPatchClock(Processor& p,const juce::File& file,const juce::File& dir){
+ const bool ccFlood=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FILTER_CC_FLOOD",{}).isNotEmpty();
+ const int key=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FILTER_NOTE","24").getIntValue();check(key>=0 && key<=127,"Filter probe MIDI note outside 0..127");
+ const auto source=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FILTER_SOURCE","internal");check(source=="host" || source=="internal","Filter probe clock must be host or internal");
+ const int selectedCase=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FILTER_CASE","-1").getIntValue();check(selectedCase>=-1 && selectedCase<8,"Filter probe case outside 0..7");
+ const bool realtime=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FILTER_REALTIME",{}).isNotEmpty();
+ PlayHead head;head.bpm=100;p.setPlayHead(&head);p.setNonRealtime(true);const juce::ScopeGuard clearHead{[&]{p.setPlayHead(nullptr);p.setNonRealtime(true);}};
+ DataList frames;check(p.patchLibrary.loadFile(frames,file.getFullPathName().toStdString()) && frames.size()==1,"Filter probe requires one program dump");
+ auto patch=p.patchLibrary.createPatch(Data(frames[0]),{});check(patch!=nullptr,"Invalid filter probe patch");juce::String error;
+ constexpr int rate=48000,block=256,half=921600,length=1958400; // 8 and 17 bars, 100 BPM, 4/4.
+ juce::AudioBuffer<float> audio(4,block);juce::MidiBuffer midi;midi.ensureSize(4096);
+ auto set=[&](const char* id,int value){auto* q=p.uiParameter(id);check(q!=nullptr,id);q->setValueNotifyingHost(q->convertTo0to1(float(value)));};
+ auto render=[&]{inAudio=true;p.processBlock(audio,midi);inAudio=false;head.ppq+=block/28800.;};
+ p.setClockSource(source=="host"?ClockSource::Host:ClockSource::Internal);
+ bool passed=true;
+ for(bool arp:{false,true})for(int variant=0;variant<4;++variant){
+  if(selectedCase>=0 && selectedCase!=(arp?4:0)+variant)continue;
+  check(p.activatePatch(patch,error),error.toRawUTF8());for(int n=0;n<200;++n)render();
+  set("arp_rate",36);set("arp_on",arp?1:0);set("cutoff",variant==0?64:127);set("filter_keytrack",variant<2?0:127);
+  for(int n=0;n<1200;++n)render();
+  const auto name=juce::String(p.isKStation()?"K":"KS")+"-tester-"+source+"-"+juce::String(key)+(arp?"-arp":"-held")+"-v"+juce::String(variant)+(realtime?"-realtime":"-offline");
+  check(p.saveCurrentPatch(dir.getChildFile(name+"-before.syx"),error),error.toRawUTF8());
+  const auto misses=p.underruns();const auto allocationBefore=audioAllocations;const int channel=1+p.midiChannel();
+  struct MissingBlock{int offset;uint64_t count;int64_t finishedLateUs;};std::vector<MissingBlock> dropoutBlocks;dropoutBlocks.reserve(length/block);uint64_t previousMissing=misses;
+  juce::AudioBuffer<float> capture(2,length);head.ppq=0;midi.addEvent(juce::MidiMessage::noteOn(channel,key,uint8_t(100)),0);
+  p.setNonRealtime(!realtime);const auto start=std::chrono::steady_clock::now();
+  for(int n=0;n<length;n+=block){
+   if(variant==3 && n>=half){const double phase=std::min(1.,double(n-half)/half);set("cutoff",int(std::round(127*std::abs(2*phase-1))));}
+   if(ccFlood){const int value=variant==0?64:variant==3 && n>=half?int(std::round(127*std::abs(2*std::min(1.,double(n-half)/half)-1))):127;midi.addEvent(juce::MidiMessage::controllerEvent(channel,105,value),0);}
+   render();const auto currentMissing=p.underruns();if(currentMissing>previousMissing){const auto elapsed=std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()-start).count();dropoutBlocks.push_back({n,currentMissing-previousMissing,elapsed-int64_t(n+block)*1000000/rate});}previousMissing=currentMissing;
+   for(int c=0;c<2;++c)capture.copyFrom(c,n,audio,c,0,block);
+   if(realtime)std::this_thread::sleep_until(start+std::chrono::microseconds(int64_t(n+block)*1000000/rate));
+  }
+  p.setNonRealtime(true);const auto missing=p.underruns()-misses;const auto allocated=audioAllocations-allocationBefore;
+  midi.addEvent(juce::MidiMessage::noteOff(channel,key),0);midi.addEvent(juce::MidiMessage::controllerEvent(channel,120,0),0);for(int n=0;n<200;++n)render();
+  check(p.saveCurrentPatch(dir.getChildFile(name+"-after.syx"),error),error.toRawUTF8());
+  const float peak=capture.getMagnitude(0,0,length);bool finite=true;
+  // Right contains the sound plus a quarter-note click; left is untouched.
+  for(int n=0;n<length;++n){finite=finite && std::isfinite(capture.getSample(0,n)) && std::isfinite(capture.getSample(1,n));const int tick=n%28800;if(tick<480)capture.addSample(1,n,float(.2*std::exp(-tick/80.)*std::sin(tick*2*juce::MathConstants<double>::pi*3000/rate)));}
+  auto stream=dir.getChildFile(name+".wav").createOutputStream();juce::WavAudioFormat wav;std::unique_ptr<juce::AudioFormatWriter> writer(wav.createWriterFor(stream.release(),rate,2,24,{},0));check(writer && writer->writeFromAudioSampleBuffer(capture,0,length),"Tester filter capture");
+  juce::XmlElement meta("FilterClockProbe");meta.setAttribute("operatingSystem",juce::SystemStats::getOperatingSystemName());meta.setAttribute("sourceFile",file.getFullPathName());meta.setAttribute("sourceModel",modelName(modelOf(patch->sysex)));meta.setAttribute("model",p.isKStation()?"K":"KS");meta.setAttribute("clockSource",source);meta.setAttribute("ksControllerMode",p.ksControllerMode());meta.setAttribute("reportedLatencySamples",p.getLatencySamples());meta.setAttribute("repeatedCutoffCC",ccFlood);meta.setAttribute("note",key);meta.setAttribute("arpOn",arp);meta.setAttribute("cutoff",variant==0?64:127);meta.setAttribute("keytrack",variant<2?0:127);meta.setAttribute("sweepAfterEightBars",variant==3);meta.setAttribute("bpm",100);meta.setAttribute("sampleRate",rate);meta.setAttribute("blockSize",block);meta.setAttribute("samples",length);meta.setAttribute("realtime",realtime);meta.setAttribute("missingFrames",juce::String(missing));meta.setAttribute("callbackAllocations",juce::String(allocated));meta.setAttribute("peak",double(peak));
+  for(const auto& lost:dropoutBlocks){auto* entry=meta.createNewChildElement("MissingBlock");entry->setAttribute("sampleOffset",lost.offset);entry->setAttribute("count",juce::String(lost.count));entry->setAttribute("callbackFinishedLateUs",juce::String(lost.finishedLateUs));}check(meta.writeTo(dir.getChildFile(name+".xml")),"Tester dropout metadata");
+  const bool ok=missing==0 && allocated==0 && finite && peak>1e-6f;passed=passed && ok;
+  std::cout<<"FILTER_PATCH "<<name<<" missing="<<missing<<" callback_allocations="<<allocated<<" peak="<<peak<<" result="<<(ok?"PASS":"FAIL")<<'\n'<<std::flush;
+ }
+ check(passed,"Tester filter probe lost frames, allocated, or produced invalid/silent audio; inspect captures");
+}
 static void audioClock(Processor& p,const juce::File& dir){
  PlayHead head;p.setPlayHead(&head);p.setNonRealtime(true);juce::AudioBuffer<float> audio(4,256);juce::MidiBuffer midi;midi.ensureSize(4096);
+ HostClock incoming;double incomingBpm=0;int64_t incomingSamples=0;bool noteHeld=false;
  auto set=[&](const char* id,int value){auto* parameter=p.uiParameter(id);check(parameter!=nullptr,id);parameter->setValueNotifyingHost(parameter->convertTo0to1(float(value)));};
  for(auto item:{std::pair<const char*,int>{"arp_on",1},{"arp_sync",9},{"arp_gate",32},{"arp_keysync",1},{"arp_latch",0},{"arp_rate",30},{"amp_release",0},{"amp_attack",0},{"amp_sustain",127},{"delay_level",0},{"reverb_level",0},{"chorus_level",0},{"volume",127}})set(item.first,item.second);
- auto render=[&]{inAudio=true;p.processBlock(audio,midi);inAudio=false;check(audioAllocations==0,"Heap allocation while processing host clock");head.ppq+=256*head.bpm/(60*48000);};
+ auto render=[&]{
+  if(incomingBpm>0){incoming.begin({true,true,true,incomingBpm,incomingSamples*incomingBpm/(60*48000)},48000,256);HostClock::Event event{};while(incoming.next(event))midi.addEvent(&event.status,1,event.offset);incomingSamples+=256;}
+  inAudio=true;p.processBlock(audio,midi);inAudio=false;check(audioAllocations==0,"Heap allocation while processing clock");head.ppq+=256*head.bpm/(60*48000);
+ };
  for(int n=0;n<250;++n)render();
- for(double tempo:{90.,180.}){
-  head.bpm=tempo;head.ppq=0;midi.addEvent(juce::MidiMessage::noteOff(1,60),0);for(int n=0;n<2400;++n)render();midi.addEvent(juce::MidiMessage::noteOn(1,60,uint8_t(100)),0);
+ struct Scenario{ClockSource source;double hostBpm,midiBpm,tempo;const char* name;};
+ for(const auto scenario:{Scenario{ClockSource::Host,90,0,90,"host-90"},
+                         {ClockSource::Host,180,0,180,"host-180"},
+                         {ClockSource::Internal,180,60,94,"internal-host180-midi60"},
+                         {ClockSource::Internal,90,180,94,"internal-host90-midi180"},
+                         {ClockSource::Midi,180,90,90,"midi90-host180"},
+                         {ClockSource::Midi,90,180,180,"midi180-host90"},
+                         {ClockSource::Host,90,180,90,"host90-after-midi"}}){
+  const double tempo=scenario.tempo;p.setClockSource(scenario.source);incomingBpm=scenario.midiBpm;incoming.reset();incomingSamples=0;
+  head.bpm=scenario.hostBpm;head.ppq=0;for(int n=0;n<2400;++n)render();if(!noteHeld){midi.addEvent(juce::MidiMessage::noteOn(1,60,uint8_t(100)),0);noteHeld=true;}
   const int blocks=750;std::vector<float> envelope;envelope.reserve(blocks);juce::AudioBuffer<float> capture(2,blocks*256);
   for(int n=0;n<blocks;++n){if(n%2==0)set("osc1_pulse_width",(n*7)%100+14);if(n==375){juce::MemoryBlock saved;p.getStateInformation(saved);check(saved.getSize()>0,"Live arp state read");}render();envelope.push_back(audio.getRMSLevel(0,0,256));capture.copyFrom(0,n*256,audio,0,0,256);capture.copyFrom(1,n*256,audio,1,0,256);}
-  const auto peak=*std::max_element(envelope.begin(),envelope.end());check(peak>1e-5,"Clock arp silent");std::vector<int> attacks;bool sounding=false;
+  const auto peak=*std::max_element(envelope.begin(),envelope.end());check(peak>1e-5,"Clock arp silent");std::vector<int> attacks;
+  // A held note can already be sounding at the measurement window's boundary;
+  // that boundary is not a new attack.
+  bool sounding=envelope[189]>peak*.12;
   for(int n=190;n<blocks;++n){const bool on=envelope[n]>peak*.12;if(on && !sounding)attacks.push_back(n*256);sounding=on;}
-  std::cout<<(p.isKStation()?"K":"KS")<<" tempo="<<tempo<<" attacks="<<attacks.size()<<" gaps:";for(size_t n=1;n<attacks.size();++n)std::cout<<' '<<attacks[n]-attacks[n-1];std::cout<<'\n';
-  const auto file=dir.getChildFile(juce::String(p.isKStation()?"K":"KS")+"-host-clock-"+juce::String(tempo)+".wav");auto stream=file.createOutputStream();juce::WavAudioFormat wav;std::unique_ptr<juce::AudioFormatWriter> writer(wav.createWriterFor(stream.release(),48000,2,24,{},0));check(writer && writer->writeFromAudioSampleBuffer(capture,0,capture.getNumSamples()),"Clock audio capture");
+  std::cout<<(p.isKStation()?"K":"KS")<<" clock="<<scenario.name<<" expected="<<tempo<<" attacks="<<attacks.size()<<" gaps:";for(size_t n=1;n<attacks.size();++n)std::cout<<' '<<attacks[n]-attacks[n-1];std::cout<<'\n';
+  const auto file=dir.getChildFile(juce::String(p.isKStation()?"K":"KS")+"-clock-"+scenario.name+".wav");auto stream=file.createOutputStream();juce::WavAudioFormat wav;std::unique_ptr<juce::AudioFormatWriter> writer(wav.createWriterFor(stream.release(),48000,2,24,{},0));check(writer && writer->writeFromAudioSampleBuffer(capture,0,capture.getNumSamples()),"Clock audio capture");
   check(attacks.size()>=3,"Arp attacks not detected");double average=0;for(size_t n=1;n<attacks.size();++n)average+=attacks[n]-attacks[n-1];average/=attacks.size()-1;
-  check(std::abs(average-48000*60/tempo)<512,"Arp does not follow host tempo");
+  check(std::abs(average-48000*60/tempo)<512,"Arp does not follow selected clock source");
   for(size_t n=1;n<attacks.size();++n)check(std::abs((attacks[n]-attacks[n-1])-average)<768,"Pulse edits disturb arp timing");
-  midi.addEvent(juce::MidiMessage::noteOff(1,60),0);for(int n=0;n<100;++n)render();
  }
- p.setPlayHead(nullptr);set("arp_on",0);for(int n=0;n<100;++n)p.processBlock(audio,midi);
+ midi.addEvent(juce::MidiMessage::noteOff(1,60),0);p.setPlayHead(nullptr);set("arp_on",0);for(int n=0;n<100;++n)p.processBlock(audio,midi);
  juce::MemoryBlock saved;p.getStateInformation(saved);check(dir.getParentDirectory().getChildFile(p.isKStation()?"K-ClockProbe.state":"KS-ClockProbe.state").replaceWithData(saved.getData(),saved.getSize()),"Save wrapper clock fixture");
- std::cout<<"PASS: original firmware arp follows host 90/180 BPM while Pulse changes every second block\n";
+ std::cout<<"PASS: Host/Internal/MIDI Clock isolation and live handovers with conflicting tempos, Pulse edits, state reads and no callback allocations\n";
 }
 static std::vector<uint8_t> read(const juce::File& f){juce::MemoryBlock b;check(f.loadFileAsData(b),"Read private fixture");const auto* p=static_cast<const uint8_t*>(b.getData());return {p,p+b.getSize()};}
 static void nativeImports(Library& library,const juce::File& os,const juce::File& wave,const juce::File& flash,const juce::File& folder){
@@ -289,10 +519,24 @@ static void nativeImports(Library& library,const juce::File& os,const juce::File
 }
 int main(int argc,char** argv){std::cout<<std::unitbuf;std::cerr<<std::unitbuf;try{
  juce::ScopedJuceInitialiser_GUI gui;const auto root=juce::File(juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",juce::File::getSpecialLocation(juce::File::tempDirectory).getFullPathName())).getChildFile("workflow-"+juce::Uuid().toString());check(root.createDirectory().wasOk(),"Test folder");
- queueChecks();{Library library(root.getChildFile("parse-db"));importChecks(library);vStationChecks(library);vStationProgramChecks(library);namingChecks(library);}cacheMigrationChecks(root);
+ queueChecks();{Library library(root.getChildFile("parse-db"));importChecks(library);drumParserChecks(library);vStationChecks(library);vStationProgramChecks(library);namingChecks(library);}cacheMigrationChecks(root);
  if(argc>=6 && !juce::SystemStats::getEnvironmentVariable("SILVER_TEST_IMPORTS_ONLY",{}).isEmpty()){Library library(root.getChildFile("reference-db"));nativeImports(library,juce::File(argv[2]),juce::File(argv[4]),juce::File(argv[3]),juce::File(argv[5]));return 0;}
  const bool browserOnly=!juce::SystemStats::getEnvironmentVariable("SILVER_TEST_BROWSER_ONLY",{}).isEmpty();
  Processor p;folderChecks(p,root);bufferChecks(p);p.prepareToPlay(48000,256);
+ if(!juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FILTER_CLOCK_ONLY",{}).isEmpty()){
+  check(argc>=5,"Filter clock probe requires K OS, KS OS, KS Data and Wave ROM paths");
+  const auto testerPatch=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FILTER_PATCH",{});
+  for(int model:{1,2}){
+   if(!juce::SystemStats::getEnvironmentVariable(model==1?"SILVER_TEST_SKIP_K":"SILVER_TEST_SKIP_KS",{}).isEmpty())continue;
+   p.flashFile=juce::File(argv[3]);p.bankFile=juce::File(argv[4]);juce::String error;check(p.loadFirmware(juce::File(argv[model]),error),error.toRawUTF8());
+   if(model==2)check(p.setKSControllerMode(1,error),error.toRawUTF8());
+   if(testerPatch.isEmpty())filterClock(p,root);else filterPatchClock(p,juce::File(testerPatch),root);
+  }return 0;
+ }
+ if(argc>=2 && !juce::SystemStats::getEnvironmentVariable("SILVER_TEST_DRUMS_ONLY",{}).isEmpty()){
+  juce::String error;const auto waveFile=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_DRUM_WAVES",{});if(waveFile.isNotEmpty())p.bankFile=juce::File(waveFile);const auto flashFile=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_DRUM_FLASH",{});if(flashFile.isNotEmpty())check(p.setFlashRom(juce::File(flashFile),error),error.toRawUTF8());check(p.setKSControllerMode(1,error),error.toRawUTF8());check(p.loadFirmware(juce::File(argv[1]),error),error.toRawUTF8());drumBrowserChecks(p,root);drumPlaybackChecks(p,root);
+  if(argc>=3){check(p.loadFirmware(juce::File(argv[2]),error),error.toRawUTF8());drumBrowserChecks(p,root);}return 0;
+ }
  const auto levelFile=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_LEVEL",{});
  if(argc>=5 && levelFile.isNotEmpty()){for(int model:{1,2}){p.flashFile=juce::File(argv[3]);p.bankFile=juce::File(argv[4]);juce::String error;check(p.loadFirmware(juce::File(argv[model]),error),error.toRawUTF8());levelProbe(p,juce::File(levelFile));}return 0;}
  if(argc>=5 && !juce::SystemStats::getEnvironmentVariable("SILVER_TEST_FXP_ONLY",{}).isEmpty()){
@@ -305,9 +549,9 @@ int main(int argc,char** argv){std::cout<<std::unitbuf;std::cerr<<std::unitbuf;t
   return 0;
  }
  if(argc>=5 && juce::SystemStats::getEnvironmentVariable("SILVER_TEST_SKIP_K",{}).isEmpty()){p.flashFile=juce::File(argv[3]);p.bankFile=juce::File(argv[4]);juce::String error;check(p.loadFirmware(juce::File(argv[1]),error),error.toRawUTF8());if(!browserOnly)audioClock(p,root);}
- auto banks=root.getChildFile("browser-banks-"+juce::Uuid().toString());banks.createDirectory();browserChecks(p,banks);
+ auto banks=root.getChildFile("browser-banks-"+juce::Uuid().toString());banks.createDirectory();browserChecks(p,banks);drumBrowserChecks(p,root);
  if(browserOnly)return 0;
- if(argc>=5){p.flashFile=juce::File(argv[3]);p.bankFile=juce::File(argv[4]);juce::String error;check(p.loadFirmware(juce::File(argv[2]),error),error.toRawUTF8());audioClock(p,root);}
+ if(argc>=5 && juce::SystemStats::getEnvironmentVariable("SILVER_TEST_SKIP_KS",{}).isEmpty()){p.flashFile=juce::File(argv[3]);p.bankFile=juce::File(argv[4]);juce::String error;check(p.loadFirmware(juce::File(argv[2]),error),error.toRawUTF8());audioClock(p,root);drumBrowserChecks(p,root);}
  if(argc>=6){Library library(root.getChildFile("external-db"));unsigned counts[5]{};for(const auto& file:juce::File(argv[5]).findChildFiles(juce::File::findFiles,true,"*.syx")){DataList data;library.loadFile(data,file.getFullPathName().toStdString());for(auto& message:data)if(auto patch=library.createPatch(std::move(message),file.getFileNameWithoutExtension().toStdString())){++counts[int(modelOf(patch->sysex))];for(auto target:{Model::KStation,Model::KS})check(validPatch(convertPatch(patch->sysex,target).data),"External bank conversion");}}
   for(int m=1;m<=4;++m)std::cout<<modelName(Model(m))<<" external programs="<<counts[m]<<'\n';check(counts[int(Model::AStation)] && counts[int(Model::XStation)],"External A/X banks missing");
   nativeImports(library,juce::File(argv[2]),juce::File(argv[4]),juce::File(argv[3]),juce::File(argv[5]));

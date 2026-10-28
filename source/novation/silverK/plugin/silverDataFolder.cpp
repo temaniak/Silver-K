@@ -1,5 +1,4 @@
 #include "silverProcessor.h"
-#include "BinaryData.h"
 namespace silverK {
 juce::File Processor::settingsFile()const{
  const auto test=juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",{});
@@ -20,7 +19,7 @@ bool Processor::updateSettings(const juce::NamedValueSet& edits,juce::String& er
  return true;
 }
 juce::NamedValueSet Processor::preferenceValues()const{
- juce::NamedValueSet values;values.set("editorScale",editorScale.load());values.set("skinChoice",skinChoice);values.set("customSkin",customSkin);values.set("bufferProfile",buffering.load());values.set("ksControllerMode",ksControllerMode());values.set("editorChannel",int(editorChannelPreference.load()));values.set("browserState",browserState);return values;
+ juce::NamedValueSet values;values.set("editorScale",editorScale.load());values.set("skinChoice",skinChoice);values.set("customSkin",customSkin);values.set("bufferProfile",buffering.load());values.set("ksControllerMode",ksControllerMode());values.set("ksTwoCoreProcessing",ksTwoCoreProcessing());values.set("editorChannel",int(editorChannelPreference.load()));values.set("browserState",browserState);return values;
 }
 void Processor::savePreferences(){
  if(isFirmwareLoading())return;
@@ -41,22 +40,32 @@ void Processor::initializeDataFolder(){
   return file;
  };
  osFile=selectedAsset("os");bankFile=selectedAsset("bank");flashFile=selectedAsset("flash");
+ restoreKSDataFiles(settings["ksDataFiles"],sameAssetRoot);
+ for(const auto& file:selectedKSDataFiles())if(isBundledInit(file)){flashFile=juce::File{};flashFiles.clear();break;}
  const double scale=double(settings.getProperty("editorScale",.75));editorScale.store(std::isfinite(scale)&&scale>=.5&&scale<=1.5?scale:.75);
  skinChoice=settings.getProperty("skinChoice","Auto").toString();customSkin=settings["customSkin"].toString();browserState=settings["browserState"].toString();
  const int controller=int(settings.getProperty("ksControllerMode",ksControllerMode()));ksController.store(controller>=0 && controller<=2?ks::ControllerMode(controller):ks::ControllerMode::H8);
+ twoCoreProcessing.store(bool(settings.getProperty("ksTwoCoreProcessing",ksTwoCoreProcessing())));
  buffering.store(juce::jlimit(0,3,int(settings.getProperty("bufferProfile",1))));controlChannel.store(uint8_t(int(settings["editorChannel"])&15));editorChannelPreference.store(controlChannel.load());
  juce::String error;setDataFolder(dataFolder,error);if(error.isNotEmpty())message=error;
  preferenceBaseline=preferenceValues();startupFirmware=osFile;startupPending.store(osFile!=juce::File{});
 }
 bool Processor::setDataFolder(const juce::File& folder,juce::String& error){
+ std::lock_guard guard(controlMutex);
  if(folder==juce::File{}){error="Choose a Silver-K folder";return false;}
- const auto roms=folder.getChildFile("ROMs"),patches=folder.getChildFile("Patches");
- for(const auto& dir:{roms,patches})if(auto result=dir.createDirectory();result.failed()){error=result.getErrorMessage();return false;}
- const auto zero=roms.getChildFile("ks-wave-zero.bin"),init=roms.getChildFile("ks-init-flash.bin");
- if(!zero.exists()){juce::MemoryBlock bytes(ks::Board::WaveSize,true);if(!zero.replaceWithData(bytes.getData(),bytes.getSize())){error="Cannot create placeholder Wave ROM";return false;}}
- if(!init.exists() && !init.replaceWithData(BinaryData::ksinitflash_bin,BinaryData::ksinitflash_binSize)){error="Cannot create synthetic KS Init Flash";return false;}
+ const auto roms=folder.getChildFile("ROMs"),patches=folder.getChildFile("Patches"),skins=folder.getChildFile("Skins");
+ for(const auto& dir:{roms,patches,skins})if(auto result=dir.createDirectory();result.failed()){error=result.getErrorMessage();return false;}
  dataFolder=folder;
- if(bankFile==juce::File{})bankFile=zero;if(flashFile==juce::File{})flashFile=init;
+ const auto zero=roms.getChildFile("ks-wave-zero.bin");
+ if(!zero.exists()){
+  juce::MemoryBlock bytes(ks::Board::WaveSize,true);
+  if(!zero.replaceWithData(bytes.getData(),bytes.getSize())){error="Cannot create required zero Wave ROM";return false;}
+ }
+ if(bankFile==juce::File{})bankFile=zero;
+ for(auto* asset:{&osFile,&bankFile})if(asset->existsAsFile()){const auto managed=managedAsset(*asset,error);if(managed==juce::File{})return false;*asset=managed;}
+ const auto selected=selectedKSDataFiles();std::vector<juce::File> managedData;
+ for(const auto& file:selected){if(!file.existsAsFile()){managedData.push_back(file);continue;}const auto managed=managedAsset(file,error);if(managed==juce::File{})return false;managedData.push_back(managed);}
+ if(!managedData.empty()){flashFiles=std::move(managedData);flashFile=flashFiles.front();}
  const auto settings=juce::JSON::parse(settingsFile());
  const bool cached=settings["dataFolder"].toString()==folder.getFullPathName() && int(settings["firmwareIndexVersion"])==1 && settings["firmwares"].isArray();
  romFolder=roms;
@@ -66,6 +75,12 @@ bool Processor::setDataFolder(const juce::File& folder,juce::String& error){
    const auto file=roms.getChildFile(relative);if(file.isAChildOf(roms) && file.existsAsFile() && firmwares.size()<1024)firmwares.push_back({file,bool(item["kStation"])});
   }
  }else{juce::String scan;setRomFolder(roms,scan);}
+ // A cached firmware index is still useful when the required Data has not
+ // been selected. Discover a real All Data file without creating substitutes.
+ if(flashFile==juce::File{})for(const auto& file:roms.findChildFiles(juce::File::findFiles,false,"*"))
+  if(file.hasFileExtension("mid;midi") && file.getFileName().containsIgnoreCase("all data")){
+   std::vector<uint8_t> storage;juce::String ignored;if(readKSData({file},storage,ignored)){flashFile=file;flashFiles={file};break;}
+  }
  patchLibrary.addPath(patches,true);
  return rememberDataFolder(error) && rememberAssets(error);
 }
@@ -81,19 +96,21 @@ bool Processor::rememberAssets(juce::String& error){
  for(const auto& asset:{std::pair<const char*,juce::File>{"os",osFile},{"bank",bankFile},{"flash",flashFile}}){
   values.set(asset.first,asset.second.getFullPathName());values.set(juce::String(asset.first)+"Relative",asset.second.isAChildOf(dataFolder)?asset.second.getRelativePathFrom(dataFolder):juce::String{});
  }
- return updateSettings(values,error);
+ values.set("ksDataFiles",ksDataReferences());return updateSettings(values,error);
 }
 bool Processor::setWaveRom(const juce::File& file,juce::String& error){
+ std::lock_guard guard(controlMutex);
  if(file.getSize()!=ks::Board::WaveSize){error="Wave ROM must contain exactly 129024 bytes";return false;}
- bankFile=file;return rememberAssets(error);
+ const auto managed=managedAsset(file,error);if(managed==juce::File{})return false;
+ bankFile=managed;return rememberAssets(error);
 }
-bool Processor::setFlashRom(const juce::File& file,juce::String& error){
- if(file.hasFileExtension("mid;midi")){
-  auto input=file.createInputStream();juce::MidiFile midi;if(!input || !midi.readFrom(*input)){error="Cannot read KS factory MIDI";return false;}
-  bool found=false;for(int t=0;t<midi.getNumTracks();++t)for(int n=0;n<midi.getTrack(t)->getNumEvents();++n){const auto& m=midi.getTrack(t)->getEventPointer(n)->message;const auto* bytes=m.getRawData();const uint8_t prefix[]{0xf0,0,0x20,0x29,1,0x42};if(m.getRawDataSize()==270 && std::equal(std::begin(prefix),std::end(prefix),bytes) && bytes[7]==1 && bytes[269]==0xf7)found=true;}
-  if(!found){error="No KS factory programs in MIDI file";return false;}
- }else if(!file.hasFileExtension("bin") || file.getSize()!=0x80000){error="KS Flash ROM must be a 524288-byte BIN or KS factory MIDI";return false;}
- flashFile=file;return rememberAssets(error);
+bool Processor::setFlashRom(const juce::File& file,juce::String& error){return setFlashRoms({file},error);}
+bool Processor::setFlashRoms(const juce::Array<juce::File>& files,juce::String& error){
+ std::lock_guard guard(controlMutex);
+ std::vector<juce::File> chosen(files.begin(),files.end());std::vector<uint8_t> storage;
+ if(!readKSData(chosen,storage,error))return false;
+ std::vector<juce::File> managed;for(const auto& file:chosen){auto saved=managedAsset(file,error);if(saved==juce::File{})return false;managed.push_back(saved);}
+ flashFiles=std::move(managed);flashFile=flashFiles.front();return rememberAssets(error);
 }
 juce::File Processor::resolveAsset(const juce::ValueTree& state,const char* role)const{
  const auto relative=state.getProperty(juce::String(role)+"Relative").toString();

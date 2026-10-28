@@ -43,15 +43,21 @@ public:
     template<class Reader,class Writer>
     Advance advanceBefore(unsigned available,Reader&& read,Writer&& write){
         const auto cost=nextClocks();if(!cost||cost>available)return {};
+        return advancePlannedPhase(cost,read,write);
+    }
+private:
+    friend class NativeControllerExecutor;
+    // The owner synchronously passes this phase's admitted nonzero cost.
+    template<class Reader,class Writer>
+    Advance advancePlannedPhase(unsigned cost,Reader&& read,Writer&& write){
         auto& job=*jobs_[count_-1];
-        const auto used=job.service.advanceBefore(cost,read,write);
+        const auto used=job.service.advancePlannedPhase(cost,read,write);
         if(used!=cost)return {};
         Advance result{used,job.service.complete(),uint8_t(job.service.critical()?7:job.priority),
             job.service.timerComponents(),job.service.adcComponents(),job.service.serialReceiveComponents()};
         if(result.returned){result.mask=job.previousMask;jobs_[--count_].reset();}
         return result;
     }
-private:
     struct Job {
         InterruptService service;
         uint8_t priority,previousMask;

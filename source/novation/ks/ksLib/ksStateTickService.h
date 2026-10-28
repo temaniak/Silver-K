@@ -19,7 +19,8 @@ public:
  struct Input {};
  struct Effect { bool read=false,write=false; };
  struct Summary { uint32_t counter=0;uint16_t tick=0,last=0,elapsed=0,presentation=0;uint8_t pedal=128;bool due=false,sent=false; };
- StateTickService()=default;
+ // Keep semantic member defaults without clearing disengaged child storage.
+ StateTickService(){}
  explicit StateTickService(Kind):StateTickService(){}
  StateTickService(Kind,Input):StateTickService(){}
  Kind kind()const{return Kind::Tick;}bool complete()const{return parent_.complete();}

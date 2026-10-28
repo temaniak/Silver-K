@@ -30,6 +30,13 @@ public:
     unsigned advanceBefore(unsigned available, Reader&& read, Writer&& write) {
         const auto cost = nextClocks();
         if (!cost || cost > available) return 0;
+        return advancePlannedPhase(cost,read,write);
+    }
+private:
+    friend class InterruptService;
+    // The owner synchronously passes this phase's admitted nonzero cost.
+    template<class Reader,class Writer>
+    unsigned advancePlannedPhase(unsigned cost,Reader&& read,Writer&& write){
         const auto readWord = [&](uint32_t address, unsigned end) {
             const unsigned gap = address >= 0xfffd10 ? 1 : 3;
             const auto high = uint8_t(read(address, end - gap));
@@ -141,7 +148,6 @@ public:
         }
         return cost;
     }
-private:
     void select(Component component) { active_ = component; components_ |= 1u << unsigned(component); }
     SerialIrqTask receive_{SerialIrqTask::Kind::Receive};
     std::optional<ClockPulseTask> latched_, edge_;

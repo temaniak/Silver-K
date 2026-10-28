@@ -1,0 +1,52 @@
+{
+  "renderStyle": "flat",
+  "font": {
+    "family": "Arial",
+    "scale": 1.05
+  },
+  "palette": {
+    "text": "#18242d",
+    "accent": "#14779e",
+    "background": "#adb7bf",
+    "panelTop": "#dce2e6",
+    "panelBottom": "#dce2e6",
+    "border": "#a4afb8",
+    "lightText": "#f7fbfd",
+    "dark": "#253943",
+    "display": "#253f4c",
+    "ff0867df": "#253f4c",
+    "ff004fbc": "#253f4c",
+    "ff0b1320": "#253f4c",
+    "ff1c2a38": "#253f4c",
+    "ffe0e5ea": "#c4cfd7",
+    "ffe5e7ea": "#dce2e6",
+    "ff148de3": "#14779e",
+    "ff25c3ff": "#14779e",
+    "ff4cb2ff": "#14779e",
+    "ff008bff": "#14779e",
+    "ff657180": "#83939f",
+    "ff202a34": "#253943",
+    "ffc5cdd6": "#a4afb8"
+  },
+  "juceColours": {
+    "comboText": "#18242d",
+    "menuBackground": "#dce2e6",
+    "menuText": "#18242d",
+    "menuHighlight": "#14779e",
+    "menuHighlightText": "#f7fbfd",
+    "editorBackground": "#edf1f4",
+    "editorText": "#18242d",
+    "tableHeaderText": "#18242d",
+    "tooltipBackground": "#253943",
+    "tooltipText": "#f7fbfd",
+    "sliderThumb": "#14779e"
+  },
+  "components": {
+    "programDisplay": {
+      "fontSize": 18
+    },
+    "setupHelp": {
+      "fontSize": 15
+    }
+  }
+}

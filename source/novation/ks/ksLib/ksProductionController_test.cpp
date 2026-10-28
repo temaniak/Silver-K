@@ -42,7 +42,7 @@ int main(int argc,char**argv){try{
  {
   auto device=std::make_unique<ks::ControllerDeviceState>();auto main=std::make_unique<ks::NativeControllerExecutor>();auto startup=std::make_unique<ks::NativeStartupController>();GuardBus bus;device->attachResourceBus(&bus);
   device->cycles=123;device->pending_irqs=1ull<<32;device->interruptPriority[32]=6;device->interruptMode2=true;device->memory[0xa12345]=0x5a;
-  check(main->nextClocks(*device)==0&&main->advanceBefore(*device,~0u)==0,"Unadmitted Main advanced");
+  check(main->nextClocks(*device)==0&&main->advanceBefore(*device,~0u)==0&&main->advanceNextPhase(*device)==0,"Unadmitted Main advanced");
   check(startup->nextClocks(*device)==0&&startup->advanceBefore(*device,~0u)==0,"Unadmitted startup advanced");
   check(device->cycles==123&&device->pending_irqs==(1ull<<32)&&device->memory[0xa12345]==0x5a&&!bus.reads&&!bus.writes,"Rejected work changed physical resources");
   for(const auto size:{0u,1u,31u}){
@@ -55,7 +55,11 @@ int main(int argc,char**argv){try{
  if(argc==4){
   ks::Rom rom(argv[1]);check(rom.isValid(),"Invalid external OS fixture");auto flash=bytes(argv[2]),wave=bytes(argv[3]);
   auto board=std::make_unique<ks::Board>(rom.data(),wave,flash,true,true);
-  check(board->nativeOwnerState(),"Semantic owner missing");unsigned phases=0;
+  check(board->nativeOwnerState(),"Semantic owner missing");
+  // Status is published unconditionally after the phase tick, so caller-written
+  // diagnostic flags cannot make a fresh cold owner appear ready.
+  board->mainEntered=board->ready=true;const auto initialCycles=board->controllerCycles();board->advance(1);board->discardAudio();unsigned phases=1;
+  check(board->controllerCycles()>initialCycles&&!board->mainEntered&&!board->ready&&board->mainEntered==board->nativeOwnerState()->mainEntered()&&board->ready==board->nativeOwnerState()->ready(),"Cold phase status did not repair forced Board flags");
   while(board->nativeOwnerState()->playback().metrics().mainReturns==0&&phases<40000000&&board->controllerCycles()<ks::Board::ControllerClockHz*10ull){board->advance(1);board->discardAudio();++phases;}
   check(board->ready&&board->mainEntered&&board->nativeOwnerState()->playbackPublished(),"Native startup did not reach Main");
   check(board->nativeOwnerState()->playback().metrics().mainReturns==1&&!board->h8InterpretedSteps(),"Native first Main did not complete");

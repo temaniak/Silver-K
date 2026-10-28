@@ -1,0 +1,2087 @@
+{
+  "studioModels": {
+    "KS": [
+      {
+        "id": "osc1_semitone",
+        "label": "Semitone",
+        "kind": "panelKnob",
+        "rect": [
+          23,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc1_fine",
+        "label": "Detune",
+        "kind": "panelKnob",
+        "rect": [
+          99,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc1_{pw}",
+        "label": "PW amount",
+        "kind": "panelKnob",
+        "rect": [
+          327,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc1_env_pitch",
+        "label": "Mod env pitch",
+        "kind": "panelKnob",
+        "rect": [
+          403,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc1_lfo1_pitch",
+        "label": "LFO 1 pitch",
+        "kind": "panelKnob",
+        "rect": [
+          175,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc1_bend_depth",
+        "label": "Pitch bend",
+        "kind": "panelKnob",
+        "rect": [
+          251,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc2_semitone",
+        "label": "Semitone",
+        "kind": "panelKnob",
+        "rect": [
+          495,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc2_fine",
+        "label": "Detune",
+        "kind": "panelKnob",
+        "rect": [
+          571,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc2_{pw}",
+        "label": "PW amount",
+        "kind": "panelKnob",
+        "rect": [
+          799,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc2_env_pitch",
+        "label": "Mod env pitch",
+        "kind": "panelKnob",
+        "rect": [
+          875,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc2_lfo1_pitch",
+        "label": "LFO 1 pitch",
+        "kind": "panelKnob",
+        "rect": [
+          647,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc2_bend_depth",
+        "label": "Pitch bend",
+        "kind": "panelKnob",
+        "rect": [
+          723,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc3_semitone",
+        "label": "Semitone",
+        "kind": "panelKnob",
+        "rect": [
+          967,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc3_fine",
+        "label": "Detune",
+        "kind": "panelKnob",
+        "rect": [
+          1043,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc3_{pw}",
+        "label": "PW amount",
+        "kind": "panelKnob",
+        "rect": [
+          1271,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc3_env_pitch",
+        "label": "Mod env pitch",
+        "kind": "panelKnob",
+        "rect": [
+          1347,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc3_lfo1_pitch",
+        "label": "LFO 1 pitch",
+        "kind": "panelKnob",
+        "rect": [
+          1119,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc3_bend_depth",
+        "label": "Pitch bend",
+        "kind": "panelKnob",
+        "rect": [
+          1195,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc1_level",
+        "label": "OSC 1",
+        "kind": "panelKnob",
+        "rect": [
+          23,
+          374,
+          82,
+          108
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc2_level",
+        "label": "OSC 2",
+        "kind": "panelKnob",
+        "rect": [
+          113,
+          374,
+          82,
+          108
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc3_level",
+        "label": "OSC 3",
+        "kind": "panelKnob",
+        "rect": [
+          203,
+          374,
+          82,
+          108
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "noise_level",
+        "label": "Noise",
+        "kind": "panelKnob",
+        "rect": [
+          293,
+          374,
+          82,
+          108
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "ring_level",
+        "label": "Ring 1 x 2",
+        "kind": "panelKnob",
+        "rect": [
+          383,
+          374,
+          82,
+          108
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "cutoff",
+        "label": "Cutoff",
+        "kind": "panelKnob",
+        "rect": [
+          495,
+          378,
+          82,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "resonance",
+        "label": "Resonance",
+        "kind": "panelKnob",
+        "rect": [
+          585,
+          378,
+          82,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "filter_drive",
+        "label": "Overdrive",
+        "kind": "panelKnob",
+        "rect": [
+          675,
+          378,
+          82,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "filter_env",
+        "label": "Env depth",
+        "kind": "panelKnob",
+        "rect": [
+          765,
+          378,
+          82,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "filter_lfo2",
+        "label": "LFO 2 depth",
+        "kind": "panelKnob",
+        "rect": [
+          855,
+          378,
+          82,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "filter_keytrack",
+        "label": "Key track",
+        "kind": "panelKnob",
+        "rect": [
+          945,
+          378,
+          82,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "fm_attack",
+        "label": "Attack",
+        "kind": "panelKnob",
+        "rect": [
+          1082,
+          374,
+          130,
+          108
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "fm_decay",
+        "label": "Decay",
+        "kind": "panelKnob",
+        "rect": [
+          1249,
+          374,
+          130,
+          108
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "lfo{lfo}_rate",
+        "label": "Rate",
+        "kind": "panelKnob",
+        "rect": [
+          703,
+          550,
+          80,
+          112
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "lfo{lfo}_delay",
+        "label": "Delay",
+        "kind": "panelKnob",
+        "rect": [
+          787,
+          550,
+          80,
+          112
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "lfo{lfo}_start_phase",
+        "label": "Start phase",
+        "kind": "panelKnob",
+        "rect": [
+          871,
+          550,
+          80,
+          112
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "lfo{lfo}_velocity",
+        "label": "Velocity depth",
+        "kind": "panelKnob",
+        "rect": [
+          955,
+          550,
+          80,
+          112
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "portamento_time",
+        "label": "Glide time",
+        "kind": "panelKnob",
+        "rect": [
+          1153,
+          550,
+          82,
+          112
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "arp_rate",
+        "label": "Tempo",
+        "kind": "panelKnob",
+        "rect": [
+          1243,
+          550,
+          82,
+          112
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "volume",
+        "label": "Volume",
+        "kind": "panelKnob",
+        "rect": [
+          1063,
+          550,
+          82,
+          112
+        ],
+        "dark": false,
+        "volume": true
+      },
+      {
+        "id": "arp_gate",
+        "label": "Gate length",
+        "kind": "panelKnob",
+        "rect": [
+          1333,
+          550,
+          82,
+          112
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "mod_attack",
+        "label": "Attack",
+        "rect": [
+          23,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "mod_decay",
+        "label": "Decay",
+        "rect": [
+          103,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "mod_sustain",
+        "label": "Sustain",
+        "rect": [
+          183,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "mod_release",
+        "label": "Release",
+        "rect": [
+          263,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "attack",
+        "label": "Attack",
+        "rect": [
+          363,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "decay",
+        "label": "Decay",
+        "rect": [
+          443,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "sustain",
+        "label": "Sustain",
+        "rect": [
+          523,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "release",
+        "label": "Release",
+        "rect": [
+          603,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "osc1_wave",
+        "label": "Waveform",
+        "kind": "menu",
+        "rect": [
+          23,
+          125,
+          176,
+          52
+        ],
+        "dark": false
+      },
+      {
+        "id": "osc1_octave",
+        "label": "Octave",
+        "kind": "menu",
+        "rect": [
+          209,
+          125,
+          90,
+          52
+        ],
+        "dark": false
+      },
+      {
+        "id": "osc2_wave",
+        "label": "Waveform",
+        "kind": "menu",
+        "rect": [
+          495,
+          125,
+          176,
+          52
+        ],
+        "dark": false
+      },
+      {
+        "id": "osc2_octave",
+        "label": "Octave",
+        "kind": "menu",
+        "rect": [
+          681,
+          125,
+          90,
+          52
+        ],
+        "dark": false
+      },
+      {
+        "id": "osc3_wave",
+        "label": "Waveform",
+        "kind": "menu",
+        "rect": [
+          967,
+          125,
+          176,
+          52
+        ],
+        "dark": false
+      },
+      {
+        "id": "osc3_octave",
+        "label": "Octave",
+        "kind": "menu",
+        "rect": [
+          1153,
+          125,
+          90,
+          52
+        ],
+        "dark": false
+      },
+      {
+        "id": "lfo{lfo}_wave",
+        "label": "Wave",
+        "kind": "inline",
+        "rect": [
+          703,
+          706,
+          158,
+          30
+        ],
+        "dark": false
+      },
+      {
+        "id": "lfo{lfo}_sync",
+        "label": "Sync",
+        "kind": "inline",
+        "rect": [
+          871,
+          706,
+          158,
+          30
+        ],
+        "dark": false
+      },
+      {
+        "id": "arp_sync",
+        "label": "Sync rate",
+        "kind": "inline",
+        "rect": [
+          1063,
+          712,
+          170,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "arp_pattern",
+        "label": "Pattern",
+        "kind": "inline",
+        "rect": [
+          1243,
+          712,
+          170,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "arp_octaves",
+        "label": "Octaves",
+        "kind": "inline",
+        "rect": [
+          1063,
+          746,
+          170,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "arp_rhythm",
+        "label": "Rhythm",
+        "kind": "rhythm",
+        "rect": [
+          1243,
+          746,
+          170,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "arp_on",
+        "label": "On",
+        "kind": "led",
+        "rect": [
+          1063,
+          670,
+          110,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "arp_latch",
+        "label": "Latch",
+        "kind": "led",
+        "rect": [
+          1181,
+          670,
+          110,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "arp_keysync",
+        "label": "K-sync",
+        "kind": "led",
+        "rect": [
+          1299,
+          670,
+          110,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "osc_sync",
+        "label": "Sync",
+        "kind": "led",
+        "rect": [
+          695,
+          91,
+          90,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "filter_slope",
+        "label": "Slope",
+        "kind": "lamps",
+        "rect": [
+          675,
+          347,
+          133,
+          24
+        ],
+        "dark": false
+      },
+      {
+        "id": "filter_type",
+        "label": "Type",
+        "kind": "lamps",
+        "rect": [
+          495,
+          347,
+          161,
+          24
+        ],
+        "dark": false
+      }
+    ],
+    "K": [
+      {
+        "id": "osc1_semitone",
+        "label": "Semitone",
+        "kind": "panelKnob",
+        "rect": [
+          23,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc1_fine",
+        "label": "Detune",
+        "kind": "panelKnob",
+        "rect": [
+          99,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc1_{pw}",
+        "label": "PW amount",
+        "kind": "panelKnob",
+        "rect": [
+          327,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc1_env_pitch",
+        "label": "Mod env pitch",
+        "kind": "panelKnob",
+        "rect": [
+          403,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc1_lfo1_pitch",
+        "label": "LFO 1 pitch",
+        "kind": "panelKnob",
+        "rect": [
+          175,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc1_bend_depth",
+        "label": "Pitch bend",
+        "kind": "panelKnob",
+        "rect": [
+          251,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc2_semitone",
+        "label": "Semitone",
+        "kind": "panelKnob",
+        "rect": [
+          495,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc2_fine",
+        "label": "Detune",
+        "kind": "panelKnob",
+        "rect": [
+          571,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc2_{pw}",
+        "label": "PW amount",
+        "kind": "panelKnob",
+        "rect": [
+          799,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc2_env_pitch",
+        "label": "Mod env pitch",
+        "kind": "panelKnob",
+        "rect": [
+          875,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc2_lfo1_pitch",
+        "label": "LFO 1 pitch",
+        "kind": "panelKnob",
+        "rect": [
+          647,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc2_bend_depth",
+        "label": "Pitch bend",
+        "kind": "panelKnob",
+        "rect": [
+          723,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc3_semitone",
+        "label": "Semitone",
+        "kind": "panelKnob",
+        "rect": [
+          967,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc3_fine",
+        "label": "Detune",
+        "kind": "panelKnob",
+        "rect": [
+          1043,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc3_{pw}",
+        "label": "PW amount",
+        "kind": "panelKnob",
+        "rect": [
+          1271,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc3_env_pitch",
+        "label": "Mod env pitch",
+        "kind": "panelKnob",
+        "rect": [
+          1347,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc3_lfo1_pitch",
+        "label": "LFO 1 pitch",
+        "kind": "panelKnob",
+        "rect": [
+          1119,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc3_bend_depth",
+        "label": "Pitch bend",
+        "kind": "panelKnob",
+        "rect": [
+          1195,
+          194,
+          72,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc1_level",
+        "label": "OSC 1",
+        "kind": "panelKnob",
+        "rect": [
+          23,
+          374,
+          82,
+          108
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc2_level",
+        "label": "OSC 2",
+        "kind": "panelKnob",
+        "rect": [
+          113,
+          374,
+          82,
+          108
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "osc3_level",
+        "label": "OSC 3",
+        "kind": "panelKnob",
+        "rect": [
+          203,
+          374,
+          82,
+          108
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "noise_level",
+        "label": "Noise",
+        "kind": "panelKnob",
+        "rect": [
+          293,
+          374,
+          82,
+          108
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "ring_level",
+        "label": "Ring 1 x 2",
+        "kind": "panelKnob",
+        "rect": [
+          383,
+          374,
+          82,
+          108
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "cutoff",
+        "label": "Cutoff",
+        "kind": "panelKnob",
+        "rect": [
+          495,
+          378,
+          82,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "resonance",
+        "label": "Resonance",
+        "kind": "panelKnob",
+        "rect": [
+          585,
+          378,
+          82,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "filter_drive",
+        "label": "Overdrive",
+        "kind": "panelKnob",
+        "rect": [
+          675,
+          378,
+          82,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "filter_env",
+        "label": "Env depth",
+        "kind": "panelKnob",
+        "rect": [
+          765,
+          378,
+          82,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "filter_lfo2",
+        "label": "LFO 2 depth",
+        "kind": "panelKnob",
+        "rect": [
+          855,
+          378,
+          82,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "filter_keytrack",
+        "label": "Key track",
+        "kind": "panelKnob",
+        "rect": [
+          945,
+          378,
+          82,
+          104
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "fm_attack",
+        "label": "Attack",
+        "kind": "panelKnob",
+        "rect": [
+          1082,
+          374,
+          130,
+          108
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "fm_decay",
+        "label": "Decay",
+        "kind": "panelKnob",
+        "rect": [
+          1249,
+          374,
+          130,
+          108
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "lfo1_rate",
+        "label": "Rate 1",
+        "kind": "panelKnob",
+        "rect": [
+          703,
+          550,
+          80,
+          112
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "lfo1_delay",
+        "label": "Delay 1",
+        "kind": "panelKnob",
+        "rect": [
+          787,
+          550,
+          80,
+          112
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "lfo2_rate",
+        "label": "Rate 2",
+        "kind": "panelKnob",
+        "rect": [
+          871,
+          550,
+          80,
+          112
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "lfo2_delay",
+        "label": "Delay 2",
+        "kind": "panelKnob",
+        "rect": [
+          955,
+          550,
+          80,
+          112
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "portamento_time",
+        "label": "Glide time",
+        "kind": "panelKnob",
+        "rect": [
+          1153,
+          550,
+          82,
+          112
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "arp_rate",
+        "label": "Tempo",
+        "kind": "panelKnob",
+        "rect": [
+          1243,
+          550,
+          82,
+          112
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "volume",
+        "label": "Volume",
+        "kind": "panelKnob",
+        "rect": [
+          1063,
+          550,
+          82,
+          112
+        ],
+        "dark": false,
+        "volume": true
+      },
+      {
+        "id": "arp_gate",
+        "label": "Gate length",
+        "kind": "panelKnob",
+        "rect": [
+          1333,
+          550,
+          82,
+          112
+        ],
+        "dark": false,
+        "volume": false
+      },
+      {
+        "id": "mod_attack",
+        "label": "Attack",
+        "rect": [
+          23,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "mod_decay",
+        "label": "Decay",
+        "rect": [
+          103,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "mod_sustain",
+        "label": "Sustain",
+        "rect": [
+          183,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "mod_release",
+        "label": "Release",
+        "rect": [
+          263,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "attack",
+        "label": "Attack",
+        "rect": [
+          363,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "decay",
+        "label": "Decay",
+        "rect": [
+          443,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "sustain",
+        "label": "Sustain",
+        "rect": [
+          523,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "release",
+        "label": "Release",
+        "rect": [
+          603,
+          546,
+          72,
+          220
+        ],
+        "kind": "fader",
+        "dark": false
+      },
+      {
+        "id": "osc1_wave",
+        "label": "Waveform",
+        "kind": "menu",
+        "rect": [
+          23,
+          125,
+          176,
+          52
+        ],
+        "dark": false
+      },
+      {
+        "id": "osc1_octave",
+        "label": "Octave",
+        "kind": "menu",
+        "rect": [
+          209,
+          125,
+          90,
+          52
+        ],
+        "dark": false
+      },
+      {
+        "id": "osc2_wave",
+        "label": "Waveform",
+        "kind": "menu",
+        "rect": [
+          495,
+          125,
+          176,
+          52
+        ],
+        "dark": false
+      },
+      {
+        "id": "osc2_octave",
+        "label": "Octave",
+        "kind": "menu",
+        "rect": [
+          681,
+          125,
+          90,
+          52
+        ],
+        "dark": false
+      },
+      {
+        "id": "osc3_wave",
+        "label": "Waveform",
+        "kind": "menu",
+        "rect": [
+          967,
+          125,
+          176,
+          52
+        ],
+        "dark": false
+      },
+      {
+        "id": "osc3_octave",
+        "label": "Octave",
+        "kind": "menu",
+        "rect": [
+          1153,
+          125,
+          90,
+          52
+        ],
+        "dark": false
+      },
+      {
+        "id": "lfo1_wave",
+        "label": "Wave",
+        "kind": "inline",
+        "rect": [
+          703,
+          684,
+          158,
+          30
+        ],
+        "dark": false
+      },
+      {
+        "id": "lfo1_sync",
+        "label": "Sync",
+        "kind": "inline",
+        "rect": [
+          703,
+          722,
+          158,
+          30
+        ],
+        "dark": false
+      },
+      {
+        "id": "lfo2_wave",
+        "label": "Wave",
+        "kind": "inline",
+        "rect": [
+          871,
+          684,
+          158,
+          30
+        ],
+        "dark": false
+      },
+      {
+        "id": "lfo2_sync",
+        "label": "Sync",
+        "kind": "inline",
+        "rect": [
+          871,
+          722,
+          158,
+          30
+        ],
+        "dark": false
+      },
+      {
+        "id": "arp_sync",
+        "label": "Sync rate",
+        "kind": "inline",
+        "rect": [
+          1063,
+          712,
+          170,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "arp_pattern",
+        "label": "Pattern",
+        "kind": "inline",
+        "rect": [
+          1243,
+          712,
+          170,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "arp_octaves",
+        "label": "Octaves",
+        "kind": "inline",
+        "rect": [
+          1063,
+          746,
+          170,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "arp_on",
+        "label": "On",
+        "kind": "led",
+        "rect": [
+          1063,
+          670,
+          110,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "arp_latch",
+        "label": "Latch",
+        "kind": "led",
+        "rect": [
+          1181,
+          670,
+          110,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "arp_keysync",
+        "label": "K-sync",
+        "kind": "led",
+        "rect": [
+          1299,
+          670,
+          110,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "osc_sync",
+        "label": "Sync",
+        "kind": "led",
+        "rect": [
+          695,
+          91,
+          90,
+          28
+        ],
+        "dark": false
+      },
+      {
+        "id": "filter_slope",
+        "label": "Slope",
+        "kind": "lamps",
+        "rect": [
+          675,
+          347,
+          133,
+          24
+        ],
+        "dark": false
+      }
+    ]
+  },
+  "name": "Silver Flat",
+  "width": 1440,
+  "height": 1000,
+  "header": [
+    13,
+    13,
+    1414,
+    64
+  ],
+  "title": [
+    29,
+    27,
+    200,
+    37
+  ],
+  "titleSize": 28,
+  "knobDiameter": 44,
+  "cutoffDiameter": 48,
+  "classicDiameter": 32,
+  "studioRegions": {
+    "Oscillators": [
+      13,
+      83,
+      1414,
+      224
+    ],
+    "Oscillator 1": [
+      13,
+      83,
+      466,
+      224
+    ],
+    "Oscillator 2": [
+      485,
+      83,
+      466,
+      224
+    ],
+    "Oscillator 3": [
+      957,
+      83,
+      470,
+      224
+    ],
+    "Mixer": [
+      13,
+      313,
+      466,
+      182
+    ],
+    "Filter": [
+      485,
+      313,
+      562,
+      182
+    ],
+    "FM Env": [
+      1053,
+      313,
+      374,
+      182
+    ],
+    "Envelopes": [
+      13,
+      501,
+      674,
+      278
+    ],
+    "LFO": [
+      693,
+      501,
+      354,
+      278
+    ],
+    "Volume / Arp / Glide": [
+      1053,
+      501,
+      374,
+      278
+    ],
+    "Program": [
+      13,
+      785,
+      466,
+      202
+    ],
+    "Effects": [
+      485,
+      785,
+      942,
+      202
+    ],
+    "FM": [
+      485,
+      83,
+      466,
+      224
+    ]
+  },
+  "sections": [
+    [
+      13,
+      83,
+      466,
+      224,
+      "Oscillator 1"
+    ],
+    [
+      485,
+      83,
+      466,
+      224,
+      "Oscillator 2"
+    ],
+    [
+      957,
+      83,
+      470,
+      224,
+      "Oscillator 3"
+    ],
+    [
+      13,
+      313,
+      466,
+      182,
+      "Mixer"
+    ],
+    [
+      485,
+      313,
+      562,
+      182,
+      "Filter"
+    ],
+    [
+      1053,
+      313,
+      374,
+      182,
+      "FM Env"
+    ],
+    [
+      13,
+      501,
+      334,
+      278,
+      "Mod Env"
+    ],
+    [
+      353,
+      501,
+      334,
+      278,
+      "Amp Env"
+    ],
+    [
+      693,
+      501,
+      354,
+      278,
+      "LFO"
+    ],
+    [
+      1053,
+      501,
+      374,
+      278,
+      "Volume / Arp / Glide"
+    ],
+    [
+      13,
+      785,
+      466,
+      202,
+      "Program"
+    ],
+    [
+      485,
+      785,
+      942,
+      202,
+      "Effects"
+    ]
+  ],
+  "studioHeader": {
+    "model": [
+      245,
+      28,
+      234,
+      34
+    ],
+    "parts": [
+      [
+        493,
+        28,
+        44,
+        34
+      ],
+      [
+        543,
+        28,
+        44,
+        34
+      ],
+      [
+        593,
+        28,
+        44,
+        34
+      ],
+      [
+        643,
+        28,
+        44,
+        34
+      ]
+    ],
+    "performance": [
+      705,
+      28,
+      160,
+      34
+    ],
+    "pages": [
+      [
+        925,
+        28,
+        120,
+        34
+      ],
+      [
+        1051,
+        28,
+        120,
+        34
+      ],
+      [
+        1177,
+        28,
+        120,
+        34
+      ],
+      [
+        1303,
+        28,
+        120,
+        34
+      ]
+    ]
+  },
+  "pwmSelectors": [
+    [
+      316,
+      121,
+      112,
+      22
+    ],
+    [
+      316,
+      145,
+      112,
+      22
+    ],
+    [
+      316,
+      169,
+      112,
+      22
+    ],
+    [
+      788,
+      121,
+      112,
+      22
+    ],
+    [
+      788,
+      145,
+      112,
+      22
+    ],
+    [
+      788,
+      169,
+      112,
+      22
+    ],
+    [
+      1260,
+      121,
+      112,
+      22
+    ],
+    [
+      1260,
+      145,
+      112,
+      22
+    ],
+    [
+      1260,
+      169,
+      112,
+      22
+    ]
+  ],
+  "lfoSelectors": [
+    [
+      812,
+      512,
+      42,
+      24
+    ],
+    [
+      858,
+      512,
+      42,
+      24
+    ]
+  ],
+  "fmButton": [
+    795,
+    91,
+    74,
+    28
+  ],
+  "lcd": [
+    28,
+    832,
+    436,
+    68
+  ],
+  "actions": {
+    "previous": [
+      28,
+      918,
+      92,
+      28
+    ],
+    "next": [
+      126,
+      918,
+      92,
+      28
+    ],
+    "loadProgram": [
+      224,
+      918,
+      142,
+      28
+    ],
+    "panic": [
+      372,
+      918,
+      92,
+      28
+    ]
+  },
+  "effectSlots": [
+    [
+      496,
+      834,
+      142,
+      106
+    ],
+    [
+      649,
+      834,
+      142,
+      106
+    ],
+    [
+      802,
+      834,
+      142,
+      106
+    ],
+    [
+      955,
+      834,
+      142,
+      106
+    ],
+    [
+      1108,
+      834,
+      142,
+      106
+    ],
+    [
+      1261,
+      834,
+      142,
+      106
+    ]
+  ],
+  "effectMenuArea": [
+    496,
+    948,
+    910,
+    28
+  ],
+  "effectMenus": [
+    [
+      496,
+      948,
+      172,
+      28
+    ],
+    [
+      678,
+      948,
+      172,
+      28
+    ]
+  ],
+  "effectSelect": [
+    1160,
+    796,
+    218,
+    28
+  ],
+  "components": {
+    "setupHelp": {
+      "bounds": [
+        52,
+        510,
+        1336,
+        120
+      ]
+    },
+    "setupStatus": {
+      "bounds": [
+        52,
+        144,
+        1336,
+        72
+      ]
+    }
+  }
+}

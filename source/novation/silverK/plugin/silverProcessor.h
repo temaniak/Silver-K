@@ -58,11 +58,14 @@ bool isKStation()const{return kMode.load();}
  bool setDataFolder(const juce::File&,juce::String&);
  bool setWaveRom(const juce::File&,juce::String&);
  bool setFlashRom(const juce::File&,juce::String&);
+ bool setFlashRoms(const juce::Array<juce::File>&,juce::String&);
+ std::vector<juce::File> ksDataFiles()const;
  void savePreferences(); // UI/cold paths only; never called by processBlock.
  juce::String browserState;
  uint64_t firmwareLoadRevision()const{return firmwareRevision.load();}
  juce::File dataFolder;
  juce::File patchesFolder()const{return dataFolder.getChildFile("Patches");}
+ juce::File skinsFolder()const{return dataFolder.getChildFile("Skins");}
  struct FirmwareChoice {juce::File file;bool kStation;};
  std::vector<FirmwareChoice> firmwares;
  juce::File romFolder;
@@ -86,7 +89,17 @@ bool isKStation()const{return kMode.load();}
  int bufferProfile()const{return buffering.load();}
  void setBufferProfile(int);
  int ksControllerMode()const{return ks::boardComparisonAvailable()?int(ksController.load()):int(ks::ControllerMode::Native);}
+ bool ksTwoCoreProcessing()const{return twoCoreProcessing.load();}
+ bool setKSTwoCoreProcessing(bool,juce::String& error); // UI/control thread only.
+ ClockSource clockSource()const{return requestedClockSource.load();}
+ void setClockSource(ClockSource); // Message thread; applied by the next audio block.
  bool setKSControllerMode(int,juce::String& error); // UI/control thread only.
+ bool demoSongActive()const;
+ bool setDemoSong(bool,juce::String& error);
+ struct DrumEditInfo{int bank=0,note=-1;juce::String name;};
+ DrumEditInfo drumEditInfo()const;
+ bool drumEditEnabled()const{return drumEditing.load();}
+ void setDrumEdit(bool enabled){drumEditing.store(enabled && drumEditInfo().bank!=0);}
  // Message/control thread only. Mode: 0 stop, 1 new summary, 2 new detailed session.
  bool setPerformanceDiagnostics(int mode);
  int performanceDiagnosticsMode()const{return performanceDiagnostics.mode();}
@@ -98,8 +111,11 @@ private:
  double performanceStartedMs=0,performanceStoppedMs=0;
  juce::String performanceStopReason;
  MidiNoteLearn noteLearn;
+ std::atomic<bool> drumEditing{false};
+ uint64_t seenDrumRevision=0;
  pluginLib::HostAudioWorkgroup hostAudioWorkgroup;
  std::atomic<int> buffering{1};
+ std::atomic<bool> twoCoreProcessing{ks::Device::environmentDspWorkersEnabled()};
  std::atomic<ks::ControllerMode> ksController{ks::Device::environmentControllerMode()};
  void applyBufferProfile();
  void notifyHostLatency();
@@ -124,11 +140,13 @@ private:
  std::array<uint8_t,256> kWire{},kMask{};
  void rebuildK();
  HostClock hostClock;
+ std::atomic<ClockSource> requestedClockSource{ClockSource::Host};
+ ClockSource activeClockSource=ClockSource::Host;
  int clockSourceMode=-1;
  std::array<uint8_t,16> externalNrpn{};
  template<class Emit> void selectClockSource(Emit emit){
   // Both supported OS 2.1 images use 0=Auto, 1=Internal, 2=External.
-  const int wanted=hostClock.ownsTransport()?2:0;
+  const int wanted=firmwareClockSource(activeClockSource,hostClock.ownsTransport());
   if(clockSourceMode==wanted)return;
   clockSourceMode=wanted;
   const uint8_t channel=controlChannel.load(),status=uint8_t(0xb0|channel);
@@ -143,7 +161,7 @@ private:
    noteLearn.observe(m.data,size_t(m.numBytes));
    const int offset=std::max(0,m.samplePosition);
    while(hasClock && clock.offset<=offset){emit(&clock.status,1,clock.offset);hasClock=hostClock.next(clock);}
-   if(m.numBytes<=65536 && !(hostClock.ownsTransport() && HostClock::transport(m.data[0]))){
+   if(m.numBytes<=65536 && !(HostClock::transport(m.data[0]) && !acceptsExternalTransport(activeClockSource,hostClock.ownsTransport()))){
     if(m.numBytes==3 && (m.data[0]&0xf0)==0xb0 && m.data[1]==98)externalNrpn[m.data[0]&15]=m.data[2];
     emit(m.data,size_t(m.numBytes),offset);
    }
@@ -196,5 +214,12 @@ private:
  juce::NamedValueSet preferenceBaseline;
  juce::File settingsFile()const;
  juce::File resolveAsset(const juce::ValueTree&,const char*)const;
+ std::vector<juce::File> selectedKSDataFiles()const;
+ std::vector<juce::File> flashFiles;
+ juce::var ksDataReferences()const;
+ void restoreKSDataFiles(const juce::var&,bool allowRelative=true);
+ juce::File managedAsset(const juce::File&,juce::String&)const;
+ static bool readKSData(const std::vector<juce::File>&,std::vector<uint8_t>&,juce::String&);
+ static bool isBundledInit(const juce::File&);
 };
 }
