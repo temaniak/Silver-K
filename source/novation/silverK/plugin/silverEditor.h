@@ -4,6 +4,9 @@
 
 namespace silverK
 {
+#if SILVER_SOULTRAIN_PREVIEW
+class SoulTrainWeb;
+#endif
 class Editor final : public juce::AudioProcessorEditor
 {
 public:
@@ -19,6 +22,11 @@ public:
 private:
     bool selectSkin(const juce::File&, const juce::String& builtinChoice, juce::String& error);
     void connectSurface();
+#if SILVER_SOULTRAIN_PREVIEW
+    void showSoulTrain(bool);
+    void soulTrainAction(const juce::String&);
+    std::unique_ptr<SoulTrainWeb> m_soulTrain;
+#endif
     void showSizeMenu(juce::Point<int> screenPosition);
     void showCustomSize();
     Processor& m_processor;

@@ -171,4 +171,51 @@ bool Browser::stepProgram(unsigned part,int direction,juce::String& error){
 }
 bool Browser::activate(int row,juce::String* error){if(row<0 || row>=int(rows.size())){if(error)*error="No preset selected";return false;}juce::String message;const bool ok=p.activatePatch(rows[row],message);if(ok){lastActivatedPatch=rows[row];if(rows[row]->sysex.size()!=1038)partPrograms[p.currentPart()]=rows[row];lastActivationTime=juce::Time::currentTimeMillis();}else if(error)*error=message;info.setText(ok?(message.isEmpty()?"Loaded "+patchName(*rows[row]):"Loaded; "+message.replace("\n","; ")):message,juce::dontSendNotification);info.setTooltip(message);return ok;}
 void Browser::choose(bool folder,bool save,bool current){chooser=std::make_unique<juce::FileChooser>(save?"Save patch":folder?"Add patch folder":"Add patches",p.patchesFolder(),save?"*.syx":"*.syx;*.mid;*.midi;*.fxb;*.fxp;*.zip");const juce::Component::SafePointer<Browser> self(this);chooser->launchAsync((save?juce::FileBrowserComponent::saveMode|juce::FileBrowserComponent::warnAboutOverwriting:juce::FileBrowserComponent::openMode)|(folder?juce::FileBrowserComponent::canSelectDirectories:juce::FileBrowserComponent::canSelectFiles),[self,save,current](const juce::FileChooser& c){if(!self)return;auto file=c.getResult();if(file==juce::File{})return;if(!save){self->p.patchLibrary.addPath(file);return;}file=file.withFileExtension("syx");juce::String error;if(current){self->p.saveCurrentPatch(file,error);self->info.setText(error.isEmpty()?"Saved current sound":error,juce::dontSendNotification);}else{int row=self->table.getSelectedRow();if(row>=0 && row<int(self->rows.size()))self->p.patchLibrary.writePatchesToFile(file,{self->rows[row]});}});}
+namespace {
+juce::String webPatchId(const pluginLib::patchDB::PatchPtr& patch){
+ const auto source=patch->source.lock();
+ return (source?juce::String(int(source->type))+":"+source->name:juce::String{})+"|"+juce::String(patch->bank)+"|"+juce::String(patch->program)+"|"+juce::String::toHexString(patch->hash.data(),int(patch->hash.size()),0);
+}
+juce::var webOptions(const juce::ComboBox& box){juce::Array<juce::var> values;for(int n=0;n<box.getNumItems();++n){auto* o=new juce::DynamicObject;o->setProperty("value",box.getItemId(n));o->setProperty("label",box.getItemText(n));values.add(juce::var(o));}return values;}
+}
+juce::var Browser::webSnapshot()const{
+ auto* state=new juce::DynamicObject;
+ state->setProperty("query",search.getText());state->setProperty("tagFilter",tagFilter.getText());state->setProperty("model",model.getSelectedId());state->setProperty("source",source.getSelectedId());state->setProperty("bank",ksBankSelect.getSelectedId());
+ state->setProperty("models",webOptions(model));state->setProperty("sources",webOptions(source));state->setProperty("banks",webOptions(ksBankSelect));state->setProperty("favouritesOnly",onlyFavourites.getToggleState());state->setProperty("allSlots",showAllSlots.getToggleState());state->setProperty("status",info.getText());state->setProperty("loading",resultsDirty);
+ juce::Array<juce::var> items;const int selected=table.getSelectedRow();
+ for(int n=0;n<int(rows.size());++n){const auto& patch=rows[size_t(n)];auto* o=new juce::DynamicObject;o->setProperty("id",webPatchId(patch));o->setProperty("program",patch->sysex.size()!=1038);o->setProperty("name",cellText(patch,1));o->setProperty("model",cellText(patch,2));o->setProperty("type",cellText(patch,3));o->setProperty("tags",tagText(patch,pluginLib::patchDB::TagType::Tag));o->setProperty("compatibility",cellText(patch,5));o->setProperty("source",cellText(patch,6));o->setProperty("number",cellText(patch,7));o->setProperty("bank",cellText(patch,8));o->setProperty("favourite",!patch->getTags(pluginLib::patchDB::TagType::Favourites).getAdded().empty());o->setProperty("selected",n==selected);items.add(juce::var(o));}
+ state->setProperty("rows",items);state->setProperty("sortColumn",sortColumn);state->setProperty("sortAscending",sortAscending);juce::Array<juce::var> parts;for(const auto& patch:partPrograms)parts.add(patch?webPatchId(patch):juce::String{});state->setProperty("partPrograms",parts);return juce::var(state);
+}
+void Browser::webAction(const juce::var& message){
+ const auto action=message["action"].toString();const auto value=message["value"];
+ if(action=="query"){search.setText(value.toString());dirty=true;}
+ else if(action=="tagFilter"){tagFilter.setText(value.toString());dirty=true;}
+ else if(action=="model"){model.setSelectedId(int(value),juce::sendNotificationSync);dirty=true;}
+ else if(action=="source"){source.setSelectedId(int(value),juce::sendNotificationSync);dirty=true;}
+ else if(action=="bank"){ksBankSelect.setSelectedId(int(value),juce::sendNotificationSync);dirty=true;}
+ else if(action=="favouritesOnly"){onlyFavourites.setToggleState(bool(value),juce::dontSendNotification);dirty=true;}
+ else if(action=="allSlots"){showAllSlots.setToggleState(bool(value),juce::dontSendNotification);dirty=true;}
+ else if(action=="sort"){const int col=int(message["column"]);if(col>=1&&col<=8){table.getHeader().setSortColumnId(col,bool(message["ascending"]));}}
+ else if(action=="stepPart"){const int part=int(message["part"]);if(part>=1&&part<=4){juce::String error;if(!stepProgram(unsigned(part-1),int(value),error))info.setText(error,juce::dontSendNotification);}}
+ else if(action=="addFile")choose(false);
+ else if(action=="addFolder")choose(true);
+ else if(action=="rescan")refresh.onClick();
+ else if(action=="removeSource")remove.onClick();
+ else if(action=="saveCurrent")choose(false,true,true);
+ else {
+  const auto id=message["id"].toString();int row=-1;for(int n=0;n<int(rows.size());++n)if(webPatchId(rows[size_t(n)])==id){row=n;break;}if(row<0){info.setText("Preset list changed; select the preset again",juce::dontSendNotification);return;}
+  const auto patch=rows[size_t(row)];
+  if(action=="loadPart"){juce::String error;if(!activateProgram(unsigned(juce::jlimit(0,3,int(message["part"])-1)),patch,error))info.setText(error,juce::dontSendNotification);}
+  else if(action=="load"){{const juce::ScopedValueSetter<bool> updating(updatingRows,true);table.selectRow(row);}juce::String error;activate(row,&error);}
+  else if(action=="export"){const juce::ScopedValueSetter<bool> updating(updatingRows,true);table.selectRow(row);choose(false,true);}
+  else if(action=="favourite" || action=="tags"){
+   pluginLib::patchDB::TypedTags edits;
+   if(action=="favourite"){
+    if(bool(value))edits.add(pluginLib::patchDB::TagType::Favourites,"Favourite");else for(const auto& old:patch->getTags(pluginLib::patchDB::TagType::Favourites).getAdded())edits.addRemoved(pluginLib::patchDB::TagType::Favourites,old);
+   }else{juce::StringArray added;added.addTokens(value.toString(),",",{});added.trim();added.removeEmptyStrings();for(const auto& old:patch->getTags(pluginLib::patchDB::TagType::Tag).getAdded())if(!added.contains(old))edits.addRemoved(pluginLib::patchDB::TagType::Tag,old);for(const auto& tag:added)edits.add(pluginLib::patchDB::TagType::Tag,tag.toStdString());}
+   p.patchLibrary.modifyTags({patch},edits);
+  }
+ }
+}
+
 }

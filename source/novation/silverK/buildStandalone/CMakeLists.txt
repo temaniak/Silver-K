@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.22)
 include("${CMAKE_CURRENT_LIST_DIR}/../../../../cmake/MacOSDefaults.cmake")
 project(SilverK VERSION 0.4.4 LANGUAGES C CXX)
+if(APPLE AND SILVER_SOULTRAIN_PREVIEW)
+    enable_language(OBJCXX)
+endif()
 # This directory can also be configured directly, without the root CMake file.
 if(MSVC)
     add_compile_options(/utf-8)

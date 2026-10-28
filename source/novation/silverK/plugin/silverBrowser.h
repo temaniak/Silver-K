@@ -9,6 +9,8 @@ public:
  void pollLibrary(){timerCallback();}
  void saveViewState(){rememberView();}
  bool stepPatch(int direction,juce::String* error=nullptr);
+ juce::var webSnapshot() const;
+ void webAction(const juce::var&);
  std::vector<pluginLib::patchDB::PatchPtr> filteredPrograms()const;
  bool activateProgram(unsigned,const pluginLib::patchDB::PatchPtr&,juce::String&);
  bool stepProgram(unsigned,int,juce::String&);

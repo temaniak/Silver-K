@@ -1,4 +1,7 @@
 #include "silverEditor.h"
+#if SILVER_SOULTRAIN_PREVIEW
+#include "silverSoulTrain.h"
+#endif
 #include "silverBrowser.h"
 #include "silverPerformance.h"
 #include "silverSkin.h"
@@ -671,6 +674,9 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         refreshSkinList();
         skinSelect.onChange=[this]{
             const int index=skinSelect.getSelectedId();
+            #if SILVER_SOULTRAIN_PREVIEW
+            if(index==5){if(requestSkin)requestSkin({},"SoulTrain");return;}
+#endif
             if(index>=1 && index<=4){if(requestSkin)requestSkin({},juce::StringArray{"Auto","Silver-K","KS Grey","Classic"}[index-1]);}
             else if(index>=100 && index-100<int(skinEntries.size())){if(requestSkin)requestSkin(skinEntries[size_t(index-100)].second,{});}
         };
@@ -822,6 +828,9 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         skinSelect.clear(juce::dontSendNotification);
         const juce::StringArray builtins{"Auto","Silver-K","KS Grey","Classic"};
         for(int i=0;i<builtins.size();++i)skinSelect.addItem(builtins[i],i+1);
+        #if SILVER_SOULTRAIN_PREVIEW
+        skinSelect.addItem("SoulTrain experimental",5);
+#endif
         skinEntries=SkinPackage::discover(processor.skinsFolder());
         int selected=builtins.indexOf(processor.skinChoice)+1;
         for(size_t i=0;i<skinEntries.size();++i){skinSelect.addItem(skinEntries[i].first,int(i)+100);if(skinEntries[i].second==package.manifest)selected=int(i)+100;}
@@ -1254,6 +1263,9 @@ Editor::Editor(Processor& p):AudioProcessorEditor(p),m_processor(p)
     m_surface=std::make_unique<Surface>(p,std::move(package));
     setResizable(true,true);addMouseListener(this,true);connectSurface();
     if(error.isNotEmpty())m_surface->status.setText("Skin: "+error,juce::dontSendNotification);
+#if SILVER_SOULTRAIN_PREVIEW
+    showSoulTrain(true);
+#endif
 }
 void Editor::connectSurface()
 {
@@ -1275,6 +1287,10 @@ void Editor::connectSurface()
 bool Editor::selectSkin(const juce::File& file,const juce::String& builtinChoice,juce::String& error)
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+#if SILVER_SOULTRAIN_PREVIEW
+    if(builtinChoice=="SoulTrain"){showSoulTrain(true);error.clear();return true;}
+    showSoulTrain(false);
+#endif
     auto candidate=SkinPackage::builtin();
     if(builtinChoice.isEmpty() && !SkinPackage::load(file,candidate,error))return false;
     if(m_processor.isFirmwareLoading()){error="Wait for firmware loading to finish";return false;}
@@ -1299,22 +1315,80 @@ bool Editor::reloadSkin(juce::String& error)
     const bool external=m_processor.skinChoice=="Custom" || m_processor.skinChoice.startsWith("Package:");
     return selectSkin(external?juce::File(m_processor.customSkin):juce::File{},external?juce::String{}:m_processor.skinChoice,error);
 }
+#if SILVER_SOULTRAIN_PREVIEW
+void Editor::showSoulTrain(bool show)
+{
+ if(show&&!m_soulTrain){
+  SoulTrainWeb::Callbacks callbacks;
+  callbacks.browserSnapshot=[this]{m_surface->browser.pollLibrary();return m_surface->browser.webSnapshot();};
+  callbacks.browserAction=[this](const juce::var& message){m_surface->browser.webAction(message);};
+  callbacks.nativeStatus=[this]{return m_surface->status.getText();};
+  const juce::Component::SafePointer<Editor> self(this);
+  callbacks.nativeAction=[self](const juce::String& action){juce::MessageManager::callAsync([self,action]{if(self)self->soulTrainAction(action);});};
+  m_soulTrain=std::make_unique<SoulTrainWeb>(m_processor,std::move(callbacks));addChildComponent(*m_soulTrain);
+ }
+ if(m_soulTrain)m_soulTrain->setVisible(show);
+ m_surface->setVisible(!show);
+ const int width=show?1486:int(m_surface->skin["width"]),height=show?942:int(m_surface->skin["height"]);
+ setResizeLimits(width/2,height/2,width*3/2,height*3/2);if(auto* c=getConstrainer())c->setFixedAspectRatio(double(width)/height);
+ setUiScale(m_processor.editorScale.load());
+}
+void Editor::soulTrainAction(const juce::String& action)
+{
+ if(action.startsWith("scale:")){setUiScale(action.substring(6).getDoubleValue()/100);return;}
+ if(action=="nativeUI"){showSoulTrain(false);m_surface->showPage(4);return;}
+ if(action=="nextPreset"||action=="previousPreset"){m_surface->stepPreset(action=="nextPreset"?1:-1);return;}
+ if(m_processor.isFirmwareLoading())return;
+ if(action.startsWith("model:")){
+  const bool wantK=action.substring(6)=="K";if(wantK==m_processor.isKStation()&&m_processor.firmwareReady())return;
+  for(const auto& f:m_processor.firmwares)if(f.kStation==wantK){m_surface->startFirmwareLoad(f.file,0);return;}
+  m_surface->status.setText("No firmware found for this model. Load firmware in Setup.",juce::dontSendNotification);return;
+ }
+ if(action.startsWith("firmware:")){const int index=action.substring(9).getIntValue();if(index>=0&&index<int(m_processor.firmwares.size()))m_surface->startFirmwareLoad(m_processor.firmwares[size_t(index)].file,0);return;}
+ if(action=="loadFirmware")m_surface->chooseAsset(4);
+ else if(action=="dataFolder")m_surface->chooseAsset(0);
+ else if(action=="waveRom")m_surface->chooseAsset(1);
+ else if(action=="factoryData")m_surface->chooseAsset(2);
+ else if(action=="loadSkin")m_surface->chooseAsset(3);
+ else if(action=="rescanRoms")m_surface->rescanRoms.onClick();
+ else if(action=="openSkins")m_surface->openSkins.onClick();
+ else if(action=="exportSkin")m_surface->exportSkin.onClick();
+ else if(action=="diagnostics")m_surface->diagnostics.onClick();
+ else if(action=="demoSong")m_surface->demoSong.onClick();
+ else if(action=="panic")m_surface->panic.onClick();
+}
+#endif
 bool Editor::keyPressed(const juce::KeyPress& key)
 {
     if(key.getKeyCode()!=juce::KeyPress::F5Key)return false;
     m_surface->reloadSkin.onClick();return true;
 }
-Editor::~Editor(){removeMouseListener(this);m_processor.savePreferences();setLookAndFeel(nullptr);}
-double Editor::getUiScale() const{return double(getWidth())/int(m_surface->skin["width"]);}
+Editor::~Editor(){
+#if SILVER_SOULTRAIN_PREVIEW
+ m_soulTrain.reset();
+#endif
+ removeMouseListener(this);m_processor.savePreferences();setLookAndFeel(nullptr);}
+double Editor::getUiScale() const{
+#if SILVER_SOULTRAIN_PREVIEW
+ if(m_soulTrain&&m_soulTrain->isVisible())return double(getWidth())/1486;
+#endif
+ return double(getWidth())/int(m_surface->skin["width"]);
+}
 void Editor::setUiScale(double scale)
 {
     if(!std::isfinite(scale)||scale<.5||scale>1.5)return;
-    const int width=int(m_surface->skin["width"]),height=int(m_surface->skin["height"]);
+    int width=int(m_surface->skin["width"]),height=int(m_surface->skin["height"]);
+#if SILVER_SOULTRAIN_PREVIEW
+    if(m_soulTrain&&m_soulTrain->isVisible()){width=1486;height=942;}
+#endif
     setSize(juce::roundToInt(width*scale),juce::roundToInt(height*scale));
     resized();
 }
 void Editor::resized()
 {
+    #if SILVER_SOULTRAIN_PREVIEW
+    if(m_soulTrain&&m_soulTrain->isVisible()){m_soulTrain->setBounds(getLocalBounds());const double scale=double(getWidth())/1486;if(scale>=.5&&scale<=1.5)m_processor.editorScale.store(scale);return;}
+#endif
     if(!m_surface)return;const int width=int(m_surface->skin["width"]),height=int(m_surface->skin["height"]);
     m_surface->setBounds(0,0,width,height);m_surface->setTransform(juce::AffineTransform::scale(float(getWidth())/width,float(getHeight())/height));
     const double scale=double(getWidth())/width;
