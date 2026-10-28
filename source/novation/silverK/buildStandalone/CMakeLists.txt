@@ -13,6 +13,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+# WebKit enables Objective-C++ as a first-class CMake language. Keep its
+# JUCE symbols private just like C++, including inside AU/VST3 hosts.
+set(CMAKE_OBJCXX_VISIBILITY_PRESET hidden)
 set(CMAKE_C_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
 set(BUILD_TESTING OFF CACHE BOOL "Build shared dependency tests" FORCE)
