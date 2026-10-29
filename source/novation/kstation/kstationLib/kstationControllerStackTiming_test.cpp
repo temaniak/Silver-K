@@ -1,0 +1,11 @@
+#include "h8s/h8s.hpp"
+#include <algorithm>
+#include <cstdint>
+#include <cstdio>
+#include <fstream>
+#include <iterator>
+#include <memory>
+#include <vector>
+struct Original:H8SEmulator{int rh()const{return lastread;}int wh()const{return lastwrite;}void history(int r,int w){lastread=r;lastwrite=w;}};
+static unsigned bus(uint32_t a,unsigned count,int& prev){unsigned cost=0;for(unsigned i=0;i<count;++i){auto x=(a+i)&0xffffff;if(x<0x400000||(x>=0xfffd10&&x<0xffffa0)){if((prev&1)||x!=uint32_t(prev|1))cost+=x<0x400000?3:1;prev=int(x);}else{cost+=x>=0xffffa0?1:3;prev=-1;}}return cost;}
+int main(int argc,char**argv){if(argc!=2)return 77;std::ifstream f(argv[1],std::ios::binary);std::vector<uint8_t>rom{std::istreambuf_iterator<char>(f),{}};if(rom.size()!=49728)return 1;auto c=std::make_unique<Original>();c->loadmem(rom.data(),unsigned(rom.size()),0);constexpr uint32_t pcs[]={0x92c,0x942,0xb50,0xba8,0x6f42,0x944,0x15c,0x15e};constexpr unsigned expected[]={6,6,10,10,7,7,5,10};uint64_t cases=0;for(uint32_t sp=0xfffd22;sp<=0xffff10;sp+=2)for(unsigned j=0;j<8;++j){c->setSP(sp);c->memory[sp]=0;c->memory[sp+1]=0;c->memory[sp+2]=0x30;c->memory[sp+3]=0;c->pc=c->makepc(pcs[j]);c->ccr=0x80;c->pending_irqs=0;c->pending_irqs_high=0;c->interruptMode2=false;c->cycles=100;c->history(-1,-1);c->step();if(c->cycles-100!=expected[j]){std::fprintf(stderr,"timing mismatch sp=%x pc=%x expected=%u actual=%llu\n",sp,pcs[j],expected[j],(unsigned long long)(c->cycles-100));return 2;}if((j==0||j==2||j==6||j==7)&&!(c->wh()&1))return 3;++cases;}for(uint32_t sp=0xfffd22;sp<=0xffff10;sp+=2){c->setSP(sp);c->pc=c->makepc(0x930);c->ccr=0;c->pending_irqs=uint64_t(1)<<38;c->pending_irqs_high=0;c->interruptMode2=false;c->memory[0xfffff2]=8;c->cycles=100;c->history(-1,-1);c->step();if(c->cycles-100!=19||c->getPC()!=0x92e||c->pending_irqs||!(c->wh()&1))return 4;++cases;}for(uint32_t a=0;a<0x1000000;++a)for(unsigned width:{1u,2u,4u}){int p=0xfffe7f,q=-1;auto x=bus(a,width,p),y=bus(a,width,q);if(x!=y||p!=q)return 5;}for(uint32_t sp:{0xfffe81u,0x200000u}){c->setSP(sp);c->pc=c->makepc(0x92c);c->ccr=0x80;c->pending_irqs=0;c->cycles=100;c->history(-1,-1);c->step();if(c->cycles-100==6)return 6;}std::printf("PASS on-chip stack timing: %llu original-H8 instruction/admission cases, all 24-bit data-write addresses, odd/foreign exclusions checked\n",(unsigned long long)cases);}

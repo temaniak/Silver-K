@@ -25,6 +25,8 @@ public:
         if(depth_)resume(c);
         if(!depth_||boundary(jobs_[depth_-1])!=at){
             if(!entry(at))return false;
+            if((at==0x15a6||at==0x16ba||at==0x1652)&&uint32_t(c.reg32(5))!=0x600000)
+                throw std::logic_error("Native K DSP entry requires the bound host port");
             if(depth_==jobs_.size())throw std::logic_error("Native K DSP continuation capacity");
             Job j;j.root=at;
             if(at==0x165e||at==0x16ba){j.kind=Kind::Word;j.word=W((uint32_t(uint16_t(c.reg16(9)))<<8)|uint8_t(c.reg8(1)),uint16_t(c.reg16(4)),at==0x165e);}

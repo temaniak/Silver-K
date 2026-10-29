@@ -150,7 +150,7 @@ public:
  task_.advance([&](T::Read)->uint16_t{c.reg16(0)=int16_t(c.read16(c.reg32(1)));c.reg32(1)+=2;c.clockI(2);val(c,c.reg16(0));return uint16_t(c.reg16(0));});if(!task_.complete())c.pc=c.makepc(int(boundary()));return true;}
 private:static unsigned length(S s){switch(s){case S::SaveLong:case S::BindCount:case S::RestoreLong:return 4;case S::BindBitmap:return 6;default:return 2;}}T task_;
 };
-struct NativeMidiEventImageRanges {struct Range{uint32_t begin,end;};inline static constexpr std::array<Range,14>ranges{{{0x2a82,0x2baa},{0x2bf6,0x2c36},{0x2c36,0x2ce8},{0x2d38,0x2d4c},{0x2d5c,0x2d7e},{0x2d7e,0x2e34},{0x33f4,0x3402},{0x3812,0x388c},{0x5c04,0x5c3a},{0x7302,0x759a},{0x759a,0x763e},{0x80ce,0x80f4},{0x8140,0x816c},{0x823c,0x825c}}};};
+struct NativeMidiEventImageRanges {struct Range{uint32_t begin,end;};inline static constexpr std::array<Range,14>ranges{{{0x2a82,0x2baa},{0x2bf6,0x2c36},{0x2c36,0x2ce8},{0x2d38,0x2d4c},{0x2d5c,0x2d7e},{0x2d7e,0x2e34},{0x2e34,0x2f68},{0x33f4,0x3402},{0x3812,0x388c},{0x5c04,0x5c3a},{0x7302,0x759a},{0x759a,0x763e},{0x80ce,0x816c},{0x823c,0x825c}}};};
 
 class NativeMidiNearestNote final {
  using T=MidiNearestNoteTask;using S=T::Stage;

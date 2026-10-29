@@ -24,7 +24,7 @@ public:
 struct Region{uint32_t at,size;};
 constexpr Region Regions[]={{0,16},{0xc598,8},{0xfffd00,0x300},{0xfff0,32},{0x1ffff0,32},{0x3ffff0,48},{0x600000,16}};
 constexpr uint32_t Stacks[]{0xffff00,0xfffdc0,0x200001,0x3fffff,0x400001,0x1000001,0x100ffff};
-struct Metrics{uint64_t graphs=0,phases=0,io=0,shortBudgets=0,faults=0,nested=0;};
+struct Metrics{uint64_t graphs=0,phases=0,io=0,shortBudgets=0,faults=0,nested=0,guards=0;};
 class Fixture {
 public:
  std::unique_ptr<Original>a=std::make_unique<Original>();std::unique_ptr<kstation::Stage1Cpu>b=std::make_unique<kstation::Stage1Cpu>();Bus<Original>x{*a};Bus<kstation::Stage1Cpu>y{*b};kstation::NativeDspTransfer native;Metrics m;
@@ -57,5 +57,9 @@ int main(int argc,char**argv){try{
   for(bool receive:{false,true}){A task(0xffff,receive);unsigned reads=0;while(!task.complete()){if(task.awaitingFault()){task.resumeFault();continue;}shortBudgets(task,[&](unsigned b){return task.advanceBefore(b,credits,[&](unsigned offset){++calls;if(offset!=4)return 0x81u;bool set=task.stage()!=A::Stage::PollResponse||receive;return ++reads>3?(set?unsigned(task.poll().mask()):0u):(set?0u:unsigned(task.poll().mask()));},[&](auto,auto){++calls;});});}}
   for(bool wrapper:{false,true}){F task(wrapper);while(!task.complete()){if(task.awaitingLatch()){auto copy=task;check(task.nextClocks(credits)==0&&!task.advanceBefore(999,credits,[&]{++calls;return 0;},[&](auto){++calls;})&&!std::memcmp(&copy,&task,sizeof(task)),"DSP blocked latch changed state");task.resumeLatch();continue;}shortBudgets(task,[&](unsigned b){return task.advanceBefore(b,credits,[&]{++calls;return 0x81u;},[&](auto){++calls;});});}}
  }
- watch=false;check(!allocations,"DSP processing allocated");char out[512];std::snprintf(out,sizeof(out),"{\"passed\":true,\"graphs\":%llu,\"phases\":%llu,\"ordered_context_io\":%llu,\"faults\":%llu,\"short_budget_checks\":%llu,\"nested_irqs\":%llu,\"processing_allocations\":%llu}\n",f.m.graphs,f.m.phases,f.m.io,f.m.faults,f.m.shortBudgets,f.m.nested,allocations);std::fputs(out,stdout);if(argc>2){std::ofstream save(argv[2]);save<<out;}return 0;
+
+ // Unsupported caller bindings reject before a phase, state or IO changes.
+ watch=false;
+ for(unsigned entry:{0x15a6u,0x16bau,0x1652u})for(unsigned base:{0u,0x600001u,0x1600000u,0xffffffffu}){f.prepare(entry,0xff,Stacks[0]);f.a->reg32(5)=f.b->reg32(5)=int32_t(base);bool rejected=false;try{f.native.step(*f.b);}catch(const std::logic_error&){rejected=true;}check(rejected&&!f.native.active()&&!f.y.count,"DSP invalid host binding admitted");f.equal();++f.m.guards;}
+ watch=false;check(!allocations,"DSP processing allocated");char out[512];std::snprintf(out,sizeof(out),"{\"passed\":true,\"graphs\":%llu,\"phases\":%llu,\"ordered_context_io\":%llu,\"faults\":%llu,\"short_budget_checks\":%llu,\"nested_irqs\":%llu,\"binding_guards\":%llu,\"processing_allocations\":%llu}\n",f.m.graphs,f.m.phases,f.m.io,f.m.faults,f.m.shortBudgets,f.m.nested,f.m.guards,allocations);std::fputs(out,stdout);if(argc>2){std::ofstream save(argv[2]);save<<out;}return 0;
  }catch(const std::exception&e){watch=false;std::fprintf(stderr,"FAIL %s\n",e.what());return 1;}}

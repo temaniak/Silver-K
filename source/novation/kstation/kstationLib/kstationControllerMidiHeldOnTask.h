@@ -1,0 +1,15 @@
+#pragma once
+#include "kstationMidiEventTask.h"
+#include "kstationControllerMidiFirstNoteTask.h"
+#include <optional>
+namespace kstation {
+class ControllerMidiHeldOnTask final {
+ using T=MidiHeldOnTask;using S=T::Stage;using P=MidiPhysicalScanTask;using PS=P::Stage;
+public:
+ ControllerMidiHeldOnTask(uint8_t note,uint8_t velocity):task_(note,velocity){}bool complete()const{return task_.complete();}bool awaitingFirstNote()const{return first_&&first_->awaitingReset();}bool resumeFirstNote(){return awaitingFirstNote()&&first_->resumeReset();}
+ bool stackWrites()const{if(first_)return first_->stackWrites();if(scan_){auto s=scan_->stage();return s==PS::SaveWord||s==PS::SaveLong;}auto s=task_.stage();return s==S::SaveWord||s==S::SaveNote||s==S::SaveValue||s==S::SaveLong||s==S::FindAny||s==S::FirstNote;}
+ unsigned nextClocks(int lastWrite=-1)const{if(first_)return first_->nextClocks(lastWrite);if(scan_){switch(scan_->stage()){case PS::SaveWord:case PS::RestoreWord:return 6;case PS::SaveLong:case PS::RestoreLong:return 10;case PS::BindBitmap:return 9;case PS::BindCount:return 6;case PS::ReadWord:return 8;case PS::Return:return 7;case PS::Complete:return 0;default:return 3;}}switch(task_.stage()){case S::AwaitChild:case S::Complete:return 0;case S::SaveWord:case S::SaveNote:case S::SaveValue:case S::RestoreValue:case S::RestoreNote:case S::RestoreWord:return 6;case S::SaveLong:case S::RestoreLong:case S::FindAny:case S::FirstNote:return 10;case S::BindVelocity:case S::BindPhysical:case S::BindHeld:case S::BindOrder:return 9;case S::ReadCount:case S::WriteLast:case S::WriteMirrorCount:case S::WriteCount:return 12;case S::SetPhysical:case S::SetHeld:return 12;case S::WriteVelocity:case S::WriteOrder:return 6;case S::Return:return 7;default:return 3;}}
+ template<class R,class W>unsigned advanceBefore(unsigned budget,R&&read,W&&write,int lastWrite=-1){auto cost=nextClocks(lastWrite);if(!cost||cost>budget)return 0;if(first_){auto used=first_->advanceBefore(cost,read,write,lastWrite);if(first_->complete()){first_.reset();task_.resume(T::Child::FirstNote);}return used;}if(scan_){bool ok=scan_->advance([&](P::Read){return uint16_t(read(0xcbde + scan_->offset(),2,cost-2));});if(!ok)return 0;if(scan_->complete()){auto v=scan_->result();scan_.reset();task_.resume(T::Child::AnyPhysical,v);}return cost;}bool ok=task_.advance([&](T::Read f){return uint8_t(read(f==T::Read::Count?0xcb56:task_.bitmapAddress(),1,f==T::Read::Count?cost:cost-3));},[&](T::Write f,uint32_t v){uint32_t a=0;unsigned width=1;switch(f){case T::Write::Velocity:a=0xcb5e + task_.note();break;case T::Write::Bitmap:a=task_.bitmapAddress();break;case T::Write::Order:a=task_.orderAddress();width=2;break;case T::Write::Last:a=0xcb5a;width=2;break;case T::Write::MirrorCount:a=0xcb57;break;case T::Write::Count:a=0xcb56;break;}write(a,v,width,cost);});if(!ok)return 0;if(task_.awaitingChild()&&task_.child()==T::Child::AnyPhysical)scan_.emplace();else if(task_.awaitingChild()&&task_.child()==T::Child::FirstNote)first_.emplace();return cost;}
+private:T task_;std::optional<P>scan_{};std::optional<ControllerMidiFirstNoteTask>first_{};
+};
+}

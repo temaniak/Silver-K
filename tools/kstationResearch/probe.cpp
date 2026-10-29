@@ -102,6 +102,11 @@ Result render(kstation::Hardware& board,uint64_t frames,const std::vector<Event>
 void byteFile(const std::string&path,const void* data,size_t bytes){std::ofstream f(path,std::ios::binary);f.write(static_cast<const char*>(data),std::streamsize(bytes));require(bool(f),"Cannot write evidence");}
 }
 
+#if defined(K_RESEARCH_COMPLETION)
+namespace {std::array<uint64_t,65536> completionFallbackAll{},completionFallbackWindow{};uint64_t completionFallbackOutside=0;bool completionRecording=false;}
+void kCompletionFallback(uint32_t pc){if(pc<completionFallbackAll.size()){++completionFallbackAll[pc];if(completionRecording)++completionFallbackWindow[pc];}else ++completionFallbackOutside;}
+#endif
+
 void kResearchStep(unsigned pc,unsigned long long begin,unsigned long long end){if(recording&&pc<pcCount.size()){++pcCount[pc];pcCycles[pc]+=end-begin;}}
 void kResearchPort(unsigned pc,unsigned long long cycle,unsigned address,unsigned value,bool write){if(!recording)return;if(pc<portReads.size())++(write?portWrites[pc]:portReads[pc]);hashWord(portHash,cycle);hashWord(portHash,pc);hashWord(portHash,address);hashWord(portHash,value);hashWord(portHash,write);}
 #if defined(K_RESEARCH_STAGE1_TRACE)
@@ -169,7 +174,14 @@ int main(int argc,char** argv){try{
  const auto frames=uint64_t(seconds*kstation::DSP::SampleRate);const auto passage=events(scenario,frames);
  std::vector<int32_t> pcm;std::vector<int32_t>* capture=nullptr;
  if(mode=="observe"||mode=="capture"){pcm.reserve(frames*2);capture=&pcm;recording=mode=="observe";}
- const auto result=render(board,frames,passage,paced,block,capture);recording=false;diagnostics.stop();board.setPerformanceDiagnostics(nullptr);
+#if defined(K_RESEARCH_COMPLETION)
+ completionRecording=true;
+#endif
+ const auto result=render(board,frames,passage,paced,block,capture);
+#if defined(K_RESEARCH_COMPLETION)
+ completionRecording=false;
+#endif
+recording=false;diagnostics.stop();board.setPerformanceDiagnostics(nullptr);
 #if defined(K_RESEARCH_STAGE1_TRACE)
  stageTrace=false;byteFile(prefix+".ports",stagePorts.data(),stagePorts.size()*sizeof(uint64_t));byteFile(prefix+".slices",stageSlices.data(),stageSlices.size()*sizeof(uint64_t));
 #endif
@@ -203,6 +215,8 @@ int main(int argc,char** argv){try{
  out<<"\"native_clock_steps\":"<<after.nativeClockSteps-before.nativeClockSteps<<",\"native_internal_clock_calls\":"<<after.nativeInternalClockCalls-before.nativeInternalClockCalls<<",\"native_external_clock_calls\":"<<after.nativeExternalClockCalls-before.nativeExternalClockCalls<<",\"native_clock_sync_updates\":"<<after.nativeClockSyncUpdates-before.nativeClockSyncUpdates<<",\n";
 #endif
 #if defined(K_RESEARCH_COMPLETION)
+ out<<"\"native_controller_service_steps\":"<<after.nativeControllerServiceSteps-before.nativeControllerServiceSteps<<",\n";
+ out<<"\"cumulative_interpreted_steps\":"<<after.interpretedSteps<<",\"cumulative_native_startup_steps\":"<<after.nativeStartupSteps<<",\"cumulative_native_controller_service_steps\":"<<after.nativeControllerServiceSteps<<",\n";
  out<<"\"native_adc_steps\":"<<after.nativeAdcSteps-before.nativeAdcSteps<<",\"native_adc_entries\":"<<after.nativeAdcEntries-before.nativeAdcEntries<<",\"native_adc_returns\":"<<after.nativeAdcReturns-before.nativeAdcReturns<<",\n";
  out<<"\"native_dsp_transfer_steps\":"<<after.nativeDspTransferSteps-before.nativeDspTransferSteps<<",\"native_foreground_steps\":"<<after.nativeForegroundSteps-before.nativeForegroundSteps<<",\"native_main_steps\":"<<after.nativeMainSteps-before.nativeMainSteps<<",\"native_midi_steps\":"<<after.nativeMidiSteps-before.nativeMidiSteps<<",\"native_tick_steps\":"<<after.nativeTickSteps-before.nativeTickSteps<<",\n";
  out<<"\"native_startup_steps\":"<<after.nativeStartupSteps-before.nativeStartupSteps<<",\"native_flash_state_steps\":"<<after.nativeFlashStateSteps-before.nativeFlashStateSteps<<",\"native_patch_unpack_steps\":"<<after.nativePatchUnpackSteps-before.nativePatchUnpackSteps<<",\"native_midi_event_steps\":"<<after.nativeMidiEventSteps-before.nativeMidiEventSteps<<",\"native_voice_allocation_steps\":"<<after.nativeVoiceAllocationSteps-before.nativeVoiceAllocationSteps<<",\"native_voice_update_steps\":"<<after.nativeVoiceUpdateSteps-before.nativeVoiceUpdateSteps<<",\n";
@@ -217,6 +231,10 @@ int main(int argc,char** argv){try{
  out<<"\"dropped_frames\":"<<board.dsp().audioFramesDropped()-beforeDrop<<",\"block_compute_over_budget\":"<<result.overBudget<<",\"max_block_compute_seconds\":"<<result.maxBlock<<",\"h8_sample_count\":"<<h8.count<<",\"dsp_sample_count\":"<<dsp.count<<",\"h8_sampled_wall_ns\":"<<h8.total<<",\"dsp_sampled_wall_ns\":"<<dsp.total<<",\"flash_fnv\":\""<<flashHash<<"\",\"observed_port_fnv\":\""<<portHash<<"\",\"memory_fnv\":\""<<memoryHash<<"\",\"midi_out_count\":"<<midiCount<<",\"midi_out_fnv\":\""<<midiHash<<"\",\n";
  out<<"\"before_patch\":[";for(unsigned i=0;i<128;++i)out<<(i?",":"")<<unsigned(beforePatch[i]);out<<"],\"after_patch\":[";for(unsigned i=0;i<128;++i)out<<(i?",":"")<<unsigned(patch[i]);out<<"],\"bank\":"<<unsigned(after.currentBank)<<",\"program\":"<<unsigned(after.currentProgram)<<"\n}\n";
  require(bool(out),"Cannot save JSON");
+#if defined(K_RESEARCH_COMPLETION)
+ {std::ofstream coverage(prefix+".remaining.json");coverage<<"{\"outside_low_image\":"<<completionFallbackOutside<<",\"entries\":[";bool comma=false;
+  for(unsigned pc=0;pc<completionFallbackAll.size();++pc)if(completionFallbackAll[pc]){coverage<<(comma?",":"")<<"{\"address\":"<<pc<<",\"total\":"<<completionFallbackAll[pc]<<",\"window\":"<<completionFallbackWindow[pc]<<"}";comma=true;}coverage<<"]}\n";require(bool(coverage),"Cannot save remaining coverage");}
+#endif
 #if defined(K_RESEARCH_FUNCTIONAL_ONLY)
  std::cout<<scenario<<" "<<mode<<" functional comparison; CPU not measured; peak="<<result.peak<<" dropped="<<board.dsp().audioFramesDropped()-beforeDrop<<"\n";
 #else

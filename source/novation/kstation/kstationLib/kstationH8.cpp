@@ -17,6 +17,7 @@
 #include "kstationNativeMidiEvents.h"
 #include "kstationNativeVoiceAllocation.h"
 #include "kstationNativeVoiceUpdate.h"
+#include "kstationNativeDevelopmentServices.h"
 #include "baseLib/sha256.h"
 
 #include <algorithm>
@@ -25,6 +26,9 @@
 #include <stdexcept>
 #include <utility>
 #include "h8s/h8sdevices.hpp"
+#if defined(K_RESEARCH_COMPLETION)
+extern void kCompletionFallback(uint32_t);
+#endif
 
 namespace kstation
 {
@@ -76,6 +80,8 @@ namespace kstation
         NativeAdc adc;NativeDspTransfer dspTransfers;NativeForeground foreground;
         NativeStartup startup;NativeDspStartup dspStartup;NativeFlashState flashState;
         NativePatchUnpack patchUnpack;NativeMidiEvents midiEvents;NativeVoiceAllocation voiceAllocation;NativeVoiceUpdate voiceUpdate;
+        NativeDevelopmentServices developmentServices;
+        uint64_t nativeControllerServiceSteps=0;
         bool developmentOverlayVerified=false;
         uint64_t nativeAdcSteps=0,nativeAdcEntries=0,nativeAdcReturns=0;
         uint64_t nativeDspTransferSteps=0,nativeForegroundSteps=0,nativeMainSteps=0,nativeMidiSteps=0,nativeTickSteps=0;
@@ -91,6 +97,7 @@ namespace kstation
             visit(NativeAdc::CodeRanges);visit(NativeDspTransfer::CodeRanges);visit(NativeForeground::CodeRanges);
             visit(NativeStartup::CodeRanges);visit(NativeDspStartup::CodeRanges);visit(NativeFlashState::CodeRanges);
             visit(NativePatchUnpack::CodeRanges);visit(NativeMidiEvents::CodeRanges);visit(NativeVoiceAllocation::CodeRanges);visit(NativeVoiceUpdate::CodeRanges);
+            NativeDevelopmentServices::ranges(f);
         }
         bool protectedCode(uint32_t low)const
         {
@@ -198,6 +205,7 @@ namespace kstation
             startup.reset();dspStartup.reset();flashState.reset();patchUnpack.reset();midiEvents.reset();voiceAllocation.reset();voiceUpdate.reset();developmentOverlayVerified=false;
             nativeStartupSteps=nativeFlashStateSteps=nativePatchUnpackSteps=0;
             nativeMidiEventSteps=nativeVoiceAllocationSteps=nativeVoiceUpdateSteps=0;
+            developmentServices.reset();nativeControllerServiceSteps=0;
             instructions=hostReads=hostWrites=midiReceived=0;nextRx=txReady=adcReady=0;
             midiIn.clear();midiOut.clear();
             if(mode==Stage1Mode::Original)
@@ -426,8 +434,11 @@ namespace kstation
                         &&(!nativeWaitReady||dspStartup.active()||pc==0x14ee||pc==0x2ae||(pc>=0x155e&&pc<0x15a6))){
                         irqStep=dspStartup.step(*cpu);if(irqStep)++nativeStartupSteps;
                     }
-                    if constexpr(Development)if(!irqStep&&nativeWaitReady&&NativeDspTransfer::candidate(pc)){
+                    if constexpr(Development)if(!irqStep&&NativeDspTransfer::candidate(pc)){
                         irqStep=dspTransfers.step(*cpu);if(irqStep)++nativeDspTransferSteps;
+                    }
+                    if constexpr(Development)if(!irqStep){
+                        irqStep=developmentServices.step(*cpu);if(irqStep)++nativeControllerServiceSteps;
                     }
                     if constexpr(Development)if(!irqStep&&NativeFlashState::candidate(pc)){
                         irqStep=flashState.step(*cpu);if(irqStep)++nativeFlashStateSteps;
@@ -444,7 +455,7 @@ namespace kstation
                     if constexpr(Development)if(!irqStep&&NativeMidiEvents::candidate(pc)){
                         irqStep=midiEvents.step(*cpu);if(irqStep)++nativeMidiEventSteps;
                     }
-                    if constexpr(Development)if(!irqStep&&nativeWaitReady&&NativeForeground::candidate(pc)){
+                    if constexpr(Development)if(!irqStep&&NativeForeground::candidate(pc)){
                         const auto f=foreground.step(*cpu);irqStep=f.stepped;
                         if(irqStep){++nativeForegroundSteps;nativeMainSteps+=f.main;nativeMidiSteps+=f.midi;nativeTickSteps+=f.tick;}
                     }
@@ -458,9 +469,14 @@ namespace kstation
                         &&(NativeDspTransfer::candidate(pc)||NativeForeground::candidate(pc)
                            ||(pc>=0x65a&&pc<0x830)))
                         throw std::logic_error("Incomplete native K development phase");
-                    if(!irqStep){if(nativeWaitReady&&NativeHdiWait::step(*cpu))++nativeWaitSteps;else cpu->step();}
+                    if(!irqStep){if(nativeWaitReady&&NativeHdiWait::step(*cpu))++nativeWaitSteps;else {
+#if defined(K_RESEARCH_COMPLETION)
+                        if constexpr(Development)kCompletionFallback(pc);
+#endif
+                        cpu->step();}}
                 }
                 else cpu->step();
+                if constexpr(Development)developmentServices.afterPhase(*cpu,pc,midiEvents);
                 ++instructions;
                 if constexpr(Native)nativeTimers->tick();else timers->tick();
                 tickSerial();
@@ -528,7 +544,7 @@ namespace kstation
         DebugState s;
         s.pc=m_impl->cpu->getPC();s.sp=m_impl->cpu->getSP();s.cycles=m_impl->cpu->cycles;
         s.instructions=m_impl->instructions;s.hostReads=m_impl->hostReads;s.hostWrites=m_impl->hostWrites;
-        s.interpretedSteps=m_impl->instructions-m_impl->nativeWaitSteps-m_impl->nativeIrqSteps-m_impl->nativeClockSteps-m_impl->nativeDspTransferSteps-m_impl->nativeForegroundSteps-m_impl->nativeStartupSteps-m_impl->nativeFlashStateSteps-m_impl->nativePatchUnpackSteps-m_impl->nativeMidiEventSteps-m_impl->nativeVoiceAllocationSteps-m_impl->nativeVoiceUpdateSteps;s.nativeWaitSteps=m_impl->nativeWaitSteps;
+        s.interpretedSteps=m_impl->instructions-m_impl->nativeWaitSteps-m_impl->nativeIrqSteps-m_impl->nativeClockSteps-m_impl->nativeDspTransferSteps-m_impl->nativeForegroundSteps-m_impl->nativeStartupSteps-m_impl->nativeFlashStateSteps-m_impl->nativePatchUnpackSteps-m_impl->nativeMidiEventSteps-m_impl->nativeVoiceAllocationSteps-m_impl->nativeVoiceUpdateSteps-m_impl->nativeControllerServiceSteps;s.nativeWaitSteps=m_impl->nativeWaitSteps;
         s.nativeIrqSteps=m_impl->nativeIrqSteps;s.nativeIrqEntries=m_impl->nativeIrqEntries;s.nativeIrqReturns=m_impl->nativeIrqReturns;
         s.nativeTimer3Steps=m_impl->nativeTimer3Steps;s.nativeSerialErrorSteps=m_impl->nativeSerialErrorSteps;
         s.nativeSerialTxSteps=m_impl->nativeSerialTxSteps;s.nativeSerialTxEntries=m_impl->nativeSerialTxEntries;s.nativeSerialTxReturns=m_impl->nativeSerialTxReturns;
@@ -538,6 +554,7 @@ namespace kstation
         s.nativeAdcSteps=m_impl->nativeAdcSteps;s.nativeAdcEntries=m_impl->nativeAdcEntries;s.nativeAdcReturns=m_impl->nativeAdcReturns;
         s.nativeDspTransferSteps=m_impl->nativeDspTransferSteps;s.nativeForegroundSteps=m_impl->nativeForegroundSteps;s.nativeMainSteps=m_impl->nativeMainSteps;s.nativeMidiSteps=m_impl->nativeMidiSteps;s.nativeTickSteps=m_impl->nativeTickSteps;
         s.nativeStartupSteps=m_impl->nativeStartupSteps;s.nativeFlashStateSteps=m_impl->nativeFlashStateSteps;s.nativePatchUnpackSteps=m_impl->nativePatchUnpackSteps;
+        s.nativeControllerServiceSteps=m_impl->nativeControllerServiceSteps;
         s.nativeMidiEventSteps=m_impl->nativeMidiEventSteps;s.nativeVoiceAllocationSteps=m_impl->nativeVoiceAllocationSteps;s.nativeVoiceUpdateSteps=m_impl->nativeVoiceUpdateSteps;
         s.midiReceived=m_impl->midiReceived;s.ramOverlay=m_impl->overlay;s.mainEntered=m_impl->enteredMain;
         s.initializedFromFirmware=m_impl->reconstructedDefaults;

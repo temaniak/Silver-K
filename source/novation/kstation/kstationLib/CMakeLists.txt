@@ -24,6 +24,129 @@ add_library(kstationLib STATIC
     kstationVoiceUpdateTask.h kstationNativeVoiceUpdate.h
     kstationQueue.h
     kstationRomLoader.cpp kstationRomLoader.h)
+target_sources(kstationLib PRIVATE
+    kstationArpMainTask.h
+    kstationControllerAdcTask.h
+    kstationControllerClockRuntime.h
+    kstationControllerDeviceState.h
+    kstationControllerDspTransferRuntime.h
+    kstationControllerForegroundRuntime.h
+    kstationControllerForegroundTask.h
+    kstationControllerInterruptOwner.h
+    kstationControllerInterruptRuntime.h
+    kstationControllerInterruptScheduler.h
+    kstationControllerInterruptTask.h
+    kstationControllerMidiDequeueTask.h
+    kstationControllerMidiDspTriggerTask.h
+    kstationControllerMidiFirstNoteTask.h
+    kstationControllerMidiHeldOffTask.h
+    kstationControllerMidiHeldOnTask.h
+    kstationControllerMidiNearestNoteTask.h
+    kstationControllerMidiNoteRuntime.h
+    kstationControllerMidiParserTask.h
+    kstationControllerMidiPumpTask.h
+    kstationControllerMidiTriggerTask.h
+    kstationControllerMidiUtilityTask.h
+    kstationControllerSerialRxTask.h
+    kstationControllerSerialTxTask.h
+    kstationControllerTimer1Task.h
+    kstationControllerVoiceActivationTask.h
+    kstationControllerVoiceBuildTask.h
+    kstationControllerVoiceReleaseDspTask.h
+    kstationControllerVoiceReleaseTask.h
+    kstationControllerVoiceSelectionTask.h
+    kstationControllerVoiceStartTask.h
+    kstationDisplayNoticeTask.h
+    kstationDspGlobalsTask.h
+    kstationDspTriggerTask.h
+    kstationFlashCommitTask.h
+    kstationForegroundClockTask.h
+    kstationKeyTask.h
+    kstationLcdTextTask.h
+    kstationMainUiTask.h
+    kstationMetadataTask.h
+    kstationMidiControlTask.h
+    kstationMidiInitTask.h
+    kstationMidiQueue.h
+    kstationMidiSendControlTask.h
+    kstationMidiSysExTask.h
+    kstationNativeArp.h
+    kstationNativeArpMain.h
+    kstationNativeDevelopmentServices.h
+    kstationNativeDisplayNotice.h
+    kstationNativeDisplayNoticeOwner.h
+    kstationNativeDspGlobals.h
+    kstationNativeDspTrigger.h
+    kstationNativeFlashCommit.h
+    kstationNativeFlashCommitOwner.h
+    kstationNativeForegroundClock.h
+    kstationNativeKey.h
+    kstationNativeKeyOwner.h
+    kstationNativeLcdText.h
+    kstationNativeMainUi.h
+    kstationNativeMetadata.h
+    kstationNativeMidiControl.h
+    kstationNativeMidiInit.h
+    kstationNativeMidiInitOwner.h
+    kstationNativeMidiSendControl.h
+    kstationNativeMidiSysEx.h
+    kstationNativeMidiSysExOwner.h
+    kstationNativeNumericDisplay.h
+    kstationNativePanelHardware.h
+    kstationNativePanelRefresh.h
+    kstationNativeParameterEdit.h
+    kstationNativeParameterInput.h
+    kstationNativeParameterUpdate.h
+    kstationNativePatchPack.h
+    kstationNativePatchPackOwner.h
+    kstationNativeProgramState.h
+    kstationNativeProgramVoices.h
+    kstationNativeStartupAdc.h
+    kstationNativeStartupBanner.h
+    kstationNativeStartupButtons.h
+    kstationNativeStartupControl.h
+    kstationNativeStartupDisplay.h
+    kstationNativeStartupHardware.h
+    kstationNativeStartupKeyboard.h
+    kstationNativeStartupServices.h
+    kstationNativeStartupState.h
+    kstationNativeStartupTables.h
+    kstationNativeTransposeApply.h
+    kstationNativeTransposeApplyOwner.h
+    kstationNativeUiEncoder.h
+    kstationNativeUiServices.h
+    kstationNativeVoiceEffects.h
+    kstationNativeVoiceGlobal.h
+    kstationNativeVoiceGlobalOwner.h
+    kstationNativeVoiceSync.h
+    kstationNumericDisplayTask.h
+    kstationPanelHardwareTask.h
+    kstationPanelRefreshTask.h
+    kstationParameterEditTask.h
+    kstationParameterInputTask.h
+    kstationParameterUpdateTask.h
+    kstationPatchPackTask.h
+    kstationProgramStateTask.h
+    kstationProgramVoicesTask.h
+    kstationStartupAdcTask.h
+    kstationStartupBannerTask.h
+    kstationStartupButtonsTask.h
+    kstationStartupControlTask.h
+    kstationStartupDisplayTask.h
+    kstationStartupHardwareTask.h
+    kstationStartupKeyboardTask.h
+    kstationStartupServicesTask.h
+    kstationStartupStateTask.h
+    kstationStartupTablesTask.h
+    kstationStartupTask.h
+    kstationTransposeApplyTask.h
+    kstationUiEncoderTask.h
+    kstationUiServicesTask.h
+    kstationVoiceEffectsTask.h
+    kstationVoiceGlobalTask.h
+    kstationVoiceInitTask.h
+    kstationVoiceSyncTask.h
+)
 target_compile_features(kstationLib PUBLIC cxx_std_17)
 target_link_libraries(kstationLib PUBLIC synthLib dsp56kEmu h8s)
 target_include_directories(kstationLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
@@ -40,7 +163,7 @@ endif()
 
 option(KSTATION_BUILD_CONTROLLER_COMPLETION_CHECK "Build native K controller development differential checks" OFF)
 if(KSTATION_BUILD_CONTROLLER_COMPLETION_CHECK)
-    foreach(check AdcService MainLoopTask MidiPumpTask DspTransferTask PatchUnpackTask ResetImageTask DspStartupTask FlashStateTask MidiEventTask VoiceAllocationTask)
+    foreach(check AdcService MainLoopTask MidiPumpTask DspTransferTask PatchUnpackTask ResetImageTask DspStartupTask FlashStateTask MidiEventTask VoiceAllocationTask VoiceUpdateTask VoiceGlobalTask DspTriggerTask ParameterInputTask ParameterUpdateTask ParameterEditTask ControllerDeviceState ControllerDspTransferRuntime ControllerForegroundRuntime ControllerForegroundBinding ControllerForegroundParser ControllerInterruptRuntime ControllerInterruptOracle ControllerTimer1Runtime ControllerAdcRuntime ControllerClockRuntime)
         add_executable(kstation${check}_test kstation${check}_test.cpp)
         target_link_libraries(kstation${check}_test PRIVATE h8s)
         target_compile_features(kstation${check}_test PRIVATE cxx_std_17)

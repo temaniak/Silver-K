@@ -1,4 +1,5 @@
 #include "kstationHardware.h"
+#include "kstationNativeDevelopmentServices.h"
 #include "kstationNativeAdc.h"
 #include "kstationNativeForeground.h"
 #include "kstationNativeDspTransfer.h"
@@ -27,6 +28,7 @@ int main(int argc,char**argv){try{
   ranges(kstation::NativeAdc::CodeRanges);ranges(kstation::NativeForeground::CodeRanges);ranges(kstation::NativeDspTransfer::CodeRanges);
   ranges(kstation::NativeDspStartup::CodeRanges);ranges(kstation::NativeStartup::CodeRanges);ranges(kstation::NativeFlashState::CodeRanges);
   ranges(kstation::NativePatchUnpack::CodeRanges);ranges(kstation::NativeMidiEvents::CodeRanges);ranges(kstation::NativeVoiceAllocation::CodeRanges);ranges(kstation::NativeVoiceUpdate::CodeRanges);
+  kstation::NativeDevelopmentServices::ranges([&](uint32_t begin,uint32_t end){struct R{uint32_t begin,end;};ranges(std::array<R,1>{{{begin,end}}});});
   board.controller().reset();cpu.write8(0x5a,0x40065a);const auto state=board.controller().debugState();
   check(cpu.memory[0x40065a]==0x5a&&!state.nativeAdcSteps&&!state.nativeDspTransferSteps&&!state.nativeForegroundSteps&&!state.nativeStartupSteps&&!state.nativeFlashStateSteps&&!state.nativePatchUnpackSteps&&!state.nativeMidiEventSteps&&!state.nativeVoiceAllocationSteps&&!state.nativeVoiceUpdateSteps,"Development reset retained state/lock");++guards;
  }

@@ -1,0 +1,16 @@
+#pragma once
+#include "kstationMidiEventTask.h"
+#include "kstationVoiceUpdateTask.h"
+#include <optional>
+namespace kstation {
+class ControllerVoiceBuildTask final {
+ using T=MidiVoiceBuildTask;using S=T::Stage;
+public:
+ using Child=T::Child;explicit ControllerVoiceBuildTask(uint32_t patch):patch_(patch){}bool complete()const{return task_.complete();}bool awaitingChild()const{return task_.awaitingChild()&&(!wrapper_||wrapper_->awaitingDsp());}bool awaitingDsp()const{return wrapper_&&wrapper_->awaitingDsp();}uint16_t dspAddress()const{return wrapper_?wrapper_->command():0;}bool dspSetAddress()const{return task_.child()==Child::InitialCommand;}Child child()const{return task_.child();}uint16_t command()const{return child()==Child::InitialCommand?0x1b:0x1a;}uint32_t word()const{return child()==Child::InitialCommand?preparedWord_:((finalWord_>>8)&0xffffff);}uint32_t patch()const{return patch_;}
+ bool resume(Child child,uint32_t resultWord=0){if(!awaitingChild()||task_.child()!=child)return false;if(wrapper_)return wrapper_->resumeDsp();if(child==Child::Prepare)preparedWord_=resultWord&0xffffff;return task_.resume(child);}
+ bool stackWrites()const{if(wrapper_)return wrapper_->stage()==VoiceDspWriteTask::Stage::DispatchWord;auto s=task_.stage();return s==S::Allocate||s==S::Prepare||s==S::InitialCommand||s==S::Parameters||s==S::SendCommand;}
+ unsigned nextClocks()const{if(wrapper_){VoiceDspWriteTask::Credits c{3,wrapper_->stage()==VoiceDspWriteTask::Stage::Return?7u:10u};return wrapper_->nextClocks(c);}switch(task_.stage()){case S::Complete:case S::AwaitChild:return 0;case S::Allocate:case S::Prepare:case S::InitialCommand:case S::Parameters:case S::SendCommand:return 10;case S::BindInitialCommand:case S::BindFinalCommand:return 6;case S::ReadMode:return 12;case S::ReadPatchHigh:case S::ReadPatchLow:case S::ReadTranspose:return 15;case S::Return:return 7;default:return 3;}}
+ template<class R>unsigned advanceBefore(unsigned budget,R&&read){auto cost=nextClocks();if(!cost||cost>budget)return 0;if(wrapper_){VoiceDspWriteTask::Credits c{3,wrapper_->stage()==VoiceDspWriteTask::Stage::Return?7u:10u};auto used=wrapper_->advanceBefore(cost,c,[&](bool second){return uint16_t(read(second?0xd026:0xd024,2,cost));});if(wrapper_->complete()){auto child=task_.child();wrapper_.reset();task_.resume(child);}return used;}bool ok=task_.advance([&](T::Read f){uint32_t a=f==T::Read::Mode?0xd02c:f==T::Read::PatchHigh?patch_+0x4f:f==T::Read::PatchLow?patch_+0x50:patch_+4;uint8_t v=uint8_t(read(a&0xffffff,1,cost));if(f==T::Read::PatchHigh)high_=v;else if(f==T::Read::PatchLow)low_=v;else if(f==T::Read::Transpose)transpose_=v;return v;});if(!ok)return 0;if(task_.awaitingChild()&&task_.child()==Child::SendCommand){auto low=uint8_t(low_|3);auto flags=uint8_t(0xbf|(uint8_t(transpose_-64)?0x40:0));finalWord_=(uint32_t(high_)<<24)|(uint32_t(low)<<16)|(uint32_t(flags)<<8)|low;}if(task_.awaitingChild()&&(task_.child()==Child::InitialCommand||task_.child()==Child::SendCommand))wrapper_.emplace(command());return cost;}
+private:T task_{};uint32_t patch_,preparedWord_=0,finalWord_=0;uint8_t high_=0,low_=0,transpose_=0;std::optional<VoiceDspWriteTask>wrapper_{};
+};
+}

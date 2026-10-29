@@ -39,6 +39,7 @@ namespace kstation
             uint64_t nativeAdcSteps=0,nativeAdcEntries=0,nativeAdcReturns=0;
             uint64_t nativeDspTransferSteps=0,nativeForegroundSteps=0,nativeMainSteps=0,nativeMidiSteps=0,nativeTickSteps=0;
             uint64_t nativeStartupSteps=0,nativeFlashStateSteps=0,nativePatchUnpackSteps=0;
+            uint64_t nativeControllerServiceSteps=0;
             uint64_t nativeMidiEventSteps=0,nativeVoiceAllocationSteps=0,nativeVoiceUpdateSteps=0;
             bool ramOverlay=false, mainEntered=false, initializedFromFirmware=false;
             uint8_t currentBank=0,currentProgram=0;

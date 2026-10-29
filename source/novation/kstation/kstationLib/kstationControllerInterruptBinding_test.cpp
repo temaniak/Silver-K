@@ -1,0 +1,9 @@
+#include "kstationControllerInterruptRuntime.h"
+#include <array>
+#include <cstdio>
+#include <fstream>
+#include <iterator>
+#include <memory>
+#include <vector>
+struct Range{uint32_t begin,end;};
+int main(int argc,char**argv){if(argc!=2)return 77;std::ifstream f(argv[1],std::ios::binary);std::vector<uint8_t>rom{std::istreambuf_iterator<char>(f),{}};if(rom.size()!=49728)return 1;constexpr std::array<Range,16> ranges{{{0x140,0x142},{0x65a,0x830},{0x84d2,0x85d2},{0x92c,0x946},{0x946,0x968},{0x968,0x9aa},{0xa50,0xa64},{0xa64,0xac2},{0xaf4,0xb0c},{0xb50,0xbb2},{0x1970,0x1b56},{0x1bd0,0x1e1c},{0x1e72,0x1ea4},{0x2186,0x21f0},{0x2284,0x22c0},{0x22fc,0x2312}}};auto d=std::make_unique<kstation::ControllerDeviceState>();d->loadMemory(rom.data(),rom.size(),0);d->loadMemory(rom.data(),rom.size(),0x400000);unsigned rejected=0,guards=0;for(auto r:ranges)for(uint32_t alias:{0u,0x400000u})for(uint32_t at:{r.begin,r.end-1}){auto address=alias+at;d->memory[address]^=1;kstation::ControllerInterruptRuntime candidate;if(candidate.bindVerifiedFirmware(*d,rom.data(),rom.size()))return 2;d->memory[address]^=1;++rejected;}kstation::ControllerInterruptRuntime runtime;if(!runtime.bindVerifiedFirmware(*d,rom.data(),rom.size()))return 3;for(auto r:ranges)for(uint32_t alias:{0u,0x400000u})for(uint32_t at:{r.begin,r.end-1}){auto address=alias+at;auto old=d->memory[address];auto cycles=d->cycles;try{d->write8(address,uint8_t(old^1));return 4;}catch(const std::logic_error&){}if(d->memory[address]!=old||d->cycles!=cycles)return 5;++guards;}auto v=d->memory[38*4+3];d->write8(38*4+3,uint8_t(v^1));d->pendingIrqs=uint64_t(1)<<38;auto a=runtime.advanceBefore(*d,13);if(!a.entered||a.clocks!=13||a.blocked!=kstation::ControllerInterruptRuntime::Block::UnsupportedVector)return 6;std::printf("PASS IRQ verified binding: %u mismatched range boundaries rejected, %u immutable guards, live vector remains writable and is checked\n",rejected,guards);}
