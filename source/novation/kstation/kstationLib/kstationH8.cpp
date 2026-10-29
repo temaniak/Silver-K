@@ -28,6 +28,7 @@
 #include "h8s/h8sdevices.hpp"
 #if defined(K_RESEARCH_COMPLETION)
 extern void kCompletionFallback(uint32_t);
+extern void kCompletionFrame(uint32_t,uint32_t,uint32_t,bool);
 #endif
 
 namespace kstation
@@ -352,6 +353,10 @@ namespace kstation
             while(cpu->cycles-begin<budget)
             {
                 const auto pc=static_cast<uint32_t>(cpu->getPC());
+#if defined(K_RESEARCH_COMPLETION)
+                const auto frameBefore=cpu->getSP();
+                const bool frameAdmission=cpu->pending_irqs&&!(cpu->ccr&0x80);
+#endif
                 if constexpr(Development)if(overlay&&!developmentOverlayVerified){
                     developmentRanges([&](uint32_t first,uint32_t last){
                         if(!std::equal(rom.begin()+first,rom.begin()+last,cpu->memory+0x400000+first))
@@ -437,6 +442,9 @@ namespace kstation
                     if constexpr(Development)if(!irqStep&&NativeDspTransfer::candidate(pc)){
                         irqStep=dspTransfers.step(*cpu);if(irqStep)++nativeDspTransferSteps;
                     }
+                    if constexpr(Development)if(!irqStep&&midiEvents.active()){
+                        irqStep=midiEvents.step(*cpu);if(irqStep)++nativeMidiEventSteps;
+                    }
                     if constexpr(Development)if(!irqStep){
                         irqStep=developmentServices.step(*cpu);if(irqStep)++nativeControllerServiceSteps;
                     }
@@ -452,7 +460,7 @@ namespace kstation
                     if constexpr(Development)if(!irqStep&&NativeVoiceUpdate::candidate(pc)){
                         irqStep=voiceUpdate.step(*cpu);if(irqStep)++nativeVoiceUpdateSteps;
                     }
-                    if constexpr(Development)if(!irqStep&&NativeMidiEvents::candidate(pc)){
+                    if constexpr(Development)if(!irqStep&&(midiEvents.active()||NativeMidiEvents::candidate(pc))){
                         irqStep=midiEvents.step(*cpu);if(irqStep)++nativeMidiEventSteps;
                     }
                     if constexpr(Development)if(!irqStep&&NativeForeground::candidate(pc)){
@@ -476,6 +484,9 @@ namespace kstation
                         cpu->step();}}
                 }
                 else cpu->step();
+#if defined(K_RESEARCH_COMPLETION)
+                kCompletionFrame(frameBefore,cpu->getSP(),pc,frameAdmission);
+#endif
                 if constexpr(Development)developmentServices.afterPhase(*cpu,pc,midiEvents);
                 ++instructions;
                 if constexpr(Native)nativeTimers->tick();else timers->tick();

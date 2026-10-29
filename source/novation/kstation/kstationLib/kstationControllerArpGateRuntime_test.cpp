@@ -1,0 +1,33 @@
+#include "kstationControllerArpGateRuntime.h"
+#include "h8s/h8s.hpp"
+#include <array>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <fstream>
+#include <memory>
+#include <new>
+#include <vector>
+namespace {
+bool watch=false;uint64_t allocations=0;
+void check(bool v,const char*why){if(!v)throw std::runtime_error(why);}
+class Original:public H8SEmulator {public:void histories(int r,int w){lastread=r;lastwrite=w;}};
+struct Event{uint64_t clocks;uint32_t address;uint8_t value;bool write;};
+template<class S>struct Tape {S&state;std::array<Event,64>events{};unsigned count=0;explicit Tape(S&s):state(s){}uint8_t readValue(uint32_t a){auto v=state.memory[a];events[count++]={state.cycles,a,v,false};return v;}void writeValue(uint32_t a,uint8_t v){events[count++]={state.cycles,a,v,true};state.memory[a]=v;}};
+struct OriginalBus:public H8SDevice {Tape<Original>&t;explicit OriginalBus(Tape<Original>&v):t(v){}uint8_t read(uint32_t a)override{return t.readValue(a);}void write(uint32_t a,uint8_t v)override{t.writeValue(a,v);}};
+struct NativeBus:public kstation::ControllerResourceBus {Tape<kstation::ControllerDeviceState>&t;explicit NativeBus(Tape<kstation::ControllerDeviceState>&v):t(v){}bool mapped(uint32_t a)const override{return (a>=0xbfaa&&a<0xd400)||(a>=0xac34&&a<0xad34)||(a>=0xfffe50&&a<0xfffe54)||(a>=0xc598&&a<0xc59a)||(a>=0x600000&&a<0x600010)||(a>=0xd022&&a<0xd080)||a==0xfffff2;}uint8_t read(uint32_t a)override{return t.readValue(a);}void write(uint32_t a,uint8_t v)override{t.writeValue(a,v);}};
+struct Fixture {
+ std::unique_ptr<Original>a=std::make_unique<Original>();std::unique_ptr<kstation::ControllerDeviceState>b=std::make_unique<kstation::ControllerDeviceState>();Tape<Original>x{*a};Tape<kstation::ControllerDeviceState>y{*b};OriginalBus ob{x};NativeBus nb{y};kstation::ControllerInterruptRuntime irq;kstation::ControllerArpGateRuntime runtime;uint64_t cases=0,phases=0,io=0,shorts=0,children=0;
+ explicit Fixture(const std::vector<uint8_t>&rom){a->loadmem(rom.data(),unsigned(rom.size()),0);b->loadMemory(rom.data(),rom.size(),0);b->loadMemory(rom.data(),rom.size(),0x400000);a->memmap(&ob,0xbfaa,0x1456);a->memmap(&ob,0xac34,0x100);a->memmap(&ob,0xfffe50,4);a->memmap(&ob,0xfffff2,1);b->attachBus(&nb);check(irq.bindVerifiedFirmware(*b,rom.data(),rom.size()),"IRQ binding");check(runtime.bindVerifiedFirmware(*b,rom.data(),rom.size()),"arp binding");for(auto entry:{0x255a,0x759a}){a->memory[entry]=0x54;a->memory[entry+1]=0x70;}}
+ void run(unsigned kind,unsigned flags,unsigned count,bool match,bool pending,bool fault){(void)kind;(void)count;(void)match;(void)fault;runtime.reset();a->cycles=b->cycles=100;for(auto&v:a->regs)v.er=0;a->setSP(0xffff00);a->memory[0xffff00]=0;a->memory[0xffff01]=5;a->memory[0xffff02]=0;a->memory[0xffff03]=0;auto put=[&](uint32_t x,uint8_t v){a->memory[x]=b->memory[x]=v;};for(unsigned i=0;i<256;++i)put(0xcf00+i,uint8_t(i*53+flags*7));put(0xbfaa,0);put(0xbfab,0);put(0xbfac,0xcf);put(0xbfad,0);for(unsigned i=0;i<0x1a;++i)put(0xcd26+i,uint8_t(flags*13+i*31));for(unsigned i=0;i<4;++i)put(0xfffe50+i,uint8_t(flags+i*17));put(0xcc02,uint8_t(flags));put(0xfffff2,8);a->ccr=uint8_t(flags|0x80);a->exr=0;a->pending_irqs=b->pendingIrqs=pending?(uint64_t(1)<<36):0;a->pending_irqs_high=b->pendingIrqsHigh=0;a->interruptMode2=b->interruptMode2=false;a->histories(-1,-1);b->lastRead=b->lastWrite=-1;irq.setMask(kstation::ControllerInterruptRuntime::Mask::Disabled);put(0xcd3d,uint8_t(flags&1));put(0xcd34,0);put(0xcd35,uint8_t(flags));put(0xcd3e,0);put(0xcd3f,0x40);put(0xcd26,uint8_t(flags));put(0xcd39,uint8_t(flags%3));put(0xcd27,uint8_t(flags));for(unsigned j=0;j<16;++j)put(0xcbee +j,uint8_t((flags&4)?1:0));a->pc=a->makepc(kind?0x35bc:0x359c);check(runtime.start(kind!=0),"arp start");++cases;
+ while(runtime.active()){x.count=y.count=0;auto req=runtime.request();if(req.waiting){a->step();if(pending)(void)b->read8(0xfffff2);b->clockInternal(7);b->lastRead=-1;check(runtime.completeChild(req.child,req.policy),"arp child");++children;}else{auto cost=runtime.nextClocks(*b,irq);check(cost,"arp next phase");if(phases%31==0)for(unsigned budget=0;budget<cost;++budget){auto t=b->cycles;auto r=runtime.advanceBefore(*b,irq,budget);check(!r.clocks&&t==b->cycles&&!y.count,"short budget");++shorts;}auto r=runtime.advanceBefore(*b,irq,cost);check(r.clocks==cost,"arp phase");a->step();}if(a->cycles!=b->cycles){std::fprintf(stderr,"case%llu phase%llu pc%x clock%llu/%llu\n",cases,phases,a->getPC(),a->cycles,b->cycles);throw std::runtime_error("clocks differ");}if(x.count!=y.count){std::fprintf(stderr,"counts case%llu phase%llu pc%x %u/%u\n",cases,phases,a->getPC(),x.count,y.count);for(unsigned j=0;j<x.count;++j)std::fprintf(stderr,"orig %x\n",x.events[j].address);for(unsigned j=0;j<y.count;++j)std::fprintf(stderr,"new %x\n",y.events[j].address);throw std::runtime_error("event count");}for(unsigned i=0;i<x.count;++i){auto p=x.events[i],q=y.events[i];if(!(p.clocks==q.clocks&&p.address==q.address&&p.value==q.value&&p.write==q.write)){std::fprintf(stderr,"case%llu phase%llu pc%x event %x/%x t%llu/%llu v%x/%x\n",cases,phases,a->getPC(),p.address,q.address,p.clocks,q.clocks,p.value,q.value);throw std::runtime_error("event differs");}}++phases;io+=y.count;check(phases<20000000,"stalled");}
+ check(a->getPC()==0x50000,"return differs");for(unsigned i=0;i<0x1a;++i)check(a->memory[0xcd26+i]==b->memory[0xcd26+i],"resource differs");}
+
+};
+}
+void*operator new(std::size_t n){if(watch)++allocations;if(auto*p=std::malloc(n?n:1))return p;throw std::bad_alloc();}void*operator new[](std::size_t n){return ::operator new(n);}void operator delete(void*p)noexcept{std::free(p);}void operator delete[](void*p)noexcept{std::free(p);}void operator delete(void*p,std::size_t)noexcept{std::free(p);}void operator delete[](void*p,std::size_t)noexcept{std::free(p);}
+int main(int argc,char**argv){try{if(argc<2)return 77;std::ifstream in(argv[1],std::ios::binary);std::vector<uint8_t>rom{std::istreambuf_iterator<char>(in),{}};check(rom.size()==49728,"Private ROM size");Fixture f(rom);watch=true;
+ for(unsigned k=0;k<2;++k)for(unsigned flags=0;flags<256;++flags)f.run(k,flags,flags%4,flags&1,flags&2,false);
+ 
+ watch=false;check(!allocations,"DSP domain processing allocated");std::printf("{\"passed\":true,\"graphs\":%llu,\"original_phases\":%llu,\"ordered_io\":%llu,\"short_budget_checks\":%llu,\"children\":%llu,\"processing_allocations\":%llu}\n",f.cases,f.phases,f.io,f.shorts,f.children,allocations);return 0;
+ }catch(const std::exception&e){watch=false;std::fprintf(stderr,"FAIL %s\n",e.what());return 1;}}

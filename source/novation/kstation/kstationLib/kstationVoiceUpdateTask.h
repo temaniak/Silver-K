@@ -214,7 +214,7 @@ private:void next(){stage_=S(unsigned(stage_)+1);}S stage_=S::ReadValue;uint32_t
 class VoiceParameterFinalFloatTask final {
 public:
  enum class Stage{Invert,SaveValue,SetMultiplier,Multiply,SetThreshold,SubtractThreshold,SelectCorrection,ClearCorrectionLow,AddCorrection,ReadOffset,AddOffset,DispatchFloat,AwaitFloat,Complete};using S=Stage;enum class Child{None,Float,Dsp};struct Credits{unsigned read=0,stack=0;};
- explicit VoiceParameterFinalFloatTask(uint8_t value):raw_(value){}Stage stage()const{return stage_;}bool complete()const{return stage_==S::Complete;}Child child()const{return stage_==S::AwaitFloat?Child::Float:Child::None;}
+ explicit VoiceParameterFinalFloatTask(uint8_t value):raw_(value){}Stage stage()const{return stage_;}bool complete()const{return stage_==S::Complete;}uint32_t converted()const{return converted_;}Child child()const{return stage_==S::AwaitFloat?Child::Float:Child::None;}
  bool resumeChild(uint32_t value=0){if(stage_==S::AwaitFloat){converted_=value;stage_=S::Complete;return true;}return false;}
  unsigned lane()const{return lane_;}uint32_t valueAddress()const{constexpr unsigned a[]={0x3b,0x3c,0x3e,0x3f,0x41,0x43,0x44,0x46};return patch_+a[lane_];}uint16_t threshold()const{return 0x76;}uint32_t offsetAddress()const{return 0xbfa6;}uint16_t input()const{return value_;}uint32_t word()const{return (converted_>>8)&0xffffff;}
  unsigned nextClocks(const Credits&c)const{switch(stage_){case S::ReadOffset:return 9+c.read;case S::Multiply:return 15;case S::DispatchFloat:return c.stack;case S::AwaitFloat:case S::Complete:return 0;default:return 3;}}

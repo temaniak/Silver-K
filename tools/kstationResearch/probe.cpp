@@ -1,3 +1,5 @@
+#include <type_traits>
+#include <utility>
 #include "kstationHardware.h"
 #include "h8s/h8s.hpp"
 #include <algorithm>
@@ -80,6 +82,13 @@ void setup(kstation::Hardware& board,const std::string& scenario){
  unsigned keys=scenario=="idle"||scenario=="notes"||scenario=="sustain"||scenario=="program"?0:scenario=="held1"?1:8;
  for(unsigned n=0;n<keys;++n)send(board,{0x90,uint8_t(48+n*3),100});
 }
+template<class C,class=void>struct HasDiagnosticInterface:std::false_type{};
+template<class C>struct HasDiagnosticInterface<C,std::void_t<decltype(std::declval<C&>().diagnosticMemory())>>:std::true_type{};
+template<class C>const uint8_t*probeMemory(C&c){if constexpr(HasDiagnosticInterface<C>::value)return c.diagnosticMemory();else return c.core().memory;}
+template<class C>uint16_t probeRead16(C&c,uint32_t a){if constexpr(HasDiagnosticInterface<C>::value)return c.diagnosticRead16(a);else return c.core().read16(int(a));}
+template<class C>void probeWrite8(C&c,uint32_t a,uint8_t v){if constexpr(HasDiagnosticInterface<C>::value)c.diagnosticWrite8(a,v);else c.core().write8(int8_t(v),int(a));}
+template<class C>void probeWrite16(C&c,uint32_t a,uint16_t v){if constexpr(HasDiagnosticInterface<C>::value)c.diagnosticWrite16(a,v);else c.core().write16(int16_t(v),int(a));}
+template<class C>void probeInterrupt(C&c,int vector){if constexpr(HasDiagnosticInterface<C>::value)c.diagnosticInterrupt(vector);else c.core().interrupt(vector);}
 struct Result{uint64_t hash=14695981039346656037ull,frames=0;double peak=0,squares=0,wall=0,cpu=0,maxBlock=0;uint64_t overBudget=0;};
 Result render(kstation::Hardware& board,uint64_t frames,const std::vector<Event>& events,bool paced,unsigned block,std::vector<int32_t>* pcm=nullptr){
  Result r;size_t next=0;const auto begin=Clock::now();const double before=cpuSeconds();
@@ -87,11 +96,11 @@ Result render(kstation::Hardware& board,uint64_t frames,const std::vector<Event>
   for(;cursor<end;++cursor){while(next<events.size()&&events[next].frame==cursor){if(events[next].size>=4){
      // Explicit synthetic transport fixture, identical in all oracle modes.
      // Ordinary musical scenarios never write guest queue/latch state.
-     auto& c=board.controller().core();
-     if(events[next].size==4)c.write8(int8_t(0xf8),0xfffe73);
-     else {const auto consumer=c.read16(0xc494);c.write8(int8_t(events[next].bytes[0]),0xc496+consumer);c.write16(int16_t((consumer+1)&255),0xc492);}
-     c.interrupt(54);
-    }else if(!events[next].size)board.controller().core().interrupt(events[next].bytes[0]);else require(board.enqueueMidi(events[next].bytes.data(),events[next].size),"Event MIDI queue full");++next;}
+     auto& c=board.controller();
+     if(events[next].size==4)probeWrite8(c,0xfffe73,0xf8);
+     else {const auto consumer=probeRead16(c,0xc494);probeWrite8(c,0xc496+consumer,events[next].bytes[0]);probeWrite16(c,0xc492,uint16_t((consumer+1)&255));}
+     probeInterrupt(c,54);
+    }else if(!events[next].size)probeInterrupt(board.controller(),events[next].bytes[0]);else require(board.enqueueMidi(events[next].bytes.data(),events[next].size),"Event MIDI queue full");++next;}
    const auto frame=board.renderSample();for(auto v:frame){const double x=v/8388608.0;require(std::isfinite(x),"Nonfinite PCM");r.peak=std::max(r.peak,std::abs(x));r.squares+=x*x;hashWord(r.hash,uint32_t(v));if(pcm)pcm->push_back(v);}
   }
   const double spent=std::chrono::duration<double>(Clock::now()-blockBegin).count();r.maxBlock=std::max(r.maxBlock,spent);if(spent>block/kstation::DSP::SampleRate)++r.overBudget;
@@ -105,6 +114,13 @@ void byteFile(const std::string&path,const void* data,size_t bytes){std::ofstrea
 #if defined(K_RESEARCH_COMPLETION)
 namespace {std::array<uint64_t,65536> completionFallbackAll{},completionFallbackWindow{};uint64_t completionFallbackOutside=0;bool completionRecording=false;}
 void kCompletionFallback(uint32_t pc){if(pc<completionFallbackAll.size()){++completionFallbackAll[pc];if(completionRecording)++completionFallbackWindow[pc];}else ++completionFallbackOutside;}
+namespace {uint64_t completionFrames=0,completionFrameWrites=0,completionFrameOutside=0;uint32_t completionFrameMin=0xffffff;std::array<uint8_t,512>completionFrameBytes{};std::array<uint64_t,65536>completionFrameOverlapSites{};}
+void kCompletionFrame(uint32_t before,uint32_t after,uint32_t pc,bool admission){
+ ++completionFrames;auto record=[&](uint32_t low,unsigned bytes){++completionFrameWrites;completionFrameMin=std::min(completionFrameMin,low&0xffffff);bool overlap=false;for(unsigned i=0;i<bytes;++i){auto at=(low+i)&0xffffff;if(at>=0xfffd10&&at<0xffff10)completionFrameBytes[at-0xfffd10]=1;else ++completionFrameOutside;if(at>=0xfffd28&&at<=0xfffe91)overlap=true;}if(overlap&&pc<completionFrameOverlapSites.size())++completionFrameOverlapSites[pc];};
+ if(admission){record(before-4,4);before-=4;}
+ if(after<before&&before-after<=256)record(after,before-after);
+}
+
 #endif
 
 void kResearchStep(unsigned pc,unsigned long long begin,unsigned long long end){if(recording&&pc<pcCount.size()){++pcCount[pc];pcCycles[pc]+=end-begin;}}
@@ -193,10 +209,10 @@ recording=false;diagnostics.stop();board.setPerformanceDiagnostics(nullptr);
   for(unsigned n=0;n<pcCount.size();++n)if(pcCount[n]||portReads[n]||portWrites[n])hist<<std::hex<<n<<std::dec<<'\t'<<pcCount[n]<<'\t'<<pcCycles[n]<<'\t'<<portReads[n]<<'\t'<<portWrites[n]<<'\n';
  }
  const auto flash=board.controller().saveFlash();uint64_t flashHash=14695981039346656037ull;for(auto b:flash)hashWord(flashHash,b);
- const auto& core=board.controller().core();uint64_t memoryHash=14695981039346656037ull;for(auto b:core.memory)hashWord(memoryHash,b);
+ const auto* coreMemory=probeMemory(board.controller());uint64_t memoryHash=14695981039346656037ull;for(size_t i=0;i<(1u<<24);++i)hashWord(memoryHash,coreMemory[i]);
  uint64_t midiHash=14695981039346656037ull,midiCount=0;uint8_t midiByte;std::vector<uint8_t> capturedMidi;while(board.popMidiOut(midiByte)){hashWord(midiHash,midiByte);++midiCount;if(capture)capturedMidi.push_back(midiByte);}
  if(capture)byteFile(prefix+".midi",capturedMidi.data(),capturedMidi.size());
- if(capture){byteFile(prefix+".memory",core.memory,sizeof(core.memory));byteFile(prefix+".flash",flash.data(),flash.size());}
+ if(capture){byteFile(prefix+".memory",coreMemory,1u<<24);byteFile(prefix+".flash",flash.data(),flash.size());}
  std::ofstream out(prefix+".json");out<<std::setprecision(12)<<"{\n\"schema\":\"kstation.research.v1\",\n\"scenario\":\""<<scenario<<"\",\"mode\":\""<<mode<<"\",\"pacing\":\""<<(paced?"paced":"offline")<<"\",\n";
  out<<"\"block\":"<<block<<",\"native_rate\":"<<kstation::DSP::SampleRate<<",\"frames\":"<<result.frames<<",\"audio_seconds\":"<<result.frames/kstation::DSP::SampleRate<<",\"warm_seconds\":"<<warmSeconds<<",\n";
  out<<"\"controller_mode\":\""<<controllerMode<<"\",\n";
@@ -215,6 +231,7 @@ recording=false;diagnostics.stop();board.setPerformanceDiagnostics(nullptr);
  out<<"\"native_clock_steps\":"<<after.nativeClockSteps-before.nativeClockSteps<<",\"native_internal_clock_calls\":"<<after.nativeInternalClockCalls-before.nativeInternalClockCalls<<",\"native_external_clock_calls\":"<<after.nativeExternalClockCalls-before.nativeExternalClockCalls<<",\"native_clock_sync_updates\":"<<after.nativeClockSyncUpdates-before.nativeClockSyncUpdates<<",\n";
 #endif
 #if defined(K_RESEARCH_COMPLETION)
+ out<<"\"full_native_ready\":false,\"implementation\":\"caller-projection-development\",\n";
  out<<"\"native_controller_service_steps\":"<<after.nativeControllerServiceSteps-before.nativeControllerServiceSteps<<",\n";
  out<<"\"cumulative_interpreted_steps\":"<<after.interpretedSteps<<",\"cumulative_native_startup_steps\":"<<after.nativeStartupSteps<<",\"cumulative_native_controller_service_steps\":"<<after.nativeControllerServiceSteps<<",\n";
  out<<"\"native_adc_steps\":"<<after.nativeAdcSteps-before.nativeAdcSteps<<",\"native_adc_entries\":"<<after.nativeAdcEntries-before.nativeAdcEntries<<",\"native_adc_returns\":"<<after.nativeAdcReturns-before.nativeAdcReturns<<",\n";
@@ -231,6 +248,9 @@ recording=false;diagnostics.stop();board.setPerformanceDiagnostics(nullptr);
  out<<"\"dropped_frames\":"<<board.dsp().audioFramesDropped()-beforeDrop<<",\"block_compute_over_budget\":"<<result.overBudget<<",\"max_block_compute_seconds\":"<<result.maxBlock<<",\"h8_sample_count\":"<<h8.count<<",\"dsp_sample_count\":"<<dsp.count<<",\"h8_sampled_wall_ns\":"<<h8.total<<",\"dsp_sampled_wall_ns\":"<<dsp.total<<",\"flash_fnv\":\""<<flashHash<<"\",\"observed_port_fnv\":\""<<portHash<<"\",\"memory_fnv\":\""<<memoryHash<<"\",\"midi_out_count\":"<<midiCount<<",\"midi_out_fnv\":\""<<midiHash<<"\",\n";
  out<<"\"before_patch\":[";for(unsigned i=0;i<128;++i)out<<(i?",":"")<<unsigned(beforePatch[i]);out<<"],\"after_patch\":[";for(unsigned i=0;i<128;++i)out<<(i?",":"")<<unsigned(patch[i]);out<<"],\"bank\":"<<unsigned(after.currentBank)<<",\"program\":"<<unsigned(after.currentProgram)<<"\n}\n";
  require(bool(out),"Cannot save JSON");
+#if defined(K_RESEARCH_COMPLETION)
+ {std::ofstream frames(prefix+".stack.json");frames<<"{\"observed_phases\":"<<completionFrames<<",\"write_intervals\":"<<completionFrameWrites<<",\"lowest_write_address\":"<<completionFrameMin<<",\"bytes_outside_onchip\":"<<completionFrameOutside<<",\"global_overlap_sites\":[";bool comma=false;for(unsigned pc=0;pc<completionFrameOverlapSites.size();++pc)if(completionFrameOverlapSites[pc]){frames<<(comma?",":"")<<"{\"address\":"<<pc<<",\"count\":"<<completionFrameOverlapSites[pc]<<"}";comma=true;}frames<<"],\"written_addresses\":[";comma=false;for(unsigned i=0;i<completionFrameBytes.size();++i)if(completionFrameBytes[i]){frames<<(comma?",":"")<<(0xfffd10+i);comma=true;}frames<<"]}\n";require(bool(frames),"Cannot save frame audit");}
+#endif
 #if defined(K_RESEARCH_COMPLETION)
  {std::ofstream coverage(prefix+".remaining.json");coverage<<"{\"outside_low_image\":"<<completionFallbackOutside<<",\"entries\":[";bool comma=false;
   for(unsigned pc=0;pc<completionFallbackAll.size();++pc)if(completionFallbackAll[pc]){coverage<<(comma?",":"")<<"{\"address\":"<<pc<<",\"total\":"<<completionFallbackAll[pc]<<",\"window\":"<<completionFallbackWindow[pc]<<"}";comma=true;}coverage<<"]}\n";require(bool(coverage),"Cannot save remaining coverage");}

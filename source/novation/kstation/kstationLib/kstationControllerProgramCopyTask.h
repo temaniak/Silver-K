@@ -1,0 +1,15 @@
+#pragma once
+#include "kstationProgramStateTask.h"
+#include "kstationControllerPatchUnpackTask.h"
+#include <optional>
+namespace kstation {
+class ControllerProgramCopyTask final {
+ using C=ProgramCopyTask;using CS=C::Stage;using M=ProgramMirrorClearTask;using MS=M::Stage;using D=ProgramDspResetTask;using DS=D::Stage;
+public:enum class Service:uint8_t{None,DspWrite,RefreshPanel,InitializeVoice};struct Request{Service service=Service::None;uint16_t address=0;uint32_t word=0;uint8_t part=0;};explicit ControllerProgramCopyTask(uint32_t source):copy_(source&0xffffff){}bool complete()const{return copy_.complete()&&!mirror_&&!unpack_&&!dsp_;}Request request()const{if(dsp_&&dsp_->awaiting())return {Service::DspWrite,0x802b,1,0};if(copy_.awaiting()){auto s=copy_.stage();return {s==CS::ClearVoice?Service::RefreshPanel:s==CS::Return?Service::InitializeVoice:Service::None,0,0,0};}return {};}
+ bool resume(Service s){if(s==Service::None||request().service!=s)return false;if(dsp_)return dsp_->resumeChild();return copy_.resumeChild();}
+ bool stackWrites()const{if(unpack_)return unpack_->stackWrites();if(dsp_)return dsp_->stage()==DS::Send;if(mirror_)return false;auto s=copy_.stage();return s==CS::Invalidate||s==CS::Unpack||s==CS::ResetDsp||s==CS::RefreshPanel||s==CS::InitVoice;}
+ unsigned nextClocks(int previous=-1)const{if(request().service!=Service::None)return 0;if(unpack_)return unpack_->nextClocks(previous);FlashCredits c;c.read=3;c.write=3;if(dsp_)return dsp_->nextClocks(c);if(mirror_){c.write=bus(0xcf36+mirror_->index(),previous);return mirror_->nextClocks(c);}c.read=bus(copy_.source()+copy_.index(),-1);c.write=bus(0xba5c+copy_.index(),previous);return copy_.nextClocks(c);}
+ template<class R,class W>unsigned advanceBefore(unsigned budget,R&&read,W&&write,int previous=-1){auto cost=nextClocks(previous);if(!cost||cost>budget)return 0;if(unpack_){auto used=unpack_->advanceBefore(cost,read,write,previous);if(unpack_->complete()){unpack_.reset();copy_.resumeChild();}return used;}FlashCredits c;c.read=3;c.write=3;if(dsp_){auto used=dsp_->advanceBefore(cost,c);if(dsp_->complete()){dsp_.reset();copy_.resumeChild();}return used;}if(mirror_){c.write=bus(0xcf36+mirror_->index(),previous);auto used=mirror_->advanceBefore(cost,c,[&](unsigned i,uint8_t v){write(0xcf36+i,v,1,cost);});if(mirror_->complete()){mirror_.reset();copy_.resumeChild();}return used;}c.read=bus(copy_.source()+copy_.index(),-1);c.write=bus(0xba5c+copy_.index(),previous);auto used=copy_.advanceBefore(cost,c,[&](unsigned i){return read(copy_.source()+i,1,cost-2);},[&](unsigned i,uint8_t v){write(0xba5c+i,v,1,cost);});if(copy_.awaiting()){auto s=copy_.stage();if(s==CS::Unpack)mirror_.emplace();else if(s==CS::ResetDsp)unpack_.emplace();else if(s==CS::RefreshPanel)dsp_.emplace();}return used;}
+private:static unsigned bus(uint32_t a,int p){a&=0xffffff;if(a<0x400000||(a>=0xfffd10&&a<0xffffa0))return (p&1)||a!=uint32_t(p|1)?(a<0x400000?3:1):0;return a>=0xffffa0?1:3;}C copy_;std::optional<M>mirror_{};std::optional<ControllerPatchUnpackTask>unpack_{};std::optional<D>dsp_{};
+};
+}

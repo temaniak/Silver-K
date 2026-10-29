@@ -31,14 +31,14 @@ namespace kstation {
 class PatchPackRefreshTask final {
 public:
  enum class Stage:uint8_t {Begin,Pack,Write,Increment,Compare,Select,Return,AwaitChild,Complete};
- Stage stage()const{return stage_;}bool complete()const{return stage_==Stage::Complete;}bool awaitingChild()const{return stage_==Stage::AwaitChild;}bool resume(){if(!awaitingChild())return false;stage_=Stage::Write;return true;}
+ Stage stage()const{return stage_;}uint8_t index()const{return index_;}bool complete()const{return stage_==Stage::Complete;}bool awaitingChild()const{return stage_==Stage::AwaitChild;}bool resume(){if(!awaitingChild())return false;stage_=Stage::Write;return true;}
  template<class W>bool advance(W&&w){switch(stage_){case Stage::Begin:index_=1;stage_=Stage::Pack;break;case Stage::Pack:stage_=Stage::AwaitChild;break;case Stage::Write:w();stage_=Stage::Increment;break;case Stage::Increment:++index_;stage_=Stage::Compare;break;case Stage::Compare:stage_=Stage::Select;break;case Stage::Select:stage_=index_<=12?Stage::Pack:Stage::Return;break;case Stage::Return:stage_=Stage::Complete;break;case Stage::AwaitChild:case Stage::Complete:return false;}return true;}
 private:Stage stage_=Stage::Begin;uint8_t index_=0;
 };
 class PatchPackSelectTask final {
 public:
  enum class Stage:uint8_t {Save,Decrement,ShiftOne,ShiftTwo,ExtendWord,ExtendLong,ReadTarget,BindPatch,Call,Restore,Return,AwaitChild,Complete};
- explicit PatchPackSelectTask(uint8_t index):index_(index){}Stage stage()const{return stage_;}bool complete()const{return stage_==Stage::Complete;}bool awaitingChild()const{return stage_==Stage::AwaitChild;}uint32_t target()const{return target_;}bool resume(){if(!awaitingChild())return false;stage_=Stage::Restore;return true;}
+ explicit PatchPackSelectTask(uint8_t index):index_(index){}Stage stage()const{return stage_;}bool complete()const{return stage_==Stage::Complete;}bool awaitingChild()const{return stage_==Stage::AwaitChild;}uint32_t target()const{return target_;}uint8_t offset()const{return index_;}bool resume(){if(!awaitingChild())return false;stage_=Stage::Restore;return true;}
  template<class R>bool advance(R&&r){switch(stage_){case Stage::Save:stage_=Stage::Decrement;break;case Stage::Decrement:--index_;stage_=Stage::ShiftOne;break;case Stage::ShiftOne:index_=uint8_t(index_<<1);stage_=Stage::ShiftTwo;break;case Stage::ShiftTwo:index_=uint8_t(index_<<1);stage_=Stage::ExtendWord;break;case Stage::ExtendWord:stage_=Stage::ExtendLong;break;case Stage::ExtendLong:stage_=Stage::ReadTarget;break;case Stage::ReadTarget:target_=r(0xba2c+index_);stage_=Stage::BindPatch;break;case Stage::BindPatch:stage_=Stage::Call;break;case Stage::Call:stage_=Stage::AwaitChild;break;case Stage::Restore:stage_=Stage::Return;break;case Stage::Return:stage_=Stage::Complete;break;case Stage::AwaitChild:case Stage::Complete:return false;}return true;}
 private:Stage stage_=Stage::Save;uint8_t index_;uint32_t target_=0;
 };

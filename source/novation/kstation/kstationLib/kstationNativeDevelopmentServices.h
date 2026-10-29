@@ -36,13 +36,26 @@
 #include "kstationNativeDspTrigger.h"
 #include "kstationNativeUiEncoder.h"
 #include "kstationNativeKeyOwner.h"
+#include "kstationNativeVoiceFeedback.h"
+#include "kstationNativeMainUi.h"
+#include "kstationNativeMidiWrappersOwner.h"
+#include "kstationNativeDisplayFormatOwner.h"
+#include "kstationNativePeriodicDisplay.h"
+#include "kstationNativeUiPanel.h"
 #include "kstationNativeMidiEvents.h"
+#include <optional>
 namespace kstation {
 // Development-only caller projection composition. Explicit child owners may
 // yield to the reference oracle; this is not the CPU-independent controller.
 class NativeDevelopmentServices final {
 public:
  template<class F> static void ranges(F&&f){
+  for(auto r:NativeUiPanel::CodeRanges)f(r.begin,r.end);
+  for(auto r:NativePeriodicDisplay::CodeRanges)f(r.begin,r.end);
+  for(auto r:NativeDisplayFormat::CodeRanges)f(r.begin,r.end);
+  for(auto r:NativeMidiWrappers::CodeRanges)f(r.begin,r.end);
+  for(auto r:NativeMainUi::CodeRanges)f(r.begin,r.end);
+  for(auto r:NativeVoiceFeedback::CodeRanges)f(r.begin,r.end);
   for(auto r:NativeKeyOwner::CodeRanges)f(r.begin,r.end);
   for(auto r:NativeUiEncoder::CodeRanges)f(r.begin,r.end);
   for(auto r:NativeDspTrigger::CodeRanges)f(r.begin,r.end);
@@ -82,6 +95,13 @@ public:
   for(auto r:NativeMidiSendControl::CodeRanges)f(r.begin,r.end);
  }
  void reset(){
+  floatConvert_.reset();
+  uiPanel_.reset();
+  periodicDisplay_.reset();
+  displayFormat_.reset();
+  midiWrappers_.reset();
+  mainUi_.reset();
+  voiceFeedback_.reset();
   keyEvents_.reset();
   uiEncoder_.reset();
   dspTrigger_.reset();
@@ -122,6 +142,26 @@ public:
  }
  bool step(Stage1Cpu&c){
   const auto pc=uint32_t(c.getPC());
+  // 610E can request conversion while the MIDI ancestor is suspended.
+  // Its independent semantic leaf must not borrow the ancestor's job stack.
+  if(pc>=0x5c04&&pc<0x5c3a){
+   if(!floatConvert_&&pc==0x5c04)floatConvert_.emplace(uint16_t(c.reg16(0)));
+   if(floatConvert_&&floatConvert_->step(c)){if(floatConvert_->task().complete())floatConvert_.reset();return true;}
+  }
+  // 4444 is both the periodic task suffix and the cold clock initializer.
+  // An admitted parent keeps its continuation before a new leaf admission.
+  if(periodicDisplay_.active()&&NativePeriodicDisplay::candidate(pc)&&periodicDisplay_.step(c))return true;
+  if(uiPanel_.active()&&NativeUiPanel::candidate(pc)&&uiPanel_.step(c))return true;
+  // Retire a completed tail child before its caller consumes the return
+  // boundary. These owners perform no IO when only retiring a continuation.
+  if(voiceGlobal_.active()&&voiceGlobal_.step(c))return true;
+  if(flashCommit_.active()&&flashCommit_.step(c))return true;
+  if(transposeApply_.active()&&transposeApply_.step(c))return true;
+  if(displayFormat_.active()&&displayFormat_.step(c))return true;
+  if(sysex_.active()&&sysex_.step(c))return true;
+  if(arp_.active()&&arp_.step(c))return true;
+  if(keyEvents_.active()&&keyEvents_.step(c))return true;
+  if(midiWrappers_.active()&&midiWrappers_.step(c))return true;
   if(parameterEdit_.ownsPackChild()&&NativePatchPack::candidate(pc))return parameterEdit_.step(c);
   if(NativeStartupControl::candidate(pc)&&startupControl_.step(c))return true;
   if(NativeStartupServices::candidate(pc)&&startupServices_.step(c))return true;
@@ -149,23 +189,40 @@ public:
   if(NativeVoiceEffects::candidate(pc)&&voiceEffects_.step(c))return true;
   if(NativeVoiceSync::candidate(pc)&&voiceSync_.step(c))return true;
   if(NativeVoiceGlobal::candidate(pc)&&voiceGlobal_.step(c))return true;
-  if(NativeArp::candidate(pc)&&arp_.step(c))return true;
-  if(NativeMidiSysEx::candidate(pc)&&sysex_.step(c))return true;
+  if((arp_.active()||NativeArp::candidate(pc))&&arp_.step(c))return true;
+  if((sysex_.active()||NativeMidiSysEx::candidate(pc))&&sysex_.step(c))return true;
   if(NativeMidiInitOwner::candidate(pc)&&midiInit_.step(c))return true;
   if(NativePatchPack::candidate(pc)&&patchPack_.step(c))return true;
-  if(NativeFlashCommitOwner::candidate(pc)&&flashCommit_.step(c))return true;
-  if(NativeTransposeApplyOwner::candidate(pc)&&transposeApply_.step(c))return true;
+  if((flashCommit_.active()||NativeFlashCommitOwner::candidate(pc))&&flashCommit_.step(c))return true;
+  if((transposeApply_.active()||NativeTransposeApplyOwner::candidate(pc))&&transposeApply_.step(c))return true;
   if(NativeDisplayNoticeOwner::candidate(pc)&&displayNotice_.step(c))return true;
   if(NativeMidiSendControl::candidate(pc)&&midiSendControl_.step(c))return true;
   if(NativeDspTrigger::candidate(pc)&&dspTrigger_.step(c))return true;
   if(NativeUiEncoder::candidate(pc)&&uiEncoder_.step(c))return true;
-  if(NativeKeyOwner::candidate(pc)&&keyEvents_.step(c))return true;
+  if((keyEvents_.active()||NativeKeyOwner::candidate(pc))&&keyEvents_.step(c))return true;
+  if(NativeVoiceFeedback::candidate(pc)&&voiceFeedback_.step(c))return true;
+  if(NativeMainUi::candidate(pc)&&mainUi_.step(c))return true;
+  if((midiWrappers_.active()||NativeMidiWrappers::candidate(pc))&&midiWrappers_.step(c))return true;
+  if(NativeDisplayFormat::candidate(pc)&&displayFormat_.step(c))return true;
+  if(NativePeriodicDisplay::candidate(pc)&&periodicDisplay_.step(c))return true;
+  if(NativeUiPanel::candidate(pc)&&uiPanel_.step(c))return true;
   return false;
  }
  // Admit direct children from the call site just executed. Return addresses
  // come from verified source graph edges, never from reading a guest frame.
  void afterPhase(Stage1Cpu&c,uint32_t from,NativeMidiEvents&events){
   const auto to=uint32_t(c.getPC());
+  if(to==0x581e&&from==0x3b16&&!keyEvents_.active())
+   if(!keyEvents_.admitPlayback(c,0x3b1a))throw std::logic_error("K playback admission");
+  if(!displayFormat_.active()){
+   struct Edge{uint32_t from,to,returned;};
+   constexpr Edge edges[]={{0x3f24,0x132c,0x3f28},{0x414a,0x4618,0x414e},{0x45a4,0x4618,0x45a8},
+    {0x4410,0x23f8,0x4414},{0x447c,0x2438,0x4480},{0x448e,0x2438,0x4492},{0x4634,0x4644,0x4636},
+    {0x463a,0x4454,0x463e},{0x463e,0x2492,0x4642},{0x4646,0x248a,0x464a},{0x46ac,0x248a,0x46b0}};
+   for(auto e:edges)if(from==e.from&&to==e.to){
+    if(!displayFormat_.admit(c,e.returned))throw std::logic_error("K display format admission");break;}
+  }
+
   if(to==0x79a4&&!voiceGlobal_.active()){
    const auto returned=from==0x79a0?0x79a2u:from==0x8360?0x8364u:0u;
    if(returned&&!voiceGlobal_.admitPrefix(c,returned))throw std::logic_error("K global parameter admission");
@@ -185,6 +242,13 @@ public:
    if(!transposeApply_.admit(c,0x314c))throw std::logic_error("K transpose apply admission");
  }
 private:
+ std::optional<NativeMidiFloatConvert> floatConvert_;
+ NativeUiPanel uiPanel_;
+ NativePeriodicDisplay periodicDisplay_;
+ NativeDisplayFormat displayFormat_;
+ NativeMidiWrappers midiWrappers_;
+ NativeMainUi mainUi_;
+ NativeVoiceFeedback voiceFeedback_;
  NativeKeyOwner keyEvents_;
  NativeUiEncoder uiEncoder_;
  NativeDspTrigger dspTrigger_;

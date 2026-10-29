@@ -147,6 +147,58 @@ target_sources(kstationLib PRIVATE
     kstationVoiceInitTask.h
     kstationVoiceSyncTask.h
 )
+target_sources(kstationLib PRIVATE
+    kstationControllerBoard.h
+    kstationControllerDspTriggerRuntime.h
+    kstationControllerExpressionApplyTask.h
+    kstationControllerExpressionValuesRuntime.h
+    kstationControllerMidiControlRuntime.h
+    kstationControllerMidiControlTask.h
+    kstationControllerMidiExpressionTask.h
+    kstationControllerMidiSysExDumpTask.h
+    kstationControllerMidiSysExRuntime.h
+    kstationControllerMidiSysExTask.h
+    kstationControllerModulationDepthRuntime.h
+    kstationControllerModulationPitchRuntime.h
+    kstationControllerPatchUnpackTask.h
+    kstationControllerProgramCopyTask.h
+    kstationControllerProgramLoadTask.h
+    kstationControllerProgramRuntime.h
+    kstationControllerProgramTask.h
+    kstationControllerTimers.h
+    kstationControllerVoiceBipolarTask.h
+    kstationControllerVoiceDepthLaneTask.h
+    kstationControllerVoiceDspWordTask.h
+    kstationControllerVoiceEnvelopeSequence.h
+    kstationControllerVoiceExtraTasks.h
+    kstationControllerVoiceFeedbackRuntime.h
+    kstationControllerVoiceFinalSequence.h
+    kstationControllerVoiceLinearTask.h
+    kstationControllerVoiceLongFinal.h
+    kstationControllerVoiceLongGlide.h
+    kstationControllerVoiceLongPortamento.h
+    kstationControllerVoiceLongPrefix.h
+    kstationControllerVoiceLongTiming.h
+    kstationControllerVoiceParameterStartTask.h
+    kstationControllerVoicePitchLaneTask.h
+    kstationControllerVoiceRefreshRuntime.h
+    kstationControllerVoiceSlotScaleTask.h
+    kstationControllerVoiceSourceSequence.h
+    kstationControllerVoiceStatusTask.h
+    kstationControllerVoiceSyncRuntime.h
+    kstationDisplayFormatTask.h
+    kstationMidiWrappersTask.h
+    kstationNativeDisplayFormat.h
+    kstationNativeDisplayFormatOwner.h
+    kstationNativeMidiWrappers.h
+    kstationNativeMidiWrappersOwner.h
+    kstationNativePeriodicDisplay.h
+    kstationNativeUiPanel.h
+    kstationNativeVoiceFeedback.h
+    kstationPeriodicDisplayTask.h
+    kstationUiPanelTask.h
+    kstationVoiceFeedbackTask.h
+)
 target_compile_features(kstationLib PUBLIC cxx_std_17)
 target_link_libraries(kstationLib PUBLIC synthLib dsp56kEmu h8s)
 target_include_directories(kstationLib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..)
@@ -163,7 +215,7 @@ endif()
 
 option(KSTATION_BUILD_CONTROLLER_COMPLETION_CHECK "Build native K controller development differential checks" OFF)
 if(KSTATION_BUILD_CONTROLLER_COMPLETION_CHECK)
-    foreach(check AdcService MainLoopTask MidiPumpTask DspTransferTask PatchUnpackTask ResetImageTask DspStartupTask FlashStateTask MidiEventTask VoiceAllocationTask VoiceUpdateTask VoiceGlobalTask DspTriggerTask ParameterInputTask ParameterUpdateTask ParameterEditTask ControllerDeviceState ControllerDspTransferRuntime ControllerForegroundRuntime ControllerForegroundBinding ControllerForegroundParser ControllerInterruptRuntime ControllerInterruptOracle ControllerTimer1Runtime ControllerAdcRuntime ControllerClockRuntime)
+    foreach(check AdcService MainLoopTask MidiPumpTask DspTransferTask PatchUnpackTask ResetImageTask DspStartupTask FlashStateTask MidiEventTask VoiceAllocationTask VoiceUpdateTask VoiceGlobalTask DspTriggerTask ParameterInputTask ParameterUpdateTask ParameterEditTask ControllerDeviceState ControllerDspTransferRuntime ControllerForegroundRuntime ControllerForegroundBinding ControllerForegroundParser ControllerInterruptRuntime ControllerInterruptOracle ControllerTimer1Runtime ControllerAdcRuntime ControllerClockRuntime ControllerTimers ControllerDspTriggerRuntime VoiceFeedbackTask)
         add_executable(kstation${check}_test kstation${check}_test.cpp)
         target_link_libraries(kstation${check}_test PRIVATE h8s)
         target_compile_features(kstation${check}_test PRIVATE cxx_std_17)

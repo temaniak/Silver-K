@@ -1,13 +1,13 @@
 #pragma once
 
 #include "kstationDSP.h"
-#include "kstationH8.h"
+#include "kstationController.h"
 #include "baseLib/performanceDiagnostics.h"
 
 namespace kstation
 {
-    // A single owner schedules both original processors. Used on the plugin's
-    // worker and by offline validation; it never calls guest entry points.
+    // A single owner schedules the DSP and selected controller backend.
+    // Used on the plugin worker and by offline functional validation.
     class Hardware
     {
     public:
@@ -15,9 +15,9 @@ namespace kstation
                           H8::Stage1Mode mode=H8::Stage1Mode::Original);
         bool boot(uint64_t maxH8Cycles = H8::ClockHz * 10ull);
         DSP::AudioFrame renderSample();
-        bool enqueueMidi(const uint8_t* bytes, size_t count) { return m_h8.enqueueMidi(bytes, count); }
-        bool popMidiOut(uint8_t& byte) { return m_h8.popMidiOut(byte); }
-        H8& controller() { return m_h8; }
+        bool enqueueMidi(const uint8_t* bytes, size_t count) { return m_h8->enqueueMidi(bytes, count); }
+        bool popMidiOut(uint8_t& byte) { return m_h8->popMidiOut(byte); }
+        Controller& controller() { return *m_h8; }
         DSP& dsp() { return m_dsp; }
         void setPerformanceDiagnostics(baseLib::performance::Diagnostics* p){m_performance=p;}
 
@@ -31,6 +31,6 @@ namespace kstation
         bool m_dspStarted = false;
         bool m_resetAsserted = true;
         DSP m_dsp;
-        H8 m_h8;
+        std::unique_ptr<Controller> m_h8;
     };
 }

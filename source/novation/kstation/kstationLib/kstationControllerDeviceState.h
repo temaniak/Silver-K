@@ -26,6 +26,7 @@ protected:
 class ControllerDeviceState final {
 public:
  static constexpr size_t MemorySize=1u<<24;
+ static constexpr unsigned ImmutableCapacity=1024;
  ControllerDeviceState()=default;
  ControllerDeviceState(const ControllerDeviceState&)=delete;
  ControllerDeviceState&operator=(const ControllerDeviceState&)=delete;
@@ -41,6 +42,9 @@ public:
  bool hasImmutableCapacity(unsigned additional)const{return additional<=protected_.size()-protectedCount_;}
  bool isRangeVerifiedImmutable(uint32_t begin,uint32_t end)const{if(begin>=end||end>MemorySize)return false;auto cursor=begin;while(cursor<end){auto furthest=cursor;for(unsigned i=0;i<protectedCount_;++i)if(protected_[i].verified&&protected_[i].begin<=cursor&&protected_[i].end>furthest)furthest=protected_[i].end;if(furthest==cursor)return false;cursor=furthest;}return true;}
  bool isVerifiedImmutable(uint32_t address)const{auto a=address&0xffffff;for(unsigned i=0;i<protectedCount_;++i)if(protected_[i].verified&&a>=protected_[i].begin&&a<protected_[i].end)return true;return false;}
+ bool hasImmutableBindings()const{return protectedCount_!=0;}
+ // A bound runtime must be recreated together with its board state.
+ void resetForBoot(){if(protectedCount_)throw std::logic_error("Cannot reset bound K controller state");std::memset(memory,0,sizeof(memory));cycles=pendingIrqs=pendingIrqsHigh=0;interruptMode2=false;std::memset(interruptPriority,0,sizeof(interruptPriority));lastRead=lastWrite=-1;protectedCount_=0;}
  void loadMemory(const uint8_t* data,size_t size,size_t address){if(address>MemorySize||size>MemorySize-address)throw std::out_of_range("K controller image range");for(unsigned i=0;i<protectedCount_;++i)if(size&&address<protected_[i].end&&protected_[i].begin<address+size)throw std::logic_error("K immutable controller image");std::memcpy(memory+address,data,size);}
  void clockInternal(unsigned clocks){cycles+=clocks;}
  void clockMemory(uint32_t address,int& previous){const auto a=address&0xffffff;if(a<0x400000){if((previous&1)||a!=uint32_t(previous|1))cycles+=3;previous=int(a);}else if(a>=0xfffd10&&a<0xffffa0){if((previous&1)||a!=uint32_t(previous|1))++cycles;previous=int(a);}else{cycles+=a>=0xffffa0?1:3;previous=-1;}}
@@ -57,7 +61,7 @@ public:
  void requestInterrupt(int vector){if(vector<0||vector>=128)return;if(interruptMode2){if(vector<64)pendingIrqs|=uint64_t(1)<<vector;else pendingIrqsHigh|=uint64_t(1)<<(vector-64);return;}if(vector>=64)return;if(vector>=12&&vector<18&&!(read8(0xfffff5)&(1u<<(vector-12))))return;pendingIrqs|=uint64_t(1)<<vector;}
 private:
  struct ImmutableRange{uint32_t begin=0,end=0;bool verified=false;};
- std::array<ImmutableRange,256>protected_{};unsigned protectedCount_=0;
+ std::array<ImmutableRange,ImmutableCapacity>protected_{};unsigned protectedCount_=0;
  ControllerResourceBus* bus_=nullptr;
 };
 }
