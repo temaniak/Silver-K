@@ -2,6 +2,7 @@
 #include "kstationMidiQueue.h"
 #include "kstationHdiWait.h"
 #include "kstationNativeTimers.h"
+#include "kstationNativeIrq.h"
 #include "baseLib/sha256.h"
 
 #include <algorithm>
@@ -50,6 +51,17 @@ namespace kstation
         const Stage1Mode mode;
         bool nativeWaitReady=false;
         uint64_t nativeWaitSteps=0;
+        uint64_t nativeIrqSteps=0,nativeIrqEntries=0,nativeIrqReturns=0;
+        uint64_t nativeTimer3Steps=0,nativeSerialErrorSteps=0;
+        bool usesIrq()const{return mode==Stage1Mode::TimersHdiAndIrq;}
+        bool usesHdi()const{return mode==Stage1Mode::TimersAndHdi||usesIrq();}
+        bool protectedCode(uint32_t low)const
+        {
+            if(low>=0x1672&&low<0x17a0)return true;
+            if(usesIrq())for(const auto& range:NativeIrq::CodeRanges)
+                if(low>=range.begin&&low<range.end)return true;
+            return false;
+        }
         HostCallbacks host;
         std::vector<uint8_t> rom,flash,initialFlash;
         std::array<uint8_t,256> regs{};
@@ -101,7 +113,9 @@ namespace kstation
             // Protect both the low overlay window and its physical RAM alias.
             // All normal H8 stores, including 24-bit wrapped addresses, must
             // reach the same immutable native-wait code guard after handoff.
-            if(mode==Stage1Mode::TimersAndHdi)cpu->memmap(this,0x401672,0x12e);
+            if(usesHdi())cpu->memmap(this,0x401672,0x12e);
+            if(usesIrq())for(const auto& range:NativeIrq::CodeRanges)
+                cpu->memmap(this,0x400000+int(range.begin),int(range.end-range.begin));
             reset();
         }
         void reset()
@@ -114,6 +128,8 @@ namespace kstation
             regs[0xb4]=0x84;regs[0xce]=0xff;regs[0xc7]=0xff;
             overlay=enteredMain=ready=false;flashCommand=pageRemaining=0;
             nativeWaitReady=false;nativeWaitSteps=0;
+            nativeIrqSteps=nativeIrqEntries=nativeIrqReturns=0;
+            nativeTimer3Steps=nativeSerialErrorSteps=0;
             instructions=hostReads=hostWrites=midiReceived=0;nextRx=txReady=adcReady=0;
             midiIn.clear();midiOut.clear();
             if(mode==Stage1Mode::Original)
@@ -138,7 +154,7 @@ namespace kstation
         uint8_t read(uint32_t address) override
         {
             if(address<0x10000 || (address>=0x200000 && address<0x240000))return raw(address);
-            if(address>=0x401672&&address<0x4017a0)return cpu->memory[address];
+            if(address>=0x400000&&address<0x410000)return cpu->memory[address];
             if(address>=0x600000 && address<0x600010){++hostReads;return host.read(address-0x600000);}
             const auto r=address&255;
             if(r==0xc7 && !(regs[0xc5]&0xff))
@@ -195,11 +211,11 @@ namespace kstation
         void write(uint32_t address,uint8_t value) override
         {
             if(address<0x10000){if(overlay){
-                if(nativeWaitReady&&address>=0x1672&&address<0x17a0)
+                if(nativeWaitReady&&protectedCode(address))
                     throw std::runtime_error("Cannot modify verified native K wait code");
                 cpu->memory[0x400000+address]=value;
             }return;}
-            if(address>=0x401672&&address<0x4017a0){
+            if(address>=0x400000&&address<0x410000){
                 if(nativeWaitReady)throw std::runtime_error("Cannot modify native K wait physical alias");
                 cpu->memory[address]=value;return;
             }
@@ -254,7 +270,7 @@ namespace kstation
                 }
             }
         }
-        template<bool Native> uint64_t execCore(uint32_t budget)
+        template<bool Native,bool Irq=false> uint64_t execCore(uint32_t budget)
         {
             const auto begin=cpu->cycles;
             while(cpu->cycles-begin<budget)
@@ -266,17 +282,30 @@ namespace kstation
                     bool valid=raw(0xcd82)>=1 && raw(0xcd82)<=4 && raw(0xcd83)<100;
                     for(unsigned i=0;i<128 && valid;++i)valid=raw(0xba5c+i)<128;
                     ready=valid;
-                    if constexpr(Native)if(ready&&mode==Stage1Mode::TimersAndHdi&&!nativeWaitReady)
+                    if constexpr(Native)if(ready&&usesHdi()&&!nativeWaitReady)
                     {
                         if(!overlay||!std::equal(rom.begin()+0x1672,rom.begin()+0x17a0,cpu->memory+0x401672))
                             throw std::runtime_error("Native K HDI handoff code mismatch");
+                        if constexpr(Irq)for(const auto& range:NativeIrq::CodeRanges)
+                            if(!std::equal(rom.begin()+range.begin,rom.begin()+range.end,cpu->memory+0x400000+range.begin))
+                                throw std::runtime_error("Native K IRQ handoff code mismatch");
                         nativeWaitReady=true;
                     }
                 }
                 if constexpr(Native)
                 {
-                    if(nativeWaitReady&&NativeHdiWait::step(*cpu))++nativeWaitSteps;
-                    else cpu->step();
+                    bool irqStep=false;
+                    if constexpr(Irq)if(nativeWaitReady&&NativeIrq::candidate(pc,cpu->pending_irqs))
+                    {
+                        const auto irq=NativeIrq::step(*cpu);irqStep=irq.stepped;
+                        if(irqStep)
+                        {
+                            ++nativeIrqSteps;nativeIrqEntries+=irq.entered;nativeIrqReturns+=irq.returned;
+                            if(irq.kind==NativeIrq::Kind::Timer3)++nativeTimer3Steps;
+                            else if(irq.kind==NativeIrq::Kind::SerialError)++nativeSerialErrorSteps;
+                        }
+                    }
+                    if(!irqStep){if(nativeWaitReady&&NativeHdiWait::step(*cpu))++nativeWaitSteps;else cpu->step();}
                 }
                 else cpu->step();
                 ++instructions;
@@ -285,7 +314,7 @@ namespace kstation
             }
             return cpu->cycles-begin;
         }
-        uint64_t exec(uint32_t budget){return mode==Stage1Mode::Original?execCore<false>(budget):execCore<true>(budget);}
+        uint64_t exec(uint32_t budget){if(mode==Stage1Mode::Original)return execCore<false>(budget);return usesIrq()?execCore<true,true>(budget):execCore<true>(budget);}
     };
 
     H8::H8(const std::vector<uint8_t>& image,HostCallbacks cb,const std::vector<uint8_t>& flash,Stage1Mode mode)
@@ -346,7 +375,9 @@ namespace kstation
         DebugState s;
         s.pc=m_impl->cpu->getPC();s.sp=m_impl->cpu->getSP();s.cycles=m_impl->cpu->cycles;
         s.instructions=m_impl->instructions;s.hostReads=m_impl->hostReads;s.hostWrites=m_impl->hostWrites;
-        s.interpretedSteps=m_impl->instructions-m_impl->nativeWaitSteps;s.nativeWaitSteps=m_impl->nativeWaitSteps;
+        s.interpretedSteps=m_impl->instructions-m_impl->nativeWaitSteps-m_impl->nativeIrqSteps;s.nativeWaitSteps=m_impl->nativeWaitSteps;
+        s.nativeIrqSteps=m_impl->nativeIrqSteps;s.nativeIrqEntries=m_impl->nativeIrqEntries;s.nativeIrqReturns=m_impl->nativeIrqReturns;
+        s.nativeTimer3Steps=m_impl->nativeTimer3Steps;s.nativeSerialErrorSteps=m_impl->nativeSerialErrorSteps;
         s.midiReceived=m_impl->midiReceived;s.ramOverlay=m_impl->overlay;s.mainEntered=m_impl->enteredMain;
         s.initializedFromFirmware=m_impl->reconstructedDefaults;
         s.currentBank=m_impl->raw(0xcd82);s.currentProgram=m_impl->raw(0xcd83);

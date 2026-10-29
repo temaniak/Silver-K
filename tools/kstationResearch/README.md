@@ -112,3 +112,41 @@ scenarios. Paced CPU interleaves frozen H8/combined three times per held8/sweep.
 Snapshots, setup, file IO and three-second warm-up are excluded. Equal audio,
 guest counters and state hashes are required. Refuse existing output folders,
 retain regressions/overruns, and keep offline cost separate from realtime.
+
+## Native IRQ stage
+
+`TimersHdiAndIrq` adds complete Timer3 overflow (vector 38) and SCI error
+(vector 52) services, including admission and return. Other IRQs still use H8.
+Admission and the first handler instruction remain one atomic reference step;
+each subsequent phase preserves the reference instruction/slice boundary.
+This retains the temporary H8 caller frame. Original remains the default.
+No audio or timing change is intended.
+
+Freeze the stage1 K library from `733f260` before edits and configure with both
+`KSTATION_STAGE1_REFERENCE` (original from `283bf00`) and
+`KSTATION_STAGE2_REFERENCE` (stage1 from `733f260`). Build
+`kstation_stage1_reference{,_trace}`, `kstation_stage2_reference{,_trace}`,
+`kstation_stage2_candidate{,_trace}`, `kstationNativeIrq_test`,
+`kstationStage2Guard_test` and the stage1 regression targets. The IRQ unit and
+guard executables require the decoded firmware argument. The production CMake
+option `KSTATION_BUILD_NATIVE_STAGE2_CHECK` is off by default.
+
+```sh
+python3 compare_stage2.py <build> <decoded-firmware> <fresh-private-correctness>
+python3 measure_stage2.py <build> <decoded-firmware> <fresh-private-offline> offline
+python3 measure_stage2.py <build> <decoded-firmware> <fresh-private-paced> paced
+```
+
+Correctness covers twelve scenarios, comparing original H8, frozen stage1,
+current stage1 control and the IRQ mode. Ordered HDI and CPU slice tapes compare
+original/stage1/IRQ; the untraced control compares raw PCM/RAM/Flash. `irq2`
+injects alternating vectors 38/52; `scierror` injects vector 52. These are
+synthetic interrupt tests, not physical UART error reproduction. Independent
+unit tests compare per-phase state, ordered context-visible IO, nested IRQs,
+flags, stack visibility and slice budgets against the original interpreter.
+
+Only after correctness, run clean CPU sequentially without builds/profiling.
+Offline interleaves original/stage1/IRQ triplets; paced interleaves adjacent
+stage1/IRQ pairs. The incremental comparison is against frozen stage1.
+Both handlers are rare in ordinary workloads: migration alone does not imply
+a measurable CPU gain. Preserve all costs and compute overruns.

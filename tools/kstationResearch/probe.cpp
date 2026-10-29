@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -38,6 +39,8 @@ std::vector<Event> events(const std::string& scenario,uint64_t frames){
  if(scenario=="program")for(uint64_t f=0;f<frames;f+=uint64_t(rate/2)){e.push_back({f,{0xc0,0,0},2});}
  if(scenario=="clock")for(uint64_t f=0;f<frames;f+=uint64_t(rate/48))e.push_back({f,{0xf8,0,0},1});
  if(scenario=="irq")for(uint64_t f=0,n=0;f<frames;f+=uint64_t(rate/997),++n)e.push_back({f,{uint8_t(n%2?38:28),0,0},0});
+ if(scenario=="irq2")for(uint64_t f=0,n=0;f<frames;f+=uint64_t(rate/997),++n)e.push_back({f,{uint8_t(n%2?52:38),0,0},0});
+ if(scenario=="scierror")for(uint64_t f=0;f<frames;f+=uint64_t(rate/100))e.push_back({f,{52,0,0},0});
  if(scenario=="sustain")for(uint64_t f=0,n=0;f<frames;f+=uint64_t(rate/4),++n){add(f,0xb0,64,n%2?0:127);add(f,0x90,uint8_t(48+n%24),100);if(f+uint64_t(rate/8)<frames)add(f+uint64_t(rate/8),0x80,uint8_t(48+n%24),0);}
  return e;
 }
@@ -82,7 +85,7 @@ int main(int argc,char** argv){try{
  require(argc==9,"Usage: probe firmware scenario seconds mode(off|capture|detailed|observe) pacing(offline|paced) block output-prefix warm-seconds");
  const auto firmware=load(argv[1]);require(firmware.size()==49728,"Decoded firmware expected; validate SHA in runner");
  const std::string scenario=argv[2],mode=argv[4],prefix=argv[7];
- require(scenario=="idle"||scenario=="held1"||scenario=="held8"||scenario=="notes"||scenario=="sweep"||scenario=="arp"||scenario=="program"||scenario=="clock"||scenario=="irq"||scenario=="sustain","Unknown scenario");
+ require(scenario=="idle"||scenario=="held1"||scenario=="held8"||scenario=="notes"||scenario=="sweep"||scenario=="arp"||scenario=="program"||scenario=="clock"||scenario=="irq"||scenario=="irq2"||scenario=="scierror"||scenario=="sustain","Unknown scenario");
  require(mode=="off"||mode=="capture"||mode=="detailed"||mode=="observe","Unknown mode");
 #ifndef K_RESEARCH_OBSERVE
  require(mode!="observe","Use observer executable");
@@ -94,8 +97,15 @@ int main(int argc,char** argv){try{
 #endif
 #if defined(K_RESEARCH_STAGE1)
  const auto* modeText=std::getenv("K_STAGE1_MODE");const std::string controllerMode=modeText?modeText:"hdi";
- require(controllerMode=="original"||controllerMode=="timers"||controllerMode=="hdi","Unknown stage1 mode");
- const auto controller=controllerMode=="hdi"?kstation::H8::Stage1Mode::TimersAndHdi:controllerMode=="timers"?kstation::H8::Stage1Mode::Timers:kstation::H8::Stage1Mode::Original;
+ bool allowed=controllerMode=="original"||controllerMode=="timers"||controllerMode=="hdi";
+#if defined(K_RESEARCH_STAGE2)
+ allowed=allowed||controllerMode=="irq";
+#endif
+ require(allowed,"Unknown native K mode");
+ auto controller=controllerMode=="hdi"?kstation::H8::Stage1Mode::TimersAndHdi:controllerMode=="timers"?kstation::H8::Stage1Mode::Timers:kstation::H8::Stage1Mode::Original;
+#if defined(K_RESEARCH_STAGE2)
+ if(controllerMode=="irq")controller=kstation::H8::Stage1Mode::TimersHdiAndIrq;
+#endif
  kstation::Hardware board(firmware,{},controller);
 #else
  const std::string controllerMode="original";kstation::Hardware board(firmware);
@@ -129,6 +139,9 @@ int main(int argc,char** argv){try{
  out<<"\"controller_mode\":\""<<controllerMode<<"\",\n";
 #if defined(K_RESEARCH_STAGE1)
  out<<"\"interpreted_steps\":"<<after.interpretedSteps-before.interpretedSteps<<",\"native_wait_steps\":"<<after.nativeWaitSteps-before.nativeWaitSteps<<",\n";
+#endif
+#if defined(K_RESEARCH_STAGE2)
+ out<<"\"native_irq_steps\":"<<after.nativeIrqSteps-before.nativeIrqSteps<<",\"native_irq_entries\":"<<after.nativeIrqEntries-before.nativeIrqEntries<<",\"native_irq_returns\":"<<after.nativeIrqReturns-before.nativeIrqReturns<<",\"native_timer3_steps\":"<<after.nativeTimer3Steps-before.nativeTimer3Steps<<",\"native_serial_error_steps\":"<<after.nativeSerialErrorSteps-before.nativeSerialErrorSteps<<",\n";
 #endif
  out<<"\"process_cpu_seconds\":"<<result.cpu<<",\"wall_seconds\":"<<result.wall<<",\"cpu_percent_one_core\":"<<100*result.cpu/(result.frames/kstation::DSP::SampleRate)<<",\"peak\":"<<result.peak<<",\"rms\":"<<sqrt(result.squares/(2*frames))<<",\"pcm_fnv\":\""<<result.hash<<"\",\n";
  out<<"\"h8_instructions\":"<<after.instructions-before.instructions<<",\"h8_cycles\":"<<after.cycles-before.cycles<<",\"dsp_instructions\":"<<board.dsp().instructions()-beforeDsp<<",\"dsp_cycles\":"<<board.dsp().cycles()-beforeCycles<<",\"hdi_reads\":"<<after.hostReads-before.hostReads<<",\"hdi_writes\":"<<after.hostWrites-before.hostWrites<<",\"midi_received\":"<<after.midiReceived-before.midiReceived<<",\n";

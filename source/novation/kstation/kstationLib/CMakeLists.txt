@@ -6,7 +6,7 @@ add_library(kstationLib STATIC
     kstationDSP.cpp kstationDSP.h
     kstationH8.cpp kstationH8.h
     kstationHardware.cpp kstationHardware.h
-    kstationHdiWait.h kstationNativeTimers.h
+    kstationHdiWait.h kstationNativeTimers.h kstationNativeIrq.h
     kstationQueue.h
     kstationRomLoader.cpp kstationRomLoader.h)
 target_compile_features(kstationLib PUBLIC cxx_std_17)
@@ -21,6 +21,19 @@ if(BUILD_TESTING)
     add_executable(kstationQueue_test kstationQueue_test.cpp)
     target_link_libraries(kstationQueue_test PRIVATE kstationLib)
     add_test(NAME kstationQueue COMMAND kstationQueue_test)
+endif()
+
+option(KSTATION_BUILD_NATIVE_STAGE2_CHECK "Build native K IRQ differential checks" OFF)
+if(KSTATION_BUILD_NATIVE_STAGE2_CHECK)
+    add_executable(kstationNativeIrq_test kstationNativeIrq_test.cpp)
+    target_link_libraries(kstationNativeIrq_test PRIVATE h8s)
+    target_compile_features(kstationNativeIrq_test PRIVATE cxx_std_17)
+    add_test(NAME kstation_native_irq COMMAND kstationNativeIrq_test)
+    set_tests_properties(kstation_native_irq PROPERTIES SKIP_RETURN_CODE 77)
+    add_executable(kstationStage2Guard_test kstationStage2Guard_test.cpp)
+    target_link_libraries(kstationStage2Guard_test PRIVATE kstationLib)
+    add_test(NAME kstation_stage2_guards COMMAND kstationStage2Guard_test)
+    set_tests_properties(kstation_stage2_guards PROPERTIES SKIP_RETURN_CODE 77)
 endif()
 
 option(KSTATION_BUILD_NATIVE_STAGE1_CHECK "Build original-H8/native stage-1 differential checks" OFF)

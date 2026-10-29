@@ -72,6 +72,8 @@ public:
     int readHistory()const{return lastread;}
     int writeHistory()const{return lastwrite;}
     void histories(int read,int write){lastread=read;lastwrite=write;}
+    int irqDepth()const{return indent;}
+    void irqDepth(int value){indent=value;}
 };
 
 class NativeHdiWait final

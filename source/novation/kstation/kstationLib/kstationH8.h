@@ -16,7 +16,7 @@ namespace kstation
     class H8
     {
     public:
-        enum class Stage1Mode { Original, Timers, TimersAndHdi };
+        enum class Stage1Mode { Original, Timers, TimersAndHdi, TimersHdiAndIrq };
         static constexpr uint32_t ClockHz = 16000000;
         static constexpr size_t FlashSize = 0x40000;
         struct HostCallbacks
@@ -30,6 +30,8 @@ namespace kstation
             uint32_t pc=0,sp=0;
             uint64_t cycles=0,instructions=0,hostReads=0,hostWrites=0,midiReceived=0;
             uint64_t interpretedSteps=0,nativeWaitSteps=0;
+            uint64_t nativeIrqSteps=0,nativeIrqEntries=0,nativeIrqReturns=0;
+            uint64_t nativeTimer3Steps=0,nativeSerialErrorSteps=0;
             bool ramOverlay=false, mainEntered=false, initializedFromFirmware=false;
             uint8_t currentBank=0,currentProgram=0;
             std::string lcd;
