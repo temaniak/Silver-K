@@ -150,3 +150,44 @@ Offline interleaves original/stage1/IRQ triplets; paced interleaves adjacent
 stage1/IRQ pairs. The incremental comparison is against frozen stage1.
 Both handlers are rare in ordinary workloads: migration alone does not imply
 a measurable CPU gain. Preserve all costs and compute overruns.
+
+## KS-style K services: serial TX pilot
+
+The third stage adapts KS `SerialIrqTask` / `InterruptService`'s typed phase,
+budget and live IO design to K. `SerialTxService` owns only serial data and a
+continuation; it has no CPU dependency. K-specific realtime-latch priority,
+queue resources, status publications and clock credits are recovered from K.
+`NativeSerialTx` is the temporary caller-frame projection while other K paths
+remain H8. It owns fixed-capacity continuations and never calls the decoder.
+KS mode2 arbitration is not used for K's mode0 interrupts. KS sources stay
+unchanged and are not a runtime dependency of the K service.
+
+`H8::Stage1Mode::TimersHdiIrqAndSerialTx` enables the new complete IRQ54 path.
+Original remains the default. Freeze stage2 from `98fbd74` before editing and
+configure `KSTATION_STAGE3_REFERENCE=<frozen-stage2-k-lib>` plus
+`KSTATION_STAGE3_ORIGINAL=<frozen-original-k-lib-from-283bf00>`. Existing
+stage1/stage2 reference options can also be supplied for their regression
+targets. Build `kstation_stage3_{original,reference,candidate}{,_trace}`,
+`kstationSerialTxService_test`, `kstationStage3Guard_test` and the older checks.
+The production test option `KSTATION_BUILD_NATIVE_STAGE3_CHECK` defaults off.
+The service and guard test executables take the external decoded firmware.
+
+```sh
+python3 compare_stage3.py <build> <decoded-firmware> <fresh-private-correctness>
+python3 measure_stage3.py <build> <decoded-firmware> <fresh-private-offline> offline
+python3 measure_stage3.py <build> <decoded-firmware> <fresh-private-paced> paced
+```
+
+Correctness covers the preceding twelve scenarios and three explicit synthetic
+transport fixtures. `txirq` injects vector54 with an empty queue; `txclock`
+publishes an F8 byte in K's realtime latch and injects54; `txqueue` publishes
+one byte/producer index in the K TX ring and injects54. The latter two use
+diagnostic guest-state IO, not an ordinary MIDI-to-firmware route. They are
+marked separately in CPU results. Musical scenarios never write this state.
+The comparison includes raw MIDI output bytes; `_trace` ports tapes now contain
+ordered HDI and SCI register byte accesses (addresses distinguish them), with
+the same five-word format. Full RAM/Flash/PCM and CPU slice frames remain exact.
+Keep trace executables out of CPU measurement. Whole-service unit checks cover
+live data mutations, queue wrap, realtime priority, nested IRQs, dynamic bus
+costs, short-budget no-ops and zero processing allocations. Unit sanitizers do
+not establish whole-DSP sanitizer coverage or physical UART behavior.

@@ -7,6 +7,7 @@ add_library(kstationLib STATIC
     kstationH8.cpp kstationH8.h
     kstationHardware.cpp kstationHardware.h
     kstationHdiWait.h kstationNativeTimers.h kstationNativeIrq.h
+    kstationSerialTxService.h kstationNativeSerialTx.h
     kstationQueue.h
     kstationRomLoader.cpp kstationRomLoader.h)
 target_compile_features(kstationLib PUBLIC cxx_std_17)
@@ -58,4 +59,17 @@ if(KSTATION_BUILD_HARDWARE_CHECK)
     target_link_libraries(kstationHardware_test PRIVATE kstationLib)
     add_executable(kstationArp_test kstationArp_test.cpp)
     target_link_libraries(kstationArp_test PRIVATE kstationLib)
+endif()
+
+option(KSTATION_BUILD_NATIVE_STAGE3_CHECK "Build KS-style K serial TX differential checks" OFF)
+if(KSTATION_BUILD_NATIVE_STAGE3_CHECK)
+    add_executable(kstationSerialTxService_test kstationSerialTxService_test.cpp)
+    target_link_libraries(kstationSerialTxService_test PRIVATE h8s)
+    target_compile_features(kstationSerialTxService_test PRIVATE cxx_std_17)
+    add_test(NAME kstation_serial_tx COMMAND kstationSerialTxService_test)
+    set_tests_properties(kstation_serial_tx PROPERTIES SKIP_RETURN_CODE 77)
+    add_executable(kstationStage3Guard_test kstationStage3Guard_test.cpp)
+    target_link_libraries(kstationStage3Guard_test PRIVATE kstationLib)
+    add_test(NAME kstation_stage3_guards COMMAND kstationStage3Guard_test)
+    set_tests_properties(kstation_stage3_guards PROPERTIES SKIP_RETURN_CODE 77)
 endif()

@@ -3,6 +3,7 @@
 #include "kstationHdiWait.h"
 #include "kstationNativeTimers.h"
 #include "kstationNativeIrq.h"
+#include "kstationNativeSerialTx.h"
 #include "baseLib/sha256.h"
 
 #include <algorithm>
@@ -53,12 +54,17 @@ namespace kstation
         uint64_t nativeWaitSteps=0;
         uint64_t nativeIrqSteps=0,nativeIrqEntries=0,nativeIrqReturns=0;
         uint64_t nativeTimer3Steps=0,nativeSerialErrorSteps=0;
-        bool usesIrq()const{return mode==Stage1Mode::TimersHdiAndIrq;}
+        NativeSerialTx serialTx;
+        uint64_t nativeSerialTxSteps=0,nativeSerialTxEntries=0,nativeSerialTxReturns=0;
+        bool usesTx()const{return mode==Stage1Mode::TimersHdiIrqAndSerialTx;}
+        bool usesIrq()const{return mode==Stage1Mode::TimersHdiAndIrq||usesTx();}
         bool usesHdi()const{return mode==Stage1Mode::TimersAndHdi||usesIrq();}
         bool protectedCode(uint32_t low)const
         {
             if(low>=0x1672&&low<0x17a0)return true;
             if(usesIrq())for(const auto& range:NativeIrq::CodeRanges)
+                if(low>=range.begin&&low<range.end)return true;
+            if(usesTx())for(const auto& range:NativeSerialTx::CodeRanges)
                 if(low>=range.begin&&low<range.end)return true;
             return false;
         }
@@ -116,6 +122,8 @@ namespace kstation
             if(usesHdi())cpu->memmap(this,0x401672,0x12e);
             if(usesIrq())for(const auto& range:NativeIrq::CodeRanges)
                 cpu->memmap(this,0x400000+int(range.begin),int(range.end-range.begin));
+            if(usesTx())for(const auto& range:NativeSerialTx::CodeRanges)
+                cpu->memmap(this,0x400000+int(range.begin),int(range.end-range.begin));
             reset();
         }
         void reset()
@@ -130,6 +138,7 @@ namespace kstation
             nativeWaitReady=false;nativeWaitSteps=0;
             nativeIrqSteps=nativeIrqEntries=nativeIrqReturns=0;
             nativeTimer3Steps=nativeSerialErrorSteps=0;
+            serialTx.reset();nativeSerialTxSteps=nativeSerialTxEntries=nativeSerialTxReturns=0;
             instructions=hostReads=hostWrites=midiReceived=0;nextRx=txReady=adcReady=0;
             midiIn.clear();midiOut.clear();
             if(mode==Stage1Mode::Original)
@@ -270,7 +279,7 @@ namespace kstation
                 }
             }
         }
-        template<bool Native,bool Irq=false> uint64_t execCore(uint32_t budget)
+        template<bool Native,bool Irq=false,bool Serial=false> uint64_t execCore(uint32_t budget)
         {
             const auto begin=cpu->cycles;
             while(cpu->cycles-begin<budget)
@@ -289,13 +298,22 @@ namespace kstation
                         if constexpr(Irq)for(const auto& range:NativeIrq::CodeRanges)
                             if(!std::equal(rom.begin()+range.begin,rom.begin()+range.end,cpu->memory+0x400000+range.begin))
                                 throw std::runtime_error("Native K IRQ handoff code mismatch");
+                        if constexpr(Serial)for(const auto& range:NativeSerialTx::CodeRanges)
+                            if(!std::equal(rom.begin()+range.begin,rom.begin()+range.end,cpu->memory+0x400000+range.begin))
+                                throw std::runtime_error("Native K TX handoff code mismatch");
                         nativeWaitReady=true;
                     }
                 }
                 if constexpr(Native)
                 {
                     bool irqStep=false;
-                    if constexpr(Irq)if(nativeWaitReady&&NativeIrq::candidate(pc,cpu->pending_irqs))
+                    if constexpr(Serial)if(nativeWaitReady&&NativeSerialTx::candidate(pc,cpu->pending_irqs))
+                    {
+                        const auto tx=serialTx.step(*cpu);irqStep=tx.stepped;
+                        if(irqStep){++nativeIrqSteps;nativeIrqEntries+=tx.entered;nativeIrqReturns+=tx.returned;
+                            ++nativeSerialTxSteps;nativeSerialTxEntries+=tx.entered;nativeSerialTxReturns+=tx.returned;}
+                    }
+                    if constexpr(Irq)if(!irqStep&&nativeWaitReady&&NativeIrq::candidate(pc,cpu->pending_irqs))
                     {
                         const auto irq=NativeIrq::step(*cpu);irqStep=irq.stepped;
                         if(irqStep)
@@ -314,7 +332,7 @@ namespace kstation
             }
             return cpu->cycles-begin;
         }
-        uint64_t exec(uint32_t budget){if(mode==Stage1Mode::Original)return execCore<false>(budget);return usesIrq()?execCore<true,true>(budget):execCore<true>(budget);}
+        uint64_t exec(uint32_t budget){if(mode==Stage1Mode::Original)return execCore<false>(budget);if(usesTx())return execCore<true,true,true>(budget);return usesIrq()?execCore<true,true>(budget):execCore<true>(budget);}
     };
 
     H8::H8(const std::vector<uint8_t>& image,HostCallbacks cb,const std::vector<uint8_t>& flash,Stage1Mode mode)
@@ -378,6 +396,7 @@ namespace kstation
         s.interpretedSteps=m_impl->instructions-m_impl->nativeWaitSteps-m_impl->nativeIrqSteps;s.nativeWaitSteps=m_impl->nativeWaitSteps;
         s.nativeIrqSteps=m_impl->nativeIrqSteps;s.nativeIrqEntries=m_impl->nativeIrqEntries;s.nativeIrqReturns=m_impl->nativeIrqReturns;
         s.nativeTimer3Steps=m_impl->nativeTimer3Steps;s.nativeSerialErrorSteps=m_impl->nativeSerialErrorSteps;
+        s.nativeSerialTxSteps=m_impl->nativeSerialTxSteps;s.nativeSerialTxEntries=m_impl->nativeSerialTxEntries;s.nativeSerialTxReturns=m_impl->nativeSerialTxReturns;
         s.midiReceived=m_impl->midiReceived;s.ramOverlay=m_impl->overlay;s.mainEntered=m_impl->enteredMain;
         s.initializedFromFirmware=m_impl->reconstructedDefaults;
         s.currentBank=m_impl->raw(0xcd82);s.currentProgram=m_impl->raw(0xcd83);

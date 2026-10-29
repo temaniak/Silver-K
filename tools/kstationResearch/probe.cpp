@@ -40,6 +40,8 @@ std::vector<Event> events(const std::string& scenario,uint64_t frames){
  if(scenario=="clock")for(uint64_t f=0;f<frames;f+=uint64_t(rate/48))e.push_back({f,{0xf8,0,0},1});
  if(scenario=="irq")for(uint64_t f=0,n=0;f<frames;f+=uint64_t(rate/997),++n)e.push_back({f,{uint8_t(n%2?38:28),0,0},0});
  if(scenario=="irq2")for(uint64_t f=0,n=0;f<frames;f+=uint64_t(rate/997),++n)e.push_back({f,{uint8_t(n%2?52:38),0,0},0});
+ if(scenario=="txirq")for(uint64_t f=0;f<frames;f+=uint64_t(rate/100))e.push_back({f,{54,0,0},0});
+ if(scenario=="txclock"||scenario=="txqueue")for(uint64_t f=0,n=0;f<frames;f+=uint64_t(rate/100),++n)e.push_back({f,{uint8_t(n),0,0},scenario=="txclock"?4u:5u});
  if(scenario=="scierror")for(uint64_t f=0;f<frames;f+=uint64_t(rate/100))e.push_back({f,{52,0,0},0});
  if(scenario=="sustain")for(uint64_t f=0,n=0;f<frames;f+=uint64_t(rate/4),++n){add(f,0xb0,64,n%2?0:127);add(f,0x90,uint8_t(48+n%24),100);if(f+uint64_t(rate/8)<frames)add(f+uint64_t(rate/8),0x80,uint8_t(48+n%24),0);}
  return e;
@@ -60,7 +62,14 @@ struct Result{uint64_t hash=14695981039346656037ull,frames=0;double peak=0,squar
 Result render(kstation::Hardware& board,uint64_t frames,const std::vector<Event>& events,bool paced,unsigned block,std::vector<int32_t>* pcm=nullptr){
  Result r;size_t next=0;const auto begin=Clock::now();const double before=cpuSeconds();
  for(uint64_t cursor=0;cursor<frames;){const auto blockBegin=Clock::now();const auto end=std::min(frames,cursor+block);
-  for(;cursor<end;++cursor){while(next<events.size()&&events[next].frame==cursor){if(!events[next].size)board.controller().core().interrupt(events[next].bytes[0]);else require(board.enqueueMidi(events[next].bytes.data(),events[next].size),"Event MIDI queue full");++next;}
+  for(;cursor<end;++cursor){while(next<events.size()&&events[next].frame==cursor){if(events[next].size>=4){
+     // Explicit synthetic transport fixture, identical in all oracle modes.
+     // Ordinary musical scenarios never write guest queue/latch state.
+     auto& c=board.controller().core();
+     if(events[next].size==4)c.write8(int8_t(0xf8),0xfffe73);
+     else {const auto consumer=c.read16(0xc494);c.write8(int8_t(events[next].bytes[0]),0xc496+consumer);c.write16(int16_t((consumer+1)&255),0xc492);}
+     c.interrupt(54);
+    }else if(!events[next].size)board.controller().core().interrupt(events[next].bytes[0]);else require(board.enqueueMidi(events[next].bytes.data(),events[next].size),"Event MIDI queue full");++next;}
    const auto frame=board.renderSample();for(auto v:frame){const double x=v/8388608.0;require(std::isfinite(x),"Nonfinite PCM");r.peak=std::max(r.peak,std::abs(x));r.squares+=x*x;hashWord(r.hash,uint32_t(v));if(pcm)pcm->push_back(v);}
   }
   const double spent=std::chrono::duration<double>(Clock::now()-blockBegin).count();r.maxBlock=std::max(r.maxBlock,spent);if(spent>block/kstation::DSP::SampleRate)++r.overBudget;
@@ -85,7 +94,7 @@ int main(int argc,char** argv){try{
  require(argc==9,"Usage: probe firmware scenario seconds mode(off|capture|detailed|observe) pacing(offline|paced) block output-prefix warm-seconds");
  const auto firmware=load(argv[1]);require(firmware.size()==49728,"Decoded firmware expected; validate SHA in runner");
  const std::string scenario=argv[2],mode=argv[4],prefix=argv[7];
- require(scenario=="idle"||scenario=="held1"||scenario=="held8"||scenario=="notes"||scenario=="sweep"||scenario=="arp"||scenario=="program"||scenario=="clock"||scenario=="irq"||scenario=="irq2"||scenario=="scierror"||scenario=="sustain","Unknown scenario");
+ require(scenario=="idle"||scenario=="held1"||scenario=="held8"||scenario=="notes"||scenario=="sweep"||scenario=="arp"||scenario=="program"||scenario=="clock"||scenario=="irq"||scenario=="irq2"||scenario=="scierror"||scenario=="txirq"||scenario=="txclock"||scenario=="txqueue"||scenario=="sustain","Unknown scenario");
  require(mode=="off"||mode=="capture"||mode=="detailed"||mode=="observe","Unknown mode");
 #ifndef K_RESEARCH_OBSERVE
  require(mode!="observe","Use observer executable");
@@ -101,10 +110,16 @@ int main(int argc,char** argv){try{
 #if defined(K_RESEARCH_STAGE2)
  allowed=allowed||controllerMode=="irq";
 #endif
+ #if defined(K_RESEARCH_STAGE3)
+ allowed=allowed||controllerMode=="serial";
+#endif
  require(allowed,"Unknown native K mode");
  auto controller=controllerMode=="hdi"?kstation::H8::Stage1Mode::TimersAndHdi:controllerMode=="timers"?kstation::H8::Stage1Mode::Timers:kstation::H8::Stage1Mode::Original;
 #if defined(K_RESEARCH_STAGE2)
  if(controllerMode=="irq")controller=kstation::H8::Stage1Mode::TimersHdiAndIrq;
+#endif
+ #if defined(K_RESEARCH_STAGE3)
+ if(controllerMode=="serial")controller=kstation::H8::Stage1Mode::TimersHdiIrqAndSerialTx;
 #endif
  kstation::Hardware board(firmware,{},controller);
 #else
@@ -132,7 +147,8 @@ int main(int argc,char** argv){try{
  }
  const auto flash=board.controller().saveFlash();uint64_t flashHash=14695981039346656037ull;for(auto b:flash)hashWord(flashHash,b);
  const auto& core=board.controller().core();uint64_t memoryHash=14695981039346656037ull;for(auto b:core.memory)hashWord(memoryHash,b);
- uint64_t midiHash=14695981039346656037ull,midiCount=0;uint8_t midiByte;while(board.popMidiOut(midiByte)){hashWord(midiHash,midiByte);++midiCount;}
+ uint64_t midiHash=14695981039346656037ull,midiCount=0;uint8_t midiByte;std::vector<uint8_t> capturedMidi;while(board.popMidiOut(midiByte)){hashWord(midiHash,midiByte);++midiCount;if(capture)capturedMidi.push_back(midiByte);}
+ if(capture)byteFile(prefix+".midi",capturedMidi.data(),capturedMidi.size());
  if(capture){byteFile(prefix+".memory",core.memory,sizeof(core.memory));byteFile(prefix+".flash",flash.data(),flash.size());}
  std::ofstream out(prefix+".json");out<<std::setprecision(12)<<"{\n\"schema\":\"kstation.research.v1\",\n\"scenario\":\""<<scenario<<"\",\"mode\":\""<<mode<<"\",\"pacing\":\""<<(paced?"paced":"offline")<<"\",\n";
  out<<"\"block\":"<<block<<",\"native_rate\":"<<kstation::DSP::SampleRate<<",\"frames\":"<<result.frames<<",\"audio_seconds\":"<<result.frames/kstation::DSP::SampleRate<<",\"warm_seconds\":"<<warmSeconds<<",\n";
@@ -142,6 +158,9 @@ int main(int argc,char** argv){try{
 #endif
 #if defined(K_RESEARCH_STAGE2)
  out<<"\"native_irq_steps\":"<<after.nativeIrqSteps-before.nativeIrqSteps<<",\"native_irq_entries\":"<<after.nativeIrqEntries-before.nativeIrqEntries<<",\"native_irq_returns\":"<<after.nativeIrqReturns-before.nativeIrqReturns<<",\"native_timer3_steps\":"<<after.nativeTimer3Steps-before.nativeTimer3Steps<<",\"native_serial_error_steps\":"<<after.nativeSerialErrorSteps-before.nativeSerialErrorSteps<<",\n";
+#endif
+#if defined(K_RESEARCH_STAGE3)
+ out<<"\"native_serial_tx_steps\":"<<after.nativeSerialTxSteps-before.nativeSerialTxSteps<<",\"native_serial_tx_entries\":"<<after.nativeSerialTxEntries-before.nativeSerialTxEntries<<",\"native_serial_tx_returns\":"<<after.nativeSerialTxReturns-before.nativeSerialTxReturns<<",\n";
 #endif
  out<<"\"process_cpu_seconds\":"<<result.cpu<<",\"wall_seconds\":"<<result.wall<<",\"cpu_percent_one_core\":"<<100*result.cpu/(result.frames/kstation::DSP::SampleRate)<<",\"peak\":"<<result.peak<<",\"rms\":"<<sqrt(result.squares/(2*frames))<<",\"pcm_fnv\":\""<<result.hash<<"\",\n";
  out<<"\"h8_instructions\":"<<after.instructions-before.instructions<<",\"h8_cycles\":"<<after.cycles-before.cycles<<",\"dsp_instructions\":"<<board.dsp().instructions()-beforeDsp<<",\"dsp_cycles\":"<<board.dsp().cycles()-beforeCycles<<",\"hdi_reads\":"<<after.hostReads-before.hostReads<<",\"hdi_writes\":"<<after.hostWrites-before.hostWrites<<",\"midi_received\":"<<after.midiReceived-before.midiReceived<<",\n";
