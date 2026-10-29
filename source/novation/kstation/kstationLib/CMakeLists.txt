@@ -11,6 +11,17 @@ add_library(kstationLib STATIC
     kstationClockPulseTask.h kstationClockTasks.h kstationNativeClock.h
     kstationTimer1Service.h kstationNativeTimer1.h
     kstationSerialRxService.h kstationNativeSerialRx.h
+    kstationAdcService.h kstationNativeAdc.h
+    kstationMainLoopTask.h kstationNativeMainLoop.h
+    kstationMidiPumpTask.h kstationNativeMidiPump.h kstationNativeForeground.h
+    kstationDspTransferTask.h kstationNativeDspTransfer.h
+    kstationPatchUnpackTask.h kstationNativePatchUnpack.h
+    kstationResetImageTask.h kstationNativeStartup.h
+    kstationDspStartupTask.h kstationNativeDspStartup.h
+    kstationFlashStateTask.h kstationLcdTask.h kstationNativeFlashState.h
+    kstationMidiEventTask.h kstationNativeMidiEvent.h kstationNativeMidiEvents.h
+    kstationVoiceAllocationTask.h kstationNativeVoiceAllocation.h
+    kstationVoiceUpdateTask.h kstationNativeVoiceUpdate.h
     kstationQueue.h
     kstationRomLoader.cpp kstationRomLoader.h)
 target_compile_features(kstationLib PUBLIC cxx_std_17)
@@ -25,6 +36,21 @@ if(BUILD_TESTING)
     add_executable(kstationQueue_test kstationQueue_test.cpp)
     target_link_libraries(kstationQueue_test PRIVATE kstationLib)
     add_test(NAME kstationQueue COMMAND kstationQueue_test)
+endif()
+
+option(KSTATION_BUILD_CONTROLLER_COMPLETION_CHECK "Build native K controller development differential checks" OFF)
+if(KSTATION_BUILD_CONTROLLER_COMPLETION_CHECK)
+    foreach(check AdcService MainLoopTask MidiPumpTask DspTransferTask PatchUnpackTask ResetImageTask DspStartupTask FlashStateTask MidiEventTask VoiceAllocationTask)
+        add_executable(kstation${check}_test kstation${check}_test.cpp)
+        target_link_libraries(kstation${check}_test PRIVATE h8s)
+        target_compile_features(kstation${check}_test PRIVATE cxx_std_17)
+        add_test(NAME kstation_${check} COMMAND kstation${check}_test)
+        set_tests_properties(kstation_${check} PROPERTIES SKIP_RETURN_CODE 77)
+    endforeach()
+    add_executable(kstationCompletionGuard_test kstationCompletionGuard_test.cpp)
+    target_link_libraries(kstationCompletionGuard_test PRIVATE kstationLib)
+    add_test(NAME kstation_controller_completion_guards COMMAND kstationCompletionGuard_test)
+    set_tests_properties(kstation_controller_completion_guards PROPERTIES SKIP_RETURN_CODE 77)
 endif()
 
 option(KSTATION_BUILD_NATIVE_STAGE2_CHECK "Build native K IRQ differential checks" OFF)

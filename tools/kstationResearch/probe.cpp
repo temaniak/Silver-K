@@ -25,7 +25,13 @@ bool stageTrace=false;std::vector<uint64_t> stagePorts,stageSlices;
 void traceWord(std::vector<uint64_t>& out,uint64_t value){if(out.size()==out.capacity())throw std::runtime_error("Stage1 trace capacity exceeded");out.push_back(value);}
 #endif
 void require(bool ok,const char* message){if(!ok)throw std::runtime_error(message);}
-double cpuSeconds(){rusage r{};require(getrusage(RUSAGE_SELF,&r)==0,"getrusage failed");return r.ru_utime.tv_sec+r.ru_utime.tv_usec*1e-6+r.ru_stime.tv_sec+r.ru_stime.tv_usec*1e-6;}
+double cpuSeconds(){
+#if defined(K_RESEARCH_FUNCTIONAL_ONLY)
+ return 0;
+#else
+ rusage r{};require(getrusage(RUSAGE_SELF,&r)==0,"getrusage failed");return r.ru_utime.tv_sec+r.ru_utime.tv_usec*1e-6+r.ru_stime.tv_sec+r.ru_stime.tv_usec*1e-6;
+#endif
+}
 void hashWord(uint64_t& h,uint64_t v){for(unsigned i=0;i<8;++i){h^=uint8_t(v>>(i*8));h*=1099511628211ull;}}
 std::vector<uint8_t> load(const std::string& path){std::ifstream f(path,std::ios::binary);require(bool(f),"Cannot read firmware");return {std::istreambuf_iterator<char>(f),{}};}
 void send(kstation::Hardware& board,std::initializer_list<uint8_t> bytes){require(board.enqueueMidi(bytes.begin(),bytes.size()),"MIDI queue full");}
@@ -132,6 +138,9 @@ int main(int argc,char** argv){try{
 #if defined(K_RESEARCH_STAGE4)
  allowed=allowed||controllerMode=="timer_rx";
 #endif
+#if defined(K_RESEARCH_COMPLETION)
+ allowed=allowed||controllerMode=="development";
+#endif
  require(allowed,"Unknown native K mode");
  auto controller=controllerMode=="hdi"?kstation::H8::Stage1Mode::TimersAndHdi:controllerMode=="timers"?kstation::H8::Stage1Mode::Timers:kstation::H8::Stage1Mode::Original;
 #if defined(K_RESEARCH_STAGE2)
@@ -142,6 +151,9 @@ int main(int argc,char** argv){try{
 #endif
 #if defined(K_RESEARCH_STAGE4)
  if(controllerMode=="timer_rx")controller=kstation::H8::Stage1Mode::Timer1AndRx;
+#endif
+#if defined(K_RESEARCH_COMPLETION)
+ if(controllerMode=="development")controller=kstation::H8::Stage1Mode::ControllerDevelopment;
 #endif
  kstation::Hardware board(firmware,{},controller);
 #else
@@ -190,12 +202,26 @@ int main(int argc,char** argv){try{
  out<<"\"native_rx_steps\":"<<after.nativeRxSteps-before.nativeRxSteps<<",\"native_rx_entries\":"<<after.nativeRxEntries-before.nativeRxEntries<<",\"native_rx_returns\":"<<after.nativeRxReturns-before.nativeRxReturns<<",\"native_rx_clock_requests\":"<<after.nativeRxClockRequests-before.nativeRxClockRequests<<",\n";
  out<<"\"native_clock_steps\":"<<after.nativeClockSteps-before.nativeClockSteps<<",\"native_internal_clock_calls\":"<<after.nativeInternalClockCalls-before.nativeInternalClockCalls<<",\"native_external_clock_calls\":"<<after.nativeExternalClockCalls-before.nativeExternalClockCalls<<",\"native_clock_sync_updates\":"<<after.nativeClockSyncUpdates-before.nativeClockSyncUpdates<<",\n";
 #endif
+#if defined(K_RESEARCH_COMPLETION)
+ out<<"\"native_adc_steps\":"<<after.nativeAdcSteps-before.nativeAdcSteps<<",\"native_adc_entries\":"<<after.nativeAdcEntries-before.nativeAdcEntries<<",\"native_adc_returns\":"<<after.nativeAdcReturns-before.nativeAdcReturns<<",\n";
+ out<<"\"native_dsp_transfer_steps\":"<<after.nativeDspTransferSteps-before.nativeDspTransferSteps<<",\"native_foreground_steps\":"<<after.nativeForegroundSteps-before.nativeForegroundSteps<<",\"native_main_steps\":"<<after.nativeMainSteps-before.nativeMainSteps<<",\"native_midi_steps\":"<<after.nativeMidiSteps-before.nativeMidiSteps<<",\"native_tick_steps\":"<<after.nativeTickSteps-before.nativeTickSteps<<",\n";
+ out<<"\"native_startup_steps\":"<<after.nativeStartupSteps-before.nativeStartupSteps<<",\"native_flash_state_steps\":"<<after.nativeFlashStateSteps-before.nativeFlashStateSteps<<",\"native_patch_unpack_steps\":"<<after.nativePatchUnpackSteps-before.nativePatchUnpackSteps<<",\"native_midi_event_steps\":"<<after.nativeMidiEventSteps-before.nativeMidiEventSteps<<",\"native_voice_allocation_steps\":"<<after.nativeVoiceAllocationSteps-before.nativeVoiceAllocationSteps<<",\"native_voice_update_steps\":"<<after.nativeVoiceUpdateSteps-before.nativeVoiceUpdateSteps<<",\n";
+#endif
  out<<"\"before_clock_source\":"<<unsigned(beforeClockSource)<<",\"after_clock_source\":"<<unsigned(board.controller().readMemory(0xbb1c))<<",\"before_clock_route\":"<<unsigned(beforeClockRoute)<<",\"after_clock_route\":"<<unsigned(board.controller().readMemory(0xfffe6e))<<",\n";
+#if defined(K_RESEARCH_FUNCTIONAL_ONLY)
+ out<<"\"cpu_measured\":false,\"process_cpu_seconds\":null,\"wall_seconds\":null,\"cpu_percent_one_core\":null,\"peak\":"<<result.peak<<",\"rms\":"<<sqrt(result.squares/(2*frames))<<",\"pcm_fnv\":\""<<result.hash<<"\",\n";
+#else
  out<<"\"process_cpu_seconds\":"<<result.cpu<<",\"wall_seconds\":"<<result.wall<<",\"cpu_percent_one_core\":"<<100*result.cpu/(result.frames/kstation::DSP::SampleRate)<<",\"peak\":"<<result.peak<<",\"rms\":"<<sqrt(result.squares/(2*frames))<<",\"pcm_fnv\":\""<<result.hash<<"\",\n";
+#endif
  out<<"\"h8_instructions\":"<<after.instructions-before.instructions<<",\"h8_cycles\":"<<after.cycles-before.cycles<<",\"dsp_instructions\":"<<board.dsp().instructions()-beforeDsp<<",\"dsp_cycles\":"<<board.dsp().cycles()-beforeCycles<<",\"hdi_reads\":"<<after.hostReads-before.hostReads<<",\"hdi_writes\":"<<after.hostWrites-before.hostWrites<<",\"midi_received\":"<<after.midiReceived-before.midiReceived<<",\n";
  out<<"\"dropped_frames\":"<<board.dsp().audioFramesDropped()-beforeDrop<<",\"block_compute_over_budget\":"<<result.overBudget<<",\"max_block_compute_seconds\":"<<result.maxBlock<<",\"h8_sample_count\":"<<h8.count<<",\"dsp_sample_count\":"<<dsp.count<<",\"h8_sampled_wall_ns\":"<<h8.total<<",\"dsp_sampled_wall_ns\":"<<dsp.total<<",\"flash_fnv\":\""<<flashHash<<"\",\"observed_port_fnv\":\""<<portHash<<"\",\"memory_fnv\":\""<<memoryHash<<"\",\"midi_out_count\":"<<midiCount<<",\"midi_out_fnv\":\""<<midiHash<<"\",\n";
  out<<"\"before_patch\":[";for(unsigned i=0;i<128;++i)out<<(i?",":"")<<unsigned(beforePatch[i]);out<<"],\"after_patch\":[";for(unsigned i=0;i<128;++i)out<<(i?",":"")<<unsigned(patch[i]);out<<"],\"bank\":"<<unsigned(after.currentBank)<<",\"program\":"<<unsigned(after.currentProgram)<<"\n}\n";
- require(bool(out),"Cannot save JSON");std::cout<<scenario<<" "<<mode<<" cpu="<<100*result.cpu/(frames/kstation::DSP::SampleRate)<<"% peak="<<result.peak<<" dropped="<<board.dsp().audioFramesDropped()-beforeDrop<<"\n";
+ require(bool(out),"Cannot save JSON");
+#if defined(K_RESEARCH_FUNCTIONAL_ONLY)
+ std::cout<<scenario<<" "<<mode<<" functional comparison; CPU not measured; peak="<<result.peak<<" dropped="<<board.dsp().audioFramesDropped()-beforeDrop<<"\n";
+#else
+ std::cout<<scenario<<" "<<mode<<" cpu="<<100*result.cpu/(frames/kstation::DSP::SampleRate)<<"% peak="<<result.peak<<" dropped="<<board.dsp().audioFramesDropped()-beforeDrop<<"\n";
+#endif
  require(board.dsp().audioFramesDropped()==beforeDrop,"Dropped native frames");require(scenario=="idle"||scenario=="program"||result.peak>1e-5,"Silent sounding scenario");
  return 0;
 }catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}}

@@ -7,6 +7,16 @@
 #include "kstationNativeClock.h"
 #include "kstationNativeTimer1.h"
 #include "kstationNativeSerialRx.h"
+#include "kstationNativeAdc.h"
+#include "kstationNativeDspTransfer.h"
+#include "kstationNativeForeground.h"
+#include "kstationNativeStartup.h"
+#include "kstationNativeDspStartup.h"
+#include "kstationNativeFlashState.h"
+#include "kstationNativePatchUnpack.h"
+#include "kstationNativeMidiEvents.h"
+#include "kstationNativeVoiceAllocation.h"
+#include "kstationNativeVoiceUpdate.h"
 #include "baseLib/sha256.h"
 
 #include <algorithm>
@@ -63,10 +73,25 @@ namespace kstation
         uint64_t nativeTimer1Steps=0,nativeTimer1Entries=0,nativeTimer1Returns=0;
         uint64_t nativeRxSteps=0,nativeRxEntries=0,nativeRxReturns=0,nativeRxClockRequests=0;
         uint64_t nativeClockSteps=0,nativeInternalClockCalls=0,nativeExternalClockCalls=0,nativeClockSyncUpdates=0;
-        bool usesTimerRx()const{return mode==Stage1Mode::Timer1AndRx;}
+        NativeAdc adc;NativeDspTransfer dspTransfers;NativeForeground foreground;
+        NativeStartup startup;NativeDspStartup dspStartup;NativeFlashState flashState;
+        NativePatchUnpack patchUnpack;NativeMidiEvents midiEvents;NativeVoiceAllocation voiceAllocation;NativeVoiceUpdate voiceUpdate;
+        bool developmentOverlayVerified=false;
+        uint64_t nativeAdcSteps=0,nativeAdcEntries=0,nativeAdcReturns=0;
+        uint64_t nativeDspTransferSteps=0,nativeForegroundSteps=0,nativeMainSteps=0,nativeMidiSteps=0,nativeTickSteps=0;
+        uint64_t nativeStartupSteps=0,nativeFlashStateSteps=0,nativePatchUnpackSteps=0;
+        uint64_t nativeMidiEventSteps=0,nativeVoiceAllocationSteps=0,nativeVoiceUpdateSteps=0;
+        bool usesDevelopment()const{return mode==Stage1Mode::ControllerDevelopment;}
+        bool usesTimerRx()const{return mode==Stage1Mode::Timer1AndRx||usesDevelopment();}
         bool usesTx()const{return mode==Stage1Mode::TimersHdiIrqAndSerialTx||usesTimerRx();}
         bool usesIrq()const{return mode==Stage1Mode::TimersHdiAndIrq||usesTx();}
         bool usesHdi()const{return mode==Stage1Mode::TimersAndHdi||usesIrq();}
+        template<class F>static void developmentRanges(F&&f){
+            const auto visit=[&](const auto&ranges){for(const auto&r:ranges)f(r.begin,r.end);};
+            visit(NativeAdc::CodeRanges);visit(NativeDspTransfer::CodeRanges);visit(NativeForeground::CodeRanges);
+            visit(NativeStartup::CodeRanges);visit(NativeDspStartup::CodeRanges);visit(NativeFlashState::CodeRanges);
+            visit(NativePatchUnpack::CodeRanges);visit(NativeMidiEvents::CodeRanges);visit(NativeVoiceAllocation::CodeRanges);visit(NativeVoiceUpdate::CodeRanges);
+        }
         bool protectedCode(uint32_t low)const
         {
             if(low>=0x1672&&low<0x17a0)return true;
@@ -78,6 +103,9 @@ namespace kstation
                 for(const auto& r:NativeClock::CodeRanges)if(low>=r.begin&&low<r.end)return true;
                 for(const auto& r:NativeTimer1::CodeRanges)if(low>=r.begin&&low<r.end)return true;
                 for(const auto& r:NativeSerialRx::CodeRanges)if(low>=r.begin&&low<r.end)return true;
+            }
+            if(usesDevelopment()){
+                bool found=false;developmentRanges([&](uint32_t begin,uint32_t end){found|=low>=begin&&low<end;});if(found)return true;
             }
             return false;
         }
@@ -142,6 +170,9 @@ namespace kstation
                 for(const auto& r:NativeTimer1::CodeRanges)cpu->memmap(this,0x400000+int(r.begin),int(r.end-r.begin));
                 for(const auto& r:NativeSerialRx::CodeRanges)cpu->memmap(this,0x400000+int(r.begin),int(r.end-r.begin));
             }
+            if(usesDevelopment()){
+                developmentRanges([&](uint32_t begin,uint32_t end){cpu->memmap(this,0x400000+int(begin),int(end-begin));});
+            }
             reset();
         }
         void reset()
@@ -161,6 +192,12 @@ namespace kstation
             nativeTimer1Steps=nativeTimer1Entries=nativeTimer1Returns=0;
             nativeRxSteps=nativeRxEntries=nativeRxReturns=nativeRxClockRequests=0;
             nativeClockSteps=nativeInternalClockCalls=nativeExternalClockCalls=nativeClockSyncUpdates=0;
+            adc.reset();dspTransfers.reset();foreground.reset();
+            nativeAdcSteps=nativeAdcEntries=nativeAdcReturns=0;
+            nativeDspTransferSteps=nativeForegroundSteps=nativeMainSteps=nativeMidiSteps=nativeTickSteps=0;
+            startup.reset();dspStartup.reset();flashState.reset();patchUnpack.reset();midiEvents.reset();voiceAllocation.reset();voiceUpdate.reset();developmentOverlayVerified=false;
+            nativeStartupSteps=nativeFlashStateSteps=nativePatchUnpackSteps=0;
+            nativeMidiEventSteps=nativeVoiceAllocationSteps=nativeVoiceUpdateSteps=0;
             instructions=hostReads=hostWrites=midiReceived=0;nextRx=txReady=adcReady=0;
             midiIn.clear();midiOut.clear();
             if(mode==Stage1Mode::Original)
@@ -301,12 +338,18 @@ namespace kstation
                 }
             }
         }
-        template<bool Native,bool Irq=false,bool Serial=false,bool TimerRx=false> uint64_t execCore(uint32_t budget)
+        template<bool Native,bool Irq=false,bool Serial=false,bool TimerRx=false,bool Development=false> uint64_t execCore(uint32_t budget)
         {
             const auto begin=cpu->cycles;
             while(cpu->cycles-begin<budget)
             {
                 const auto pc=static_cast<uint32_t>(cpu->getPC());
+                if constexpr(Development)if(overlay&&!developmentOverlayVerified){
+                    developmentRanges([&](uint32_t first,uint32_t last){
+                        if(!std::equal(rom.begin()+first,rom.begin()+last,cpu->memory+0x400000+first))
+                            throw std::runtime_error("Native K development overlay code mismatch");});
+                    developmentOverlayVerified=true;
+                }
                 if(pc==0x3a58)enteredMain=true;
                 if(enteredMain && pc==0x3ae4)
                 {
@@ -328,6 +371,9 @@ namespace kstation
                                 if(!std::equal(rom.begin()+r.begin,rom.begin()+r.end,cpu->memory+0x400000+r.begin))
                                     throw std::runtime_error("Native K Timer1/RX handoff code mismatch");};
                             verify(NativeClock::CodeRanges);verify(NativeTimer1::CodeRanges);verify(NativeSerialRx::CodeRanges);
+                            if constexpr(Development)developmentRanges([&](uint32_t first,uint32_t last){
+                                if(!std::equal(rom.begin()+first,rom.begin()+last,cpu->memory+0x400000+first))
+                                    throw std::runtime_error("Native K development handoff code mismatch");});
                         }
                         nativeWaitReady=true;
                     }
@@ -335,7 +381,10 @@ namespace kstation
                 if constexpr(Native)
                 {
                     bool irqStep=false;
-                    if constexpr(TimerRx)if(nativeWaitReady){
+                    if constexpr(Development)if(NativeStartup::candidate(pc)&&(startup.active()||pc==0x2fe||pc==0x382)){
+                        irqStep=startup.step(*cpu);if(irqStep)++nativeStartupSteps;
+                    }
+                    if constexpr(TimerRx)if(!irqStep&&nativeWaitReady){
                         if(NativeTimer1::candidate(pc,cpu->pending_irqs)){
                             const auto t=timer1.step(*cpu);irqStep=t.stepped;
                             if(irqStep){++nativeIrqSteps;nativeIrqEntries+=t.entered;nativeIrqReturns+=t.returned;
@@ -367,11 +416,48 @@ namespace kstation
                         irqStep=clockServices.step(*cpu);
                         if(irqStep){++nativeClockSteps;nativeInternalClockCalls+=pc==0x1970;nativeExternalClockCalls+=pc==0x19f4;nativeClockSyncUpdates+=pc==0x1aba;}
                     }
+                    if constexpr(Development)if(!irqStep&&nativeWaitReady&&NativeAdc::candidate(pc,cpu->pending_irqs)
+                        &&(adc.active()||pc<0x65a||pc>=0x670||(cpu->pending_irqs&&!(cpu->ccr&0x80)))){
+                        const auto a=adc.step(*cpu);irqStep=a.stepped;
+                        if(irqStep){++nativeIrqSteps;nativeIrqEntries+=a.entered;nativeIrqReturns+=a.returned;
+                            ++nativeAdcSteps;nativeAdcEntries+=a.entered;nativeAdcReturns+=a.returned;}
+                    }
+                    if constexpr(Development)if(!irqStep&&NativeDspStartup::candidate(pc)
+                        &&(!nativeWaitReady||dspStartup.active()||pc==0x14ee||pc==0x2ae||(pc>=0x155e&&pc<0x15a6))){
+                        irqStep=dspStartup.step(*cpu);if(irqStep)++nativeStartupSteps;
+                    }
+                    if constexpr(Development)if(!irqStep&&nativeWaitReady&&NativeDspTransfer::candidate(pc)){
+                        irqStep=dspTransfers.step(*cpu);if(irqStep)++nativeDspTransferSteps;
+                    }
+                    if constexpr(Development)if(!irqStep&&NativeFlashState::candidate(pc)){
+                        irqStep=flashState.step(*cpu);if(irqStep)++nativeFlashStateSteps;
+                    }
+                    if constexpr(Development)if(!irqStep&&NativePatchUnpack::candidate(pc)){
+                        irqStep=patchUnpack.step(*cpu);if(irqStep)++nativePatchUnpackSteps;
+                    }
+                    if constexpr(Development)if(!irqStep&&NativeVoiceAllocation::candidate(pc)){
+                        irqStep=voiceAllocation.step(*cpu);if(irqStep)++nativeVoiceAllocationSteps;
+                    }
+                    if constexpr(Development)if(!irqStep&&NativeVoiceUpdate::candidate(pc)){
+                        irqStep=voiceUpdate.step(*cpu);if(irqStep)++nativeVoiceUpdateSteps;
+                    }
+                    if constexpr(Development)if(!irqStep&&NativeMidiEvents::candidate(pc)){
+                        irqStep=midiEvents.step(*cpu);if(irqStep)++nativeMidiEventSteps;
+                    }
+                    if constexpr(Development)if(!irqStep&&nativeWaitReady&&NativeForeground::candidate(pc)){
+                        const auto f=foreground.step(*cpu);irqStep=f.stepped;
+                        if(irqStep){++nativeForegroundSteps;nativeMainSteps+=f.main;nativeMidiSteps+=f.midi;nativeTickSteps+=f.tick;}
+                    }
                     if constexpr(TimerRx)if(!irqStep&&nativeWaitReady
                         &&(timer1.active()||serialRx.active()||clockServices.active())
                         &&(!(cpu->pending_irqs)||(cpu->ccr&0x80))
                         &&(NativeTimer1::candidate(pc,0)||NativeSerialRx::candidate(pc,0)||NativeClock::candidate(pc)))
                         throw std::logic_error("Incomplete native K Timer1/RX clock phase");
+                    if constexpr(Development)if(!irqStep&&nativeWaitReady
+                        &&(!(cpu->pending_irqs)||(cpu->ccr&0x80))
+                        &&(NativeDspTransfer::candidate(pc)||NativeForeground::candidate(pc)
+                           ||(pc>=0x65a&&pc<0x830)))
+                        throw std::logic_error("Incomplete native K development phase");
                     if(!irqStep){if(nativeWaitReady&&NativeHdiWait::step(*cpu))++nativeWaitSteps;else cpu->step();}
                 }
                 else cpu->step();
@@ -381,7 +467,7 @@ namespace kstation
             }
             return cpu->cycles-begin;
         }
-        uint64_t exec(uint32_t budget){if(mode==Stage1Mode::Original)return execCore<false>(budget);if(usesTimerRx())return execCore<true,true,true,true>(budget);if(usesTx())return execCore<true,true,true>(budget);return usesIrq()?execCore<true,true>(budget):execCore<true>(budget);}
+        uint64_t exec(uint32_t budget){if(mode==Stage1Mode::Original)return execCore<false>(budget);if(usesDevelopment())return execCore<true,true,true,true,true>(budget);if(usesTimerRx())return execCore<true,true,true,true>(budget);if(usesTx())return execCore<true,true,true>(budget);return usesIrq()?execCore<true,true>(budget):execCore<true>(budget);}
     };
 
     H8::H8(const std::vector<uint8_t>& image,HostCallbacks cb,const std::vector<uint8_t>& flash,Stage1Mode mode)
@@ -442,13 +528,17 @@ namespace kstation
         DebugState s;
         s.pc=m_impl->cpu->getPC();s.sp=m_impl->cpu->getSP();s.cycles=m_impl->cpu->cycles;
         s.instructions=m_impl->instructions;s.hostReads=m_impl->hostReads;s.hostWrites=m_impl->hostWrites;
-        s.interpretedSteps=m_impl->instructions-m_impl->nativeWaitSteps-m_impl->nativeIrqSteps-m_impl->nativeClockSteps;s.nativeWaitSteps=m_impl->nativeWaitSteps;
+        s.interpretedSteps=m_impl->instructions-m_impl->nativeWaitSteps-m_impl->nativeIrqSteps-m_impl->nativeClockSteps-m_impl->nativeDspTransferSteps-m_impl->nativeForegroundSteps-m_impl->nativeStartupSteps-m_impl->nativeFlashStateSteps-m_impl->nativePatchUnpackSteps-m_impl->nativeMidiEventSteps-m_impl->nativeVoiceAllocationSteps-m_impl->nativeVoiceUpdateSteps;s.nativeWaitSteps=m_impl->nativeWaitSteps;
         s.nativeIrqSteps=m_impl->nativeIrqSteps;s.nativeIrqEntries=m_impl->nativeIrqEntries;s.nativeIrqReturns=m_impl->nativeIrqReturns;
         s.nativeTimer3Steps=m_impl->nativeTimer3Steps;s.nativeSerialErrorSteps=m_impl->nativeSerialErrorSteps;
         s.nativeSerialTxSteps=m_impl->nativeSerialTxSteps;s.nativeSerialTxEntries=m_impl->nativeSerialTxEntries;s.nativeSerialTxReturns=m_impl->nativeSerialTxReturns;
         s.nativeTimer1Steps=m_impl->nativeTimer1Steps;s.nativeTimer1Entries=m_impl->nativeTimer1Entries;s.nativeTimer1Returns=m_impl->nativeTimer1Returns;
         s.nativeRxSteps=m_impl->nativeRxSteps;s.nativeRxEntries=m_impl->nativeRxEntries;s.nativeRxReturns=m_impl->nativeRxReturns;s.nativeRxClockRequests=m_impl->nativeRxClockRequests;
         s.nativeClockSteps=m_impl->nativeClockSteps;s.nativeInternalClockCalls=m_impl->nativeInternalClockCalls;s.nativeExternalClockCalls=m_impl->nativeExternalClockCalls;s.nativeClockSyncUpdates=m_impl->nativeClockSyncUpdates;
+        s.nativeAdcSteps=m_impl->nativeAdcSteps;s.nativeAdcEntries=m_impl->nativeAdcEntries;s.nativeAdcReturns=m_impl->nativeAdcReturns;
+        s.nativeDspTransferSteps=m_impl->nativeDspTransferSteps;s.nativeForegroundSteps=m_impl->nativeForegroundSteps;s.nativeMainSteps=m_impl->nativeMainSteps;s.nativeMidiSteps=m_impl->nativeMidiSteps;s.nativeTickSteps=m_impl->nativeTickSteps;
+        s.nativeStartupSteps=m_impl->nativeStartupSteps;s.nativeFlashStateSteps=m_impl->nativeFlashStateSteps;s.nativePatchUnpackSteps=m_impl->nativePatchUnpackSteps;
+        s.nativeMidiEventSteps=m_impl->nativeMidiEventSteps;s.nativeVoiceAllocationSteps=m_impl->nativeVoiceAllocationSteps;s.nativeVoiceUpdateSteps=m_impl->nativeVoiceUpdateSteps;
         s.midiReceived=m_impl->midiReceived;s.ramOverlay=m_impl->overlay;s.mainEntered=m_impl->enteredMain;
         s.initializedFromFirmware=m_impl->reconstructedDefaults;
         s.currentBank=m_impl->raw(0xcd82);s.currentProgram=m_impl->raw(0xcd83);
