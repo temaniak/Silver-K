@@ -4,6 +4,9 @@
 #include "kstationNativeTimers.h"
 #include "kstationNativeIrq.h"
 #include "kstationNativeSerialTx.h"
+#include "kstationNativeClock.h"
+#include "kstationNativeTimer1.h"
+#include "kstationNativeSerialRx.h"
 #include "baseLib/sha256.h"
 
 #include <algorithm>
@@ -56,7 +59,12 @@ namespace kstation
         uint64_t nativeTimer3Steps=0,nativeSerialErrorSteps=0;
         NativeSerialTx serialTx;
         uint64_t nativeSerialTxSteps=0,nativeSerialTxEntries=0,nativeSerialTxReturns=0;
-        bool usesTx()const{return mode==Stage1Mode::TimersHdiIrqAndSerialTx;}
+        NativeTimer1 timer1;NativeSerialRx serialRx;NativeClock clockServices;
+        uint64_t nativeTimer1Steps=0,nativeTimer1Entries=0,nativeTimer1Returns=0;
+        uint64_t nativeRxSteps=0,nativeRxEntries=0,nativeRxReturns=0,nativeRxClockRequests=0;
+        uint64_t nativeClockSteps=0,nativeInternalClockCalls=0,nativeExternalClockCalls=0,nativeClockSyncUpdates=0;
+        bool usesTimerRx()const{return mode==Stage1Mode::Timer1AndRx;}
+        bool usesTx()const{return mode==Stage1Mode::TimersHdiIrqAndSerialTx||usesTimerRx();}
         bool usesIrq()const{return mode==Stage1Mode::TimersHdiAndIrq||usesTx();}
         bool usesHdi()const{return mode==Stage1Mode::TimersAndHdi||usesIrq();}
         bool protectedCode(uint32_t low)const
@@ -66,6 +74,11 @@ namespace kstation
                 if(low>=range.begin&&low<range.end)return true;
             if(usesTx())for(const auto& range:NativeSerialTx::CodeRanges)
                 if(low>=range.begin&&low<range.end)return true;
+            if(usesTimerRx()){
+                for(const auto& r:NativeClock::CodeRanges)if(low>=r.begin&&low<r.end)return true;
+                for(const auto& r:NativeTimer1::CodeRanges)if(low>=r.begin&&low<r.end)return true;
+                for(const auto& r:NativeSerialRx::CodeRanges)if(low>=r.begin&&low<r.end)return true;
+            }
             return false;
         }
         HostCallbacks host;
@@ -124,6 +137,11 @@ namespace kstation
                 cpu->memmap(this,0x400000+int(range.begin),int(range.end-range.begin));
             if(usesTx())for(const auto& range:NativeSerialTx::CodeRanges)
                 cpu->memmap(this,0x400000+int(range.begin),int(range.end-range.begin));
+            if(usesTimerRx()){
+                for(const auto& r:NativeClock::CodeRanges)cpu->memmap(this,0x400000+int(r.begin),int(r.end-r.begin));
+                for(const auto& r:NativeTimer1::CodeRanges)cpu->memmap(this,0x400000+int(r.begin),int(r.end-r.begin));
+                for(const auto& r:NativeSerialRx::CodeRanges)cpu->memmap(this,0x400000+int(r.begin),int(r.end-r.begin));
+            }
             reset();
         }
         void reset()
@@ -139,6 +157,10 @@ namespace kstation
             nativeIrqSteps=nativeIrqEntries=nativeIrqReturns=0;
             nativeTimer3Steps=nativeSerialErrorSteps=0;
             serialTx.reset();nativeSerialTxSteps=nativeSerialTxEntries=nativeSerialTxReturns=0;
+            timer1.reset();serialRx.reset();clockServices.reset();
+            nativeTimer1Steps=nativeTimer1Entries=nativeTimer1Returns=0;
+            nativeRxSteps=nativeRxEntries=nativeRxReturns=nativeRxClockRequests=0;
+            nativeClockSteps=nativeInternalClockCalls=nativeExternalClockCalls=nativeClockSyncUpdates=0;
             instructions=hostReads=hostWrites=midiReceived=0;nextRx=txReady=adcReady=0;
             midiIn.clear();midiOut.clear();
             if(mode==Stage1Mode::Original)
@@ -279,7 +301,7 @@ namespace kstation
                 }
             }
         }
-        template<bool Native,bool Irq=false,bool Serial=false> uint64_t execCore(uint32_t budget)
+        template<bool Native,bool Irq=false,bool Serial=false,bool TimerRx=false> uint64_t execCore(uint32_t budget)
         {
             const auto begin=cpu->cycles;
             while(cpu->cycles-begin<budget)
@@ -301,13 +323,31 @@ namespace kstation
                         if constexpr(Serial)for(const auto& range:NativeSerialTx::CodeRanges)
                             if(!std::equal(rom.begin()+range.begin,rom.begin()+range.end,cpu->memory+0x400000+range.begin))
                                 throw std::runtime_error("Native K TX handoff code mismatch");
+                        if constexpr(TimerRx){
+                            const auto verify=[&](const auto& ranges){for(const auto& r:ranges)
+                                if(!std::equal(rom.begin()+r.begin,rom.begin()+r.end,cpu->memory+0x400000+r.begin))
+                                    throw std::runtime_error("Native K Timer1/RX handoff code mismatch");};
+                            verify(NativeClock::CodeRanges);verify(NativeTimer1::CodeRanges);verify(NativeSerialRx::CodeRanges);
+                        }
                         nativeWaitReady=true;
                     }
                 }
                 if constexpr(Native)
                 {
                     bool irqStep=false;
-                    if constexpr(Serial)if(nativeWaitReady&&NativeSerialTx::candidate(pc,cpu->pending_irqs))
+                    if constexpr(TimerRx)if(nativeWaitReady){
+                        if(NativeTimer1::candidate(pc,cpu->pending_irqs)){
+                            const auto t=timer1.step(*cpu);irqStep=t.stepped;
+                            if(irqStep){++nativeIrqSteps;nativeIrqEntries+=t.entered;nativeIrqReturns+=t.returned;
+                                ++nativeTimer1Steps;nativeTimer1Entries+=t.entered;nativeTimer1Returns+=t.returned;}
+                        }
+                        if(!irqStep&&NativeSerialRx::candidate(pc,cpu->pending_irqs)){
+                            const auto r=serialRx.step(*cpu);irqStep=r.stepped;
+                            if(irqStep){++nativeIrqSteps;nativeIrqEntries+=r.entered;nativeIrqReturns+=r.returned;
+                                ++nativeRxSteps;nativeRxEntries+=r.entered;nativeRxReturns+=r.returned;nativeRxClockRequests+=r.clockRequested;}
+                        }
+                    }
+                    if constexpr(Serial)if(!irqStep&&nativeWaitReady&&NativeSerialTx::candidate(pc,cpu->pending_irqs))
                     {
                         const auto tx=serialTx.step(*cpu);irqStep=tx.stepped;
                         if(irqStep){++nativeIrqSteps;nativeIrqEntries+=tx.entered;nativeIrqReturns+=tx.returned;
@@ -323,6 +363,15 @@ namespace kstation
                             else if(irq.kind==NativeIrq::Kind::SerialError)++nativeSerialErrorSteps;
                         }
                     }
+                    if constexpr(TimerRx)if(!irqStep&&nativeWaitReady&&NativeClock::candidate(pc)){
+                        irqStep=clockServices.step(*cpu);
+                        if(irqStep){++nativeClockSteps;nativeInternalClockCalls+=pc==0x1970;nativeExternalClockCalls+=pc==0x19f4;nativeClockSyncUpdates+=pc==0x1aba;}
+                    }
+                    if constexpr(TimerRx)if(!irqStep&&nativeWaitReady
+                        &&(timer1.active()||serialRx.active()||clockServices.active())
+                        &&(!(cpu->pending_irqs)||(cpu->ccr&0x80))
+                        &&(NativeTimer1::candidate(pc,0)||NativeSerialRx::candidate(pc,0)||NativeClock::candidate(pc)))
+                        throw std::logic_error("Incomplete native K Timer1/RX clock phase");
                     if(!irqStep){if(nativeWaitReady&&NativeHdiWait::step(*cpu))++nativeWaitSteps;else cpu->step();}
                 }
                 else cpu->step();
@@ -332,7 +381,7 @@ namespace kstation
             }
             return cpu->cycles-begin;
         }
-        uint64_t exec(uint32_t budget){if(mode==Stage1Mode::Original)return execCore<false>(budget);if(usesTx())return execCore<true,true,true>(budget);return usesIrq()?execCore<true,true>(budget):execCore<true>(budget);}
+        uint64_t exec(uint32_t budget){if(mode==Stage1Mode::Original)return execCore<false>(budget);if(usesTimerRx())return execCore<true,true,true,true>(budget);if(usesTx())return execCore<true,true,true>(budget);return usesIrq()?execCore<true,true>(budget):execCore<true>(budget);}
     };
 
     H8::H8(const std::vector<uint8_t>& image,HostCallbacks cb,const std::vector<uint8_t>& flash,Stage1Mode mode)
@@ -393,10 +442,13 @@ namespace kstation
         DebugState s;
         s.pc=m_impl->cpu->getPC();s.sp=m_impl->cpu->getSP();s.cycles=m_impl->cpu->cycles;
         s.instructions=m_impl->instructions;s.hostReads=m_impl->hostReads;s.hostWrites=m_impl->hostWrites;
-        s.interpretedSteps=m_impl->instructions-m_impl->nativeWaitSteps-m_impl->nativeIrqSteps;s.nativeWaitSteps=m_impl->nativeWaitSteps;
+        s.interpretedSteps=m_impl->instructions-m_impl->nativeWaitSteps-m_impl->nativeIrqSteps-m_impl->nativeClockSteps;s.nativeWaitSteps=m_impl->nativeWaitSteps;
         s.nativeIrqSteps=m_impl->nativeIrqSteps;s.nativeIrqEntries=m_impl->nativeIrqEntries;s.nativeIrqReturns=m_impl->nativeIrqReturns;
         s.nativeTimer3Steps=m_impl->nativeTimer3Steps;s.nativeSerialErrorSteps=m_impl->nativeSerialErrorSteps;
         s.nativeSerialTxSteps=m_impl->nativeSerialTxSteps;s.nativeSerialTxEntries=m_impl->nativeSerialTxEntries;s.nativeSerialTxReturns=m_impl->nativeSerialTxReturns;
+        s.nativeTimer1Steps=m_impl->nativeTimer1Steps;s.nativeTimer1Entries=m_impl->nativeTimer1Entries;s.nativeTimer1Returns=m_impl->nativeTimer1Returns;
+        s.nativeRxSteps=m_impl->nativeRxSteps;s.nativeRxEntries=m_impl->nativeRxEntries;s.nativeRxReturns=m_impl->nativeRxReturns;s.nativeRxClockRequests=m_impl->nativeRxClockRequests;
+        s.nativeClockSteps=m_impl->nativeClockSteps;s.nativeInternalClockCalls=m_impl->nativeInternalClockCalls;s.nativeExternalClockCalls=m_impl->nativeExternalClockCalls;s.nativeClockSyncUpdates=m_impl->nativeClockSyncUpdates;
         s.midiReceived=m_impl->midiReceived;s.ramOverlay=m_impl->overlay;s.mainEntered=m_impl->enteredMain;
         s.initializedFromFirmware=m_impl->reconstructedDefaults;
         s.currentBank=m_impl->raw(0xcd82);s.currentProgram=m_impl->raw(0xcd83);

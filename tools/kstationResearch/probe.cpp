@@ -44,6 +44,21 @@ std::vector<Event> events(const std::string& scenario,uint64_t frames){
  if(scenario=="txclock"||scenario=="txqueue")for(uint64_t f=0,n=0;f<frames;f+=uint64_t(rate/100),++n)e.push_back({f,{uint8_t(n),0,0},scenario=="txclock"?4u:5u});
  if(scenario=="scierror")for(uint64_t f=0;f<frames;f+=uint64_t(rate/100))e.push_back({f,{52,0,0},0});
  if(scenario=="sustain")for(uint64_t f=0,n=0;f<frames;f+=uint64_t(rate/4),++n){add(f,0xb0,64,n%2?0:127);add(f,0x90,uint8_t(48+n%24),100);if(f+uint64_t(rate/8)<frames)add(f+uint64_t(rate/8),0x80,uint8_t(48+n%24),0);}
+ if(scenario=="clockext"||scenario=="clockjitter"||scenario=="clockgap"||scenario=="clockburst"){
+  uint64_t f=0,n=0;
+  while(f<frames){
+   if(scenario!="clockgap"||f<uint64_t(rate*.5)||f>uint64_t(rate*1.25))e.push_back({f,{0xf8,0,0},1});
+   const auto base=uint64_t(rate/(scenario=="clockburst"?240:48));
+   const int jitter=scenario=="clockjitter"?int(n%5)*13-26:0;
+   f+=uint64_t(int64_t(base)+jitter);++n;
+  }
+  if(scenario=="clockburst")for(uint64_t f=0,n=0;f<frames;f+=uint64_t(rate/50),++n)add(f,0xb0,105,uint8_t(n%128));
+ }
+ if(scenario=="rxrunning"){
+  add(0,0x90,60,100);
+  for(uint64_t f=uint64_t(rate/16),n=1;f<frames;f+=uint64_t(rate/16),++n)e.push_back({f,{uint8_t(48+(n/2)%24),uint8_t(n%2?100:0),0},2});
+ }
+ std::stable_sort(e.begin(),e.end(),[](const Event&a,const Event&b){return a.frame<b.frame;});
  return e;
 }
 void setup(kstation::Hardware& board,const std::string& scenario){
@@ -54,7 +69,8 @@ void setup(kstation::Hardware& board,const std::string& scenario){
  send(board,{0xb0,91,0});send(board,{0xb0,92,0});send(board,{0xb0,93,0});
  send(board,{0xb0,105,127});send(board,{0xb0,87,3});send(board,{0xb0,89,0});
  for(unsigned i=0;i<8192;++i)board.renderSample();
- if(scenario=="arp"||scenario=="clock"){send(board,{0xb0,87,3});send(board,{0xb0,88,64});send(board,{0xb0,89,12});}
+ if(scenario=="clockext"||scenario=="clockjitter"||scenario=="clockgap"||scenario=="clockburst")send(board,{0xb0,99,0,0xb0,98,38,0xb0,6,2,0xb0,98,0});
+ if(scenario=="arp"||scenario=="clock"||scenario=="clockext"||scenario=="clockjitter"||scenario=="clockgap"||scenario=="clockburst"){send(board,{0xb0,87,3});send(board,{0xb0,88,64});send(board,{0xb0,89,12});}
  unsigned keys=scenario=="idle"||scenario=="notes"||scenario=="sustain"||scenario=="program"?0:scenario=="held1"?1:8;
  for(unsigned n=0;n<keys;++n)send(board,{0x90,uint8_t(48+n*3),100});
 }
@@ -94,7 +110,7 @@ int main(int argc,char** argv){try{
  require(argc==9,"Usage: probe firmware scenario seconds mode(off|capture|detailed|observe) pacing(offline|paced) block output-prefix warm-seconds");
  const auto firmware=load(argv[1]);require(firmware.size()==49728,"Decoded firmware expected; validate SHA in runner");
  const std::string scenario=argv[2],mode=argv[4],prefix=argv[7];
- require(scenario=="idle"||scenario=="held1"||scenario=="held8"||scenario=="notes"||scenario=="sweep"||scenario=="arp"||scenario=="program"||scenario=="clock"||scenario=="irq"||scenario=="irq2"||scenario=="scierror"||scenario=="txirq"||scenario=="txclock"||scenario=="txqueue"||scenario=="sustain","Unknown scenario");
+ require(scenario=="idle"||scenario=="held1"||scenario=="held8"||scenario=="notes"||scenario=="sweep"||scenario=="arp"||scenario=="program"||scenario=="clock"||scenario=="irq"||scenario=="irq2"||scenario=="scierror"||scenario=="txirq"||scenario=="txclock"||scenario=="txqueue"||scenario=="sustain"||scenario=="clockext"||scenario=="clockjitter"||scenario=="clockgap"||scenario=="clockburst"||scenario=="rxrunning","Unknown scenario");
  require(mode=="off"||mode=="capture"||mode=="detailed"||mode=="observe","Unknown mode");
 #ifndef K_RESEARCH_OBSERVE
  require(mode!="observe","Use observer executable");
@@ -102,7 +118,7 @@ int main(int argc,char** argv){try{
  const double seconds=std::stod(argv[3]),warmSeconds=std::stod(argv[8]);const unsigned block=std::stoul(argv[6]);require(seconds>0&&seconds<=120&&warmSeconds>=0&&block>=16&&block<=2048,"Bad duration/block");
  const bool paced=std::string(argv[5])=="paced";require(paced||std::string(argv[5])=="offline","Unknown pacing");
 #if defined(K_RESEARCH_STAGE1_TRACE)
- stagePorts.reserve(20000000);stageSlices.reserve(34000000);stageTrace=true;
+ stagePorts.reserve(40000000);stageSlices.reserve(34000000);stageTrace=true;
 #endif
 #if defined(K_RESEARCH_STAGE1)
  const auto* modeText=std::getenv("K_STAGE1_MODE");const std::string controllerMode=modeText?modeText:"hdi";
@@ -113,6 +129,9 @@ int main(int argc,char** argv){try{
  #if defined(K_RESEARCH_STAGE3)
  allowed=allowed||controllerMode=="serial";
 #endif
+#if defined(K_RESEARCH_STAGE4)
+ allowed=allowed||controllerMode=="timer_rx";
+#endif
  require(allowed,"Unknown native K mode");
  auto controller=controllerMode=="hdi"?kstation::H8::Stage1Mode::TimersAndHdi:controllerMode=="timers"?kstation::H8::Stage1Mode::Timers:kstation::H8::Stage1Mode::Original;
 #if defined(K_RESEARCH_STAGE2)
@@ -121,6 +140,9 @@ int main(int argc,char** argv){try{
  #if defined(K_RESEARCH_STAGE3)
  if(controllerMode=="serial")controller=kstation::H8::Stage1Mode::TimersHdiIrqAndSerialTx;
 #endif
+#if defined(K_RESEARCH_STAGE4)
+ if(controllerMode=="timer_rx")controller=kstation::H8::Stage1Mode::Timer1AndRx;
+#endif
  kstation::Hardware board(firmware,{},controller);
 #else
  const std::string controllerMode="original";kstation::Hardware board(firmware);
@@ -128,6 +150,7 @@ int main(int argc,char** argv){try{
  require(board.boot(),"Boot failed");setup(board,scenario);
  const auto warmFrames=uint64_t(warmSeconds*kstation::DSP::SampleRate);render(board,warmFrames,events(scenario,warmFrames),paced,block);
  std::array<uint8_t,128> beforePatch{};board.controller().copyCurrentPatch(beforePatch.data());
+ const auto beforeClockSource=board.controller().readMemory(0xbb1c),beforeClockRoute=board.controller().readMemory(0xfffe6e);
  const auto before=board.controller().debugState();const auto beforeDsp=board.dsp().instructions(),beforeCycles=board.dsp().cycles(),beforeDrop=board.dsp().audioFramesDropped();
  baseLib::performance::Diagnostics diagnostics;
  if(mode=="detailed"){diagnostics.start(true);board.setPerformanceDiagnostics(&diagnostics);}
@@ -162,6 +185,12 @@ int main(int argc,char** argv){try{
 #if defined(K_RESEARCH_STAGE3)
  out<<"\"native_serial_tx_steps\":"<<after.nativeSerialTxSteps-before.nativeSerialTxSteps<<",\"native_serial_tx_entries\":"<<after.nativeSerialTxEntries-before.nativeSerialTxEntries<<",\"native_serial_tx_returns\":"<<after.nativeSerialTxReturns-before.nativeSerialTxReturns<<",\n";
 #endif
+#if defined(K_RESEARCH_STAGE4)
+ out<<"\"native_timer1_steps\":"<<after.nativeTimer1Steps-before.nativeTimer1Steps<<",\"native_timer1_entries\":"<<after.nativeTimer1Entries-before.nativeTimer1Entries<<",\"native_timer1_returns\":"<<after.nativeTimer1Returns-before.nativeTimer1Returns<<",\n";
+ out<<"\"native_rx_steps\":"<<after.nativeRxSteps-before.nativeRxSteps<<",\"native_rx_entries\":"<<after.nativeRxEntries-before.nativeRxEntries<<",\"native_rx_returns\":"<<after.nativeRxReturns-before.nativeRxReturns<<",\"native_rx_clock_requests\":"<<after.nativeRxClockRequests-before.nativeRxClockRequests<<",\n";
+ out<<"\"native_clock_steps\":"<<after.nativeClockSteps-before.nativeClockSteps<<",\"native_internal_clock_calls\":"<<after.nativeInternalClockCalls-before.nativeInternalClockCalls<<",\"native_external_clock_calls\":"<<after.nativeExternalClockCalls-before.nativeExternalClockCalls<<",\"native_clock_sync_updates\":"<<after.nativeClockSyncUpdates-before.nativeClockSyncUpdates<<",\n";
+#endif
+ out<<"\"before_clock_source\":"<<unsigned(beforeClockSource)<<",\"after_clock_source\":"<<unsigned(board.controller().readMemory(0xbb1c))<<",\"before_clock_route\":"<<unsigned(beforeClockRoute)<<",\"after_clock_route\":"<<unsigned(board.controller().readMemory(0xfffe6e))<<",\n";
  out<<"\"process_cpu_seconds\":"<<result.cpu<<",\"wall_seconds\":"<<result.wall<<",\"cpu_percent_one_core\":"<<100*result.cpu/(result.frames/kstation::DSP::SampleRate)<<",\"peak\":"<<result.peak<<",\"rms\":"<<sqrt(result.squares/(2*frames))<<",\"pcm_fnv\":\""<<result.hash<<"\",\n";
  out<<"\"h8_instructions\":"<<after.instructions-before.instructions<<",\"h8_cycles\":"<<after.cycles-before.cycles<<",\"dsp_instructions\":"<<board.dsp().instructions()-beforeDsp<<",\"dsp_cycles\":"<<board.dsp().cycles()-beforeCycles<<",\"hdi_reads\":"<<after.hostReads-before.hostReads<<",\"hdi_writes\":"<<after.hostWrites-before.hostWrites<<",\"midi_received\":"<<after.midiReceived-before.midiReceived<<",\n";
  out<<"\"dropped_frames\":"<<board.dsp().audioFramesDropped()-beforeDrop<<",\"block_compute_over_budget\":"<<result.overBudget<<",\"max_block_compute_seconds\":"<<result.maxBlock<<",\"h8_sample_count\":"<<h8.count<<",\"dsp_sample_count\":"<<dsp.count<<",\"h8_sampled_wall_ns\":"<<h8.total<<",\"dsp_sampled_wall_ns\":"<<dsp.total<<",\"flash_fnv\":\""<<flashHash<<"\",\"observed_port_fnv\":\""<<portHash<<"\",\"memory_fnv\":\""<<memoryHash<<"\",\"midi_out_count\":"<<midiCount<<",\"midi_out_fnv\":\""<<midiHash<<"\",\n";

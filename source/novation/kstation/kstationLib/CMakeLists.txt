@@ -8,6 +8,9 @@ add_library(kstationLib STATIC
     kstationHardware.cpp kstationHardware.h
     kstationHdiWait.h kstationNativeTimers.h kstationNativeIrq.h
     kstationSerialTxService.h kstationNativeSerialTx.h
+    kstationClockPulseTask.h kstationClockTasks.h kstationNativeClock.h
+    kstationTimer1Service.h kstationNativeTimer1.h
+    kstationSerialRxService.h kstationNativeSerialRx.h
     kstationQueue.h
     kstationRomLoader.cpp kstationRomLoader.h)
 target_compile_features(kstationLib PUBLIC cxx_std_17)
@@ -72,4 +75,19 @@ if(KSTATION_BUILD_NATIVE_STAGE3_CHECK)
     target_link_libraries(kstationStage3Guard_test PRIVATE kstationLib)
     add_test(NAME kstation_stage3_guards COMMAND kstationStage3Guard_test)
     set_tests_properties(kstation_stage3_guards PROPERTIES SKIP_RETURN_CODE 77)
+endif()
+
+option(KSTATION_BUILD_NATIVE_STAGE4_CHECK "Build K Timer1/RX/F8 differential checks" OFF)
+if(KSTATION_BUILD_NATIVE_STAGE4_CHECK)
+    foreach(check ClockService SerialRxService Timer1Service)
+        add_executable(kstation${check}_test kstation${check}_test.cpp)
+        target_link_libraries(kstation${check}_test PRIVATE h8s)
+        target_compile_features(kstation${check}_test PRIVATE cxx_std_17)
+        add_test(NAME kstation_${check} COMMAND kstation${check}_test)
+        set_tests_properties(kstation_${check} PROPERTIES SKIP_RETURN_CODE 77)
+    endforeach()
+    add_executable(kstationStage4Guard_test kstationStage4Guard_test.cpp)
+    target_link_libraries(kstationStage4Guard_test PRIVATE kstationLib)
+    add_test(NAME kstation_stage4_guards COMMAND kstationStage4Guard_test)
+    set_tests_properties(kstation_stage4_guards PROPERTIES SKIP_RETURN_CODE 77)
 endif()

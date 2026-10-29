@@ -103,7 +103,8 @@ scenarios. `_trace` targets record actual clocked HDI byte accesses and full
 CPU/slice frames, from cold boot through the captured passage, into bounded
 preallocated buffers. They must not be used for CPU claims. Final PCM, full
 H8 RAM and Flash compare byte-for-byte. `clock` supplies F8 traffic with the
-default Internal clock setting; `irq` is synthetic timer IRQ injection.
+ROM-derived clock selection; stage4 records selector0 (Auto), correcting the
+earlier unverified Internal label. `irq` is synthetic timer IRQ injection.
 `program` is a deliberately non-sounding state-reload test in this stage, and
 is excluded from CPU. This does not erase the earlier sounding-preflight failure.
 
@@ -191,3 +192,51 @@ Keep trace executables out of CPU measurement. Whole-service unit checks cover
 live data mutations, queue wrap, realtime priority, nested IRQs, dynamic bus
 costs, short-budget no-ops and zero processing allocations. Unit sanitizers do
 not establish whole-DSP sanitizer coverage or physical UART behavior.
+
+## Timer1 and SCI RX with incoming F8
+
+`H8::Stage1Mode::Timer1AndRx` extends stage3 with complete Timer1/encoder/panel/
+LCD and SCI RX services, plus the shared internal/external clock graph. The
+pure tasks follow KS typed-service/child-budget design; numeric constants,
+resources and timings belong to K. Separate adapters still project into the
+temporary H8 caller frame. Bootstrap, ADC and the remaining Main/MIDI/voice
+services continue to use H8. Original remains the default.
+
+Freeze K stage3 from `21b2bd4`. Add `KSTATION_STAGE4_REFERENCE=<frozen-stage3>`
+and `KSTATION_STAGE4_ORIGINAL=<frozen-original-from-283bf00>` to the preceding
+research configuration, retaining earlier reference options for regressions.
+Build `kstation_stage4_{original,reference,candidate}{,_trace}`,
+`kstationClockService_test`, `kstationSerialRxService_test`,
+`kstationTimer1Service_test`, `kstationStage4Guard_test` and previous checks.
+The production test option `KSTATION_BUILD_NATIVE_STAGE4_CHECK` defaults off.
+
+```sh
+python3 compare_stage4.py <build> <decoded-firmware> <fresh-private-correctness>
+python3 measure_stage4.py <build> <decoded-firmware> <fresh-private-offline> offline
+python3 measure_stage4.py <build> <decoded-firmware> <fresh-private-paced> paced
+```
+
+Run final default component tests, not their explicitly named intermediate
+original-clock sidecar configurations. Both RX and Timer1 reports must show
+zero original-clock child steps. All admitted child waits must be no-ops for
+insufficient budget or absent child completion. Full-engine native graph gaps
+fail explicitly rather than silently using the interpreter inside that graph.
+
+Correctness covers20 scenarios: the prior15 plus `clockext`, `clockjitter`,
+`clockgap`, `clockburst` and `rxrunning`. External scenarios select K clock via
+real MIDI NRPN38=2, then send actual F8 through the UART input. Source/route
+witnesses verify the selection; these scenarios do not patch guest RAM.
+`clockburst` mixes dense F8 and cutoff CC; `rxrunning` uses running-status note
+traffic. The prior synthetic TX fixtures remain explicitly labeled as such.
+
+Stage4 trace copies wrap real timer and MCU device mappings without changing
+their state/time behavior. Ports tapes now contain HDI, timer MMIO and all
+mapped MCU IO, including SYSCR and panel/LCD. The unchanged five-word format
+uses addresses to distinguish them. It records guest accesses, not timer
+backend implementation reads. Stock-vs-trace admission must pass before use.
+These trace targets must never be used for CPU claims.
+
+Offline CPU uses eight musical scenarios including External and jitter;
+paced CPU uses held8/sweep/External, with adjacent stage3/native pairs. Keep
+all CPU regressions, compute overruns and legacy diagnostic output. Original
+H8 divide-by-zero behavior is preserved, not normalized to a new algorithm.
