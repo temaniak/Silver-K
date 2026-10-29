@@ -16,6 +16,7 @@ namespace kstation
     class H8
     {
     public:
+        enum class Stage1Mode { Original, Timers, TimersAndHdi };
         static constexpr uint32_t ClockHz = 16000000;
         static constexpr size_t FlashSize = 0x40000;
         struct HostCallbacks
@@ -28,13 +29,14 @@ namespace kstation
         {
             uint32_t pc=0,sp=0;
             uint64_t cycles=0,instructions=0,hostReads=0,hostWrites=0,midiReceived=0;
+            uint64_t interpretedSteps=0,nativeWaitSteps=0;
             bool ramOverlay=false, mainEntered=false, initializedFromFirmware=false;
             uint8_t currentBank=0,currentProgram=0;
             std::string lcd;
         };
 
         H8(const std::vector<uint8_t>& decodedOS, HostCallbacks callbacks,
-           const std::vector<uint8_t>& initialFlash={});
+           const std::vector<uint8_t>& initialFlash={}, Stage1Mode mode=Stage1Mode::Original);
         ~H8();
         H8(const H8&)=delete;
         H8& operator=(const H8&)=delete;

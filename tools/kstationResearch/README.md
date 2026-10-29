@@ -1,7 +1,7 @@
 # K-Station controller research (macOS)
 
-Standalone diagnostic tools for the original K-Station H8/DSP engine. These do
-not add a replacement controller and are not part of the product build.
+Standalone diagnostic tools for the original K-Station H8/DSP engine and the
+opt-in first native K stage. These tools are not part of the product build.
 
 `kstation_research_clean` compiles the existing `kstationH8.cpp`,
 `kstationHardware.cpp` and `kstationDSP.cpp` without editing them. The observer
@@ -71,3 +71,44 @@ The optional `--include-program` correctness case is diagnostic only: reloading
 the stored Init clears held notes and restores envelope values. It can fail
 the sounding/dry admission equally in all modes; preserve that failure and
 exclude it from CPU conclusions. It is not included in the default six cases.
+
+## First native K stage
+
+The engine now also accepts `H8::Stage1Mode::Timers` or `TimersAndHdi` in its
+constructor. `Original` remains the default; no plugin UI or installation is
+provided here. Timers replaces the K-only timer peripheral and pending IRQ
+production. TimersAndHdi additionally runs five verified HDI status waits as
+typed C++ phases after the original bootstrap/handoff. IRQ admission, ISR
+firmware bodies and the rest of the controller remain original H8. The bridge
+temporarily projects phase results into that caller frame; it is not a full
+semantic controller or a decoder for arbitrary H8 instructions.
+
+Freeze the original K library directory before edits (the stage was based on
+commit `283bf00`). Use a fresh build and add
+`-DKSTATION_STAGE1_REFERENCE=<frozen-k-lib>` to the CMake command above. This
+configuration builds four explicit targets: `kstation_stage1_reference`,
+`kstation_stage1_candidate` and their `_trace` variants. It does not require the
+legacy observer preparation. Build the NativeTimers, HdiWait and Stage1Guard
+test targets as well; HdiWait/Guard take the decoded firmware as one argument.
+
+```sh
+python3 compare_stage1.py <build> <decoded-firmware> <fresh-private-correctness>
+python3 measure_stage1.py <build> <decoded-firmware> <fresh-private-offline> offline
+python3 measure_stage1.py <build> <decoded-firmware> <fresh-private-paced> paced
+```
+
+Run correctness before CPU, and run every command sequentially. Correctness
+includes original/default control, timers-only and combined modes in ten
+scenarios. `_trace` targets record actual clocked HDI byte accesses and full
+CPU/slice frames, from cold boot through the captured passage, into bounded
+preallocated buffers. They must not be used for CPU claims. Final PCM, full
+H8 RAM and Flash compare byte-for-byte. `clock` supplies F8 traffic with the
+default Internal clock setting; `irq` is synthetic timer IRQ injection.
+`program` is a deliberately non-sounding state-reload test in this stage, and
+is excluded from CPU. This does not erase the earlier sounding-preflight failure.
+
+Clean offline CPU interleaves frozen H8/timers/combined, three times per six
+scenarios. Paced CPU interleaves frozen H8/combined three times per held8/sweep.
+Snapshots, setup, file IO and three-second warm-up are excluded. Equal audio,
+guest counters and state hashes are required. Refuse existing output folders,
+retain regressions/overruns, and keep offline cost separate from realtime.

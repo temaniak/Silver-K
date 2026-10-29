@@ -6,6 +6,7 @@ add_library(kstationLib STATIC
     kstationDSP.cpp kstationDSP.h
     kstationH8.cpp kstationH8.h
     kstationHardware.cpp kstationHardware.h
+    kstationHdiWait.h kstationNativeTimers.h
     kstationQueue.h
     kstationRomLoader.cpp kstationRomLoader.h)
 target_compile_features(kstationLib PUBLIC cxx_std_17)
@@ -20,6 +21,22 @@ if(BUILD_TESTING)
     add_executable(kstationQueue_test kstationQueue_test.cpp)
     target_link_libraries(kstationQueue_test PRIVATE kstationLib)
     add_test(NAME kstationQueue COMMAND kstationQueue_test)
+endif()
+
+option(KSTATION_BUILD_NATIVE_STAGE1_CHECK "Build original-H8/native stage-1 differential checks" OFF)
+if(KSTATION_BUILD_NATIVE_STAGE1_CHECK)
+    foreach(check NativeTimers HdiWait)
+        add_executable(kstation${check}_test kstation${check}_test.cpp)
+        target_link_libraries(kstation${check}_test PRIVATE h8s)
+        target_compile_features(kstation${check}_test PRIVATE cxx_std_17)
+    endforeach()
+    add_test(NAME kstation_native_timers COMMAND kstationNativeTimers_test)
+    add_test(NAME kstation_hdi_wait COMMAND kstationHdiWait_test)
+    set_tests_properties(kstation_hdi_wait PROPERTIES SKIP_RETURN_CODE 77)
+    add_executable(kstationStage1Guard_test kstationStage1Guard_test.cpp)
+    target_link_libraries(kstationStage1Guard_test PRIVATE kstationLib)
+    add_test(NAME kstation_stage1_guards COMMAND kstationStage1Guard_test)
+    set_tests_properties(kstation_stage1_guards PROPERTIES SKIP_RETURN_CODE 77)
 endif()
 
 option(KSTATION_BUILD_HARDWARE_CHECK "Build original reset/MIDI/audio firmware check" OFF)

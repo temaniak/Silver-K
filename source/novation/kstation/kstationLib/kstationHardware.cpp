@@ -4,7 +4,7 @@
 
 namespace kstation
 {
-    Hardware::Hardware(const std::vector<uint8_t>& rom, const std::vector<uint8_t>& flash)
+    Hardware::Hardware(const std::vector<uint8_t>& rom, const std::vector<uint8_t>& flash, H8::Stage1Mode mode)
         : m_h8(rom, {
             [this](uint32_t offset) { return m_dsp.hostRead(offset); },
             [this](uint32_t offset, uint8_t value) { return m_dsp.hostWrite(offset, value); },
@@ -16,7 +16,7 @@ namespace kstation
                     m_dspStarted = false;
                 }
                 m_resetAsserted = asserted;
-            }}, flash)
+            }}, flash, mode)
     {
     }
 

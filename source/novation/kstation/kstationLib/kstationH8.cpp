@@ -1,5 +1,8 @@
 #include "kstationH8.h"
 #include "kstationMidiQueue.h"
+#include "kstationHdiWait.h"
+#include "kstationNativeTimers.h"
+#include "baseLib/sha256.h"
 
 #include <algorithm>
 #include <array>
@@ -41,8 +44,12 @@ namespace kstation
 
     struct H8::Impl final : H8SDevice
     {
-        std::unique_ptr<H8SEmulator> cpu=std::make_unique<H8SEmulator>();
+        std::unique_ptr<Stage1Cpu> cpu=std::make_unique<Stage1Cpu>();
         std::unique_ptr<KStationTimers> timers;
+        std::unique_ptr<NativeTimers> nativeTimers;
+        const Stage1Mode mode;
+        bool nativeWaitReady=false;
+        uint64_t nativeWaitSteps=0;
         HostCallbacks host;
         std::vector<uint8_t> rom,flash,initialFlash;
         std::array<uint8_t,256> regs{};
@@ -56,10 +63,15 @@ namespace kstation
         unsigned flashCommand=0,pageRemaining=0;
         uint64_t flashRevision=0;
 
-        Impl(const std::vector<uint8_t>& image,HostCallbacks callbacks,const std::vector<uint8_t>& storage)
-        : host(std::move(callbacks)),rom(image)
+        Impl(const std::vector<uint8_t>& image,HostCallbacks callbacks,const std::vector<uint8_t>& storage,Stage1Mode stage1)
+        : mode(stage1),host(std::move(callbacks)),rom(image)
         {
             if(image.size()!=49728)throw std::invalid_argument("K-Station requires decoded OS 2.1.01");
+            if(mode!=Stage1Mode::Original)
+            {
+                constexpr baseLib::SHA256 supported("2ad5409f511e96fbd996901f993f8765ac226efc8930253a76f06edf012f2f07");
+                if(baseLib::SHA256(image)!=supported)throw std::invalid_argument("Native K stage 1 requires verified OS 2.1.01");
+            }
             if(!host.read || !host.write)throw std::invalid_argument("Missing DSP HDI08 callbacks");
             if(!storage.empty() && storage.size()!=FlashSize)throw std::invalid_argument("Wrong K-Station flash size");
             initialFlash=storage.empty()?std::vector<uint8_t>(FlashSize,0xff):storage;
@@ -86,6 +98,10 @@ namespace kstation
             cpu->memmap(this,0x200000,FlashSize);
             cpu->memmap(this,0x600000,16);
             cpu->memmap(this,0xffff1c,0xe4);
+            // Protect both the low overlay window and its physical RAM alias.
+            // All normal H8 stores, including 24-bit wrapped addresses, must
+            // reach the same immutable native-wait code guard after handoff.
+            if(mode==Stage1Mode::TimersAndHdi)cpu->memmap(this,0x401672,0x12e);
             reset();
         }
         void reset()
@@ -97,10 +113,19 @@ namespace kstation
             flash=initialFlash;regs.fill(0);lcd.fill(' ');lcdCharacters.fill(0);lcdAddress=lcdData=0;lcdCgram=false;
             regs[0xb4]=0x84;regs[0xce]=0xff;regs[0xc7]=0xff;
             overlay=enteredMain=ready=false;flashCommand=pageRemaining=0;
+            nativeWaitReady=false;nativeWaitSteps=0;
             instructions=hostReads=hostWrites=midiReceived=0;nextRx=txReady=adcReady=0;
             midiIn.clear();midiOut.clear();
-            timers=std::make_unique<KStationTimers>();
-            cpu->memmap(timers.get(),0xffff60,64);
+            if(mode==Stage1Mode::Original)
+            {
+                nativeTimers.reset();timers=std::make_unique<KStationTimers>();
+                cpu->memmap(timers.get(),0xffff60,64);
+            }
+            else
+            {
+                timers.reset();nativeTimers=std::make_unique<NativeTimers>();
+                cpu->memmap(nativeTimers.get(),0xffff60,64);
+            }
             cpu->boot();
         }
         uint8_t raw(uint32_t address) const
@@ -113,6 +138,7 @@ namespace kstation
         uint8_t read(uint32_t address) override
         {
             if(address<0x10000 || (address>=0x200000 && address<0x240000))return raw(address);
+            if(address>=0x401672&&address<0x4017a0)return cpu->memory[address];
             if(address>=0x600000 && address<0x600010){++hostReads;return host.read(address-0x600000);}
             const auto r=address&255;
             if(r==0xc7 && !(regs[0xc5]&0xff))
@@ -168,7 +194,15 @@ namespace kstation
         }
         void write(uint32_t address,uint8_t value) override
         {
-            if(address<0x10000){if(overlay)cpu->memory[0x400000+address]=value;return;}
+            if(address<0x10000){if(overlay){
+                if(nativeWaitReady&&address>=0x1672&&address<0x17a0)
+                    throw std::runtime_error("Cannot modify verified native K wait code");
+                cpu->memory[0x400000+address]=value;
+            }return;}
+            if(address>=0x401672&&address<0x4017a0){
+                if(nativeWaitReady)throw std::runtime_error("Cannot modify native K wait physical alias");
+                cpu->memory[address]=value;return;
+            }
             if(address>=0x200000 && address<0x240000){writeFlash(address,value);return;}
             if(address>=0x600000 && address<0x600010)
             {
@@ -220,7 +254,7 @@ namespace kstation
                 }
             }
         }
-        uint64_t exec(uint32_t budget)
+        template<bool Native> uint64_t execCore(uint32_t budget)
         {
             const auto begin=cpu->cycles;
             while(cpu->cycles-begin<budget)
@@ -232,15 +266,30 @@ namespace kstation
                     bool valid=raw(0xcd82)>=1 && raw(0xcd82)<=4 && raw(0xcd83)<100;
                     for(unsigned i=0;i<128 && valid;++i)valid=raw(0xba5c+i)<128;
                     ready=valid;
+                    if constexpr(Native)if(ready&&mode==Stage1Mode::TimersAndHdi&&!nativeWaitReady)
+                    {
+                        if(!overlay||!std::equal(rom.begin()+0x1672,rom.begin()+0x17a0,cpu->memory+0x401672))
+                            throw std::runtime_error("Native K HDI handoff code mismatch");
+                        nativeWaitReady=true;
+                    }
                 }
-                cpu->step();++instructions;timers->tick();tickSerial();
+                if constexpr(Native)
+                {
+                    if(nativeWaitReady&&NativeHdiWait::step(*cpu))++nativeWaitSteps;
+                    else cpu->step();
+                }
+                else cpu->step();
+                ++instructions;
+                if constexpr(Native)nativeTimers->tick();else timers->tick();
+                tickSerial();
             }
             return cpu->cycles-begin;
         }
+        uint64_t exec(uint32_t budget){return mode==Stage1Mode::Original?execCore<false>(budget):execCore<true>(budget);}
     };
 
-    H8::H8(const std::vector<uint8_t>& image,HostCallbacks cb,const std::vector<uint8_t>& flash)
-    :m_impl(std::make_unique<Impl>(image,std::move(cb),flash)){}
+    H8::H8(const std::vector<uint8_t>& image,HostCallbacks cb,const std::vector<uint8_t>& flash,Stage1Mode mode)
+    :m_impl(std::make_unique<Impl>(image,std::move(cb),flash,mode)){}
     H8::~H8()=default;
     void H8::reset(){m_impl->reset();}
     uint64_t H8::exec(uint32_t budget){return m_impl->exec(budget);}
@@ -297,6 +346,7 @@ namespace kstation
         DebugState s;
         s.pc=m_impl->cpu->getPC();s.sp=m_impl->cpu->getSP();s.cycles=m_impl->cpu->cycles;
         s.instructions=m_impl->instructions;s.hostReads=m_impl->hostReads;s.hostWrites=m_impl->hostWrites;
+        s.interpretedSteps=m_impl->instructions-m_impl->nativeWaitSteps;s.nativeWaitSteps=m_impl->nativeWaitSteps;
         s.midiReceived=m_impl->midiReceived;s.ramOverlay=m_impl->overlay;s.mainEntered=m_impl->enteredMain;
         s.initializedFromFirmware=m_impl->reconstructedDefaults;
         s.currentBank=m_impl->raw(0xcd82);s.currentProgram=m_impl->raw(0xcd83);

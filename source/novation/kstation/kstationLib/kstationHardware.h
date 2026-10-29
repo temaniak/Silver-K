@@ -11,7 +11,8 @@ namespace kstation
     class Hardware
     {
     public:
-        explicit Hardware(const std::vector<uint8_t>& rom, const std::vector<uint8_t>& flash = {});
+        explicit Hardware(const std::vector<uint8_t>& rom, const std::vector<uint8_t>& flash = {},
+                          H8::Stage1Mode mode=H8::Stage1Mode::Original);
         bool boot(uint64_t maxH8Cycles = H8::ClockHz * 10ull);
         DSP::AudioFrame renderSample();
         bool enqueueMidi(const uint8_t* bytes, size_t count) { return m_h8.enqueueMidi(bytes, count); }
@@ -21,6 +22,7 @@ namespace kstation
         void setPerformanceDiagnostics(baseLib::performance::Diagnostics* p){m_performance=p;}
 
     private:
+        friend struct HardwareStage1Comparison;
         baseLib::performance::Diagnostics* m_performance=nullptr;
         uint64_t m_diagnosticAdvances=0;
         void advance();
