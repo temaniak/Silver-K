@@ -145,14 +145,14 @@ template<class C>uint16_t probeRead16(C&c,uint32_t a){if constexpr(HasDiagnostic
 template<class C>void probeWrite8(C&c,uint32_t a,uint8_t v){if constexpr(HasDiagnosticInterface<C>::value)c.diagnosticWrite8(a,v);else c.core().write8(int8_t(v),int(a));}
 template<class C>void probeWrite16(C&c,uint32_t a,uint16_t v){if constexpr(HasDiagnosticInterface<C>::value)c.diagnosticWrite16(a,v);else c.core().write16(int16_t(v),int(a));}
 template<class C>void probeInterrupt(C&c,int vector){if constexpr(HasDiagnosticInterface<C>::value)c.diagnosticInterrupt(vector);else c.core().interrupt(vector);}
-struct Result{uint64_t hash=14695981039346656037ull,frames=0;double peak=0,squares=0,wall=0,cpu=0,maxBlock=0;uint64_t overBudget=0;};
+struct Result{uint64_t hash=14695981039346656037ull,frames=0;double peak=0,squares=0,wall=0,cpu=0,maxBlock=0,maxLateness=0;uint64_t overBudget=0,lateBlocks=0;};
 Result render(kstation::Hardware& board,uint64_t frames,const std::vector<Event>& events,bool paced,unsigned block,std::vector<int32_t>* pcm=nullptr){
  Result r;size_t next=0;
 #if !defined(K_RESEARCH_FUNCTIONAL_ONLY)
  const auto begin=Clock::now();const double before=cpuSeconds();
 #endif
  for(uint64_t cursor=0;cursor<frames;){
-#if !defined(K_RESEARCH_FUNCTIONAL_ONLY)
+#if !defined(K_RESEARCH_FUNCTIONAL_ONLY) && (!defined(K_RESEARCH_CPU) || defined(K_RESEARCH_CPU_DEADLINES))
   const auto blockBegin=Clock::now();
 #endif
   const auto end=std::min(frames,cursor+block);
@@ -185,7 +185,12 @@ Result render(kstation::Hardware& board,uint64_t frames,const std::vector<Event>
    const auto frame=board.renderSample();for(auto v:frame){const double x=v/8388608.0;require(std::isfinite(x),"Nonfinite PCM");r.peak=std::max(r.peak,std::abs(x));r.squares+=x*x;hashWord(r.hash,uint32_t(v));if(pcm)pcm->push_back(v);}
   }
 #if !defined(K_RESEARCH_FUNCTIONAL_ONLY)
+#if !defined(K_RESEARCH_CPU) || defined(K_RESEARCH_CPU_DEADLINES)
   const double spent=std::chrono::duration<double>(Clock::now()-blockBegin).count();r.maxBlock=std::max(r.maxBlock,spent);if(spent>block/kstation::DSP::SampleRate)++r.overBudget;
+#if defined(K_RESEARCH_CPU_DEADLINES)
+  if(paced){const auto deadline=begin+std::chrono::nanoseconds(int64_t(cursor*1e9/kstation::DSP::SampleRate));const double late=std::chrono::duration<double>(Clock::now()-deadline).count();if(late>0){++r.lateBlocks;r.maxLateness=std::max(r.maxLateness,late);}}
+#endif
+#endif
   if(paced)std::this_thread::sleep_until(begin+std::chrono::nanoseconds(int64_t(cursor*1e9/kstation::DSP::SampleRate)));
 #endif
  }
@@ -255,7 +260,7 @@ int main(int argc,char** argv){try{
 #if defined(K_RESEARCH_STAGE4)
  allowed=allowed||controllerMode=="timer_rx";
 #endif
-#if defined(K_RESEARCH_COMPLETION)
+#if defined(K_RESEARCH_COMPLETION) || defined(K_RESEARCH_CPU)
  allowed=allowed||controllerMode=="development";
 #if defined(KSTATION_HAS_NATIVE_CONTROLLER)
  allowed=allowed||controllerMode=="native";
@@ -272,7 +277,7 @@ int main(int argc,char** argv){try{
 #if defined(K_RESEARCH_STAGE4)
  if(controllerMode=="timer_rx")controller=ProbeControllerMode::Timer1AndRx;
 #endif
-#if defined(K_RESEARCH_COMPLETION)
+#if defined(K_RESEARCH_COMPLETION) || defined(K_RESEARCH_CPU)
  if(controllerMode=="development")controller=ProbeControllerMode::ControllerDevelopment;
 #if defined(KSTATION_HAS_NATIVE_CONTROLLER)
  if(controllerMode=="native")controller=ProbeControllerMode::Native;
@@ -334,7 +339,7 @@ recording=false;diagnostics.stop();board.setPerformanceDiagnostics(nullptr);
  out<<"\"native_rx_steps\":"<<after.nativeRxSteps-before.nativeRxSteps<<",\"native_rx_entries\":"<<after.nativeRxEntries-before.nativeRxEntries<<",\"native_rx_returns\":"<<after.nativeRxReturns-before.nativeRxReturns<<",\"native_rx_clock_requests\":"<<after.nativeRxClockRequests-before.nativeRxClockRequests<<",\n";
  out<<"\"native_clock_steps\":"<<after.nativeClockSteps-before.nativeClockSteps<<",\"native_internal_clock_calls\":"<<after.nativeInternalClockCalls-before.nativeInternalClockCalls<<",\"native_external_clock_calls\":"<<after.nativeExternalClockCalls-before.nativeExternalClockCalls<<",\"native_clock_sync_updates\":"<<after.nativeClockSyncUpdates-before.nativeClockSyncUpdates<<",\n";
 #endif
-#if defined(K_RESEARCH_COMPLETION)
+#if defined(K_RESEARCH_COMPLETION) || defined(K_RESEARCH_CPU)
  out<<"\"full_native_ready\":"<<(controllerMode=="native"?"true":"false")<<",\"implementation\":\""<<(controllerMode=="native"?"native-controller":"caller-projection-development")<<"\",\n";
  out<<"\"native_controller_service_steps\":"<<after.nativeControllerServiceSteps-before.nativeControllerServiceSteps<<",\n";
  out<<"\"cumulative_interpreted_steps\":"<<after.interpretedSteps<<",\"cumulative_native_startup_steps\":"<<after.nativeStartupSteps<<",\"cumulative_native_controller_service_steps\":"<<after.nativeControllerServiceSteps<<",\n";
@@ -350,7 +355,12 @@ recording=false;diagnostics.stop();board.setPerformanceDiagnostics(nullptr);
 #endif
  out<<"\"h8_instructions\":"<<after.instructions-before.instructions<<",\"h8_cycles\":"<<after.cycles-before.cycles<<",\"dsp_instructions\":"<<board.dsp().instructions()-beforeDsp<<",\"dsp_cycles\":"<<board.dsp().cycles()-beforeCycles<<",\"hdi_reads\":"<<after.hostReads-before.hostReads<<",\"hdi_writes\":"<<after.hostWrites-before.hostWrites<<",\"midi_received\":"<<after.midiReceived-before.midiReceived<<",\n";
  out<<"\"dropped_frames\":"<<board.dsp().audioFramesDropped()-beforeDrop;
-#if defined(K_RESEARCH_FUNCTIONAL_ONLY)
+#if defined(K_RESEARCH_CPU_DEADLINES)
+ out<<",\"late_block_completions\":"<<result.lateBlocks<<",\"max_block_completion_lateness_seconds\":"<<result.maxLateness;
+#else
+ out<<",\"late_block_completions\":null,\"max_block_completion_lateness_seconds\":null";
+#endif
+#if defined(K_RESEARCH_FUNCTIONAL_ONLY) || (defined(K_RESEARCH_CPU) && !defined(K_RESEARCH_CPU_DEADLINES))
  out<<",\"block_compute_over_budget\":null,\"max_block_compute_seconds\":null";
 #else
  out<<",\"block_compute_over_budget\":"<<result.overBudget<<",\"max_block_compute_seconds\":"<<result.maxBlock;

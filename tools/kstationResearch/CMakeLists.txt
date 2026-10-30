@@ -232,6 +232,22 @@ foreach(variant clean observe)
 endforeach()
 endif()
 
+# Separate plain Release CPU targets: no per-phase completion or trace hooks.
+# Freeze this directory before measuring so later source edits cannot change it.
+if(KSTATION_CPU_SOURCE)
+  foreach(cpu_variant cpu cpu_deadlines)
+    add_executable(kstation_${cpu_variant} "${KSTATION_CPU_SOURCE}/research/probe.cpp"
+      "${KSTATION_CPU_SOURCE}/kstationH8.cpp" "${KSTATION_CPU_SOURCE}/kstationHardware.cpp"
+      "${KSTATION_CPU_SOURCE}/kstationDSP.cpp" "${SILVER_SOURCE}/source/framework/baseLib/sha256.cpp")
+    target_link_libraries(kstation_${cpu_variant} PRIVATE dsp56kEmu)
+    target_include_directories(kstation_${cpu_variant} PRIVATE "${KSTATION_CPU_SOURCE}" "${SILVER_SOURCE}/source/cpu" "${SILVER_SOURCE}/source/framework")
+    target_compile_definitions(kstation_${cpu_variant} PRIVATE K_RESEARCH_STAGE1=1 K_RESEARCH_CPU=1)
+    if(cpu_variant STREQUAL cpu_deadlines)
+      target_compile_definitions(kstation_${cpu_variant} PRIVATE K_RESEARCH_CPU_DEADLINES=1)
+    endif()
+  endforeach()
+endif()
+
 # A frozen candidate supplies its independent backend alongside its facade.
 get_property(kstation_research_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
 foreach(research_target IN LISTS kstation_research_targets)
