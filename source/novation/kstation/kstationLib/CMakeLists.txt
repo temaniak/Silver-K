@@ -293,3 +293,35 @@ if(KSTATION_BUILD_NATIVE_STAGE4_CHECK)
     add_test(NAME kstation_stage4_guards COMMAND kstationStage4Guard_test)
     set_tests_properties(kstation_stage4_guards PROPERTIES SKIP_RETURN_CODE 77)
 endif()
+
+option(KSTATION_BUILD_CONTROLLER_SERVICE_CHECKS "Build CPU-free K controller service differential checks" OFF)
+if(KSTATION_BUILD_CONTROLLER_SERVICE_CHECKS)
+    # Keep the ROM outside the build tree: tests that require one return 77
+    # when invoked by CTest without arguments. Run the target directly with
+    # the authenticated firmware path to perform the differential check.
+    file(GLOB controller_service_tests CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/kstationController*_test.cpp")
+    foreach(source IN LISTS controller_service_tests)
+        get_filename_component(target "${source}" NAME_WE)
+        # The earlier completion option may already define a subset.
+        if(NOT TARGET ${target})
+            add_executable(${target} "${source}")
+            target_link_libraries(${target} PRIVATE h8s baseLib)
+            target_compile_features(${target} PRIVATE cxx_std_17)
+            add_test(NAME ${target} COMMAND ${target})
+            set_tests_properties(${target} PROPERTIES SKIP_RETURN_CODE 77)
+        endif()
+    endforeach()
+
+    # This executable intentionally cannot reach the original H8 controller
+    # or kstationLib. Its link tests the native coordinator independently.
+    add_executable(kstationNativeControllerStandalone_test
+        kstationNativeControllerStandalone_test.cpp
+        kstationNativeController.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../../framework/baseLib/sha256.cpp)
+    target_include_directories(kstationNativeControllerStandalone_test PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../../../framework)
+    target_compile_features(kstationNativeControllerStandalone_test PRIVATE cxx_std_17)
+    add_test(NAME kstationNativeControllerStandalone_test COMMAND kstationNativeControllerStandalone_test)
+    set_tests_properties(kstationNativeControllerStandalone_test PROPERTIES SKIP_RETURN_CODE 77)
+endif()

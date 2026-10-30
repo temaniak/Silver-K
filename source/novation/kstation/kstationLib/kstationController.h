@@ -28,6 +28,7 @@ public:
  virtual void diagnosticWrite16(uint32_t address,uint16_t value)=0;
  virtual void diagnosticInterrupt(int vector)=0;
  virtual bool isNative()const{return false;}
+ virtual const char*faultMessage()const noexcept{return nullptr;}
  // Reference-only diagnostics. A native backend has no architectural core.
  virtual h8state&core(){throw std::logic_error("Native K controller has no H8 core");}
 };

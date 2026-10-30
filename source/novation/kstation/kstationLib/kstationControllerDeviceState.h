@@ -26,7 +26,7 @@ protected:
 class ControllerDeviceState final {
 public:
  static constexpr size_t MemorySize=1u<<24;
- static constexpr unsigned ImmutableCapacity=4096;
+ static constexpr unsigned ImmutableCapacity=8192;
  ControllerDeviceState()=default;
  ControllerDeviceState(const ControllerDeviceState&)=delete;
  ControllerDeviceState&operator=(const ControllerDeviceState&)=delete;

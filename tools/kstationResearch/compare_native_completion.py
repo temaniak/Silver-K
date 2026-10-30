@@ -74,7 +74,9 @@ def main():
             report = json.loads(prefix.with_suffix('.json').read_text())
             original = json.loads(archive.read(f'correctness-final/{case}-original.json'))
             assert report['cpu_measured'] is False and report['interpreted_steps'] == 0
-            assert report['implementation'] == 'native-controller-development'
+            assert report['implementation'] in ('native-controller-development', 'native-controller')
+            if report['implementation'] == 'native-controller':
+                assert report['full_native_ready'] is True
             audit_path = a.stack_audits / f'{case}-native.stack.json'
             audit = json.loads(audit_path.read_text())
             raw = {ext: compare(archive, f'correctness-final/{case}-original.{ext}', prefix.with_suffix('.' + ext))

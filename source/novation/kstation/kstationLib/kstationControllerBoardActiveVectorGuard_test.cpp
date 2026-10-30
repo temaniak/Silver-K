@@ -1,0 +1,8 @@
+#include "kstationControllerBoard.h"
+#include "kstationControllerInterruptRuntime.h"
+#include <cstdio>
+#include <fstream>
+#include <memory>
+#include <vector>
+void check(bool p,const char*m){if(!p)throw std::runtime_error(m);}
+int main(int argc,char**argv){try{if(argc!=2)return 77;std::ifstream f(argv[1],std::ios::binary);std::vector<uint8_t>image{std::istreambuf_iterator<char>(f),{}};auto d=std::make_unique<kstation::ControllerDeviceState>();kstation::ControllerBoard b(*d,image,{[](uint32_t){return uint8_t(7);},[](uint32_t,uint8_t){return true;},[](bool){}});d->loadMemory(image.data(),image.size(),0x400000);d->write8(0xffffcf,0);check(b.ramOverlay(),"overlay");kstation::ControllerInterruptRuntime irq;check(irq.bindVerifiedFirmware(*d,image.data(),image.size()),"bind");unsigned checks=0;for(auto range:{std::pair{0x70u,0x74u},std::pair{0x98u,0x9cu},std::pair{0xd0u,0xdcu},std::pair{0xf0u,0xf4u}})for(auto a=range.first;a<range.second;++a)for(auto alias:{0u,0x400000u}){auto address=a+alias;auto old=b.read(address);auto clocks=d->cycles;bool rejected=false;try{b.write(address,uint8_t(old^1));}catch(const std::logic_error&){rejected=true;}check(rejected&&b.read(address)==old&&d->cycles==clocks,"board vector guard");++checks;}for(auto a:{0u,5u,6u,0x4eu,0x4fu,0x50u,0x58u,0x79u,0x7au,0x7bu,0x7eu,0x7fu}){auto old=b.read(a);b.write(a,uint8_t(old^1));check(b.read(a)==uint8_t(old^1)&&b.read(0x400000+a)==uint8_t(old^1),"board live unused alias");b.write(a,old);}std::printf("{\"passed\":true,\"board_vector_guards\":%u,\"live_unused_aliases\":12}\n",checks);return 0;}catch(const std::exception&e){std::fprintf(stderr,"FAIL %s\n",e.what());return 1;}}

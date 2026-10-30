@@ -12,6 +12,8 @@ public:
  uint8_t readMemory(uint32_t)const override;void copyCurrentPatch(uint8_t*)const override;
  std::vector<uint8_t>saveFlash()const override;void copyFlash(std::vector<uint8_t>&)const override;uint64_t flashRevision()const override;bool hasProgram(uint8_t,uint8_t)const override;
  const uint8_t*diagnosticMemory()override;uint16_t diagnosticRead16(uint32_t)override;void diagnosticWrite8(uint32_t,uint8_t)override;void diagnosticWrite16(uint32_t,uint16_t)override;void diagnosticInterrupt(int)override;
+ unsigned immutableBindingCount()const noexcept;
+ const char*faultMessage()const noexcept override;
  bool isNative()const override{return true;}
 private:struct Impl;std::unique_ptr<Impl>impl_;
 };

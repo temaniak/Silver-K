@@ -53,7 +53,7 @@ public:
   d.lastRead=-1;if(stackWrite)d.lastWrite=-1;skipBodyArbitration_=false;return {cost+arb,false,result.returned,result.kind,Block::None};
  }
 private:
- struct CodeRange{uint32_t begin,end;};inline static constexpr std::array<CodeRange,16>codeRanges_{{{0x140,0x142},{0x65a,0x830},{0x84d2,0x85d2},{0x92c,0x946},{0x946,0x968},{0x968,0x9aa},{0xa50,0xa64},{0xa64,0xac2},{0xaf4,0xb0c},{0xb50,0xbb2},{0x1970,0x1b56},{0x1bd0,0x1e1c},{0x1e72,0x1ea4},{0x2186,0x21f0},{0x2284,0x22c0},{0x22fc,0x2312}}};
+ struct CodeRange{uint32_t begin,end;};inline static constexpr std::array<CodeRange,20>codeRanges_{{{0x70,0x74},{0x98,0x9c},{0xd0,0xdc},{0xf0,0xf4},{0x140,0x142},{0x65a,0x830},{0x84d2,0x85d2},{0x92c,0x946},{0x946,0x968},{0x968,0x9aa},{0xa50,0xa64},{0xa64,0xac2},{0xaf4,0xb0c},{0xb50,0xbb2},{0x1970,0x1b56},{0x1bd0,0x1e1c},{0x1e72,0x1ea4},{0x2186,0x21f0},{0x2284,0x22c0},{0x22fc,0x2312}}};
  bool skipBodyArbitration_=false;ControllerDeviceState*boundState_=nullptr;ControllerInterruptOwner owner_{};std::array<std::optional<ControllerSerialTxTask>,ControllerInterruptScheduler::Capacity>tx_{};std::array<std::optional<ControllerSerialRxTask>,ControllerInterruptScheduler::Capacity>rx_{};std::array<ControllerClockRuntime,ControllerInterruptScheduler::Capacity>clock_{};std::array<std::optional<ControllerAdcTask>,ControllerInterruptScheduler::Capacity>adc_{};std::array<std::optional<ControllerTimer1Task>,ControllerInterruptScheduler::Capacity>timer1_{};
 };
 }

@@ -185,7 +185,11 @@ if(KSTATION_COMPLETION_REFERENCE)
           COMMAND python3 "${CMAKE_CURRENT_SOURCE_DIR}/prepare_stage4_trace.py" "${stage_source}/kstationH8.cpp" "${h8_source}"
           DEPENDS "${stage_source}/kstationH8.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/prepare_stage1_trace.py" "${CMAKE_CURRENT_SOURCE_DIR}/prepare_stage4_trace.py" VERBATIM)
       endif()
-      add_executable(kstation_completion_${variant}${suffix} probe.cpp "${h8_source}" "${stage_source}/kstationHardware.cpp" "${stage_source}/kstationDSP.cpp" "${SILVER_SOURCE}/source/framework/baseLib/sha256.cpp")
+      set(completion_probe "${CMAKE_CURRENT_SOURCE_DIR}/probe.cpp")
+      if(EXISTS "${stage_source}/research/probe.cpp")
+        set(completion_probe "${stage_source}/research/probe.cpp")
+      endif()
+      add_executable(kstation_completion_${variant}${suffix} "${completion_probe}" "${h8_source}" "${stage_source}/kstationHardware.cpp" "${stage_source}/kstationDSP.cpp" "${SILVER_SOURCE}/source/framework/baseLib/sha256.cpp")
       target_link_libraries(kstation_completion_${variant}${suffix} PRIVATE dsp56kEmu)
       target_include_directories(kstation_completion_${variant}${suffix} PRIVATE "${stage_source}" "${SILVER_SOURCE}/source/cpu" "${SILVER_SOURCE}/source/framework")
       target_compile_definitions(kstation_completion_${variant}${suffix} PRIVATE K_RESEARCH_STAGE1=1 K_RESEARCH_STAGE2=1 K_RESEARCH_STAGE3=1 K_RESEARCH_STAGE4=1 K_RESEARCH_FUNCTIONAL_ONLY=1)
@@ -226,4 +230,38 @@ foreach(variant clean observe)
     target_compile_definitions(kstation_research_${variant} PRIVATE K_RESEARCH_OBSERVE=1)
   endif()
 endforeach()
+endif()
+
+# A frozen candidate supplies its independent backend alongside its facade.
+get_property(kstation_research_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+foreach(research_target IN LISTS kstation_research_targets)
+  get_target_property(research_sources ${research_target} SOURCES)
+  foreach(research_source IN LISTS research_sources)
+    if(research_source MATCHES "/kstationHardware\\.cpp$")
+      get_filename_component(research_controller_dir "${research_source}" DIRECTORY)
+      if(EXISTS "${research_controller_dir}/kstationNativeController.cpp")
+        target_sources(${research_target} PRIVATE "${research_controller_dir}/kstationNativeController.cpp")
+        target_compile_definitions(${research_target} PRIVATE KSTATION_HAS_NATIVE_CONTROLLER=1)
+        if(research_target MATCHES "_trace$")
+          target_compile_definitions(${research_target} PRIVATE K_RESEARCH_NATIVE_TRACE=1)
+        endif()
+      endif()
+    endif()
+  endforeach()
+endforeach()
+
+if(KSTATION_COMPLETION_REFERENCE AND KSTATION_COMPLETION_CANDIDATE AND EXISTS "${KSTATION_COMPLETION_CANDIDATE}/kstationNativeController.cpp")
+  file(STRINGS "${KSTATION_COMPLETION_CANDIDATE}/kstationHardware.cpp" candidate_native_only_guard REGEX "KSTATION_NATIVE_ONLY")
+  if(candidate_native_only_guard)
+  add_executable(kstation_native_only_trace "${KSTATION_COMPLETION_CANDIDATE}/research/probe.cpp"
+    "${KSTATION_COMPLETION_CANDIDATE}/kstationNativeController.cpp"
+    "${KSTATION_COMPLETION_CANDIDATE}/kstationHardware.cpp"
+    "${KSTATION_COMPLETION_CANDIDATE}/kstationDSP.cpp"
+    "${SILVER_SOURCE}/source/framework/baseLib/sha256.cpp")
+  target_link_libraries(kstation_native_only_trace PRIVATE dsp56kEmu)
+  target_include_directories(kstation_native_only_trace PRIVATE "${KSTATION_COMPLETION_CANDIDATE}" "${SILVER_SOURCE}/source/framework")
+  target_compile_definitions(kstation_native_only_trace PRIVATE KSTATION_NATIVE_ONLY=1 KSTATION_HAS_NATIVE_CONTROLLER=1
+    K_RESEARCH_COMPLETION=1 K_RESEARCH_STAGE1=1 K_RESEARCH_STAGE2=1 K_RESEARCH_STAGE3=1 K_RESEARCH_STAGE4=1
+    K_RESEARCH_STAGE1_TRACE=1 K_RESEARCH_NATIVE_TRACE=1 K_RESEARCH_FUNCTIONAL_ONLY=1)
+endif()
 endif()
