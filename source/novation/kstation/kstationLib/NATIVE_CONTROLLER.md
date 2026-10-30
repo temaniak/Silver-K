@@ -41,3 +41,7 @@ UI fixture впервые подаёт клавиши во время capture. �
 Это не универсальная гарантия no-throw/no-allocation для всех повреждённых входов: неподдержанное стирание сектора Flash, busy HDI write, переполнение host MIDI output и immutable resource guards имеют явные fatal исключения. Host сообщает latched fault после возврата backend. Существующий DSP JIT не входит в утверждение об allocation-free controller phases. Не следует выдавать happy-path allocation counters за доказательство всех аварийных ветвей.
 
 CPU benchmarks и профилирование в ходе завершения переноса не запускались. Финальный `K_RESEARCH_FUNCTIONAL_ONLY` также отключает служебные host block timers и отвергает paced/detailed modes; исторические отчёты сохраняют прежние incidental block wall fields, которые не использовались для оценки CPU. Производительность и paced realtime budget требуют отдельного следующего этапа; из точного функционального соответствия ускорение не следует. Прежняя неудача realtime gate на stage4 этими функциональными проверками не снимается.
+
+## Отдельный этап CPU
+
+Первое измерение и оптимизация полного NativeController выполнены 30 октября: см. [NATIVE_CONTROLLER_CPU.md](NATIVE_CONTROLLER_CPU.md). CPU на секунду звука снизился, но Native пока дороже H8 и realtime gate не пройден. Историческое отключение CPU выше относится к этапу завершения функционального переноса.

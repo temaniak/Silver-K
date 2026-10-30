@@ -36,9 +36,9 @@ public:
  uint8_t interruptPriority[128]{};
  int lastRead=-1,lastWrite=-1;
  void attachBus(ControllerResourceBus* bus){bus_=bus;if(bus_)bus_->attachState(this);}
- bool protectImmutable(uint32_t begin,uint32_t end){if(begin>=end||end>MemorySize||protectedCount_==protected_.size())return false;protected_[protectedCount_++]={begin,end,false};return true;}
- bool protectImmutableVerified(uint32_t begin,uint32_t end,const uint8_t*expected){if(!expected||begin>=end||end>MemorySize||protectedCount_==protected_.size())return false;for(uint32_t a=begin;a<end;++a)if(readResource(a)!=expected[a-begin])return false;protected_[protectedCount_++]={begin,end,true};return true;}
- bool isImmutable(uint32_t address)const{auto a=address&0xffffff;for(unsigned i=0;i<protectedCount_;++i)if(a>=protected_[i].begin&&a<protected_[i].end)return true;return false;}
+ bool protectImmutable(uint32_t begin,uint32_t end){if(begin>=end||end>MemorySize||protectedCount_==protected_.size())return false;protected_[protectedCount_++]={begin,end,false};indexImmutable(begin,end);return true;}
+ bool protectImmutableVerified(uint32_t begin,uint32_t end,const uint8_t*expected){if(!expected||begin>=end||end>MemorySize||protectedCount_==protected_.size())return false;for(uint32_t a=begin;a<end;++a)if(readResource(a)!=expected[a-begin])return false;protected_[protectedCount_++]={begin,end,true};indexImmutable(begin,end);return true;}
+ bool isImmutable(uint32_t address)const{const auto a=address&0xffffff;unsigned lo=0,hi=immutableSpanCount_;while(lo<hi){const auto mid=lo+(hi-lo)/2;if(immutableSpans_[mid].begin<=a)lo=mid+1;else hi=mid;}return lo&&a<immutableSpans_[lo-1].end;}
  bool hasImmutableCapacity(unsigned additional)const{return additional<=protected_.size()-protectedCount_;}
  bool isRangeVerifiedImmutable(uint32_t begin,uint32_t end)const{if(begin>=end||end>MemorySize)return false;auto cursor=begin;while(cursor<end){auto furthest=cursor;for(unsigned i=0;i<protectedCount_;++i)if(protected_[i].verified&&protected_[i].begin<=cursor&&protected_[i].end>furthest)furthest=protected_[i].end;if(furthest==cursor)return false;cursor=furthest;}return true;}
  bool isVerifiedImmutable(uint32_t address)const{auto a=address&0xffffff;for(unsigned i=0;i<protectedCount_;++i)if(protected_[i].verified&&a>=protected_[i].begin&&a<protected_[i].end)return true;return false;}
@@ -61,8 +61,20 @@ public:
  void write32(uint32_t a,uint32_t v){for(unsigned i=0;i<4;++i)if(isImmutable(a+i))throw std::logic_error("K immutable controller resource");write16(a,uint16_t(v>>16));write16(a+2,uint16_t(v));}
  void requestInterrupt(int vector){if(vector<0||vector>=128)return;if(interruptMode2){if(vector<64)pendingIrqs|=uint64_t(1)<<vector;else pendingIrqsHigh|=uint64_t(1)<<(vector-64);return;}if(vector>=64)return;if(vector>=12&&vector<18&&!(read8(0xfffff5)&(1u<<(vector-12))))return;pendingIrqs|=uint64_t(1)<<vector;}
 private:
+ struct ImmutableSpan{uint32_t begin=0,end=0;};
+ // Registration happens during binding, never during audio processing. The
+ // index is a sorted union; the original list retains its count and verified
+ // flags for capacity and verified-coverage queries.
+ void indexImmutable(uint32_t begin,uint32_t end){
+  unsigned first=0;while(first<immutableSpanCount_&&immutableSpans_[first].end<begin)++first;
+  unsigned last=first;while(last<immutableSpanCount_&&immutableSpans_[last].begin<=end){if(immutableSpans_[last].begin<begin)begin=immutableSpans_[last].begin;if(immutableSpans_[last].end>end)end=immutableSpans_[last].end;++last;}
+  if(first==last){for(unsigned i=immutableSpanCount_;i>first;--i)immutableSpans_[i]=immutableSpans_[i-1];++immutableSpanCount_;}
+  else{const unsigned removed=last-first-1;for(unsigned i=last;i<immutableSpanCount_;++i)immutableSpans_[i-removed]=immutableSpans_[i];immutableSpanCount_-=removed;}
+  immutableSpans_[first]={begin,end};
+ }
  struct ImmutableRange{uint32_t begin=0,end=0;bool verified=false;};
  std::array<ImmutableRange,ImmutableCapacity>protected_{};unsigned protectedCount_=0;
+ std::array<ImmutableSpan,ImmutableCapacity>immutableSpans_{};unsigned immutableSpanCount_=0;
  ControllerResourceBus* bus_=nullptr;
 };
 }
