@@ -1,7 +1,11 @@
 #pragma once
 #include <cstdint>
+#if defined(K_RESEARCH_NATIVE_TRACE)
+#include <stdexcept>
+#endif
 
 namespace kstation {
+class ControllerDspTransferRuntime;
 // K's live, byte-oriented host protocol. KS supplies the task/child ownership
 // pattern; K supplies the handshakes, retry policy and timing. These tasks do
 // not own a processor frame or decode any instruction/data stream.
@@ -24,6 +28,14 @@ public:
     }
     template<class R>unsigned advanceBefore(unsigned budget,const DspTransferCredits&c,R&&read){
         const auto cost=nextClocks(c);if(!cost||cost>budget)return 0;
+        return advancePrepared(cost,c,read);
+    }
+private:
+    friend class DspAddressTask;friend class DspWordTask;
+    template<class R>unsigned advancePrepared(unsigned cost,const DspTransferCredits&c,R&&read){
+#if defined(K_RESEARCH_NATIVE_TRACE)
+        if(!cost||cost!=nextClocks(c))throw std::logic_error("K DSP poll prepared cost");
+#endif
         switch(stage_){
         case Stage::FirstRead:case Stage::Read:status_=uint8_t(read());next();break;
         case Stage::FirstMask:case Stage::Mask:status_&=mask_;next();break;
@@ -67,8 +79,16 @@ public:
     }
     template<class R,class W>unsigned advanceBefore(unsigned budget,const DspTransferCredits&c,R&&read,W&&write){
         const auto cost=nextClocks(c);if(!cost||cost>budget)return 0;
+        return advancePrepared(cost,c,read,write);
+    }
+private:
+    friend class ControllerDspTransferRuntime;
+    template<class R,class W>unsigned advancePrepared(unsigned cost,const DspTransferCredits&c,R&&read,W&&write){
+#if defined(K_RESEARCH_NATIVE_TRACE)
+        if(!cost||cost!=nextClocks(c))throw std::logic_error("K DSP address prepared cost");
+#endif
         if(polling()){
-            const auto used=poll_.advanceBefore(budget,c,[&]{return read(4);});
+            const auto used=poll_.advancePrepared(cost,c,[&]{return read(4);});
             if(poll_.complete()){
                 if(stage_==Stage::PollReady)stage_=Stage::PrepareAssert;
                 else if(stage_==Stage::PollAsserted)stage_=Stage::PrepareRelease;
@@ -121,7 +141,15 @@ public:
     }
     template<class R,class W>unsigned advanceBefore(unsigned budget,const DspTransferCredits&c,R&&read,W&&write){
         const auto cost=nextClocks(c);if(!cost||cost>budget)return 0;
-        if(stage_==Stage::PollReady){const auto used=poll_.advanceBefore(budget,c,[&]{return read(false);});if(poll_.complete())stage_=Stage::PrepareWord;return used;}
+        return advancePrepared(cost,c,read,write);
+    }
+private:
+    friend class ControllerDspTransferRuntime;
+    template<class R,class W>unsigned advancePrepared(unsigned cost,const DspTransferCredits&c,R&&read,W&&write){
+#if defined(K_RESEARCH_NATIVE_TRACE)
+        if(!cost||cost!=nextClocks(c))throw std::logic_error("K DSP word prepared cost");
+#endif
+        if(stage_==Stage::PollReady){const auto used=poll_.advancePrepared(cost,c,[&]{return read(false);});if(poll_.complete())stage_=Stage::PrepareWord;return used;}
         switch(stage_){
         case Stage::SelectPort:stage_=Stage::ReadCache;break;
         case Stage::ReadCache:cache_=uint16_t(read(true));stage_=Stage::CompareCache;break;

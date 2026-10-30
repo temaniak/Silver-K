@@ -22,11 +22,8 @@ namespace kstation
             const auto now = state.cycles;
             for(unsigned i = 0; i < channels_.size(); ++i)
             {
-                if(!(tstr_ & (1u << i)) || (tmdr_ & (1u << i))
-                   || (i == 2 && (tmdr_ & 0x40)))
-                    continue;
+                if(!(activeMask_ & (1u << i))) continue;
                 auto& c = channels_[i];
-                if(c.tcr & 4) continue;
                 const auto shift = c.tcr & 3;
                 // The old peripheral deliberately narrows the shifted delta
                 // to unsigned int. Keep its 32-bit truncation, including wrap.
@@ -82,9 +79,9 @@ namespace kstation
             auto offset = address - Base;
             switch(offset)
             {
-            case 0: tstr_ = value; return;
+            case 0: tstr_ = value; updateActiveMask(); return;
             case 1: tsnc_ = value; return;
-            case 2: tmdr_ = value; return;
+            case 2: tmdr_ = value; updateActiveMask(); return;
             case 3: tfcr_ = value; return;
             default: break;
             }
@@ -93,7 +90,7 @@ namespace kstation
             auto& c = channels_[static_cast<unsigned>(index)];
             switch(offset)
             {
-            case 0: c.tcr = value; return;
+            case 0: c.tcr = value; updateActiveMask(); return;
             case 1: return;
             case 2: c.tier = value; return;
             case 3: c.tsr = value; return;
@@ -124,6 +121,15 @@ namespace kstation
             return -1;
         }
 
+        void updateActiveMask()
+        {
+            unsigned mask = tstr_ & ~tmdr_ & 0x1fu;
+            if(tmdr_ & 0x40) mask &= ~(1u << 2);
+            for(unsigned i = 0; i < channels_.size(); ++i)
+                if(channels_[i].tcr & 4) mask &= ~(1u << i);
+            activeMask_ = static_cast<std::uint8_t>(mask);
+        }
+
         static std::uint8_t advance(Channel& c, std::uint32_t count)
         {
             const auto start = c.tcnt;
@@ -144,6 +150,16 @@ namespace kstation
                 if(!start) flags |= 4;
                 c.tcnt = next;
                 return flags;
+            }
+            // Events inspect the old counter. Equality leaves the event at
+            // the next counter, outside this interval; including zero also
+            // excludes wraparound before the last increment.
+            if(count <= static_cast<std::uint16_t>(c.gra - start)
+               && count <= static_cast<std::uint16_t>(c.grb - start)
+               && count <= static_cast<std::uint16_t>(0u - start))
+            {
+                c.tcnt = static_cast<std::uint16_t>(std::uint32_t(start) + count);
+                return 0;
             }
             const auto mode = c.tcr & 0x60;
             const bool clears = mode == 0x20 || mode == 0x40;
@@ -171,6 +187,7 @@ namespace kstation
             return flags;
         }
 
+        std::uint8_t activeMask_ = 0;
         std::uint64_t lastCycles_ = 0;
         std::array<std::uint8_t, 64> space_{};
         std::uint8_t tstr_ = 0xc0, tsnc_ = 0xc0, tmdr_ = 0x80, tfcr_ = 0xc0;

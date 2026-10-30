@@ -13,6 +13,7 @@ namespace kstation {
 // Firmware data, board resources and peripheral clocks. This class never
 // constructs a CPU and contains no instruction fetch or controller dispatcher.
 class ControllerBoard final : public ControllerResourceBus {
+ friend struct NativeBoardAccess;
  template<size_t N>struct ByteQueue{std::array<uint8_t,N>data{};size_t head=0,tail=0;bool push(uint8_t v){if(head-tail==N)return false;data[(head++)%N]=v;return true;}bool pop(uint8_t&v){if(head==tail)return false;v=data[(tail++)%N];return true;}void clear(){head=tail=0;}};
 public:
  static constexpr size_t FlashSize=0x40000;
@@ -139,7 +140,7 @@ public:
             const auto r=address&255;
             const auto old=regs[r];
             regs[r]=value;
-            if(r==0xcf)overlay=(value&1)==0; // Original P8 bank select.
+            if(r==0xcf){overlay=(value&1)==0;if(expectedBus_&&state_.bus_==expectedBus_)state_.lowRead_=overlay?state_.memory+0x400000:nullptr;} // Original P8 bank select.
             else if(r==0xd2 && ((old^value)&2) && host.resetDSP)host.resetDSP((value&2)==0);
             else if(r==0xc7)lcdData=value;
             else if(r==0xd3 && (old&0x80) && !(value&0x80) && !(value&0x10) && (value&0x40))lcdLatch();
@@ -187,6 +188,7 @@ private:
  uint8_t lcdAddress=0,lcdData=0;bool lcdCgram=false;
  MidiSerialQueue<8192>midiIn;ByteQueue<8192>midiOut;ControllerTimers timers_;
  uint64_t nextRx=0,txReady=0,adcReady=0,hostReads=0,hostWrites=0,midiReceived=0;
+ ControllerResourceBus*expectedBus_=nullptr;
  bool overlay=false,reconstructedDefaults=false;unsigned flashCommand=0,pageRemaining=0;uint64_t flashRevision=0;
 };
 }

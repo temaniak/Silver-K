@@ -59,15 +59,17 @@ public:
             const auto stage=j.word.stage();pushAddress=stage==W::Stage::DispatchAddress;
             pushFault=stage==W::Stage::PollReady&&j.word.poll().stage()==DspPollTask::Stage::DispatchFault;
             stackWrite=pushAddress||pushFault;
-            if(j.word.advanceBefore(clocks,cr,[&](bool cache){return read(cache?0xc598:0x600004,cache?2:1,clocks);},
-                [&](W::Write field,uint16_t v){write(field==W::Write::Cache?0xc598:field==W::Write::High?0x60000a:field==W::Write::Middle?0x60000c:0x60000e,v,field==W::Write::Cache?2:1,clocks);})!=clocks)
+            auto wordRead=[&](bool cache){return read(cache?0xc598:0x600004,cache?2:1,clocks);};
+            auto wordWrite=[&](W::Write field,uint16_t v){write(field==W::Write::Cache?0xc598:field==W::Write::High?0x60000a:field==W::Write::Middle?0x60000c:0x60000e,v,field==W::Write::Cache?2:1,clocks);};
+            if((arb?j.word.advanceBefore(clocks,cr,wordRead,wordWrite):j.word.advancePrepared(clocks,cr,wordRead,wordWrite))!=clocks)
                 throw std::logic_error("K domain DSP word phase");
             done=j.word.complete();
         }else if(j.kind==Kind::Address){
             pushFault=j.address.polling()&&j.address.poll().stage()==DspPollTask::Stage::DispatchFault;
             stackWrite=pushFault;
-            if(j.address.advanceBefore(clocks,cr,[&](unsigned port){return read(0x600000+port,1,clocks);},
-                [&](A::Write field,uint16_t v){write(field==A::Write::Cache?0xc598:field==A::Write::Control?0x600000:field==A::Write::High?0x60000a:field==A::Write::Middle?0x60000c:0x60000e,v,field==A::Write::Cache?2:1,clocks);})!=clocks)
+            auto addressRead=[&](unsigned port){return read(0x600000+port,1,clocks);};
+            auto addressWrite=[&](A::Write field,uint16_t v){write(field==A::Write::Cache?0xc598:field==A::Write::Control?0x600000:field==A::Write::High?0x60000a:field==A::Write::Middle?0x60000c:0x60000e,v,field==A::Write::Cache?2:1,clocks);};
+            if((arb?j.address.advanceBefore(clocks,cr,addressRead,addressWrite):j.address.advancePrepared(clocks,cr,addressRead,addressWrite))!=clocks)
                 throw std::logic_error("K domain DSP address phase");
             done=j.address.complete();if(done&&j.address.receives())value_=j.address.result();
         }else if(j.kind==Kind::Fault){

@@ -7,6 +7,8 @@
 
 namespace kstation {
 class ControllerDeviceState;
+class ControllerBoard;
+struct NativeBoardAccess;
 // Board-specific mapping and peripherals supply their own decoding. The bus
 // receives the physical 24-bit address after the device clock is advanced.
 class ControllerResourceBus {
@@ -35,7 +37,7 @@ public:
  bool interruptMode2=false;
  uint8_t interruptPriority[128]{};
  int lastRead=-1,lastWrite=-1;
- void attachBus(ControllerResourceBus* bus){bus_=bus;if(bus_)bus_->attachState(this);}
+ void attachBus(ControllerResourceBus* bus){lowRead_=nullptr;bus_=bus;if(bus_)bus_->attachState(this);}
  bool protectImmutable(uint32_t begin,uint32_t end){if(begin>=end||end>MemorySize||protectedCount_==protected_.size())return false;protected_[protectedCount_++]={begin,end,false};indexImmutable(begin,end);return true;}
  bool protectImmutableVerified(uint32_t begin,uint32_t end,const uint8_t*expected){if(!expected||begin>=end||end>MemorySize||protectedCount_==protected_.size())return false;for(uint32_t a=begin;a<end;++a)if(readResource(a)!=expected[a-begin])return false;protected_[protectedCount_++]={begin,end,true};indexImmutable(begin,end);return true;}
  bool isImmutable(uint32_t address)const{const auto a=address&0xffffff;unsigned lo=0,hi=immutableSpanCount_;while(lo<hi){const auto mid=lo+(hi-lo)/2;if(immutableSpans_[mid].begin<=a)lo=mid+1;else hi=mid;}return lo&&a<immutableSpans_[lo-1].end;}
@@ -45,13 +47,13 @@ public:
  bool hasImmutableBindings()const{return protectedCount_!=0;}
  unsigned immutableBindingCount()const{return protectedCount_;}
  // A bound runtime must be recreated together with its board state.
- void resetForBoot(){if(protectedCount_)throw std::logic_error("Cannot reset bound K controller state");std::memset(memory,0,sizeof(memory));cycles=pendingIrqs=pendingIrqsHigh=0;interruptMode2=false;std::memset(interruptPriority,0,sizeof(interruptPriority));lastRead=lastWrite=-1;protectedCount_=0;}
+ void resetForBoot(){if(protectedCount_)throw std::logic_error("Cannot reset bound K controller state");lowRead_=nullptr;std::memset(memory,0,sizeof(memory));cycles=pendingIrqs=pendingIrqsHigh=0;interruptMode2=false;std::memset(interruptPriority,0,sizeof(interruptPriority));lastRead=lastWrite=-1;protectedCount_=0;}
  void loadMemory(const uint8_t* data,size_t size,size_t address){if(address>MemorySize||size>MemorySize-address)throw std::out_of_range("K controller image range");for(unsigned i=0;i<protectedCount_;++i)if(size&&address<protected_[i].end&&protected_[i].begin<address+size)throw std::logic_error("K immutable controller image");std::memcpy(memory+address,data,size);}
  void clockInternal(unsigned clocks){cycles+=clocks;}
  void clockMemory(uint32_t address,int& previous){const auto a=address&0xffffff;if(a<0x400000){if((previous&1)||a!=uint32_t(previous|1))cycles+=3;previous=int(a);}else if(a>=0xfffd10&&a<0xffffa0){if((previous&1)||a!=uint32_t(previous|1))++cycles;previous=int(a);}else{cycles+=a>=0xffffa0?1:3;previous=-1;}}
  // Untimed byte transactions support semantic phase schedulers that have
  // already computed the exact bus timestamp and history.
- uint8_t readResource(uint32_t address){auto a=address&0xffffff;return bus_&&bus_->mapped(a)?bus_->read(a):memory[a];}
+ uint8_t readResource(uint32_t address){auto a=address&0xffffff;if(a<0x10000&&lowRead_)return lowRead_[a];return bus_&&bus_->mapped(a)?bus_->read(a):memory[a];}
  void writeResource(uint32_t address,uint8_t value){auto a=address&0xffffff;if(isImmutable(a))throw std::logic_error("K immutable controller resource");if(bus_&&bus_->mapped(a))bus_->write(a,value);else memory[a]=value;}
  uint8_t read8(uint32_t address){auto a=address&0xffffff;clockMemory(a,lastRead);return readResource(a);}
  uint16_t read16(uint32_t a){auto hi=read8(a);return uint16_t((unsigned(hi)<<8)|read8(a+1));}
@@ -75,6 +77,9 @@ private:
  struct ImmutableRange{uint32_t begin=0,end=0;bool verified=false;};
  std::array<ImmutableRange,ImmutableCapacity>protected_{};unsigned protectedCount_=0;
  std::array<ImmutableSpan,ImmutableCapacity>immutableSpans_{};unsigned immutableSpanCount_=0;
+ friend class ControllerBoard;
+ friend struct NativeBoardAccess;
+ const uint8_t* lowRead_=nullptr;
  ControllerResourceBus* bus_=nullptr;
 };
 }

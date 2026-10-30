@@ -24,6 +24,23 @@ extern void kNativeControllerPort(uint64_t,uint32_t,uint8_t,bool);
 extern void kNativeControllerSlice(uint64_t,uint64_t,uint64_t,uint64_t);
 #endif
 namespace kstation {
+struct NativeBoardAccess {
+ static void enable(ControllerBoard&board,ControllerResourceBus&bus){board.expectedBus_=&bus;}
+};
+struct NativeForegroundAccess {
+ static ControllerForegroundRuntime::Result advance(ControllerForegroundRuntime&fg,ControllerDeviceState&d,ControllerInterruptRuntime&irq,unsigned budget){
+#if defined(K_RESEARCH_NATIVE_TRACE)
+  if(fg.bound_!=&d||!irq.boundTo(d)||!fg.active_||d.interruptMode2||d.pendingIrqsHigh||irq.active()||(d.pendingIrqs&&irq.mask()==ControllerInterruptRuntime::Mask::Enabled))throw std::logic_error("foreground selected entry invariant");
+#endif
+  if(fg.feedback_){
+#if defined(K_RESEARCH_NATIVE_TRACE)
+   if(fg.refresh_||fg.expressionValues_)throw std::logic_error("foreground feedback owner priority");
+#endif
+   return fg.advanceFeedbackBefore(d,irq,budget);
+  }
+  return fg.advanceSelectedBefore(d,irq,budget);
+ }
+};
 struct NativeController::Impl {
  using F=ControllerForegroundRuntime;using G=ControllerStartupGraph;using SH=ControllerStartupServicesHolder;using M=MainLoopTask;
  std::vector<uint8_t>image,storage;ControllerHostCallbacks host;
@@ -46,10 +63,16 @@ struct NativeController::Impl {
  enum class DirectParent:uint8_t{None,Midi,Startup,Script,Ui,Callback,DeferredUi};DirectParent directParent=DirectParent::None;ControllerMidiServices::Request directMidiRequest{};ControllerStartupDisplayRuntime::Request directStartupRequest{};ControllerScriptPlaybackServices::Request directScriptRequest{};ControllerUiServices::Request directUiRequest{};
  ControllerMainEntryRuntime entry;ControllerKeyServices keys;ControllerArpServices arp;ControllerPeriodicDisplayServices periodic;ControllerMidiRealtimeRuntime realtime;ControllerDeferredUiRuntime deferredUi;ControllerDeferredMenuRuntime deferredMenu;ControllerDeferredNoticeRuntime deferredNotice;ControllerDeferredParameterRuntime deferredParameter;ControllerScriptPlaybackServices script;ControllerPeriodicUiRuntime scriptPeriodic;ControllerUiServices::Request scriptUiParent{};
  const char*fault=nullptr;ControllerDebugState stats;bool bound=false,entryCall=false,entryDone=false,ready=false,enteredMain=false;StartupChild rootStartup=StartupChild::None;
+ // Only the foreground dispatcher starts root-owned services. IRQ/board
+ // phases update device state, not these owners. A pending request drops
+ // this eligibility before admission; no request or guest data is cached.
+ // UI/MIDI selection is cleared before routing nested services or returning.
+ enum class ForegroundOwner:uint8_t{Unknown,Core,Ui,Midi};
+ ForegroundOwner foregroundOwner_=ForegroundOwner::Unknown;
  M::Child keyParent=M::Child::LocalKeys;ControllerCallback callback=ControllerCallback::Unknown;F::MidiHandler realtimeParent=F::MidiHandler::Unknown;
  Impl(const std::vector<uint8_t>&rom,ControllerHostCallbacks callbacks,const std::vector<uint8_t>&flash)
  :image(rom),storage(flash),host(std::move(callbacks)),board(state,image,ControllerHostCallbacks{host.read,host.write,host.resetDSP},storage),bus(board,state){
-  state.attachBus(&bus);irq.setMask(ControllerInterruptRuntime::Mask::Disabled);
+  state.attachBus(&bus);NativeBoardAccess::enable(board,bus);irq.setMask(ControllerInterruptRuntime::Mask::Disabled);
   require(startup.bindBootResources(state,image.data(),image.size()),"startup resources");
   require(startupServices.bindBootResources(state,image.data(),image.size()),"startup service resources");
   require(numeric.bindBootResources(state,image.data(),image.size()),"numeric boot resources");require(firmwareUpdate.bindBootResources(state,image.data(),image.size()),"firmware progress boot resources");
@@ -87,7 +110,62 @@ struct NativeController::Impl {
   if(startupServices.active())return startupServices.advanceBefore(startup,state,irq,dsp,midi,voices,numeric,budget).clocks;
   auto r=startup.advanceBefore(state,irq,budget);return r.clocks;
  }
+ unsigned uiForegroundPhase(){
+  constexpr auto budget=std::numeric_limits<unsigned>::max();foregroundOwner_=ForegroundOwner::Unknown;
+  auto route=ui.routeForeground(foreground,state,irq,dsp,voices,startup.panel(),startup.lcd(),numeric);if(route==ControllerUiServices::Route::External){auto request=ui.externalRequest();if(request.owner==ControllerUiServices::Owner::KeyDisplay&&startDisplay(request.keyDisplay,DirectParent::Ui)){directUiRequest=request;return 0;}if(request.owner==ControllerUiServices::Owner::KeyRange&&request.keyRange.service==ControllerUiKeyRangeRuntime::Service::Script){if(!check(script.start(),"script admission"))return 0;scriptUiParent=request;return 0;}}if(!check(route==ControllerUiServices::Route::Ready,"UI request remains open"))return 0;auto r=ui.advanceBefore(foreground,state,irq,budget);if(r.clocks&&ui.active())foregroundOwner_=ForegroundOwner::Ui;return r.clocks;
+ }
+ unsigned midiForegroundPhase(const F::Request*q){
+  constexpr auto budget=std::numeric_limits<unsigned>::max();foregroundOwner_=ForegroundOwner::Unknown;
+  if(!midi.active()&&!check(q!=nullptr,"missing MIDI admission"))return 0;
+  if(!midi.active()&&(q->handler==F::MidiHandler::Ignore||q->handler==F::MidiHandler::Realtime)){if(!check(realtime.start(q->handler==F::MidiHandler::Ignore),"system MIDI admission"))return 0;realtimeParent=q->handler;return 0;}auto route=midi.routeForeground(foreground,state,irq,dsp,voices,startup.lcd(),numeric,startup.panel());if(route==ControllerMidiServices::Route::External){auto request=midi.externalRequest(voices);if(request.owner==ControllerMidiServices::Owner::Display&&startDisplay(request.display,DirectParent::Midi)){directMidiRequest=request;return 0;}}if(!check(route==ControllerMidiServices::Route::Ready,"MIDI child remains open"))return 0;auto r=midi.advanceBefore(foreground,state,irq,dsp,voices,budget);if(r.clocks&&midi.active())foregroundOwner_=ForegroundOwner::Midi;return r.clocks;
+ }
  unsigned foregroundPhase(){
+  constexpr auto budget=std::numeric_limits<unsigned>::max();
+  if(foregroundOwner_==ForegroundOwner::Ui||foregroundOwner_==ForegroundOwner::Midi){
+#if defined(K_RESEARCH_NATIVE_TRACE)
+   if(!check(entryDone&&!deferredNotice.active()&&!deferredParameter.active()&&!deferredMenu.active()&&!directUi.active()&&!deferredUi.active()&&!script.active()&&!keys.active()&&!arp.active()&&!periodic.active()&&!realtime.active(),"foreground selected owner priority"))return 0;
+   const auto selectedRequest=foreground.request();
+   if(foregroundOwner_==ForegroundOwner::Ui){if(!check(ui.active()&&selectedRequest.kind==F::RequestKind::MainChild&&selectedRequest.slot>=5&&selectedRequest.slot<=7,"foreground UI ownership"))return 0;}
+   else if(!check(midi.active()&&!ui.active()&&selectedRequest.kind==F::RequestKind::MidiHandler,"foreground MIDI ownership"))return 0;
+#endif
+   return foregroundOwner_==ForegroundOwner::Ui?uiForegroundPhase():midiForegroundPhase(nullptr);
+  }
+  if(foregroundOwner_==ForegroundOwner::Core){
+#if defined(K_RESEARCH_NATIVE_TRACE)
+   if(!check(entryDone&&!deferredNotice.active()&&!deferredParameter.active()&&!deferredMenu.active()&&!directUi.active()&&!deferredUi.active()&&!script.active()&&!keys.active()&&!arp.active()&&!periodic.active()&&!realtime.active()&&!ui.active()&&!midi.active(),"foreground core ownership"))return 0;
+   if(voices.foregroundGlobalActive()&&!check(foreground.request().kind==F::RequestKind::VoiceGlobal,"foreground global ownership"))return 0;
+#endif
+   if(voices.foregroundGlobalActive()){
+    if(!check(voices.routeForeground(foreground,state,dsp,nullptr)==ControllerVoiceServices::Route::Ready,"voice child remains open"))return 0;
+    return voices.advanceForeground(foreground,state,irq,dsp,budget).clocks;
+   }
+   if(!voices.globalActive()){
+#if defined(K_RESEARCH_NATIVE_TRACE)
+    if(!check(voices.boundTo(state)&&dsp.boundTo(state),"foreground fixed bindings"))return 0;
+    const auto probeCycles=state.cycles,probePending=state.pendingIrqs,probeHigh=state.pendingIrqsHigh;const auto probeRead=state.lastRead,probeWrite=state.lastWrite;const auto probeMask=irq.mask();
+#endif
+    const auto r=state.interruptMode2||state.pendingIrqsHigh?foreground.advanceBefore(state,irq,budget):NativeForegroundAccess::advance(foreground,state,irq,budget);
+    if(r.clocks)return r.clocks;
+    // Await guards and the outer unsupported-mode guard precede guest work.
+    // Other zero results may have changed state and must not be replayed.
+    switch(r.blocked){
+     case F::Block::UnsupportedMode:case F::Block::AwaitMainChild:case F::Block::AwaitCallback:case F::Block::AwaitPumpChild:case F::Block::AwaitNoteChild:case F::Block::AwaitExpressionChild:case F::Block::AwaitRefreshChild:case F::Block::AwaitVoiceGlobal:
+#if defined(K_RESEARCH_NATIVE_TRACE)
+      if(!check(state.cycles==probeCycles&&state.pendingIrqs==probePending&&state.pendingIrqsHigh==probeHigh&&state.lastRead==probeRead&&state.lastWrite==probeWrite&&irq.mask()==probeMask,"foreground guard changed state"))return 0;
+#endif
+      break;
+     default:return 0;
+    }
+   }else if(!foreground.hasPendingRequest()){
+    if(!check(voices.routeForeground(foreground,state,dsp,nullptr)==ControllerVoiceServices::Route::Ready,"voice child remains open"))return 0;
+    return voices.advanceForeground(foreground,state,irq,dsp,budget).clocks;
+   }
+   foregroundOwner_=ForegroundOwner::Unknown;
+  }
+  return foregroundSlowPhase();
+ }
+ // Keep canonical admission and its request payload off the selected-owner path.
+ unsigned foregroundSlowPhase(){
   constexpr auto budget=std::numeric_limits<unsigned>::max();
   if(!entryDone){if(!entryCall){if(state.pendingIrqs)(void)state.read8(0xfffff2);state.clockInternal(10);state.lastRead=state.lastWrite=-1;entryCall=true;if(!check(entry.start(),"Main entry admission"))return 0;ready=board.readMemory(0xcd82)>=1&&board.readMemory(0xcd82)<=4&&board.readMemory(0xcd83)<100;for(unsigned i=0;i<128&&ready;++i)ready=board.readMemory(0xba5c+i)<128;return 10+(state.pendingIrqs?1:0);}auto r=entry.advanceBefore(state,irq,budget);if(r.returned){entryDone=true;if(!check(foreground.start(),"foreground admission"))return 0;}return r.clocks;}
   if(deferredNotice.active()){auto r=deferredNotice.advanceBefore(state,irq,startup.lcd(),budget);if(r.returned){if(!check(foreground.completeCallback(callback),"deferred notice completion"))return 0;callback=ControllerCallback::Unknown;}return r.clocks;}
@@ -101,23 +179,29 @@ struct NativeController::Impl {
   if(periodic.active()){auto r=periodic.advanceBefore(state,irq,startup.lcd(),numeric,dsp,budget);if(r.returned){if(!check(foreground.completeCallback(callback),"periodic callback completion"))return 0;callback=ControllerCallback::Unknown;}return r.clocks;}
   if(realtime.active()){auto r=realtime.advanceBefore(state,irq,dsp,budget);if(r.returned){if(!check(foreground.completeMidiHandler(realtimeParent),"system MIDI completion"))return 0;realtimeParent=F::MidiHandler::Unknown;}return r.clocks;}
   auto q=foreground.request();
-  if(ui.active()||(q.kind==F::RequestKind::MainChild&&q.slot>=5&&q.slot<=7)){auto route=ui.routeForeground(foreground,state,irq,dsp,voices,startup.panel(),startup.lcd(),numeric);if(route==ControllerUiServices::Route::External){auto request=ui.externalRequest();if(request.owner==ControllerUiServices::Owner::KeyDisplay&&startDisplay(request.keyDisplay,DirectParent::Ui)){directUiRequest=request;return 0;}if(request.owner==ControllerUiServices::Owner::KeyRange&&request.keyRange.service==ControllerUiKeyRangeRuntime::Service::Script){if(!check(script.start(),"script admission"))return 0;scriptUiParent=request;return 0;}}if(!check(route==ControllerUiServices::Route::Ready,"UI request remains open"))return 0;return ui.advanceBefore(foreground,state,irq,budget).clocks;}
-  if(midi.active()||q.kind==F::RequestKind::MidiHandler){if(!midi.active()&&(q.handler==F::MidiHandler::Ignore||q.handler==F::MidiHandler::Realtime)){if(!check(realtime.start(q.handler==F::MidiHandler::Ignore),"system MIDI admission"))return 0;realtimeParent=q.handler;return 0;}auto route=midi.routeForeground(foreground,state,irq,dsp,voices,startup.lcd(),numeric,startup.panel());if(route==ControllerMidiServices::Route::External){auto request=midi.externalRequest(voices);if(request.owner==ControllerMidiServices::Owner::Display&&startDisplay(request.display,DirectParent::Midi)){directMidiRequest=request;return 0;}}if(!check(route==ControllerMidiServices::Route::Ready,"MIDI child remains open"))return 0;return midi.advanceBefore(foreground,state,irq,dsp,voices,budget).clocks;}
+  if(ui.active()||(q.kind==F::RequestKind::MainChild&&q.slot>=5&&q.slot<=7))return uiForegroundPhase();
+  if(midi.active()||q.kind==F::RequestKind::MidiHandler)return midiForegroundPhase(&q);
   if(q.kind==F::RequestKind::MainChild){if(q.slot<5){if(!check(foreground.beginDeferred(),"deferred admission"))return 0;return 0;}switch(q.child){case M::Child::MidiInput:if(!check(foreground.beginMidiPump(),"MIDI pump admission"))return 0;return 0;case M::Child::LocalKeys:case M::Child::Playback:keyParent=q.child;if(!check(q.child==M::Child::LocalKeys?keys.startKey():keys.startPlayback(),"key admission"))return 0;return 0;case M::Child::Arpeggiator:if(!check(arp.start(),"arpeggiator admission"))return 0;return 0;default:break;}}
   if(q.kind==F::RequestKind::Callback){if(q.callback==ControllerCallback::Callback2){if(!check(deferredNotice.start(),"deferred notice admission"))return 0;callback=q.callback;return 0;}if(q.callback==ControllerCallback::Callback3||q.callback==ControllerCallback::Callback4){if(!check(deferredParameter.start(q.callback==ControllerCallback::Callback3?ControllerDeferredParameterRuntime::Kind::Decrease:ControllerDeferredParameterRuntime::Kind::Increase),"deferred parameter admission"))return 0;callback=q.callback;return 0;}if(q.callback==ControllerCallback::Callback0||q.callback==ControllerCallback::Callback1){if(!check(deferredMenu.start(q.callback==ControllerCallback::Callback0?ControllerDeferredMenuRuntime::Kind::Previous:ControllerDeferredMenuRuntime::Kind::Next),"deferred menu admission"))return 0;callback=q.callback;return 0;}if(q.callback==ControllerCallback::Callback5||q.callback==ControllerCallback::Callback9||q.callback==ControllerCallback::Callback10){auto kind=q.callback==ControllerCallback::Callback5?ControllerDeferredUiRuntime::Kind::ClearNotice:q.callback==ControllerCallback::Callback9?ControllerDeferredUiRuntime::Kind::Noop:ControllerDeferredUiRuntime::Kind::ClearEdit;if(!check(deferredUi.start(kind),"deferred UI admission"))return 0;callback=q.callback;return 0;}if(q.callback==ControllerCallback::Callback7||q.callback==ControllerCallback::Callback8){if(!check(directUi.startDirect(q.callback==ControllerCallback::Callback7?ControllerUiServices::DirectKind::ProgramRepeatFirst:ControllerUiServices::DirectKind::ProgramRepeatAgain,0,0),"program repeat callback admission"))return 0;callback=q.callback;directParent=DirectParent::Callback;return 0;}if(q.callback==ControllerCallback::Callback6){if(!check(periodic.start(),"periodic callback admission"))return 0;callback=q.callback;return 0;}return fail("callback remains open");}
-  if(!check(voices.routeForeground(foreground,state,dsp)==ControllerVoiceServices::Route::Ready,"voice child remains open"))return 0;
-  auto r=voices.advanceForeground(foreground,state,irq,dsp,budget);return r.clocks;
+  if(!check(voices.routeForeground(foreground,state,dsp,&q)==ControllerVoiceServices::Route::Ready,"voice child remains open"))return 0;
+  auto r=voices.advanceForeground(foreground,state,irq,dsp,budget);foregroundOwner_=ForegroundOwner::Core;return r.clocks;
  }
  bool validInitialPatch()const{auto bank=board.readMemory(0xcd82);bool valid=bank>=1&&bank<=4&&board.readMemory(0xcd83)<100;for(unsigned i=0;i<128&&valid;++i)valid=board.readMemory(0xba5c+i)<128;return valid;}
- unsigned phase(){
+ unsigned irqPhase(){
+  constexpr auto budget=std::numeric_limits<unsigned>::max();
+  auto r=irq.advanceBefore(state,budget);unsigned used=r.clocks;if(r.entered){++stats.nativeIrqEntries;auto body=irq.advanceBefore(state,budget);if(!check(body.clocks!=0,"first IRQ body interval"))return 0;used+=body.clocks;}
+  if(!check(used!=0,"IRQ phase"))return 0;++stats.nativeIrqSteps;return used;
+ }
+ unsigned startupPhase(){
   if(startup.phase()==G::Phase::MainScratch)enteredMain=true;
   if(startup.complete()&&!entryCall)ready=validInitialPatch();
-  constexpr auto budget=std::numeric_limits<unsigned>::max();
-  if(irq.active()||(state.pendingIrqs&&irq.mask()==ControllerInterruptRuntime::Mask::Enabled)){
-   auto r=irq.advanceBefore(state,budget);unsigned used=r.clocks;if(r.entered){++stats.nativeIrqEntries;auto body=irq.advanceBefore(state,budget);if(!check(body.clocks!=0,"first IRQ body interval"))return 0;used+=body.clocks;}
-   if(!check(used!=0,"IRQ phase"))return 0;++stats.nativeIrqSteps;return used;
-  }
+  if(irq.active()||(state.pendingIrqs&&irq.mask()==ControllerInterruptRuntime::Mask::Enabled))return irqPhase();
   if(!startup.complete()){auto n=timedStartup();if(n)++stats.nativeStartupSteps;return n;}
+  auto n=foregroundPhase();if(n)++stats.nativeForegroundSteps;return n;
+ }
+ unsigned phase(){
+  if(!entryDone)return startupPhase();
+  if(irq.active()||(state.pendingIrqs&&irq.mask()==ControllerInterruptRuntime::Mask::Enabled))return irqPhase();
   auto n=foregroundPhase();if(n)++stats.nativeForegroundSteps;return n;
  }
  uint64_t exec(uint32_t budget){auto begin=state.cycles;if(fault)return 0;while(state.cycles-begin<budget){auto before=state.cycles;unsigned used=0;for(unsigned i=0;i<64&&!used&&!fault;++i)used=phase();if(fault)return state.cycles-begin;if(!check(used&&state.cycles-before==used,"controller progress"))return 0;board.tickAfterPhase();++stats.instructions;

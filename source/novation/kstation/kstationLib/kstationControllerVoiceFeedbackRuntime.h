@@ -25,7 +25,7 @@ public:
 private:
  struct Range{uint32_t begin,end;};inline static constexpr Range ranges_[]={{0x819a,0x8218},{0x834a,0x8366},{0x72ba,0x72ce},{0x5bb8,0x5bec}};
  static unsigned bus(uint32_t a,unsigned n,int p){unsigned c=0;for(unsigned i=0;i<n;++i){auto x=(a+i)&0xffffff;if(x<0x400000||(x>=0xfffd10&&x<0xffffa0)){if((p&1)||x!=uint32_t(p|1))c+=x<0x400000?3:1;p=int(x);}else{c+=x>=0xffffa0?1:3;p=-1;}}return c;}
- static VoiceFeedbackCredits credits(const T&t,int last){VoiceFeedbackCredits c{};c.readState=12+bus(t.voice()+8,2,-1);c.writeState=12+bus(t.voice()+8,2,last);c.writeInactive=15+bus(t.voice()+8,4,last);c.readCounter=6+bus(t.voice()+10,2,-1);c.writeCounter=6+bus(t.voice()+10,2,last);return c;}
+ static VoiceFeedbackCredits credits(const T&t,int last){VoiceFeedbackCredits c{};const uint32_t a=t.voice()+8;if(!(a&1)&&a<=0x3ffffc){c.readState=15;c.writeState=15;c.writeInactive=21;c.readCounter=9;c.writeCounter=9;return c;}c.readState=12+bus(t.voice()+8,2,-1);c.writeState=12+bus(t.voice()+8,2,last);c.writeInactive=15+bus(t.voice()+8,4,last);c.readCounter=6+bus(t.voice()+10,2,-1);c.writeCounter=6+bus(t.voice()+10,2,last);return c;}
  unsigned cost(int previous)const{if(voice_){V::Credits c{3,7};return voice_->nextClocks(c);}if(select_)return select_->nextClocks();if(read_){R::Credits c{3,read_->stage()==R::Stage::Return?7u:10u};return read_->nextClocks(c);}if(voiceFeedback_)return voiceFeedback_->nextClocks(credits(*voiceFeedback_,previous));VoiceFeedbackCredits c{};return dspFeedback_->nextClocks(c);}
  ControllerDeviceState*bound_=nullptr;std::optional<T>voiceFeedback_{};std::optional<Q>dspFeedback_{};std::optional<V>voice_{};std::optional<ControllerVoiceReleaseDspTask>select_{};std::optional<R>read_{};bool ownsDsp_=false;uint32_t readWord_=0;
 };
