@@ -40,7 +40,7 @@ struct Fixture {
    if(x.count!=y.count){std::fprintf(stderr,"event count kind%u case%llu phase%llu pc%x %u/%u clocks%llu/%llu\n",kind,cases,phases,a->getPC(),x.count,y.count,a->cycles,b->cycles);for(unsigned i=0;i<x.count;++i)std::fprintf(stderr,"orig %x %x at%llu\n",x.events[i].address,x.events[i].value,x.events[i].clocks);for(unsigned i=0;i<y.count;++i)std::fprintf(stderr,"native %x %x at%llu\n",y.events[i].address,y.events[i].value,y.events[i].clocks);throw std::runtime_error("DSP domain event count");}for(unsigned i=0;i<x.count;++i){auto p=x.events[i],q=y.events[i];if(!(p.clocks==q.clocks&&p.address==q.address&&p.value==q.value&&p.write==q.write)){std::fprintf(stderr,"event PC%x %llx/%llx addr%x/%x val%x/%x write%d/%d\n",a->getPC(),p.clocks,q.clocks,p.address,q.address,p.value,q.value,p.write,q.write);throw std::runtime_error("DSP domain event differs");}}
    ++phases;io+=y.count;check(phases<20000000,"DSP domain stalled");
   }
-  check(a->getPC()==0x50000,"DSP return differs");check(a->memory[0xc598]==b->memory[0xc598]&&a->memory[0xc599]==b->memory[0xc599]&&x.pins==y.pins&&x.ports==y.ports,"DSP domain final resources");
+  check(a->getPC()==0x50000,"DSP return differs");check(!std::memcmp(a->memory+0xc000,b->memory+0xc000,0x1100),"DSP globals data differs");check(a->memory[0xc598]==b->memory[0xc598]&&a->memory[0xc599]==b->memory[0xc599]&&x.pins==y.pins&&x.ports==y.ports,"DSP domain final resources");
 
  }
 };

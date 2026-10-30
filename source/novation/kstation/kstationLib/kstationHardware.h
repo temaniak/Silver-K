@@ -12,8 +12,8 @@ namespace kstation
     {
     public:
         explicit Hardware(const std::vector<uint8_t>& rom, const std::vector<uint8_t>& flash = {},
-                          H8::Stage1Mode mode=H8::Stage1Mode::Original);
-        bool boot(uint64_t maxH8Cycles = H8::ClockHz * 10ull);
+                          ControllerMode mode=ControllerMode::Original);
+        bool boot(uint64_t maxH8Cycles = ControllerClockHz * 10ull);
         DSP::AudioFrame renderSample();
         bool enqueueMidi(const uint8_t* bytes, size_t count) { return m_h8->enqueueMidi(bytes, count); }
         bool popMidiOut(uint8_t& byte) { return m_h8->popMidiOut(byte); }

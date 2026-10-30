@@ -498,7 +498,7 @@ namespace kstation
     };
 
     H8::H8(const std::vector<uint8_t>& image,HostCallbacks cb,const std::vector<uint8_t>& flash,Stage1Mode mode)
-    :m_impl(std::make_unique<Impl>(image,std::move(cb),flash,mode)){}
+    :m_impl([&]{if(mode==Stage1Mode::Native)throw std::invalid_argument("Select the native controller through Hardware");return std::make_unique<Impl>(image,std::move(cb),flash,mode);}()){}
     H8::~H8()=default;
     void H8::reset(){m_impl->reset();}
     uint64_t H8::exec(uint32_t budget){return m_impl->exec(budget);}

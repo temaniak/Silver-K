@@ -1,5 +1,6 @@
 #pragma once
-#include "kstationH8.h"
+#include "kstationControllerTypes.h"
+class h8state;
 #include <stdexcept>
 namespace kstation {
 // Board-facing controller contract. The original oracle and CPU-independent
@@ -13,7 +14,7 @@ public:
  virtual bool popMidiOut(uint8_t&byte)=0;
  virtual bool bootReady()const=0;
  bool ready()const{return bootReady();}
- virtual H8::DebugState debugState()const=0;
+ virtual ControllerDebugState debugState()const=0;
  virtual uint8_t readMemory(uint32_t address)const=0;
  virtual void copyCurrentPatch(uint8_t*destination128)const=0;
  virtual std::vector<uint8_t> saveFlash()const=0;

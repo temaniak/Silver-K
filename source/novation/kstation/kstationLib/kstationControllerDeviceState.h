@@ -26,7 +26,7 @@ protected:
 class ControllerDeviceState final {
 public:
  static constexpr size_t MemorySize=1u<<24;
- static constexpr unsigned ImmutableCapacity=1024;
+ static constexpr unsigned ImmutableCapacity=4096;
  ControllerDeviceState()=default;
  ControllerDeviceState(const ControllerDeviceState&)=delete;
  ControllerDeviceState&operator=(const ControllerDeviceState&)=delete;
@@ -43,6 +43,7 @@ public:
  bool isRangeVerifiedImmutable(uint32_t begin,uint32_t end)const{if(begin>=end||end>MemorySize)return false;auto cursor=begin;while(cursor<end){auto furthest=cursor;for(unsigned i=0;i<protectedCount_;++i)if(protected_[i].verified&&protected_[i].begin<=cursor&&protected_[i].end>furthest)furthest=protected_[i].end;if(furthest==cursor)return false;cursor=furthest;}return true;}
  bool isVerifiedImmutable(uint32_t address)const{auto a=address&0xffffff;for(unsigned i=0;i<protectedCount_;++i)if(protected_[i].verified&&a>=protected_[i].begin&&a<protected_[i].end)return true;return false;}
  bool hasImmutableBindings()const{return protectedCount_!=0;}
+ unsigned immutableBindingCount()const{return protectedCount_;}
  // A bound runtime must be recreated together with its board state.
  void resetForBoot(){if(protectedCount_)throw std::logic_error("Cannot reset bound K controller state");std::memset(memory,0,sizeof(memory));cycles=pendingIrqs=pendingIrqsHigh=0;interruptMode2=false;std::memset(interruptPriority,0,sizeof(interruptPriority));lastRead=lastWrite=-1;protectedCount_=0;}
  void loadMemory(const uint8_t* data,size_t size,size_t address){if(address>MemorySize||size>MemorySize-address)throw std::out_of_range("K controller image range");for(unsigned i=0;i<protectedCount_;++i)if(size&&address<protected_[i].end&&protected_[i].begin<address+size)throw std::logic_error("K immutable controller image");std::memcpy(memory+address,data,size);}

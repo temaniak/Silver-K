@@ -1,3 +1,4 @@
+#include "kstationH8.h"
 #include "kstationHardware.h"
 #include "kstationNativeClock.h"
 #include "kstationNativeTimer1.h"

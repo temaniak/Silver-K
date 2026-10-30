@@ -1,3 +1,4 @@
+#include "kstationH8.h"
 #include "kstationHardware.h"
 #include "kstationNativeIrq.h"
 #include <fstream>

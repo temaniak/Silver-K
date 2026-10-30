@@ -93,7 +93,10 @@ def main():
             if args.mode == 'development':
                 assert current['native_adc_steps'] > 0 and current['native_foreground_steps'] > 0
                 assert current['native_dsp_transfer_steps'] > 0
-                assert current['interpreted_steps'] > 0, 'Update readiness gate before claiming a complete controller'
+                assert current['full_native_ready'] is False
+                assert current['implementation'] == 'caller-projection-development'
+                # Zero remaining instructions in a bounded passage would still
+                # retain architectural caller projections in this mode.
             print(scenario, 'PASS exact PCM/RAM/Flash/MIDI/IO/slices; remaining H8', current['interpreted_steps'], flush=True)
     (args.output / 'identity.json').write_text(json.dumps({'binary_sha256': identity, 'mode': args.mode,
         'cpu_measured': False, 'reference_archive_sha256': digest(args.reference_archive)}, indent=2))

@@ -1,5 +1,6 @@
 #pragma once
 #include "kstationControllerDeviceState.h"
+#include "kstationControllerTypes.h"
 #include "kstationControllerTimers.h"
 #include "kstationMidiQueue.h"
 #include "baseLib/sha256.h"
@@ -9,11 +10,6 @@
 #include <vector>
 #include <utility>
 namespace kstation {
-struct ControllerHostCallbacks {
- std::function<uint8_t(uint32_t)> read;
- std::function<bool(uint32_t,uint8_t)> write;
- std::function<void(bool)> resetDSP;
-};
 // Firmware data, board resources and peripheral clocks. This class never
 // constructs a CPU and contains no instruction fetch or controller dispatcher.
 class ControllerBoard final : public ControllerResourceBus {

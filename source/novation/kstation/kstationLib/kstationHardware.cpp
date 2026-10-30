@@ -1,4 +1,6 @@
 #include "kstationHardware.h"
+#include "kstationH8.h"
+#include "kstationNativeController.h"
 
 #include <stdexcept>
 #include <utility>
@@ -32,10 +34,14 @@ namespace kstation
             h8state&core()override{return core_.core();}
         private:H8 core_;
         };
+        std::unique_ptr<Controller> makeController(const std::vector<uint8_t>&rom,H8::HostCallbacks callbacks,const std::vector<uint8_t>&flash,H8::Stage1Mode mode){
+            if(mode==H8::Stage1Mode::Native)return std::make_unique<NativeController>(rom,std::move(callbacks),flash);
+            return std::make_unique<OriginalController>(rom,std::move(callbacks),flash,mode);
+        }
     }
 
     Hardware::Hardware(const std::vector<uint8_t>& rom, const std::vector<uint8_t>& flash, H8::Stage1Mode mode)
-        : m_h8(std::make_unique<OriginalController>(rom, H8::HostCallbacks{
+        : m_h8(makeController(rom, H8::HostCallbacks{
             [this](uint32_t offset) { return m_dsp.hostRead(offset); },
             [this](uint32_t offset, uint8_t value) { return m_dsp.hostWrite(offset, value); },
             [this](bool asserted)

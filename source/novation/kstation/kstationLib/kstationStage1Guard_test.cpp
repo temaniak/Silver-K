@@ -1,3 +1,4 @@
+#include "kstationH8.h"
 #include "kstationHardware.h"
 #include "h8s/h8s.hpp"
 #include <fstream>

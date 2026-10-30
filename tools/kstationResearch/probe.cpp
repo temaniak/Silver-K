@@ -1,3 +1,4 @@
+#include "kstationH8.h"
 #include <type_traits>
 #include <utility>
 #include "kstationHardware.h"
@@ -38,7 +39,7 @@ void hashWord(uint64_t& h,uint64_t v){for(unsigned i=0;i<8;++i){h^=uint8_t(v>>(i
 std::vector<uint8_t> load(const std::string& path){std::ifstream f(path,std::ios::binary);require(bool(f),"Cannot read firmware");return {std::istreambuf_iterator<char>(f),{}};}
 void send(kstation::Hardware& board,std::initializer_list<uint8_t> bytes){require(board.enqueueMidi(bytes.begin(),bytes.size()),"MIDI queue full");}
 struct Event{uint64_t frame;std::array<uint8_t,3>bytes;unsigned size;};
-std::vector<Event> events(const std::string& scenario,uint64_t frames){
+std::vector<Event> events(const std::string& scenario,uint64_t frames,const std::vector<uint8_t>*image=nullptr){
  std::vector<Event> e;
  auto add=[&](uint64_t f,uint8_t a,uint8_t b,uint8_t c){e.push_back({f,{a,b,c},3});};
  const auto rate=kstation::DSP::SampleRate;
@@ -66,6 +67,16 @@ std::vector<Event> events(const std::string& scenario,uint64_t frames){
   add(0,0x90,60,100);
   for(uint64_t f=uint64_t(rate/16),n=1;f<frames;f+=uint64_t(rate/16),++n)e.push_back({f,{uint8_t(48+(n/2)%24),uint8_t(n%2?100:0),0},2});
  }
+ if(scenario=="sysexpatch"||scenario=="sysexreply"){
+  require(image&&image->size()==49728,"SysEx fixture requires verified image");
+  std::vector<uint8_t>message{0xf0};for(unsigned i=0;i<5;++i)message.push_back((*image)[0x130+i]);message.push_back(0x7f);
+  for(auto v:{uint8_t(scenario=="sysexreply"?0x40:0),uint8_t(1),uint8_t(8),uint8_t(7),uint8_t(1),uint8_t(2)})message.push_back(v);
+  if(scenario=="sysexpatch")for(unsigned i=0;i<128;++i)message.push_back((*image)[0xba5c+i]&0x7f);
+  message.push_back(0xf7);for(unsigned i=0;i<message.size();++i)e.push_back({uint64_t(i),{message[i],0,0},1});
+ }
+ if(scenario=="nrpnboundary")for(uint64_t f=0,n=0;f<frames;f+=uint64_t(rate/20),++n){add(f,0xb0,99,0);add(f,0xb0,98,uint8_t(104+n%4));add(f,0xb0,6,uint8_t((n*37)%128));}
+ if(scenario=="expression")for(uint64_t f=0,n=0;f<frames;f+=uint64_t(rate/50),++n){e.push_back({f,{0xd0,uint8_t(n*37%128),0},2});add(f,0xe0,uint8_t(n*13%128),uint8_t(n*29%128));}
+ if(scenario=="programstress")for(uint64_t f=0,n=0;f<frames;f+=uint64_t(rate/4),++n){add(f,0xb0,64,uint8_t(n%2?0:127));add(f,0x90,uint8_t(48+n%24),100);e.push_back({f,{0xc0,uint8_t(n%3),0},2});e.push_back({f,{0xf8,0,0},1});}
  std::stable_sort(e.begin(),e.end(),[](const Event&a,const Event&b){return a.frame<b.frame;});
  return e;
 }
@@ -133,11 +144,16 @@ void kStage1Slice(const h8state&cpu,int read,int write,unsigned long long begin)
 }
 #endif
 
+#if defined(K_RESEARCH_NATIVE_TRACE)
+void kNativeControllerPort(uint64_t cycle,uint32_t address,uint8_t value,bool write){if(!stageTrace)return;for(auto v:{cycle,uint64_t(0),uint64_t(address),uint64_t(value),uint64_t((write?1:0)|2)})traceWord(stagePorts,v);}
+void kNativeControllerSlice(uint64_t begin,uint64_t end,uint64_t pending,uint64_t high){if(!stageTrace)return;for(auto v:{begin,end,uint64_t(0),uint64_t(0),uint64_t(0),pending,high})traceWord(stageSlices,v);for(unsigned i=0;i<10;++i)traceWord(stageSlices,0);}
+#endif
+
 int main(int argc,char** argv){try{
  require(argc==9,"Usage: probe firmware scenario seconds mode(off|capture|detailed|observe) pacing(offline|paced) block output-prefix warm-seconds");
  const auto firmware=load(argv[1]);require(firmware.size()==49728,"Decoded firmware expected; validate SHA in runner");
  const std::string scenario=argv[2],mode=argv[4],prefix=argv[7];
- require(scenario=="idle"||scenario=="held1"||scenario=="held8"||scenario=="notes"||scenario=="sweep"||scenario=="arp"||scenario=="program"||scenario=="clock"||scenario=="irq"||scenario=="irq2"||scenario=="scierror"||scenario=="txirq"||scenario=="txclock"||scenario=="txqueue"||scenario=="sustain"||scenario=="clockext"||scenario=="clockjitter"||scenario=="clockgap"||scenario=="clockburst"||scenario=="rxrunning","Unknown scenario");
+ require(scenario=="idle"||scenario=="held1"||scenario=="held8"||scenario=="notes"||scenario=="sweep"||scenario=="arp"||scenario=="program"||scenario=="clock"||scenario=="irq"||scenario=="irq2"||scenario=="scierror"||scenario=="txirq"||scenario=="txclock"||scenario=="txqueue"||scenario=="sustain"||scenario=="clockext"||scenario=="clockjitter"||scenario=="clockgap"||scenario=="clockburst"||scenario=="rxrunning"||scenario=="sysexpatch"||scenario=="sysexreply"||scenario=="nrpnboundary"||scenario=="expression"||scenario=="programstress","Unknown scenario");
  require(mode=="off"||mode=="capture"||mode=="detailed"||mode=="observe","Unknown mode");
 #ifndef K_RESEARCH_OBSERVE
  require(mode!="observe","Use observer executable");
@@ -161,6 +177,9 @@ int main(int argc,char** argv){try{
 #endif
 #if defined(K_RESEARCH_COMPLETION)
  allowed=allowed||controllerMode=="development";
+#if defined(KSTATION_HAS_NATIVE_CONTROLLER)
+ allowed=allowed||controllerMode=="native";
+#endif
 #endif
  require(allowed,"Unknown native K mode");
  auto controller=controllerMode=="hdi"?kstation::H8::Stage1Mode::TimersAndHdi:controllerMode=="timers"?kstation::H8::Stage1Mode::Timers:kstation::H8::Stage1Mode::Original;
@@ -175,19 +194,22 @@ int main(int argc,char** argv){try{
 #endif
 #if defined(K_RESEARCH_COMPLETION)
  if(controllerMode=="development")controller=kstation::H8::Stage1Mode::ControllerDevelopment;
+#if defined(KSTATION_HAS_NATIVE_CONTROLLER)
+ if(controllerMode=="native")controller=kstation::H8::Stage1Mode::Native;
+#endif
 #endif
  kstation::Hardware board(firmware,{},controller);
 #else
  const std::string controllerMode="original";kstation::Hardware board(firmware);
 #endif
  require(board.boot(),"Boot failed");setup(board,scenario);
- const auto warmFrames=uint64_t(warmSeconds*kstation::DSP::SampleRate);render(board,warmFrames,events(scenario,warmFrames),paced,block);
+ const auto warmFrames=uint64_t(warmSeconds*kstation::DSP::SampleRate);render(board,warmFrames,events(scenario,warmFrames,&firmware),paced,block);
  std::array<uint8_t,128> beforePatch{};board.controller().copyCurrentPatch(beforePatch.data());
  const auto beforeClockSource=board.controller().readMemory(0xbb1c),beforeClockRoute=board.controller().readMemory(0xfffe6e);
  const auto before=board.controller().debugState();const auto beforeDsp=board.dsp().instructions(),beforeCycles=board.dsp().cycles(),beforeDrop=board.dsp().audioFramesDropped();
  baseLib::performance::Diagnostics diagnostics;
  if(mode=="detailed"){diagnostics.start(true);board.setPerformanceDiagnostics(&diagnostics);}
- const auto frames=uint64_t(seconds*kstation::DSP::SampleRate);const auto passage=events(scenario,frames);
+ const auto frames=uint64_t(seconds*kstation::DSP::SampleRate);const auto passage=events(scenario,frames,&firmware);
  std::vector<int32_t> pcm;std::vector<int32_t>* capture=nullptr;
  if(mode=="observe"||mode=="capture"){pcm.reserve(frames*2);capture=&pcm;recording=mode=="observe";}
 #if defined(K_RESEARCH_COMPLETION)
@@ -231,7 +253,7 @@ recording=false;diagnostics.stop();board.setPerformanceDiagnostics(nullptr);
  out<<"\"native_clock_steps\":"<<after.nativeClockSteps-before.nativeClockSteps<<",\"native_internal_clock_calls\":"<<after.nativeInternalClockCalls-before.nativeInternalClockCalls<<",\"native_external_clock_calls\":"<<after.nativeExternalClockCalls-before.nativeExternalClockCalls<<",\"native_clock_sync_updates\":"<<after.nativeClockSyncUpdates-before.nativeClockSyncUpdates<<",\n";
 #endif
 #if defined(K_RESEARCH_COMPLETION)
- out<<"\"full_native_ready\":false,\"implementation\":\"caller-projection-development\",\n";
+ out<<"\"full_native_ready\":false,\"implementation\":\""<<(controllerMode=="native"?"native-controller-development":"caller-projection-development")<<"\",\n";
  out<<"\"native_controller_service_steps\":"<<after.nativeControllerServiceSteps-before.nativeControllerServiceSteps<<",\n";
  out<<"\"cumulative_interpreted_steps\":"<<after.interpretedSteps<<",\"cumulative_native_startup_steps\":"<<after.nativeStartupSteps<<",\"cumulative_native_controller_service_steps\":"<<after.nativeControllerServiceSteps<<",\n";
  out<<"\"native_adc_steps\":"<<after.nativeAdcSteps-before.nativeAdcSteps<<",\"native_adc_entries\":"<<after.nativeAdcEntries-before.nativeAdcEntries<<",\"native_adc_returns\":"<<after.nativeAdcReturns-before.nativeAdcReturns<<",\n";
@@ -260,6 +282,10 @@ recording=false;diagnostics.stop();board.setPerformanceDiagnostics(nullptr);
 #else
  std::cout<<scenario<<" "<<mode<<" cpu="<<100*result.cpu/(frames/kstation::DSP::SampleRate)<<"% peak="<<result.peak<<" dropped="<<board.dsp().audioFramesDropped()-beforeDrop<<"\n";
 #endif
- require(board.dsp().audioFramesDropped()==beforeDrop,"Dropped native frames");require(scenario=="idle"||scenario=="program"||result.peak>1e-5,"Silent sounding scenario");
+ require(board.dsp().audioFramesDropped()==beforeDrop,"Dropped native frames");require(scenario=="idle"||scenario=="program"||scenario=="programstress"||result.peak>1e-5,"Silent sounding scenario");
  return 0;
-}catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}}
+}catch(const std::exception&e){
+#if defined(K_RESEARCH_STAGE1_TRACE)
+ if(const auto*failure=std::getenv("K_RESEARCH_FAILURE_TAPE")){byteFile(std::string(failure)+".ports",stagePorts.data(),stagePorts.size()*sizeof(uint64_t));byteFile(std::string(failure)+".slices",stageSlices.data(),stageSlices.size()*sizeof(uint64_t));}
+#endif
+ std::cerr<<e.what()<<'\n';return 1;}}

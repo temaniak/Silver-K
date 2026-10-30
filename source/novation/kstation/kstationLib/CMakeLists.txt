@@ -5,6 +5,7 @@ add_library(kstationLib STATIC
     kstationDevice.cpp kstationDevice.h
     kstationDSP.cpp kstationDSP.h
     kstationH8.cpp kstationH8.h
+    kstationController.h kstationControllerTypes.h kstationNativeController.cpp kstationNativeController.h
     kstationHardware.cpp kstationHardware.h
     kstationHdiWait.h kstationNativeTimers.h kstationNativeIrq.h
     kstationSerialTxService.h kstationNativeSerialTx.h
