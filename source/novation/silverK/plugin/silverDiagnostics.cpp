@@ -100,7 +100,7 @@ juce::String Processor::performanceReport()const
     system->setProperty("architecture","other");
 #endif
     auto* build=object();root->setProperty("build",juce::var(build));
-    build->setProperty("version","0.4.4a");
+    build->setProperty("version","0.4.5a");
     build->setProperty("plugin_version",JucePlugin_VersionString);
     build->setProperty("git_revision",SILVER_DIAGNOSTICS_REVISION);
     build->setProperty("source_state_at_configure",SILVER_DIAGNOSTICS_SOURCE_STATE);
