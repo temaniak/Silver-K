@@ -65,7 +65,8 @@ static void verify(Processor& p){
  click(*e,"pageSetup");check(diagnostics->isVisible()&&diagnostics->getParentComponent()->getLocalBounds().contains(diagnostics->getBounds()),"Diagnostics missing/outside Setup");
  check(demo->isVisible()==!p.isKStation(),"Demo visible in wrong model");check(!demo->getBounds().intersects(controller->getBounds()),"Demo/controller overlap");
  check(controller->isVisible()&&controller->getParentComponent()->getLocalBounds().contains(controller->getBounds()),"Controller missing/outside Setup");
- check(controller->isEnabled()==!p.isKStation() && controller->getSelectedId()==p.ksControllerMode()+1,"Controller model/selection mismatch");
+ check(controller->isEnabled()==(ks::boardComparisonAvailable()&&!p.isKStation()) && controller->getSelectedId()==p.ksControllerMode()+1,"Controller model/selection mismatch");
+ if(!ks::boardComparisonAvailable())check(controller->getNumItems()==1&&controller->getItemId(0)==2,"Production controller selector must contain only native C++");
  auto* channel=find(*e,"controlChannel");auto* buffer=find(*e,"audioBuffer");check(channel&&buffer&&!channel->getBounds().intersects(buffer->getBounds())&&!controller->getBounds().intersects(buffer->getBounds()),"Setup controls overlap");
  auto report=juce::JSON::parse(p.performanceReport());check(report["schema"].toString()=="silver-k.performance.v1"&&report["metrics"].isObject(),"Invalid diagnostics JSON");
  check(p.performanceDiagnosticsMode()==0,"Diagnostics enabled by default");

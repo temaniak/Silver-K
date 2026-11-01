@@ -1,0 +1,6 @@
+#include "ksSerialDirectTask.h"
+#include <stdexcept>
+#include <iostream>
+#include <vector>
+#include <utility>
+int main(){using T=ks::SerialDirectTask;using S=T::Stage;using W=T::Write;unsigned cases=0;auto verify=[&](unsigned input,unsigned status,unsigned wait,bool noop){T t(noop?T::Kind::Noop:T::Kind::Write);unsigned used=0,reads=0;std::vector<std::pair<W,unsigned>>writes;auto clock=[](W){return 1u;};while(t.stage()!=S::Complete){auto cost=t.nextClocks(clock);if(t.advanceBefore(cost-1,[](T::Read){return 0;},[](W,uint8_t){},clock))throw std::runtime_error("early");used+=t.advanceBefore(cost,[&](T::Read r){if(r==T::Read::Input)return input;return reads++<wait?status&127:status|128;},[&](W w,uint8_t v){writes.emplace_back(w,v);},clock);}std::vector<std::pair<W,unsigned>>expected;if(!noop)expected={{W::Data,input},{W::Status,status&127}};if(writes!=expected||reads!=(noop?0:wait+1)||used!=(noop?17u:60+10*wait))throw std::runtime_error("direct TX strobe/poll/clocks");++cases;};for(unsigned input=0;input<256;++input)for(unsigned status=0;status<128;++status)verify(input,status,0,false);for(unsigned wait=0;wait<256;++wait)for(unsigned input=0;input<256;++input)verify(input,255,wait,false);verify(0,0,0,true);std::cout<<"PASS: "<<cases<<" pure serial-direct properties\n";}

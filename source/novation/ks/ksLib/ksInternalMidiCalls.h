@@ -1,0 +1,6 @@
+#pragma once
+#include "ksInternalMidiTask.h"
+#include <array>
+#include <optional>
+namespace ks {class ControllerCpu;class InternalMidiCalls final {public:static bool candidate(unsigned p){return p>=0xa762&&p<=0xa880;}bool step(ControllerCpu&);unsigned activeCalls()const{unsigned n=0;for(const auto&c:calls)if(c)++n;return n;}unsigned activeDescriptors()const{unsigned n=0;for(const auto&c:descriptors)if(c)++n;return n;}void resetMetrics(){initialDescriptors=activeDescriptors();initialActive=activeCalls();started=completed=handedOff=descriptorStarted=descriptorCompleted=partialEntries=0;}void discardCalls(){for(auto& c:calls)c.reset();for(auto& d:descriptors)d.reset();}uint64_t initialDescriptors=0,initialActive=0,started=0,completed=0,handedOff=0,descriptorStarted=0,descriptorCompleted=0,partialEntries=0;
+private:struct Call{InternalMidiTask task;uint32_t token,handlerReference=0;unsigned depth=0;Call(uint8_t input,uint32_t payload,uint32_t t):task(input,payload),token(t){}};struct Descriptor{MidiDescriptorTask task;uint32_t token;Descriptor(uint8_t status,uint32_t t):task(status),token(t){}};std::array<std::optional<Call>,16>calls{};std::array<std::optional<Descriptor>,16>descriptors{};};using InternalMidiPartialTest=bool(*)(ControllerCpu&);void setInternalMidiPartialForTests(InternalMidiPartialTest);}

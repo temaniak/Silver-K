@@ -1,3 +1,5 @@
+// Explicit retained LEGACY comparison test; not a semantic NativeControllerExecutor proof.
+#include "ksLib/ksBoardComparison_test.h"
 #include "silverBrowser.h"
 #include "kstationLib/kstationRomLoader.h"
 #include "kstationLib/kstationMidiQueue.h"
@@ -485,11 +487,11 @@ static void audioClock(Processor& p,const juce::File& dir){
 static std::vector<uint8_t> read(const juce::File& f){juce::MemoryBlock b;check(f.loadFileAsData(b),"Read private fixture");const auto* p=static_cast<const uint8_t*>(b.getData());return {p,p+b.getSize()};}
 static void nativeImports(Library& library,const juce::File& os,const juce::File& wave,const juce::File& flash,const juce::File& folder){
  ks::Rom rom(os.getFullPathName().toStdString());check(rom.isValid(),"Reference KS firmware");
- auto board=std::make_unique<ks::Board>(rom.data(),read(wave),read(flash));check(board->boot(),"Reference KS boot");
+ auto board=ks::test::makeLegacyBoard(rom.data(),read(wave),read(flash));check(board->boot(),"Reference KS boot");
  const auto counter=[&]{return (unsigned(board->read(0xffffe6))<<8)|board->read(0xffffe7);};
  check(board->read(0xffffe0)==6,"KS clock timer prescaler");
- auto before=counter();auto cycles=board->cpu().cycles;board->advance(4096);
- check(counter()==((before+((board->cpu().cycles>>8)-(cycles>>8)))&65535),"TPU1 counter does not follow CPU/256");
+ auto before=counter();auto cycles=ks::test::comparisonCpu(*board).cycles;board->advance(4096);
+ check(counter()==((before+((ks::test::comparisonCpu(*board).cycles>>8)-(cycles>>8)))&65535),"TPU1 counter does not follow CPU/256");
  const auto start=board->read(0xffffc0);board->write(0xffffc0,uint8_t(start&~2));before=counter();board->advance(4096);check(counter()==before,"Stopped TPU1 counter advanced");board->write(0xffffc0,start);
  board->write(0xffffe6,255);board->write(0xffffe7,255);board->advance(4096);check(counter()<64 && (board->read(0xffffe5)&4),"TPU1 overflow/wrap");
  std::cout<<"PASS: original KS timer setup, CPU/256 count, stop and 16-bit overflow\n";
@@ -532,7 +534,7 @@ int main(int argc,char** argv){std::cout<<std::unitbuf;std::cerr<<std::unitbuf;t
   }return 0;
  }
  if(argc>=2 && !juce::SystemStats::getEnvironmentVariable("SILVER_TEST_DRUMS_ONLY",{}).isEmpty()){
-  juce::String error;const auto waveFile=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_DRUM_WAVES",{});if(waveFile.isNotEmpty())p.bankFile=juce::File(waveFile);check(p.loadFirmware(juce::File(argv[1]),error),error.toRawUTF8());drumBrowserChecks(p,root);drumPlaybackChecks(p,root);
+  juce::String error;const auto waveFile=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_DRUM_WAVES",{});if(waveFile.isNotEmpty())p.bankFile=juce::File(waveFile);const auto flashFile=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_DRUM_FLASH",{});if(flashFile.isNotEmpty())check(p.setFlashRom(juce::File(flashFile),error),error.toRawUTF8());check(p.setKSControllerMode(1,error),error.toRawUTF8());check(p.loadFirmware(juce::File(argv[1]),error),error.toRawUTF8());drumBrowserChecks(p,root);drumPlaybackChecks(p,root);
   if(argc>=3){check(p.loadFirmware(juce::File(argv[2]),error),error.toRawUTF8());drumBrowserChecks(p,root);}return 0;
  }
  const auto levelFile=juce::SystemStats::getEnvironmentVariable("SILVER_TEST_LEVEL",{});

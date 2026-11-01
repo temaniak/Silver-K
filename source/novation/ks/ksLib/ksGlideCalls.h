@@ -1,0 +1,21 @@
+#pragma once
+#include "ksGlideTask.h"
+#include <array>
+#include <optional>
+namespace ks {
+class ControllerCpu;
+class GlideCalls final {
+public:
+ static bool candidate(unsigned p){return (p>=0x8e9c&&p<=0x8fb6)||(p>=0x9138&&p<=0x927a);}
+ void retireReturns(ControllerCpu&);bool step(ControllerCpu&);
+ unsigned activeCalls()const{unsigned n=0;for(const auto& c:calls)if(c)++n;return n;}
+ void resetMetrics(){initialActive=activeCalls();started=completed=partialEntries=0;}
+ void discardCalls(){for(auto& c:calls)c.reset();}
+ uint64_t started=0,completed=0,partialEntries=0,initialActive=0;
+private:
+ struct Call {GlideTask task;uint32_t token;unsigned depth=0;Call(bool relative,uint32_t t):task(relative),token(t){}};
+ std::array<std::optional<Call>,16> calls{};
+};
+using GlidePartialTest=bool(*)(ControllerCpu&);
+void setGlidePartialForTests(GlidePartialTest);
+}

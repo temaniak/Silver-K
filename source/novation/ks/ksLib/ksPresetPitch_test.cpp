@@ -1,4 +1,5 @@
-#include "ksBoard.h"
+// Explicit retained LEGACY comparison test; not a semantic NativeControllerExecutor proof.
+#include "ksBoardComparison_test.h"
 #include <fstream>
 #include <iostream>
 #include <filesystem>
@@ -19,7 +20,7 @@ int main(int argc,char** argv){if(argc!=5 && argc!=6)return 2;try{
   b.enqueueMidi(msg.data(),msg.size());for(unsigned i=0;i<45340;++i)b.renderSample();
   std::string name(reinterpret_cast<const char*>(flash.data()+0x20000+patch*256+151),16);std::cout<<"patch="<<patch+100<<" name="<<name<<std::endl;
   std::ofstream out(std::filesystem::path(argv[4])/ (std::to_string(100+patch)+".raw"),std::ios::binary);unsigned sample=0;
-  auto render=[&](unsigned frames,const char* stage){const auto begin=sample;double energy=0;for(unsigned n=0;n<frames;++n){auto a=b.renderSample();out.write(reinterpret_cast<const char*>(a.data()),sizeof(a));energy+=double(a[0])*a[0]/(8388608.*8388608.);++sample;}std::cout<<stage<<" begin="<<begin<<" end="<<sample<<" rms="<<sqrt(energy/frames)<<" tick="<<b.cpu().read32(0xffec10)<<std::endl;};
+  auto render=[&](unsigned frames,const char* stage){const auto begin=sample;double energy=0;for(unsigned n=0;n<frames;++n){auto a=b.renderSample();out.write(reinterpret_cast<const char*>(a.data()),sizeof(a));energy+=double(a[0])*a[0]/(8388608.*8388608.);++sample;}std::cout<<stage<<" begin="<<begin<<" end="<<sample<<" rms="<<sqrt(energy/frames)<<" tick="<<ks::test::comparisonCpu(b).read32(0xffec10)<<std::endl;};
   render(45340,"idle");midi({0x90,48,100});render(45340*3,"on48");midi({0x80,48,0});render(45340*4,"off48");midi({0xb0,123,0});render(45340,"allnotesoff");midi({0xb0,120,0});render(45340,"allsoundoff");
   for(uint8_t note:{60,48,67}){midi({0x90,note,100});render(45340,"repeat-on");midi({0x80,note,0});render(45340,"repeat-off");}midi({0xb0,120,0});render(45340,"end");
  }

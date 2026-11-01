@@ -61,27 +61,33 @@ int main(int argc,char** argv){try{
         h->loadmem(os.data().data(),unsigned(os.data().size()),0xa00000);h->interruptMode2=true;
     }
     original->memmap(&x,0,1<<24);native->memmap(&y,0,1<<24);
-    ks::LiveMidiController shared(*native);ks::RuntimeController controller(*native,shared);
+    // Large diagnostic fixtures live outside the limited host test stack.
+    // Allocation happens only during test setup, before controller execution.
+    auto sharedStorage=std::make_unique<ks::LiveMidiController>(*native);auto& shared=*sharedStorage;
+    auto controllerStorage=std::make_unique<ks::RuntimeController>(*native,shared);auto& controller=*controllerStorage;
     native->interpreterAllowed=false;std::mt19937 random(0x4b534e52);uint64_t boundaries=0;
     for(unsigned pc=0x170;pc<0xb8e8;pc+=2){
         for(unsigned sample=0;sample<32;++sample){
-            native->nativeFetchClocksOnly=bool(sample&1);
+            shared.midiDecodeCalls.discardCalls();shared.midiControlCalls.discardCalls();shared.midiAuxCalls.discardCalls();shared.resetImageCalls.discardCalls();shared.hardwareSetupCalls.discardCalls();shared.midiPartInitCalls.discardCalls();shared.midiRouteCalls.discardCalls();shared.stateFieldMapCalls.discardCalls();shared.voiceTableInitCalls.discardCalls();shared.stateParameterEditCalls.discardCalls();shared.statePatchNameCalls.discardCalls();shared.stateStorageCalls.discardCalls();shared.panelDecayCalls.discardCalls();shared.stateModeCalls.discardCalls();shared.stateParameterExpandCalls.discardCalls();shared.statePackFieldsCalls.discardCalls();shared.statePackRefreshCalls.discardCalls();shared.stateGlobalsCalls.discardCalls();shared.panelByteCalls.discardCalls();shared.panelPollCalls.discardCalls();shared.panelActionCalls.discardCalls();shared.arpPrimitiveCalls.discardCalls();shared.arpScheduleCalls.discardCalls();shared.arpMainCalls.discardCalls();shared.stateMultiSerializeCalls.discardCalls();shared.statePatchLoadCalls.discardCalls();shared.stateProgramCalls.discardCalls();shared.stateMultiLoadCalls.discardCalls();shared.statePresetAddressCalls.discardCalls();shared.stateSingleLoadCalls.discardCalls();shared.serialQueueCalls.discardCalls();shared.serialReceiveCalls.discardCalls();shared.serialSetupCalls.discardCalls();shared.serialTransmitCalls.discardCalls();shared.serialIrqCalls.discardCalls();shared.serialDirectCalls.discardCalls();shared.arpEventCalls.discardCalls();shared.arpSelectCalls.discardCalls();shared.stateManualEditCalls.discardCalls();shared.statePostEditCalls.discardCalls();shared.panelControlCalls.discardCalls();shared.panelToggleCalls.discardCalls();shared.panelDecimalCalls.discardCalls();shared.panelTextCalls.discardCalls();shared.internalMidiCalls.discardCalls();shared.internalNoteCalls.discardCalls();shared.sysExFrameCalls.discardCalls();shared.stateFlashCommitCalls.discardCalls();shared.flashPageCalls.discardCalls();shared.timerServiceCalls.discardCalls();shared.stateChannelCalls.discardCalls();shared.panelInputCalls.discardCalls();shared.stateProgramEventCalls.discardCalls();shared.stateProgramDisplayCalls.discardCalls();shared.stateProgramBrowseCalls.discardCalls();shared.stateBrowseWorkflowCalls.discardCalls();shared.stateStoredValueCalls.discardCalls();shared.stateStatusDisplayCalls.discardCalls();shared.stateBankNavigationCalls.discardCalls();shared.stateFieldActionsCalls.discardCalls();shared.stateEditLabelCalls.discardCalls();shared.stateValueBoundsCalls.discardCalls();shared.loaderSessionCalls.discardCalls();shared.loaderProgramCalls.discardCalls();shared.loaderPacketsCalls.discardCalls();shared.loaderCodecCalls.discardCalls();shared.loaderInputsCalls.discardCalls();shared.stateEditWorkflowCalls.discardCalls();shared.stateFunctionKeysCalls.discardCalls();shared.statePanelModesCalls.discardCalls();shared.stateScreenActionsCalls.discardCalls();shared.startupBannerCalls.discardCalls();shared.memoryDiagnosticsCalls.discardCalls();shared.diagnosticTransferCalls.discardCalls();shared.diagnosticCodecCalls.discardCalls();shared.keyboardScanCalls.discardCalls();shared.stateMenuActionsCalls.discardCalls();shared.statePartSelectionCalls.discardCalls();shared.keyboardEventsCalls.discardCalls();shared.systemServicesCalls.discardCalls();shared.stateMenuFormatCalls.discardCalls();shared.stateScreenEditCalls.discardCalls();shared.stateEditContextCalls.discardCalls();shared.panelSettingsCalls.discardCalls();shared.stateScreenCalls.discardCalls();shared.clockDisplayCalls.discardCalls();shared.clockPulseCalls.discardCalls();shared.clockSyncCalls.discardCalls();shared.panelAnalogCalls.discardCalls();shared.stateButtonDispatchCalls.discardCalls();shared.stateForegroundCalls.discardCalls();shared.internalMidiServiceCalls.discardCalls();shared.midiOutputCalls.discardCalls();shared.internalMidiQueueCalls.discardCalls();shared.panelAdcScanCalls.discardCalls();shared.panelAdcIrqCalls.discardCalls();shared.panelAdcCalibrationCalls.discardCalls();shared.panelAdcScaleCalls.discardCalls();shared.panelAdcSamplesCalls.discardCalls();shared.panelEncoderCalls.discardCalls();shared.pedalSenseCalls.discardCalls();shared.panelMatrixCalls.discardCalls();shared.stateStoreUiCalls.discardCalls();shared.stateEditAddressCalls.discardCalls();shared.stateStoreServicesCalls.discardCalls();shared.statePresetFormatCalls.discardCalls();shared.statePresetSaveCalls.discardCalls();shared.stateGlobalSaveCalls.discardCalls();shared.stateFactoryServicesCalls.discardCalls();shared.panelFormatCalls.discardCalls();shared.panelHexCalls.discardCalls();shared.panelPercentCalls.discardCalls();shared.panelVersionCalls.discardCalls();shared.patchExpandCalls.discardCalls();shared.sysExActionCalls.discardCalls();shared.legacySysExCalls.discardCalls();shared.stateMultiSaveCalls.discardCalls();shared.stateNameCodecCalls.discardCalls();shared.stateDeferredPartsCalls.discardCalls();shared.statePanelRefreshCalls.discardCalls();shared.stateAuditionCalls.discardCalls();shared.panelPublishCalls.discardCalls();shared.panelMasksCalls.discardCalls();shared.panelInitializeCalls.discardCalls();shared.panelDetectCalls.discardCalls();shared.firmwareLayoutCheckCalls.discardCalls();shared.sysExDumpCalls.discardCalls();shared.midiFileTimeCalls.discardCalls();shared.stateProgramChangeCalls.discardCalls();shared.stateNameEditorCalls.discardCalls();shared.stateBankDisplayCalls.discardCalls();shared.stateDspFactoryTransferCalls.discardCalls();shared.stateDspFactoryResetCalls.discardCalls();shared.stateDspFactoryUploadCalls.discardCalls();shared.timingTablesCalls.discardCalls();shared.midiFileEventCalls.discardCalls();shared.monoArpCalls.discardCalls();shared.midiFileTransportCalls.discardCalls();shared.editAddressCalls.discardCalls();shared.editSceneCalls.discardCalls();shared.editDecisionCalls.discardCalls();shared.noteActions.discardTransientCalls();shared.parameterScaleCalls.discardCalls();shared.voiceActions.discardTransientCalls();shared.faultCalls.discardCalls();shared.bootStreamCalls.discardCalls();shared.bootSetupCalls.discardCalls();shared.startupCalls.discardCalls();shared.scheduledTimerCalls.discardCalls();shared.serviceCycleCalls.discardCalls();shared.stateInitCalls.discardCalls();
+            shared.resetImageCalls.discardCalls();shared.hardwareSetupCalls.discardCalls();
+        native->nativeFetchClocksOnly=bool(sample&1);
             for(unsigned i=0;i<8;++i)original->regs[i].er=native->regs[i].er=int32_t(random());
             original->pc=original->makepc(pc);native->pc=native->makepc(pc);
             original->setSP(0xfff000);native->setSP(0xfff000);
             original->ccr=native->ccr=uint8_t(random());original->exr=native->exr=uint8_t(random()&7);
             original->pending_irqs=native->pending_irqs=0;original->pending_irqs_high=native->pending_irqs_high=0;
             x.accesses.clear();y.accesses.clear();
-            if(!controller.stepCode(*native))break;
+            try{if(!controller.stepCode(*native))break;}catch(const std::exception&){std::cerr<<"Runtime admission PC="<<std::hex<<pc<<std::dec<<" sample="<<sample<<'\n';throw;}
             original->step();++boundaries;
             try{same(*original,*native,x,y);}catch(const std::exception&){std::cerr<<"Runtime PC="<<std::hex<<pc<<std::dec<<" sample="<<sample<<'\n';throw;}
         }
     }
-    check(boundaries==13766*32,"Native runtime boundary coverage differs");
+    // The 23 shared pin-setup boundaries now also admit through normal IO.
+    check(boundaries==13789*32,"Native runtime boundary coverage differs");
     // Reset boundaries are independently checked even for firmware-update,
     // checksum-failure, all branch outcomes and arbitrary partial frames.
     // These cases supplement full production-reset timelines.
-    ks::RuntimeController resetController(*native,shared,ks::RuntimeController::Entry::Reset);
+    auto resetControllerStorage=std::make_unique<ks::RuntimeController>(*native,shared,ks::RuntimeController::Entry::Reset);auto& resetController=*resetControllerStorage;
     for(unsigned n=0;n<14;++n){
         const auto v=os.data()[0x422+n];
         original->memory[0xffec00+n]=native->memory[0xffec00+n]=lengthOracle->memory[0xffec00+n]=v;
@@ -89,6 +95,7 @@ int main(int argc,char** argv){try{
     }
     uint64_t resetCases=0;
     for(unsigned pc:{0x170u,0x180u,0x2ecu,0x2f2u,0x2f8u,0x2feu,0x300u,0x302u,0x304u,0x306u,0x30au,0x30eu,0x312u,0x314u,0x318u,0x31au,0x31eu,0x320u,0x322u,0x324u,0x326u,0x328u,0x32au,0x32eu,0x332u,0x336u,0x33au,0x33cu,0x342u,0x346u,0x34cu,0x34eu,0x350u,0x356u,0x35cu,0x360u,0x362u,0x364u,0x366u,0x368u,0x36au,0x36eu,0x374u,0x376u,0x37au,0x37eu,0x380u,0x382u,0x388u,0x38eu,0x392u,0x394u,0x396u,0x398u,0x39au,0x39cu,0x39eu,0x3a0u,0x3a6u,0x3b0u,0x3b2u,0x3b4u,0x3b6u,0x3b8u,0x3bau,0x3bcu,0x3beu,0x3c6u,0x3c8u,0x3cau,0x3ccu,0x3d0u,0x3dau,0x3dcu,0x3deu,0x3e6u,0x3e8u,0x3eau,0x3ecu,0x3eeu,0x3f0u,0x3f4u,0x3fau,0x3feu,0x400u,0x404u,0x40au,0x410u,0x414u,0x416u,0x418u,0x41au,0x41cu,0x41eu,0xffffec00u,0xffffec04u,0xffffec06u,0xffffec0au,0x430u,0x436u,0x43au,0x440u,0x446u,0x44au,0x450u,0x454u,0x456u,0x458u,0x45au,0x45cu,0x45eu,0x460u,0x464u,0x466u,0x468u,0x46au,0x46eu,0x470u,0x474u,0x476u,0x47au,0x47cu,0x47eu,0x480u,0x484u,0x486u,0x488u,0x48au,0x48eu})for(unsigned sample=0;sample<32;++sample){
+        shared.resetImageCalls.discardCalls();shared.hardwareSetupCalls.discardCalls();
         native->nativeFetchClocksOnly=bool(sample&1);
         for(unsigned i=0;i<8;++i)original->regs[i].er=native->regs[i].er=int32_t(random());
         for(auto* h:{original.get(),native.get()}){
@@ -107,6 +114,8 @@ int main(int argc,char** argv){try{
     // Execute interrupt arbitration plus the first actual handler boundary, as
     // the reference core does in one step. Cover masks, priorities and ties.
     for(bool clockOnly:{false,true})for(unsigned vector:{28,32,42,89,90})for(unsigned mask=0;mask<8;++mask){
+        // Each trial supplies a fresh synthetic IRQ frame and executes only its first boundary.
+        shared.serialIrqCalls.discardCalls();shared.panelAdcIrqCalls.discardCalls();
         native->nativeFetchClocksOnly=clockOnly;
         for(auto* h:{original.get(),native.get()}){
             h->pc=h->makepc(0x4338);h->setSP(0xfff000);h->ccr=0;h->exr=uint8_t(mask);
@@ -146,7 +155,7 @@ int main(int argc,char** argv){try{
             }
             original->lastread=native->lastread=int(random());original->lastwrite=native->lastwrite=int(random());
             x.accesses.clear();y.accesses.clear();
-            check(ks::DspTransport::candidate(pc),"HDI entry not recognized");
+            check(!ks::DspTransport::candidate(pc),"Retired HDI batch remained a production candidate");
             // A task without sufficient time (or with pending arbitration)
             // must leave even the bus and register frame untouched.
             check(!ks::DspTransport::service(*native,1001),"HDI job crossed its deadline");
@@ -243,10 +252,10 @@ int main(int argc,char** argv){try{
     try{controller.step(*native);}catch(const std::runtime_error&){rejected=true;}
     check(rejected && native->interpretedSteps==0,"Unknown native state fell back to H8");
     native->memory[0xb000]^=1;rejected=false;
-    try{ks::RuntimeController bad(*native,shared);}catch(const std::runtime_error&){rejected=true;}
+    try{auto bad=std::make_unique<ks::RuntimeController>(*native,shared);}catch(const std::runtime_error&){rejected=true;}
     check(rejected,"Native runtime accepted different ROM");native->memory[0xb000]^=1;
     native->memory[0xa0b000]^=1;rejected=false;
-    try{ks::RuntimeController bad(*native,shared);}catch(const std::runtime_error&){rejected=true;}
+    try{auto bad=std::make_unique<ks::RuntimeController>(*native,shared);}catch(const std::runtime_error&){rejected=true;}
     check(rejected,"Native runtime accepted different active code image");
     std::cout<<"PASS: "<<boundaries<<" native boundaries, 80 interrupt/mask/tie entries and "<<jobs<<" timed HDI jobs; registers/flags/clocks/PC/data/IO bus and RAM match H8; zero interpreter calls; deadline/IRQ, unknown-state, ROM/image and interpreter-lock guards\n";
     return 0;

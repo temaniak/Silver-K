@@ -1,0 +1,34 @@
+#pragma once
+#include "ksStateReloadVoiceService.h"
+#include "ksSerialForegroundService.h"
+#include "ksMidiOutputTask.h"
+#include "ksStateStoreService.h"
+#include <optional>
+#include <type_traits>
+namespace ks {
+// Complete per-part reset children used by the five-part playback reset.
+class StatePlaybackResetService final {
+public:
+ enum class Kind{HeldKeys,ReleaseVoices,Panic};enum class Component{Keys,Voices,Midi,Lookup,Serial};struct Effect{bool read=false,write=false;};
+ struct Summary{Kind kind=Kind::HeldKeys;uint8_t part=0,channel=0;uint16_t serialProducer=0,serialConsumer=0;uint32_t controls=0;};
+ explicit StatePlaybackResetService(Kind k):kind_(k){summary_.kind=k;if(k==Kind::HeldKeys){keys_.emplace(KeyResetTask::Kind::Held);component_=Component::Keys;}else if(k==Kind::ReleaseVoices){voices_.emplace(StateReloadVoiceService::Kind::Voices,VoiceReleaseTask::Mode::Part);component_=Component::Voices;}else{midi_.emplace(MidiOutputTask::Kind::Panic,0,0,0);component_=Component::Midi;}}
+ Kind kind()const{return kind_;}Component component()const{return component_;}bool complete()const{return complete_;}bool critical()const{return serial_&&serial_->critical();}const Effect&effect()const{return effect_;}const Summary&summary()const{return summary_;}uint32_t components()const{return components_;}
+ const StateReloadVoiceService*voices()const{return voices_?&*voices_:nullptr;}
+ template<class T>const T*task()const{if constexpr(std::is_same_v<T,KeyResetTask>)return component_==Component::Keys&&keys_?&*keys_:voices_?voices_->keyTask():nullptr;else if constexpr(std::is_same_v<T,PartLookupTask>)return component_==Component::Lookup&&lookup_?&*lookup_:voices_?voices_->lookupTask():nullptr;else if constexpr(std::is_same_v<T,MidiOutputTask>)return component_==Component::Midi&&midi_?&*midi_:nullptr;else if constexpr(std::is_same_v<T,SerialForegroundService>)return serial_?&*serial_:nullptr;else if constexpr(std::is_same_v<T,VoiceReleaseTask>)return voices_?voices_->voiceTask():nullptr;else if constexpr(std::is_same_v<T,DspRoutingTask>)return voices_?voices_->routingTask():nullptr;else if constexpr(std::is_same_v<T,DspWordTask>)return voices_?voices_->wordTask():nullptr;else if constexpr(std::is_same_v<T,DspAddressTask>)return voices_?voices_->addressTask():nullptr;else if constexpr(std::is_same_v<T,DspFaultTask>)return voices_?voices_->faultTask():nullptr;else return nullptr;}
+ unsigned nextClocks(int previous=-1)const{if(complete_)return 0;switch(component_){case Component::Keys:return keys_->complete()?17:keys_->nextClocks(keys_->publication()?byteClock(keyBase_+keys_->publicationOffset(),previous):3);case Component::Voices:return voices_->nextClocks(previous);case Component::Midi:return midi_->nextClocks();case Component::Lookup:return lookup_->stage()==PartLookupTask::Stage::Complete?17:lookup_->nextClocks();case Component::Serial:return serial_->nextClocks();}return 0;}
+ template<class R,class W>unsigned advanceBefore(unsigned available,R&&rawRead,W&&rawWrite,int previous=-1){const auto cost=nextClocks(previous);if(!cost||available<cost)return 0;effect_={};components_|=1u<<unsigned(component_);
+  auto read=[&](uint32_t raw,unsigned dt){const auto a=raw&0xffffff;if(!endpoint(a))throw std::logic_error("Unsupported evolving playback reset read");return rawRead(a,dt);};auto write=[&](uint32_t raw,uint8_t v,unsigned dt){const auto a=raw&0xffffff;if(!endpoint(a))throw std::logic_error("Unsupported evolving playback reset write");rawWrite(a,v,dt);};
+  if(component_==Component::Voices){voices_->advanceBefore(cost,read,write,previous);effect_={voices_->effect().read,voices_->effect().write};if(voices_->complete()){summary_.part=voices_->voiceTask()->part();complete_=true;}}
+  else if(component_==Component::Keys){using S=KeyResetTask::Stage;const auto s=keys_->stage();if(keys_->complete()){effect_.read=true;complete_=true;}else{keys_->advanceBefore(cost,[&](unsigned offset,uint8_t v){write(keyBase_+offset,v,cost-(s==S::ClearByte?2:0));},[&](unsigned offset){return byteClock(keyBase_+offset,previous);});if(s==S::RetainPart||s==S::RetainBitmap||s==S::RetainCount||s==S::DispatchPart)effect_.write=true;if(s==S::ReleaseCount||s==S::ReleaseBitmap||s==S::ReleasePart)effect_.read=true;if(keys_->awaitingPart()){lookup_.emplace(PartLookupTask::Layout::Parameters);component_=Component::Lookup;}}}
+  else if(component_==Component::Lookup){if(lookup_->stage()==PartLookupTask::Stage::Complete){effect_.read=true;summary_.part=lookup_->index();if(kind_==Kind::HeldKeys){keyBase_=0x160d2u+334*summary_.part;keys_->resumePart(summary_.part);component_=Component::Keys;}else{summary_.controls=0x174aeu+20*summary_.part;midi_->resumeChild(midi_->event(),summary_.controls,false);component_=Component::Midi;}lookup_.reset();}else lookup_->advanceBefore(cost,[&](auto){return read(0x17526,cost);});}
+  else if(component_==Component::Midi){using T=MidiOutputTask;using S=T::Stage;const auto s=midi_->stage();midi_->advanceBefore(cost,[&](T::Read q){if(q!=T::Read::PanicChannel)throw std::logic_error("Unexpected panic observation");return summary_.channel=uint8_t(read(summary_.controls+11,cost));},[](auto,uint8_t){throw std::logic_error("Unexpected panic publication");});if(s==S::LocatePanicControls||s==S::SendPanicStatus||s==S::SendPanicController||s==S::SendPanicValue)effect_.write=true;if(s==S::ReturnPanic)effect_.read=true;if(midi_->awaitingChild()){if(s==S::LocatePanicControls){lookup_.emplace(PartLookupTask::Layout::Controls);component_=Component::Lookup;}else{serial_.emplace(SerialForegroundService::Kind::Transmit,midi_->low());component_=Component::Serial;}}else if(midi_->complete())complete_=true;}
+  else{using S=SerialTransmitTask::Stage;effect_.write=serial_->atTransmit(S::RetainFirst)||serial_->atTransmit(S::RetainSecond)||serial_->atTransmit(S::RetainCritical);effect_.read=serial_->atTransmit(S::RestoreCritical)||serial_->atTransmit(S::RestoreSecond)||serial_->atTransmit(S::RestoreFirst)||serial_->atTransmit(S::Finish);serial_->advanceBefore(cost,read,write);if(serial_->complete()){summary_.serialProducer=serial_->producer();summary_.serialConsumer=serial_->consumer();serial_.reset();midi_->resumeChild(midi_->event(),summary_.controls,false);component_=Component::Midi;}}
+  return cost;
+ }
+ static bool endpoint(uint32_t a){return StateStoreService::dataSpan(a,1)||(a>=0xffed6c&&a<0xffee70)||(a>=0x400000&&a<0x400010)||(a>=0x600000&&a<0x600010)||a==0xffff8a||a==0xffec22||a==0xffff61||a==0xffff62;}
+private:
+ static unsigned byteClock(uint32_t a,int p){a&=0xffffff;return a<0x400000&&!(p&1)&&a==(uint32_t(p)|1u)?0:3;}
+ Kind kind_;Component component_;Summary summary_{};Effect effect_{};uint32_t components_=0,keyBase_=0;bool complete_=false;
+ std::optional<KeyResetTask>keys_;std::optional<StateReloadVoiceService>voices_;std::optional<MidiOutputTask>midi_;std::optional<PartLookupTask>lookup_;std::optional<SerialForegroundService>serial_;
+};
+}

@@ -1,4 +1,5 @@
-#include "ksBoard.h"
+// Explicit retained LEGACY comparison test; not a semantic NativeControllerExecutor proof.
+#include "ksBoardComparison_test.h"
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
@@ -23,7 +24,7 @@ int main(int argc,char** argv) {
         auto pattern=bank;pattern.front()=0x12;pattern[1]=0x34;pattern[pattern.size()-2]=0xab;pattern.back()=0xcd;
         ks::Board mapped(os,pattern,flash);
         require(!mapped.zeroBank(),"Real wave bank enabled adaptation");
-        require(mapped.cpu().read16(ks::Board::WaveBase)==0x1234 && mapped.cpu().read16(ks::Board::WaveBase+ks::Board::WaveSize-2)==0xabcd,"Wave bank word reads lost byte order or boundaries");
+        require(ks::test::comparisonCpu(mapped).read16(ks::Board::WaveBase)==0x1234 && ks::test::comparisonCpu(mapped).read16(ks::Board::WaveBase+ks::Board::WaveSize-2)==0xabcd,"Wave bank word reads lost byte order or boundaries");
     }
     std::copy_n(flash.begin()+0x20000,256,flash.begin()+0x39000);
     flash[0x39000+128]=31;

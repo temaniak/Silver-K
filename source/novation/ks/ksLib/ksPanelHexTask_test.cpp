@@ -1,0 +1,6 @@
+#include "ksPanelHexTask.h"
+#include <stdexcept>
+#include <iostream>
+#include <vector>
+#include <utility>
+int main(){using T=ks::PanelHexTask;using S=T::Stage;using C=T::Child;unsigned cases=0;for(unsigned kind=0;kind<4;++kind)for(unsigned word=0;word<65536;++word){T t(static_cast<T::Kind>(kind));unsigned used=0,reads=0;std::vector<std::pair<C,unsigned>>events;while(t.stage()!=S::Complete){auto child=t.child();if(child!=C::None){events.emplace_back(child,child==C::Write?t.output():t.argument());t.resumeChild();continue;}auto cost=t.nextClocks();if(t.advanceBefore(cost-1,[]{return 0;}))throw std::runtime_error("early");used+=t.advanceBefore(cost,[&]{++reads;return kind==0?word:word&255;});}unsigned byte=word&255,biased=(byte+0x30)&255,ascii=(biased+(biased>0x39?7:0))&255;std::vector<std::pair<C,unsigned>>expected=kind==0?std::vector<std::pair<C,unsigned>>{{C::Byte,word>>8},{C::Byte,byte}}:kind==1?std::vector<std::pair<C,unsigned>>{{C::Digit,byte>>4},{C::Digit,byte&15}}:kind==2?std::vector<std::pair<C,unsigned>>{{C::Digit,byte}}:std::vector<std::pair<C,unsigned>>{{C::Write,ascii}};unsigned clocks=kind==0?150:kind==1?146:kind==2?110:71+(biased>0x39?3:0);if(events!=expected||reads!=1||used!=clocks)throw std::runtime_error("word/byte/nibble/raw route/order/ASCII/clocks");++cases;}std::cout<<"PASS: "<<cases<<" pure panel-hex properties\n";}

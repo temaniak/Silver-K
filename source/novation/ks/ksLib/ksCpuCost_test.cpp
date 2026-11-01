@@ -1,4 +1,5 @@
-#include "ksBoard.h"
+// Explicit retained LEGACY comparison test; not a semantic NativeControllerExecutor proof.
+#include "ksBoardComparison_test.h"
 #include "ksRom.h"
 #include "dsp56kBase/threadtools.h"
 #include <chrono>
@@ -35,7 +36,7 @@ int main(int argc,char** argv){try{
     const auto* flag=std::getenv("SILVER_KS_DSP_THREADS");const bool parallel=flag&&std::string(flag)=="2";
     const double setupCpu=cpu();const auto setupBegin=Clock::now();
     ks::Rom os(argv[1]);check(os.isValid(),"Invalid KS OS");
-    auto board=std::make_unique<ks::Board>(os.data(),bytes(argv[3]),bytes(argv[2]),true);
+    auto board=ks::test::makeLegacyBoard(os.data(),bytes(argv[3]),bytes(argv[2]),true);
     check(board->boot(),"Original H8 boot failed");
     const double setupCost=cpu()-setupCpu,setupWall=std::chrono::duration<double>(Clock::now()-setupBegin).count();
     dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::Highest);
@@ -74,7 +75,7 @@ int main(int argc,char** argv){try{
         <<",\"setup_cpu_seconds\":"<<setupCost<<",\"setup_wall_seconds\":"<<setupWall
         <<",\"warmup_cpu_seconds\":"<<warmCost<<",\"warmup_wall_seconds\":"<<warmWall
         <<",\"missing_frames\":0,\"audio_hash\":\""<<hash<<"\",\"peak\":"<<peak
-        <<",\"h8_cycles\":"<<board->cpu().cycles<<",\"h8_pc\":"<<board->cpu().getPC()
+        <<",\"h8_cycles\":"<<ks::test::comparisonCpu(*board).cycles<<",\"h8_pc\":"<<ks::test::comparisonCpu(*board).getPC()
         <<",\"dsp_a_cycles\":"<<board->dsp(0).cycles()<<",\"dsp_b_cycles\":"<<board->dsp(1).cycles()
         <<",\"dsp_a_instructions\":"<<board->dsp(0).instructions()<<",\"dsp_b_instructions\":"<<board->dsp(1).instructions()
         <<",\"notes\":\"GetProcessTimes user+kernel for coordinator and both DSP helpers. Fixed complete native Board render, original H8/JIT/serial schedule. Boot and warm-up excluded. No host callback, resampler, output queue polling, pacing or diagnostics. 24-stream integer hash must agree. Not a real DAW/driver or an energy measurement.\"}";

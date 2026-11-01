@@ -9,14 +9,14 @@
 #include "dsp56kBase/audioworkgroup.h"
 namespace ks {
 ControllerMode Device::environmentControllerMode(){
- if(!controllerReferenceAvailable())return ControllerMode::Native;
+ if(!boardComparisonAvailable())return ControllerMode::Native;
  const auto* v=std::getenv("SILVER_KS_CONTROLLER");
  return v&&std::strcmp(v,"native")==0?ControllerMode::Native:v&&std::strcmp(v,"native-midi")==0?ControllerMode::Hybrid:ControllerMode::H8;
 }
 bool Device::environmentDspWorkersEnabled(){const auto* v=std::getenv("SILVER_KS_DSP_THREADS");return v&&std::strcmp(v,"2")==0;}
 Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,const std::vector<uint8_t>& flash,double hostRate,int block,const std::vector<uint8_t>& program,baseLib::performance::Diagnostics* diagnostics,ControllerMode controller,bool dspWorkersEnabled)
 :performance(diagnostics),parallelDSPs(dspWorkersEnabled),currentController(controller==ControllerMode::Environment?environmentControllerMode():controller),baseLead(std::min(4096,std::max(256,block+128))),lead(baseLead),rate(hostRate){
- if(!controllerReferenceAvailable())currentController.store(ControllerMode::Native);
+ if(!boardComparisonAvailable())currentController.store(ControllerMode::Native);
  realtimeBlock.store(unsigned(std::max(64,block)));
  const auto* cores=std::getenv("SILVER_KS_WORKER_CORES");
  const bool performanceCores=cores&&std::strcmp(cores,"p")==0;
@@ -138,7 +138,7 @@ bool Device::setDspWorkersEnabled(bool enabled,std::string& error){
  error=dspWorkersError;return error.empty();
 }
 bool Device::setControllerMode(ControllerMode mode,std::string& error){
- if(mode!=ControllerMode::Native && !controllerReferenceAvailable()){error="KS H8/hybrid is available only in comparison tests";return false;}
+ if(mode!=ControllerMode::Native && !boardComparisonAvailable()){error="KS H8/hybrid is available only in comparison tests";return false;}
  if(mode!=ControllerMode::H8 && mode!=ControllerMode::Native && mode!=ControllerMode::Hybrid){error="Invalid KS controller selection";return false;}
  std::lock_guard serial(coldMutex);std::unique_lock lock(controllerMutex);error.clear();
  if(!running.load() || stopping.load()){error=failure.empty()?"KS engine is stopped":failure;return false;}

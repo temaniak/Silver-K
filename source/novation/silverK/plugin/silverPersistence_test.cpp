@@ -285,7 +285,8 @@ int main(int argc,char** argv){
  std::cout<<std::unitbuf;std::cerr<<std::unitbuf;testArgc=argc;testArgv=argv;
  juce::JUCEApplicationBase::createInstance=[]()->juce::JUCEApplicationBase*{return new PersistenceTestApplication;};
 #if JUCE_WINDOWS
- // Windows JUCE reads its command line internally and exports only main().
+ // JUCE implements only main() on Windows; it reads its own command line.
+ // Keep the console arguments above for the optional private-ROM checks.
  return juce::JUCEApplicationBase::main();
 #else
  std::vector<const char*> arguments(argv,argv+argc);arguments.push_back(nullptr);return juce::JUCEApplicationBase::main(argc,arguments.data());

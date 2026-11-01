@@ -1,4 +1,5 @@
-#include "ksBoard.h"
+// Explicit retained LEGACY comparison test; not a semantic NativeControllerExecutor proof.
+#include "ksBoardComparison_test.h"
 #include "ksRom.h"
 #include <algorithm>
 #include <cstdlib>
@@ -13,9 +14,8 @@ std::vector<uint8_t> bytes(const char* name){std::ifstream f(name,std::ios::bina
 int main(int argc,char** argv){try{
     if(argc!=4 && argc!=5){std::cout<<"SKIP: supply decoded KS OS/update, wave bank and Flash paths, optionally native\n";return 77;}
     ks::Rom os(argv[1]);check(os.isValid(),"Invalid KS OS");auto wave=bytes(argv[2]),flash=bytes(argv[3]);
-    const bool native=argc==5 && std::string(argv[4])=="native";
-    auto baseline=std::make_unique<ks::Board>(os.data(),wave,flash,true,native);
-    auto parallel=std::make_unique<ks::Board>(os.data(),wave,flash,true,native);
+    auto baseline=ks::test::makeLegacyBoard(os.data(),wave,flash,true);
+    auto parallel=ks::test::makeLegacyBoard(os.data(),wave,flash,true);
     check(baseline->boot() && parallel->boot(),"Sequential original H8 boot failed");
     parallel->enableDspWorkers(48000,64);
     uint64_t hash=14695981039346656037ull,frames=0;int64_t peak=0;
@@ -27,7 +27,7 @@ int main(int argc,char** argv){try{
         for(auto value:a){hash^=uint32_t(value);hash*=1099511628211ull;peak=std::max(peak,int64_t(std::abs(int64_t(value))));}
         ++frames;
         if((frames&1023)==0){
-            check(baseline->cpu().cycles==parallel->cpu().cycles && baseline->cpu().getPC()==parallel->cpu().getPC(),"H8 scheduling diverged");
+            check(ks::test::comparisonCpu(*baseline).cycles==ks::test::comparisonCpu(*parallel).cycles && ks::test::comparisonCpu(*baseline).getPC()==ks::test::comparisonCpu(*parallel).getPC(),"H8 scheduling diverged");
             for(unsigned i=0;i<2;++i)check(baseline->dsp(i).cycles()==parallel->dsp(i).cycles() && baseline->dsp(i).instructions()==parallel->dsp(i).instructions(),"DSP scheduling diverged");
             check(baseline->serialDepth()==parallel->serialDepth() && baseline->serialUnderruns==parallel->serialUnderruns && baseline->serialOverflows==parallel->serialOverflows,"Serial exchange diverged");
         }

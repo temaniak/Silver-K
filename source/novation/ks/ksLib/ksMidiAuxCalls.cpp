@@ -1,0 +1,39 @@
+#include "ksMidiAuxCalls.h"
+#include "ksControllerBoundary.h"
+#include <stdexcept>
+namespace ks {
+namespace {MidiAuxPartialTest partialTest=nullptr;using T=MidiAuxTask;using S=T::Stage;using K=T::Kind;
+struct Point{unsigned location,length;};
+Point point(const T& t){const bool conditional=t.kind()==K::ConditionalProgram;switch(t.stage()){
+ case S::CompareLocal:return {0x358a,2};case S::AdmitLocal:return {0x358c,2};case S::CompareLocalValue:return {0x358e,2};case S::AdmitLocalValue:return {0x3590,2};case S::CopyLocal:return {0x3592,2};case S::ZeroLocal:return {0x3594,2};case S::CompareLocalThreshold:return {0x3596,2};case S::AdmitLocalThreshold:return {0x3598,2};case S::HighLocal:return {0x359a,2};case S::SkipLocal:return {0x359c,2};
+ case S::CompareSelector:return {0x359e,2};case S::AdmitSelector:return {0x35a0,2};case S::CaptureSelector:return {0x35a2,2};case S::DispatchSelectorPart:return {0x35a4,4};case S::AwaitSelectorPart:case S::PublishSelector:return {0x35a8,8};case S::FinishSelector:return {0x35b0,2};
+ case S::CompareEntry:return {0x35b2,2};case S::AdmitEntry:return {0x35b4,2};case S::CaptureEntry:return {0x35b6,2};case S::DispatchEntryPart:return {0x35b8,4};case S::AwaitEntryPart:case S::ReadSelector:return {0x35bc,8};case S::AdmitSelectorValue:return {0x35c4,2};case S::DispatchEntry:return {0x35c6,4};case S::AwaitEntry:case S::FinishEntry:return {0x35ca,2};
+ case S::CaptureGenericController:return {0x35cc,2};case S::CaptureGenericValue:return {0x35ce,2};case S::DispatchGeneric:return {0x35d0,4};case S::AwaitGeneric:case S::FinishGeneric:return {0x35d4,2};
+ case S::GlobalReadController:return {0x35d6,2};case S::GlobalReadValue:return {0x35d8,4};case S::GlobalCompareBank:return {0x35dc,2};case S::GlobalAdmitBank:return {0x35de,2};case S::GlobalCaptureBank:return {0x35e0,2};case S::GlobalMaskBank:return {0x35e2,2};case S::GlobalAdmitMask:return {0x35e4,2};case S::GlobalDispatchPart:return {0x35e6,4};case S::GlobalAwaitPart:case S::GlobalPublishBank:return {0x35ea,8};case S::GlobalFinish:return {0x35f2,2};
+ case S::DispatchStart:return {0x35f4,4};case S::AwaitStart:case S::FinishStart:return {0x35f8,2};case S::DispatchContinue:return {0x35fa,4};case S::AwaitContinue:case S::FinishContinue:return {0x35fe,2};
+ case S::DispatchProgramPart:return {conditional?0x361cu:0x3600u,4};case S::AwaitProgramPart:case S::ReadBank:return {conditional?0x3620u:0x3604u,8};case S::AdmitBank:return {0x3628,2};case S::SetInvalidBank:return {conditional?0x362au:0x360cu,2};case S::PublishInvalidBank:return {conditional?0x362cu:0x360eu,8};case S::ReadProgram:return {conditional?0x3634u:0x3616u,2};case S::TailProgram:return {conditional?0x3636u:0x3618u,4};case S::FinishProgram:return {0x363a,2};case S::FinishNoop:return {0x3640,2};case S::TailStop:return {0x363c,4};case S::HandoffProgram:return {0x61ec,0};case S::HandoffStop:return {0xa028,0};default:throw std::runtime_error("Invalid native auxiliary MIDI stage");}}
+}
+void setMidiAuxPartialForTests(MidiAuxPartialTest fn){partialTest=fn;}
+bool MidiAuxCalls::step(ControllerCpu& h){using namespace controllerDetail;const unsigned pc=unsigned(h.getPC());auto& v=h.regs;
+ std::optional<Call>* selected=nullptr;for(auto& c:calls)if(c&&c->token==h.getSP()){selected=&c;break;}
+ const bool root=pc==0x35d6||pc==0x35f4||pc==0x35fa||pc==0x3600||pc==0x361c||pc==0x363c||pc==0x3640||(pc==0x358a&&(!selected||point((*selected)->task).location!=pc));
+ if(root){if(!selected)for(auto& c:calls)if(!c){selected=&c;break;}if(!selected)throw std::runtime_error("Native auxiliary MIDI capacity exceeded");selected->emplace(pc==0x358a?K::Parameter:pc==0x35d6?K::GlobalControl:pc==0x35f4?K::Start:pc==0x35fa?K::Continue:pc==0x3600?K::Program:pc==0x361c?K::ConditionalProgram:pc==0x3640?K::Noop:K::Stop,h.getSP());++started;}
+ if(!selected||point((*selected)->task).location!=pc){if(selected)selected->reset();if(partialTest&&partialTest(h)){++partialEntries;return true;}return false;}
+ auto& task=(*selected)->task;if(task.awaitingPart()){const auto a=uint32_t(v[0].er);if(a<0x160d2||a>=0x160d2+256*334||(a-0x160d2)%334)throw std::runtime_error("Invalid auxiliary MIDI part binding");task.resumePart(uint8_t((a-0x160d2)/334));}if(task.awaitingChild())task.resumeChild();
+ const auto stage=task.stage();const auto begin=h.cycles;Boundary clocks(h,pc,point(task).length);const unsigned base=0x160d2 + unsigned(task.part())*334;
+ auto timing=[&](unsigned offset){const auto at=base+offset;return (h.lastwrite&1)||at!=(unsigned(h.lastwrite)|1u)?3u:0u;};const auto cost=task.nextClocks(task.publication()?timing(task.publicationOffset()):3);
+ auto read=[&](T::Read field)->unsigned{switch(field){case T::Read::Controller:return uint8_t(v[0].rh);case T::Read::Value:return uint8_t(v[0].rl);case T::Read::EventFirst:return uint8_t(h.read8(uint32_t(v[4].er)));case T::Read::EventSecond:return uint8_t(h.read8(uint32_t(v[4].er)+1));case T::Read::Selector:return uint8_t(h.read8(base+332));default:return uint8_t(h.read8(base+331));}};
+ auto write=[&](T::Write field,unsigned data){h.write8(int8_t(data),base+(field==T::Write::Selector?332:331));};if(task.advanceBefore(cost,read,write,timing)!=cost)throw std::runtime_error("Auxiliary MIDI deadline mismatch");
+ switch(stage){
+ case S::CompareLocal:h.sub8(v[0].rh,122);break;case S::CompareLocalValue:h.sub8(v[0].rl,63);break;case S::CopyLocal:v[1].rl=int8_t(task.localValue());value(h,v[1].rl);break;case S::ZeroLocal:v[0].rl=0;value(h,v[0].rl);break;case S::CompareLocalThreshold:h.sub8(v[1].rl,63);break;case S::HighLocal:v[0].rl=127;value(h,v[0].rl);break;
+ case S::CompareSelector:h.sub8(v[0].rh,98);break;case S::CaptureSelector:v[1].rl=int8_t(task.selector());value(h,v[1].rl);break;case S::PublishSelector:value(h,int8_t(task.selector()));break;
+ case S::CompareEntry:h.sub8(v[0].rh,6);break;case S::CaptureEntry:v[6].rh=int8_t(task.value());value(h,v[6].rh);break;case S::ReadSelector:v[6].rl=int8_t(task.selector());value(h,v[6].rl);break;
+ case S::CaptureGenericController:v[6].rl=int8_t(task.controller());value(h,v[6].rl);break;case S::CaptureGenericValue:v[6].rh=int8_t(task.value());value(h,v[6].rh);break;
+ case S::GlobalReadController:v[0].rh=int8_t(task.controller());value(h,v[0].rh);break;case S::GlobalReadValue:v[0].rl=int8_t(task.value());value(h,v[0].rl);break;case S::GlobalCompareBank:h.sub8(v[0].rh,32);break;case S::GlobalCaptureBank:v[5].rl=int8_t(task.bank());value(h,v[5].rl);break;case S::GlobalMaskBank:v[0].rl=int8_t(task.bankMask());value(h,v[0].rl);break;case S::GlobalPublishBank:value(h,int8_t(task.bank()));break;
+ case S::DispatchSelectorPart:case S::DispatchEntryPart:case S::GlobalDispatchPart:case S::DispatchProgramPart:case S::DispatchEntry:case S::DispatchGeneric:case S::DispatchStart:case S::DispatchContinue:clocks.call(stage==S::DispatchEntry?0x6cfe:stage==S::DispatchGeneric?0x6d10:stage==S::DispatchStart?0xa936:stage==S::DispatchContinue?0xa934:0x4000);h.pc=h.makepc(clocks.next);if(h.cycles-begin!=cost)throw std::runtime_error("Auxiliary MIDI dispatch clocks differ");return true;
+ case S::ReadBank:v[5].rh=int8_t(task.bank());value(h,v[5].rh);break;case S::SetInvalidBank:v[1].rl=-1;value(h,v[1].rl);break;case S::PublishInvalidBank:value(h,-1);break;case S::ReadProgram:v[5].rl=int8_t(task.program());value(h,v[5].rl);break;case S::TailProgram:case S::TailStop:h.clockI(2);break;
+ case S::FinishSelector:case S::FinishEntry:case S::FinishGeneric:case S::GlobalFinish:case S::FinishStart:case S::FinishContinue:case S::FinishProgram:case S::FinishNoop:clocks.ret();h.pc=h.makepc(clocks.next);if(h.cycles-begin!=cost)throw std::runtime_error("Auxiliary MIDI return clocks differ");selected->reset();++completed;return true;default:break;
+ }
+ if(h.cycles-begin!=cost)throw std::runtime_error("Auxiliary MIDI bus clocks differ");const auto next=point(task).location;if(task.handoff()){h.pc=h.makepc(next);selected->reset();++handedOff;}else h.pc=h.makepc(next);return true;
+}
+}

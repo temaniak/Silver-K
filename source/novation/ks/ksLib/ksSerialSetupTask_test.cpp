@@ -1,0 +1,6 @@
+#include "ksSerialSetupTask.h"
+#include <stdexcept>
+#include <iostream>
+#include <vector>
+#include <utility>
+int main(){using T=ks::SerialSetupTask;using S=T::Stage;using P=T::Port;unsigned cases=0;for(unsigned kind=0;kind<2;++kind)for(unsigned paired=0;paired<2;++paired){T t(static_cast<T::Kind>(kind));unsigned used=0,ticks=0,children=0;std::vector<std::pair<P,unsigned>>writes;auto clock=[&](P p){return p==P::Baud&&paired?0u:1u;};while(t.stage()!=S::Complete){if(t.awaiting()){if((children==0)!=(t.stage()==S::AwaitRx))throw std::runtime_error("queue reset order");++children;t.resumeChild();continue;}auto stage=t.stage();auto cost=t.nextClocks(clock);if(t.advanceBefore(cost-1,[](P,uint8_t){},clock))throw std::runtime_error("early");used+=t.advanceBefore(cost,[&](P p,uint8_t v){writes.emplace_back(p,v);},clock);if(stage==S::Tick)++ticks;}std::vector<std::pair<P,unsigned>>expected=kind?std::vector<std::pair<P,unsigned>>{{P::Control,0x70}}:std::vector<std::pair<P,unsigned>>{{P::Control,0},{P::Mode,0},{P::Baud,0x18}};if(writes!=expected||ticks!=(kind?0u:100u)||children!=(kind?2u:0u)||used!=(kind?64u:666u-paired))throw std::runtime_error("setup wait/strobes/clocks");++cases;}std::cout<<"PASS: "<<cases<<" pure serial-setup properties\n";}

@@ -1,0 +1,61 @@
+#pragma once
+#include <array>
+#include <cstdint>
+namespace ks {class StateNameEditorTask final {public:enum class Kind {Category,ClearSuffix,Begin,Move,InsertSpace,InsertDigit,InsertRaw,Adjust,Commit,Toggle};enum class Stage {ReadCategory,AddCategory,AdmitCategorySign,ClearCategory,CompareCategory,AdmitCategoryLimit,SetLastCategory,WriteCategory,TailCategory,ClearSuffixBase,ReadSuffixCursor,SetSuffixLength,SubtractSuffix,AddSuffixBase,ExtendSuffix,SetSpaceByte,WriteSpace,AdvanceSpace,DecrementSpace,AdmitSpace,TailSuffix,ClearBegin,WriteBegin,ReadBegin,DecodeBegin,ReturnBegin,ReadMoveCursor,AddMoveCursor,MaskMoveCursor,WriteMoveCursor,SetCursorCommand,AddCursorCommand,SendCursor,ReadMoved,CompareMoved,AdmitMoved,DecodeMoved,ReturnMove,SetSpaceInsert,SkipSpaceInsert,AddDigitInsert,ClearInsertBase,ReadInsertCursor,AddInsertBase,WriteInsert,SetMoveNext,MoveNext,TailInsert,ReadAdjusted,CompareAdjusted,AdmitAdjusted,ReadPreviousIndex,SkipPreviousIndex,DecodeAdjusted,AddIndex,AdmitIndexSign,ClearIndex,CompareIndex,AdmitIndexLimit,SetLastIndex,WriteIndex,EncodeIndex,WriteName,TailName,ReadToggle,DecodeToggle,ReadCase,ToggleCase,WriteCase,TailCommit,AwaitChild,AwaitTail,Complete};enum class Read {Category,SuffixCursor,MoveCursor,InsertCursor,PreviousIndex,Case};enum class Write {Category,Suffix,Cursor,Insert,Index,Name,Case};enum class Child {Read,Decode,Cursor,Move,Encode};enum class Tail {Display,Commit};explicit StateNameEditorTask(Kind k,uint8_t delta=0):phase_(k==Kind::Category?Stage::ReadCategory:k==Kind::ClearSuffix?Stage::ClearSuffixBase:k==Kind::Begin?Stage::ClearBegin:k==Kind::Move?Stage::ReadMoveCursor:k==Kind::InsertSpace?Stage::SetSpaceInsert:k==Kind::InsertDigit?Stage::AddDigitInsert:k==Kind::InsertRaw?Stage::ClearInsertBase:k==Kind::Adjust?Stage::ReadAdjusted:k==Kind::Commit?Stage::EncodeIndex:Stage::ReadToggle),delta_(delta),raw_(delta){}Stage stage()const{return phase_;}Stage resumeStage()const{return resume_;}bool complete()const{return phase_==Stage::Complete;}bool awaitingChild()const{return phase_==Stage::AwaitChild;}bool awaitingTail()const{return phase_==Stage::AwaitTail;}Child child()const{return child_;}Tail tail()const{return tail_;}uint8_t cursor()const{return cursor_;}unsigned suffixOffset()const{return offset_;}uint8_t cursorCommand()const{return uint8_t(0xc1+cursor_);}bool resumeChild(uint8_t value=0){if(!awaitingChild())return false;if(child_==Child::Read||child_==Child::Encode)character_=value;if(child_==Child::Decode)index_=value;phase_=resume_;return true;}bool retireTail(){if(!awaitingTail())return false;phase_=Stage::Complete;return true;}
+ unsigned nextClocks(unsigned storeClocks=3)const{constexpr std::array<unsigned,70> costs{{12,3,3,3,3,3,3,12,8,3,12,3,3,9,3,3,6,3,3,3,8,3,12,20,20,17,12,3,3,12,3,3,20,15,3,3,20,17,3,3,3,3,12,9,6,3,15,8,15,3,3,12,3,15,3,3,3,3,3,3,12,15,6,8,15,15,12,3,12,3}};if(unsigned(phase_)>=costs.size())return 0;switch(phase_){case Stage::WriteCategory:case Stage::WriteSpace:case Stage::WriteBegin:case Stage::WriteMoveCursor:case Stage::WriteInsert:case Stage::WriteIndex:case Stage::WriteName:case Stage::WriteCase: return costs[unsigned(phase_)]-3+storeClocks;default:return costs[unsigned(phase_)];}}
+ template<class Reader,class Writer>unsigned advanceBefore(unsigned available,Reader&& read,Writer&& write,unsigned storeClocks=3){unsigned used=0;while(const auto c=nextClocks(storeClocks)){if(c>available-used)break;switch(phase_){case Stage::ReadCategory:category_=uint8_t(read(Read::Category));next();break;
+case Stage::AddCategory:category_=uint8_t(category_+delta_);next();break;
+case Stage::AdmitCategorySign:phase_=category_&128?Stage::ClearCategory:Stage::CompareCategory;break;
+case Stage::ClearCategory:category_=0;next();break;
+case Stage::AdmitCategoryLimit:phase_=category_<24?Stage::WriteCategory:Stage::SetLastCategory;break;
+case Stage::SetLastCategory:category_=23;next();break;
+case Stage::WriteCategory:write(Write::Category,category_);next();break;
+case Stage::TailCategory:tail_=Tail::Display;phase_=Stage::AwaitTail;break;
+case Stage::ReadSuffixCursor:cursor_=uint8_t(read(Read::SuffixCursor));next();break;
+case Stage::SubtractSuffix:remaining_=uint8_t(16-cursor_);next();break;
+case Stage::WriteSpace:write(Write::Suffix,32);next();break;
+case Stage::AdvanceSpace:++offset_;next();break;
+case Stage::DecrementSpace:--remaining_;next();break;
+case Stage::AdmitSpace:phase_=remaining_?Stage::WriteSpace:Stage::TailSuffix;break;
+case Stage::TailSuffix:tail_=Tail::Display;phase_=Stage::AwaitTail;break;
+case Stage::WriteBegin:write(Write::Cursor,0);next();break;
+case Stage::ReadBegin:await(Child::Read,Stage::DecodeBegin);break;
+case Stage::DecodeBegin:await(Child::Decode,Stage::ReturnBegin);break;
+case Stage::ReturnBegin:phase_=Stage::Complete;break;
+case Stage::ReadMoveCursor:cursor_=uint8_t(read(Read::MoveCursor));next();break;
+case Stage::AddMoveCursor:cursor_=uint8_t(cursor_+delta_);next();break;
+case Stage::MaskMoveCursor:cursor_&=15;next();break;
+case Stage::WriteMoveCursor:write(Write::Cursor,cursor_);next();break;
+case Stage::SendCursor:await(Child::Cursor,Stage::ReadMoved);break;
+case Stage::ReadMoved:await(Child::Read,Stage::CompareMoved);break;
+case Stage::AdmitMoved:phase_=character_==32?Stage::ReturnMove:Stage::DecodeMoved;break;
+case Stage::DecodeMoved:await(Child::Decode,Stage::ReturnMove);break;
+case Stage::ReturnMove:phase_=Stage::Complete;break;
+case Stage::SetSpaceInsert:raw_=32;next();break;
+case Stage::SkipSpaceInsert:phase_=Stage::ClearInsertBase;break;
+case Stage::AddDigitInsert:raw_=uint8_t(raw_+48);next();break;
+case Stage::ReadInsertCursor:cursor_=uint8_t(read(Read::InsertCursor));next();break;
+case Stage::WriteInsert:write(Write::Insert,raw_);next();break;
+case Stage::MoveNext:await(Child::Move,Stage::TailInsert);break;
+case Stage::TailInsert:tail_=Tail::Display;phase_=Stage::AwaitTail;break;
+case Stage::ReadAdjusted:await(Child::Read,Stage::CompareAdjusted);break;
+case Stage::AdmitAdjusted:phase_=character_==32?Stage::ReadPreviousIndex:Stage::DecodeAdjusted;break;
+case Stage::ReadPreviousIndex:index_=uint8_t(read(Read::PreviousIndex));next();break;
+case Stage::SkipPreviousIndex:phase_=Stage::AddIndex;break;
+case Stage::DecodeAdjusted:await(Child::Decode,Stage::AddIndex);break;
+case Stage::AddIndex:index_=uint8_t(index_+delta_);next();break;
+case Stage::AdmitIndexSign:phase_=index_&128?Stage::ClearIndex:Stage::CompareIndex;break;
+case Stage::ClearIndex:index_=0;next();break;
+case Stage::AdmitIndexLimit:phase_=index_<58?Stage::WriteIndex:Stage::SetLastIndex;break;
+case Stage::SetLastIndex:index_=57;next();break;
+case Stage::WriteIndex:write(Write::Index,index_);next();break;
+case Stage::EncodeIndex:await(Child::Encode,Stage::WriteName);break;
+case Stage::WriteName:write(Write::Name,character_);next();break;
+case Stage::TailName:tail_=Tail::Display;phase_=Stage::AwaitTail;break;
+case Stage::ReadToggle:await(Child::Read,Stage::DecodeToggle);break;
+case Stage::DecodeToggle:await(Child::Decode,Stage::ReadCase);break;
+case Stage::ReadCase:case_=uint8_t(read(Read::Case));next();break;
+case Stage::ToggleCase:case_^=1;next();break;
+case Stage::WriteCase:write(Write::Case,case_);next();break;
+case Stage::TailCommit:tail_=Tail::Commit;phase_=Stage::AwaitTail;break; default:next();break;}used+=c;}return used;}
+private:void next(){phase_=Stage(unsigned(phase_)+1);}void await(Child c,Stage s){child_=c;resume_=s;phase_=Stage::AwaitChild;}Stage phase_,resume_=Stage::Complete;Child child_=Child::Read;Tail tail_=Tail::Display;unsigned offset_=0;uint16_t remaining_=0;uint8_t delta_=0,raw_=0,cursor_=0,category_=0,index_=0,case_=0,character_=0;};}

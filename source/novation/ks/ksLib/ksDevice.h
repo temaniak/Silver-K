@@ -1,5 +1,4 @@
 #pragma once
-#include "ksControllerState.h"
 #include "ksBoard.h"
 #include "ksWorkerPlacement.h"
 #include <atomic>

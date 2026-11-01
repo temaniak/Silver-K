@@ -1,0 +1,5 @@
+#include "ksGlobalTailScalarTask.h"
+#include <iostream>
+#include <stdexcept>
+static void check(bool b){if(!b)throw std::runtime_error("Tail scalar property failed");}
+int main(){using T=ks::GlobalTailScalarTask;unsigned cases=0;for(unsigned kind=0;kind<4;++kind)for(unsigned value=0;value<256;++value){T t{T::Kind(kind)};unsigned reads=0,guard=0;auto read=[&](){++reads;return value;};while(!t.awaiting()){check(++guard<16);auto c=t.nextClocks(),s=unsigned(t.stage());check(t.advanceBefore(c-1,read)==0&&unsigned(t.stage())==s);check(t.advanceBefore(c,read)==c);}uint32_t expected;if(kind==1)expected=uint32_t(uint16_t(unsigned(uint8_t(value-64))<<9))<<8;else if(kind==3){auto v=value^127;expected=((v<<8)|uint8_t(v<<1))<<8;}else expected=value<<16;check(t.wireWord()==expected&&t.offset()==0x838+kind&&reads==1);check(t.resumeChild()&&t.stage()==T::Stage::Complete);++cases;}std::cout<<"PASS: "<<cases<<" pure tail-scalar properties; all4shapes/all byte inputs, inverse high/shiftedlow, centered wrap, budget refusal and return lifetime\n";}

@@ -88,11 +88,11 @@ bool isKStation()const{return kMode.load();}
  uint8_t editorChannel()const{return isKStation()?controlChannel.load():midiChannel();}
  int bufferProfile()const{return buffering.load();}
  void setBufferProfile(int);
+ int ksControllerMode()const{return ks::boardComparisonAvailable()?int(ksController.load()):int(ks::ControllerMode::Native);}
  bool ksTwoCoreProcessing()const{return twoCoreProcessing.load();}
  bool setKSTwoCoreProcessing(bool,juce::String& error); // UI/control thread only.
  ClockSource clockSource()const{return requestedClockSource.load();}
  void setClockSource(ClockSource); // Message thread; applied by the next audio block.
- int ksControllerMode()const{return ks::controllerReferenceAvailable()?int(ksController.load()):int(ks::ControllerMode::Native);}
  bool setKSControllerMode(int,juce::String& error); // UI/control thread only.
  bool demoSongActive()const;
  bool setDemoSong(bool,juce::String& error);

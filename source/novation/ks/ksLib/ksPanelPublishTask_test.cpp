@@ -1,0 +1,6 @@
+#include "ksPanelPublishTask.h"
+#include <stdexcept>
+#include <iostream>
+#include <vector>
+#include <tuple>
+int main(){using T=ks::PanelPublishTask;using S=T::Stage;using R=T::Read;using W=T::Write;unsigned cases=0;for(unsigned value=0;value<256;++value)for(unsigned stride=0;stride<256;++stride){T t;unsigned used=0,reads=0;uint8_t port=0;std::vector<std::pair<W,unsigned>>writes;auto clock=[](W){return 1u;};while(t.stage()!=S::Complete){auto cost=t.nextClocks(clock);if(t.advanceBefore(cost-1,[](R)->unsigned{throw std::runtime_error("early read");},[](W,uint8_t){throw std::runtime_error("early write");},clock))throw std::runtime_error("early budget");used+=t.advanceBefore(cost,[&](R r){if(r==R::Shadow){++reads;return uint8_t(value+t.index()*stride);}return port;},[&](W w,uint8_t v){writes.emplace_back(w,v);if(w!=W::Data)port=v;},clock);}std::vector<std::pair<W,unsigned>>expected;for(unsigned i=0;i<7;++i){expected.emplace_back(W::Data,uint8_t(value+i*stride));expected.emplace_back(W::Port,0x30+i);expected.emplace_back(W::Strobe,(0x30+i)&0xdf);expected.emplace_back(W::Strobe,0x30+i);}if(writes!=expected||used!=724||reads!=7||t.index()!=7||t.remaining()||t.delay())throw std::runtime_error("publish order/state/clocks");++cases;}std::cout<<"PASS: "<<cases<<" pure panel-publish properties\n";}

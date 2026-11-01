@@ -1,0 +1,64 @@
+#pragma once
+#include <array>
+#include <cstdint>
+namespace ks {class StateBankDisplayTask final {public:enum class Entry {Select,Display};enum class Stage {ReadSelectedPart,WriteSelectedPart,TailSelectedPart,ReadMessageMode,AdmitMessageMode,SetMainHeader,ReadHeaderKind,AdmitHeaderKind,SetPartHeader,DecrementHeaderKind,AdmitPartHeader,SetOtherHeader,PrintHeader,ReadProgram,PrintProgram,ReadSelectedAddress,SetNameCursor,SendNameCursor,ReadLateKind,AdmitLateKind,ComparePartName,AdmitPartName,SetPartName,TailPartName,SetPrefix,SendPrefix,SetQuoteBefore,SendQuoteBefore,SetNameSource,PrintName,SetQuoteAfter,SendQuoteAfter,ReadNameCursor,AddNameCursor,TailNameCursor,ReadPatchName,PrintPatchName,ReturnName,DecrementMessageMode,SetLabelStride,ScaleLabel,ExtendLabel,SetLabelBase,AddLabelBase,PrintLabel,SetLabelPrefix,SendLabelPrefix,ResolveTable,CaptureTable,SetRowCount,SetRowCursor,BindTableNames,ClearRowProgram,ReadRowProgram,ReadRowBank,AdmitRowBank,RetainEmptyCursor,SendEmptyCursor,SetEmptyString,PrintEmptyString,RestoreEmptyCursor,SkipRowFormat,DecrementRowBank,RetainTable,RetainRowCursor,ReadRowLookup,FormatRow,RestoreRowCursor,RestoreTable,AdvanceRowCursor,DecrementRowCount,AdmitRows,RestoreNameTables,ReturnRows,AwaitChild,AwaitTail,Complete};enum class Read {SelectedPart,MessageMode,HeaderKind,Program,SelectedAddress,LateKind,NameCursor,RowProgram,RowBank,RowLookup};enum class String {Main,Part,Other,Name,Label,Empty};enum class Child {String,Number,Character,PatchName,Table,BindTables,Formatted,RestoreTables};enum class Tail {Refresh,String,Character};explicit StateBankDisplayTask(Entry e):phase_(e==Entry::Select?Stage::ReadSelectedPart:Stage::ReadMessageMode){}Stage stage()const{return phase_;}Stage resumeStage()const{return resume_;}bool complete()const{return phase_==Stage::Complete;}bool awaitingChild()const{return phase_==Stage::AwaitChild;}bool awaitingTail()const{return phase_==Stage::AwaitTail;}Child child()const{return child_;}Tail tail()const{return tail_;}String string()const{return string_;}uint8_t number()const{return number_;}uint8_t character()const{return phase_==Stage::AwaitChild&&child_==Child::Character&&resume_==Stage::SetEmptyString?uint8_t(0xc1+row_*5):character_;}unsigned labelOffset()const{return message_*22;}unsigned row()const{return row_;}uint8_t rowProgram()const{return rowProgram_;}uint8_t rowBank()const{return rowBank_;}uint8_t lookup()const{return lookup_;}bool resumeChild(){if(!awaitingChild())return false;phase_=resume_;return true;}bool retireTail(){if(!awaitingTail())return false;phase_=Stage::Complete;return true;}
+ unsigned nextClocks(unsigned storeClocks=3)const{constexpr std::array<unsigned,74> costs{{12,12,8,12,8,9,12,3,9,3,3,9,20,12,20,18,3,20,12,3,3,3,9,8,3,20,3,20,9,20,3,20,12,3,8,20,20,17,3,3,15,3,9,3,20,3,20,20,3,3,3,15,3,8,8,3,11,20,9,20,11,3,3,20,11,15,20,11,20,3,3,3,15,17}};if(unsigned(phase_)>=costs.size())return 0;return phase_==Stage::WriteSelectedPart?costs[unsigned(phase_)]-3+storeClocks:costs[unsigned(phase_)];}
+ template<class Reader,class Writer>unsigned advanceBefore(unsigned available,Reader&& read,Writer&& write,unsigned storeClocks=3){unsigned used=0;while(const auto c=nextClocks(storeClocks)){if(c>available-used)break;switch(phase_){case Stage::ReadSelectedPart:selected_=uint8_t(read(Read::SelectedPart));next();break;
+case Stage::WriteSelectedPart:write(selected_);next();break;
+case Stage::TailSelectedPart:tail_=Tail::Refresh;phase_=Stage::AwaitTail;break;
+case Stage::ReadMessageMode:message_=uint8_t(read(Read::MessageMode));next();break;
+case Stage::AdmitMessageMode:phase_=message_?Stage::DecrementMessageMode:Stage::SetMainHeader;break;
+case Stage::SetMainHeader:string_=String::Main;next();break;
+case Stage::ReadHeaderKind:kind_=uint8_t(read(Read::HeaderKind));next();break;
+case Stage::AdmitHeaderKind:phase_=kind_?Stage::SetPartHeader:Stage::PrintHeader;break;
+case Stage::SetPartHeader:string_=String::Part;next();break;
+case Stage::DecrementHeaderKind:--kind_;next();break;
+case Stage::AdmitPartHeader:phase_=kind_?Stage::SetOtherHeader:Stage::PrintHeader;break;
+case Stage::SetOtherHeader:string_=String::Other;next();break;
+case Stage::PrintHeader:await(Child::String,Stage::ReadProgram);break;
+case Stage::ReadProgram:number_=uint8_t(read(Read::Program));next();break;
+case Stage::PrintProgram:await(Child::Number,Stage::ReadSelectedAddress);break;
+case Stage::ReadSelectedAddress:(void)read(Read::SelectedAddress);next();break;
+case Stage::SetNameCursor:character_=0xc0;next();break;
+case Stage::SendNameCursor:await(Child::Character,Stage::ReadLateKind);break;
+case Stage::ReadLateKind:kind_=uint8_t(read(Read::LateKind));next();break;
+case Stage::AdmitLateKind:phase_=kind_?Stage::ComparePartName:Stage::ReadPatchName;break;
+case Stage::AdmitPartName:phase_=kind_==1?Stage::SetPartName:Stage::SetPrefix;break;
+case Stage::SetPartName:string_=String::Name;next();break;
+case Stage::TailPartName:tail_=Tail::String;phase_=Stage::AwaitTail;break;
+case Stage::SetPrefix:character_=0xfc;next();break;
+case Stage::SendPrefix:await(Child::Character,Stage::SetQuoteBefore);break;
+case Stage::SetQuoteBefore:character_=39;next();break;
+case Stage::SendQuoteBefore:await(Child::Character,Stage::SetNameSource);break;
+case Stage::SetNameSource:string_=String::Name;next();break;
+case Stage::PrintName:await(Child::String,Stage::SetQuoteAfter);break;
+case Stage::SetQuoteAfter:character_=39;next();break;
+case Stage::SendQuoteAfter:await(Child::Character,Stage::ReadNameCursor);break;
+case Stage::ReadNameCursor:character_=uint8_t(read(Read::NameCursor));next();break;
+case Stage::AddNameCursor:character_=uint8_t(character_+0xc1);next();break;
+case Stage::TailNameCursor:tail_=Tail::Character;phase_=Stage::AwaitTail;break;
+case Stage::ReadPatchName:await(Child::PatchName,Stage::PrintPatchName);break;
+case Stage::PrintPatchName:string_=String::Name;await(Child::String,Stage::ReturnName);break;
+case Stage::ReturnName:phase_=Stage::Complete;break;
+case Stage::DecrementMessageMode:--message_;next();break;
+case Stage::SetLabelBase:string_=String::Label;next();break;
+case Stage::PrintLabel:await(Child::String,Stage::SetLabelPrefix);break;
+case Stage::SetLabelPrefix:character_=0xfc;next();break;
+case Stage::SendLabelPrefix:await(Child::Character,Stage::ResolveTable);break;
+case Stage::ResolveTable:await(Child::Table,Stage::CaptureTable);break;
+case Stage::BindTableNames:await(Child::BindTables,Stage::ClearRowProgram);break;
+case Stage::ReadRowProgram:rowProgram_=uint8_t(read(Read::RowProgram));next();break;
+case Stage::ReadRowBank:rowBank_=uint8_t(read(Read::RowBank));next();break;
+case Stage::AdmitRowBank:phase_=rowBank_?Stage::DecrementRowBank:Stage::RetainEmptyCursor;break;
+case Stage::SendEmptyCursor:await(Child::Character,Stage::SetEmptyString);break;
+case Stage::SetEmptyString:string_=String::Empty;next();break;
+case Stage::PrintEmptyString:await(Child::String,Stage::RestoreEmptyCursor);break;
+case Stage::SkipRowFormat:phase_=Stage::AdvanceRowCursor;break;
+case Stage::DecrementRowBank:--rowBank_;next();break;
+case Stage::ReadRowLookup:lookup_=uint8_t(read(Read::RowLookup));next();break;
+case Stage::FormatRow:await(Child::Formatted,Stage::RestoreRowCursor);break;
+case Stage::AdvanceRowCursor:++row_;next();break;
+case Stage::AdmitRows:phase_=row_<4?Stage::ClearRowProgram:Stage::RestoreNameTables;break;
+case Stage::RestoreNameTables:await(Child::RestoreTables,Stage::ReturnRows);break;
+case Stage::ReturnRows:phase_=Stage::Complete;break; default:next();break;}used+=c;}return used;}
+private:void next(){phase_=Stage(unsigned(phase_)+1);}void await(Child c,Stage s){child_=c;resume_=s;phase_=Stage::AwaitChild;}Stage phase_,resume_=Stage::Complete;Child child_=Child::String;Tail tail_=Tail::String;String string_=String::Main;unsigned row_=0;uint8_t selected_=0,message_=0,kind_=0,number_=0,character_=0,rowProgram_=0,rowBank_=0,lookup_=0;};}

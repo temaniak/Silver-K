@@ -1,0 +1,49 @@
+#pragma once
+#include "ksNativeArpMainService.h"
+#include "ksNativeArpRunAbi.h"
+#include "ksNativeArpChordAbi.h"
+#include "ksNativeArpPrimitiveAbi.h"
+#include "ksNativeVoiceReleaseAbi.h"
+#include "ksInternalKeyOutputAbi.h"
+#include "ksNativeKeyAbi.h"
+#include "ksControlArithmetic.h"
+#include "ksNativeMonoArpCompatibility.h"
+namespace ks {
+// Temporary EXTERNAL Stage3 sink. Native execution never reads this image or
+// any observer output; only the outer completion edge may apply it to a caller.
+class NativeArpMainCompatibility final {
+public:
+ struct Image{std::array<uint32_t,7>values{};uint8_t flags=0;};
+ NativeArpMainCompatibility()=default;template<class A>explicit NativeArpMainCompatibility(const A&a){image_.values=a.values;image_.flags=a.flags;if(mono_)mono_->replaceImage(a);}
+ const Image&image()const{return image_;}template<class A>void replaceImage(const A&a){image_.values=a.values;image_.flags=a.flags;if(mono_)mono_->replaceImage(a);}
+ void operator()(NativeMonoArpCoordinator::Notice n,MonoArpTask::Stage stage,const NativeMonoArpCoordinator&s,const MonoArpTask&t){if(!mono_)throw std::logic_error("Missing external mono accounting");(*mono_)(n,stage,s,t);image_.values=mono_->image().values;image_.flags=mono_->image().flags;}
+ void operator()(NativeArpMainService::Notice n,ArpMainTask::Stage stage,const NativeArpMainService&s){using N=NativeArpMainService::Notice;using S=ArpMainTask::Stage;auto&v=image_.values;
+ if(n!=N::Policy){switch(n){case N::Lookup:v[0]=s.summary().lastChild==ArpMainTask::Child::Controls?0x174aeu+20*s.lookup()->index():0x160d2u+334*s.lookup()->index();image_.flags&=0xd0;break;case N::Primitive:projectNativeArpPrimitive(image_,*s.primitive());break;case N::Release:projectNativeVoiceRelease(image_,*s.release());break;case N::Bootstrap:{const auto stream=v[4];projectNativeMonoArpBootstrap(image_,*s.bootstrap());v[4]=stream;break;}case N::InternalKeys:projectInternalKeyOutput(image_,*s.internalKeys());break;case N::Held:projectNativeKey(image_,*s.held());break;case N::Gate:projectNativeArpGate(image_,*s.gate());break;case N::Chord:projectNativeArpChord(image_,*s.chord());break;case N::Run:projectNativeArpRun(image_,*s.run());break;default:break;}return;}
+ if(s.policy().handoff()&&!mono_)mono_.emplace(image_);
+ const uint32_t data=s.summary().lastObservation;const auto lo=[&](unsigned r){return uint8_t(v[r]);};const auto hi=[&](unsigned r){return uint8_t(v[r]>>8);};const auto word=[&](unsigned r){return uint16_t(v[r]);};const auto upper=[&](unsigned r){return uint16_t(v[r]>>16);};
+ const auto low=[&](unsigned r,uint8_t x){v[r]=(v[r]&0xffffff00u)|x;nz(x,8);};const auto high=[&](unsigned r,uint8_t x){v[r]=(v[r]&0xffff00ffu)|(uint32_t(x)<<8);nz(x,8);};const auto half=[&](unsigned r,uint16_t x){v[r]=(v[r]&0xffff0000u)|x;nz(x,16);};const auto top=[&](unsigned r,uint16_t x){v[r]=(v[r]&0xffffu)|(uint32_t(x)<<16);nz(x,16);};const auto full=[&](unsigned r,uint32_t x){v[r]=x;nz(x,32);};const auto bit=[&](unsigned mask,bool set){image_.flags=uint8_t((image_.flags&~mask)|(set?mask:0));};
+ switch(stage){
+ case S::ReadPatch:case S::ReadCurrentPatch:full(4,data);break;
+ case S::ReadTempo:case S::ReadVelocity:case S::ReadGate:case S::ReadModeIndex:case S::ReadModeTable:case S::ReadPolicy:case S::ReadReleasedMode:case S::ReadEnabledMode:case S::ReadGateMode:case S::ReadPatternIndex:case S::ReadPatternMode:case S::ReadFinalMode:case S::ReadCurrentPhase:case S::ReadRestPhase:case S::ReadNotePhase:case S::ReadGateShape:case S::ReadNotePolicy:
+  if(stage==S::ReadRestPhase)high(4,uint8_t(data));else low(1,uint8_t(data));break;
+ case S::ReadOldMode:case S::ReadOldPolicy:case S::ReadNextGate:high(1,uint8_t(data));break;case S::ReadPedal:case S::ReadOldPatternIndex:low(2,uint8_t(data));break;
+ case S::PublishVelocity:case S::PublishGate:case S::PublishMode:case S::PublishPolicy:case S::PublishPatternIndex:case S::PublishNoteGate:nz(lo(1),8);break;case S::PublishOctaves:nz(lo(2),8);break;case S::PublishClock:case S::PublishAccumulator:nz(v[4],32);break;case S::PublishPhase:nz(word(4),16);break;case S::PublishPatternLength:nz(hi(2),8);break;case S::PublishPatternReference:nz(v[1],32);break;case S::PublishRestGate:nz(lo(4),8);break;case S::ReadEventVelocity:nz(hi(4),8);break;case S::PublishDuration:nz(word(2),16);break;
+ case S::ClearModeIndex:case S::ClearPatternIndex:{const auto r=controlArithmetic::subtract(int32_t(v[1]),int32_t(v[1]),image_.flags);v[1]=uint32_t(r.value);image_.flags=r.flags;break;}
+ case S::CompareModes:image_.flags=controlArithmetic::subtract(int8_t(lo(1)),int8_t(hi(1)),image_.flags).flags;break;
+ case S::ObserveNewMono:case S::ObserveReleasedMono:case S::ObserveEnabledMono:case S::ObserveGateMono:case S::ObservePatternMono:case S::ObserveFinalMono:bit(4,!(lo(1)&64));break;case S::ObserveOldMono:bit(4,!(hi(1)&64));break;case S::ObserveHoldPolicy:case S::ObserveNoteEnabled:bit(4,!(lo(1)&4));break;case S::ObservePedalRelease:bit(4,!(lo(2)&16));break;case S::ObserveEnableChange:bit(4,!(hi(1)&4));break;
+ case S::RetainPatchForMono:case S::RetainPatchForPoly:case S::RetainPatchForPattern:retainedPatch_=v[4];nz(v[4],32);break;case S::RetainPartForMono:case S::RetainPartForPoly:case S::RetainPartForPattern:retainedPart_=v[0];nz(v[0],32);break;case S::ReleasePatchForMono:case S::ReleasePatchForPoly:case S::ReleasePatchForPattern:full(4,retainedPatch_);break;case S::ReleasePartForMono:case S::ReleasePartForPoly:case S::ReleasePartForPattern:full(0,retainedPart_);break;
+ case S::MergePedal:low(1,uint8_t(lo(1)|lo(2)));break;case S::CaptureOctaves:case S::CaptureFalling:low(2,lo(1));break;case S::MaskOctaves:low(2,uint8_t(lo(2)&3));break;case S::ComparePolicy:high(1,uint8_t(hi(1)^lo(1)));break;case S::InvertPolicy:low(2,uint8_t(~lo(2)));break;case S::IntersectChanges:low(2,uint8_t(lo(2)&hi(1)));break;
+ case S::RetainPolicy:retainedPolicy_=word(1);nz(word(1),16);break;case S::ReleasePolicy:half(1,retainedPolicy_);break;
+ case S::ReadClock:full(4,data);break;case S::ReadPreviousClock:case S::ReadAccumulator:case S::ReadRate:full(1,data);break;case S::ElapsedClock:{auto r=controlArithmetic::subtract(int32_t(v[4]),int32_t(v[1]),image_.flags);v[4]=uint32_t(r.value);image_.flags=r.flags;break;}case S::AccumulateClock:{auto r=controlArithmetic::add(int32_t(v[4]),int32_t(v[1]),image_.flags);v[4]=uint32_t(r.value);image_.flags=r.flags;break;}
+ case S::CaptureHighPhase:half(2,upper(4));break;case S::MultiplyHighPhase:v[2]=uint32_t(word(2))*upper(1);break;case S::ShiftHighProduct:top(2,word(2));break;case S::ClearLowProduct:{auto r=controlArithmetic::subtract(int16_t(word(2)),int16_t(word(2)),image_.flags);v[2]&=0xffff0000u;image_.flags=r.flags;break;}case S::CaptureElapsedHigh:half(3,upper(4));break;case S::MultiplyElapsedLow:v[4]=uint32_t(word(4))*upper(1);break;case S::MultiplyRateLow:v[1]=uint32_t(word(1))*word(3);break;case S::AddElapsedProduct:case S::AddRateProduct:{auto r=controlArithmetic::add(int32_t(v[2]),int32_t(v[stage==S::AddElapsedProduct?4:1]),image_.flags);v[2]=uint32_t(r.value);image_.flags=r.flags;break;}case S::CapturePhase:half(4,upper(2));break;case S::ReadOldPhase:half(1,uint16_t(data));break;
+ case S::ComparePatternIndex:image_.flags=controlArithmetic::subtract(int8_t(lo(1)),int8_t(lo(2)),image_.flags).flags;break;case S::ScalePatternIndex:{const auto x=lo(1);bit(1,x&64);low(1,uint8_t(x<<2));break;}case S::ReadPatternReference:full(1,data);break;case S::ReadPatternHeader:half(2,uint16_t(data));v[1]+=2;break;
+ case S::SubtractGate:{auto r=controlArithmetic::subtract(int8_t(lo(1)),int8_t(hi(1)),image_.flags);v[1]=(v[1]&0xffffff00u)|uint8_t(r.value);image_.flags=r.flags;break;}case S::ObserveFirstEvent:case S::ObservePeekEvent:nz(hi(4),8);break;case S::LocateRestGate:{auto r=controlArithmetic::add(int8_t(lo(4)),int8_t(hi(4)),image_.flags);v[4]=(v[4]&0xffffff00u)|uint8_t(r.value);image_.flags=r.flags;break;}
+ case S::CaptureFirstDelay:high(2,lo(4));break;case S::CaptureSecondDelay:low(2,lo(4));break;case S::ReadPeekStep:half(4,uint16_t(data));break;case S::MergeThirdDelay:{auto r=controlArithmetic::add(int8_t(lo(2)),int8_t(lo(4)),image_.flags);v[2]=(v[2]&0xffffff00u)|uint8_t(r.value);image_.flags=r.flags;break;}case S::AddFirstDelay:case S::AddSecondDelay:{auto r=controlArithmetic::add(int8_t(lo(1)),int8_t(stage==S::AddFirstDelay?hi(2):lo(2)),image_.flags);v[1]=(v[1]&0xffffff00u)|uint8_t(r.value);image_.flags=r.flags;break;}
+ case S::OffsetGateShape:{auto r=controlArithmetic::add(int8_t(lo(1)),int8_t(-64),image_.flags);v[1]=(v[1]&0xffffff00u)|uint8_t(r.value);image_.flags=r.flags;break;}case S::ScaleLongGate:case S::ScaleShortGate:{const auto x=lo(1);bit(1,x&64);low(1,uint8_t(x<<2));break;}case S::MultiplyLongGate:case S::MultiplyShortGate:v[1]=(v[1]&0xffff0000u)|(uint16_t(lo(1))*uint8_t(stage==S::MultiplyLongGate?lo(2):hi(2)));break;case S::MergeLongGate:{auto r=controlArithmetic::add(int8_t(hi(1)),int8_t(hi(2)),image_.flags);v[1]=(v[1]&0xffff00ffu)|(uint32_t(uint8_t(r.value))<<8);image_.flags=r.flags;break;}case S::CaptureLongGate:half(2,word(1));break;case S::InvertShortGate:{auto r=controlArithmetic::subtract(int8_t(0),int8_t(lo(1)),image_.flags);v[1]=(v[1]&0xffffff00u)|uint8_t(r.value);image_.flags=r.flags;break;}case S::SaturateShortScale:low(1,252);break;case S::ClearShortLow:low(2,0);break;case S::SubtractShortGate:{auto r=controlArithmetic::subtract(int16_t(word(2)),int16_t(word(1)),image_.flags);v[2]=(v[2]&0xffff0000u)|uint16_t(r.value);image_.flags=r.flags;break;}
+ default:break;}
+ }
+private:
+ void nz(uint32_t value,unsigned bits){const auto mask=bits==32?~0u:(uint32_t(1)<<bits)-1;value&=mask;image_.flags=uint8_t((image_.flags&0xf1)|(value&(uint32_t(1)<<(bits-1))?8:0)|(!value?4:0));}
+ Image image_{};std::optional<NativeMonoArpCompatibility>mono_;uint32_t retainedPart_=0,retainedPatch_=0;uint16_t retainedPolicy_=0;
+};
+}

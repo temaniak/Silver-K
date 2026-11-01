@@ -1,0 +1,10 @@
+#pragma once
+#include <cstdint>
+namespace ks { class PartEnableTask final { public:
+enum class Stage { SelectPart, DispatchControl, AwaitControl, Enable, WriteEnable, ReadGeneration, BumpGeneration, WriteGeneration, Finish, Complete };
+enum class Read { Input, Generation }; enum class Write { Part, Enable, Generation };
+Stage stage()const{return stage_;} uint8_t part()const{return part_;} uint8_t generation()const{return generation_;}
+bool awaiting()const{return stage_==Stage::AwaitControl;} bool resumeChild(uint8_t p){if(!awaiting())return false;part_=p;stage_=Stage::Enable;return true;}
+template<class StoreClock> unsigned nextClocks(StoreClock&& store)const {switch(stage_){case Stage::SelectPart:return 9+store(Write::Part);case Stage::DispatchControl:return 20;case Stage::WriteEnable:return 12+store(Write::Enable);case Stage::ReadGeneration:return 15;case Stage::WriteGeneration:return 12+store(Write::Generation);case Stage::Finish:return 17;case Stage::AwaitControl:case Stage::Complete:return 0;default:return 3;}}
+template<class Reader,class Writer,class StoreClock>unsigned advanceBefore(unsigned available,Reader&&read,Writer&&write,StoreClock&&store){unsigned used=0;while(auto cost=nextClocks(store)){if(cost>available-used)break;switch(stage_){case Stage::SelectPart:part_=uint8_t(read(Read::Input));write(Write::Part,part_);stage_=Stage::DispatchControl;break;case Stage::DispatchControl:stage_=Stage::AwaitControl;break;case Stage::Enable:stage_=Stage::WriteEnable;break;case Stage::WriteEnable:write(Write::Enable,1);stage_=Stage::ReadGeneration;break;case Stage::ReadGeneration:generation_=uint8_t(read(Read::Generation));stage_=Stage::BumpGeneration;break;case Stage::BumpGeneration:generation_=uint8_t(generation_+8);stage_=Stage::WriteGeneration;break;case Stage::WriteGeneration:write(Write::Generation,generation_);stage_=Stage::Finish;break;case Stage::Finish:stage_=Stage::Complete;break;default:break;}used+=cost;}return used;}
+private:Stage stage_=Stage::SelectPart;uint8_t part_=0,generation_=0;};}

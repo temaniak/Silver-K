@@ -1,10 +1,160 @@
 #pragma once
 #include "ksControllerState.h"
+#include "ksMidiDecodeCalls.h"
+#include "ksMidiControlCalls.h"
+#include "ksMidiAuxCalls.h"
+#include "ksHardwareSetupCalls.h"
+#include "ksMidiPartInitCalls.h"
+#include "ksMidiRouteCalls.h"
+#include "ksStateFieldMapCalls.h"
+#include "ksVoiceTableInitCalls.h"
+#include "ksStateParameterEditCalls.h"
+#include "ksStatePatchNameCalls.h"
+#include "ksStateStorageCalls.h"
+#include "ksPanelDecayCalls.h"
+#include "ksStateModeCalls.h"
+#include "ksStateParameterExpandCalls.h"
+#include "ksStatePackFieldsCalls.h"
+#include "ksStatePackRefreshCalls.h"
+#include "ksStateGlobalsCalls.h"
+#include "ksPanelByteCalls.h"
+#include "ksPanelPollCalls.h"
+#include "ksPanelActionCalls.h"
+#include "ksArpPrimitiveCalls.h"
+#include "ksArpScheduleCalls.h"
+#include "ksArpMainCalls.h"
+#include "ksStateMultiSerializeCalls.h"
+#include "ksStatePatchLoadCalls.h"
+#include "ksStateProgramCalls.h"
+#include "ksStateMultiLoadCalls.h"
+#include "ksStatePresetAddressCalls.h"
+#include "ksStateSingleLoadCalls.h"
+#include "ksSerialQueueCalls.h"
+#include "ksSerialReceiveCalls.h"
+#include "ksSerialSetupCalls.h"
+#include "ksSerialTransmitCalls.h"
+#include "ksSerialIrqCalls.h"
+#include "ksSerialDirectCalls.h"
+#include "ksArpEventCalls.h"
+#include "ksArpSelectCalls.h"
+#include "ksResetImageCalls.h"
+#include "ksStateManualEditCalls.h"
+#include "ksStatePostEditCalls.h"
+#include "ksPanelControlCalls.h"
+#include "ksPanelToggleCalls.h"
+#include "ksPanelDecimalCalls.h"
+#include "ksPanelTextCalls.h"
+#include "ksInternalMidiCalls.h"
+#include "ksInternalNoteCalls.h"
+#include "ksSysExFrameCalls.h"
+#include "ksExceptionReturnCalls.h"
+#include "ksStateFlashCommitCalls.h"
+#include "ksFlashPageCalls.h"
+#include "ksTimerServiceCalls.h"
+#include "ksStateChannelCalls.h"
+#include "ksPanelInputCalls.h"
+#include "ksStateProgramEventCalls.h"
+#include "ksStateProgramDisplayCalls.h"
+#include "ksStateProgramBrowseCalls.h"
+#include "ksStateBrowseWorkflowCalls.h"
+#include "ksStateStoredValueCalls.h"
+#include "ksStateStatusDisplayCalls.h"
+#include "ksStateBankNavigationCalls.h"
+#include "ksStateFieldActionsCalls.h"
+#include "ksStateEditLabelCalls.h"
+#include "ksStateValueBoundsCalls.h"
+#include "ksLoaderSessionCalls.h"
+#include "ksLoaderProgramCalls.h"
+#include "ksLoaderPacketsCalls.h"
+#include "ksLoaderCodecCalls.h"
+#include "ksLoaderInputsCalls.h"
+#include "ksStateEditWorkflowCalls.h"
+#include "ksStateFunctionKeysCalls.h"
+#include "ksStatePanelModesCalls.h"
+#include "ksStateScreenActionsCalls.h"
+#include "ksStartupBannerCalls.h"
+#include "ksMemoryDiagnosticsCalls.h"
+#include "ksDiagnosticTransferCalls.h"
+#include "ksDiagnosticCodecCalls.h"
+#include "ksKeyboardScanCalls.h"
+#include "ksStateMenuActionsCalls.h"
+#include "ksStatePartSelectionCalls.h"
+#include "ksKeyboardEventsCalls.h"
+#include "ksSystemServicesCalls.h"
+#include "ksStateMenuFormatCalls.h"
+#include "ksStateScreenEditCalls.h"
+#include "ksStateEditContextCalls.h"
+#include "ksPanelSettingsCalls.h"
+#include "ksStateScreenCalls.h"
+#include "ksClockDisplayCalls.h"
+#include "ksClockPulseCalls.h"
+#include "ksClockSyncCalls.h"
+#include "ksPanelAnalogCalls.h"
+#include "ksStateButtonDispatchCalls.h"
+#include "ksStateForegroundCalls.h"
+#include "ksInternalMidiServiceCalls.h"
+#include "ksMidiOutputCalls.h"
+#include "ksInternalMidiQueueCalls.h"
+#include "ksPanelAdcScanCalls.h"
+#include "ksPanelAdcIrqCalls.h"
+#include "ksPanelAdcCalibrationCalls.h"
+#include "ksPanelAdcScaleCalls.h"
+#include "ksPanelAdcSamplesCalls.h"
+#include "ksPanelEncoderCalls.h"
+#include "ksPedalSenseCalls.h"
+#include "ksPanelMatrixCalls.h"
+#include "ksStateStoreUiCalls.h"
+#include "ksStateEditAddressCalls.h"
+#include "ksStateStoreServicesCalls.h"
+#include "ksStatePresetFormatCalls.h"
+#include "ksStatePresetSaveCalls.h"
+#include "ksStateGlobalSaveCalls.h"
+#include "ksStateFactoryServicesCalls.h"
+#include "ksPanelFormatCalls.h"
+#include "ksPanelHexCalls.h"
+#include "ksPanelPercentCalls.h"
+#include "ksPanelVersionCalls.h"
+#include "ksPatchExpandCalls.h"
+#include "ksSysExActionCalls.h"
+#include "ksLegacySysExCalls.h"
+#include "ksStateMultiSaveCalls.h"
+#include "ksStateNameCodecCalls.h"
+#include "ksStateDeferredPartsCalls.h"
+#include "ksStatePanelRefreshCalls.h"
+#include "ksStateAuditionCalls.h"
+#include "ksPanelPublishCalls.h"
+#include "ksPanelMasksCalls.h"
+#include "ksPanelInitializeCalls.h"
+#include "ksPanelDetectCalls.h"
+#include "ksFirmwareLayoutCheckCalls.h"
+#include "ksSysExDumpCalls.h"
+#include "ksMidiFileTimeCalls.h"
+#include "ksStateProgramChangeCalls.h"
+#include "ksStateNameEditorCalls.h"
+#include "ksStateBankDisplayCalls.h"
+#include "ksStateDspFactoryTransferCalls.h"
+#include "ksStateDspFactoryResetCalls.h"
+#include "ksStateDspFactoryUploadCalls.h"
+#include "ksTimingTablesCalls.h"
+#include "ksMidiFileEventCalls.h"
+#include "ksMonoArpCalls.h"
+#include "ksMidiFileTransportCalls.h"
+#include "ksEditAddressCalls.h"
+#include "ksEditSceneCalls.h"
+#include "ksEditDecisionCalls.h"
 #include <cstdint>
 #include <cstddef>
 #include <utility>
 #include "ksLiveNoteController.h"
 #include "ksLiveVoiceController.h"
+#include "ksParameterScaleCalls.h"
+#include "ksDspFaultCalls.h"
+#include "ksDspBootStreamCalls.h"
+#include "ksDspBootSetupCalls.h"
+#include "ksDspStartupCalls.h"
+#include "ksScheduledTimerCalls.h"
+#include "ksServiceCycleCalls.h"
+#include "ksStateInitCalls.h"
 #include <vector>
 #include <algorithm>
 #include <stdexcept>
@@ -22,18 +172,310 @@ public:
     bool step(ControllerCpu&);
     static bool candidate(unsigned pc){
         // Cheap page filter in the hot Board loop; step() validates exact PCs.
-        constexpr uint64_t pages[]{0x007be03000000000ull,0x0180000000000001ull,0x00000078001f8000ull,0x0000000000000000ull};
-        return pc<0x10000 && ((pages[pc>>14]>>((pc>>8)&63))&1);
+        constexpr uint64_t pages[]{0x007be03000000000ull,0x0180000000000001ull,0x0000007e001f8000ull,0x0000000000000000ull};
+        return MidiPartInitCalls::candidate(pc)||MidiRouteCalls::candidate(pc)||MidiDecodeCalls::candidate(pc)||MidiControlCalls::candidate(pc)||MidiAuxCalls::candidate(pc)||(pc<0x10000 && ((pages[pc>>14]>>((pc>>8)&63))&1));
     }
+    MidiDecodeCalls midiDecodeCalls;
+    MidiControlCalls midiControlCalls;
+    MidiAuxCalls midiAuxCalls;
+    HardwareSetupCalls hardwareSetupCalls;
+    MidiPartInitCalls midiPartInitCalls;
+    MidiRouteCalls midiRouteCalls;
+    StateFieldMapCalls stateFieldMapCalls;
+    VoiceTableInitCalls voiceTableInitCalls;
+    StateParameterEditCalls stateParameterEditCalls;
+    StatePatchNameCalls statePatchNameCalls;
+    StateStorageCalls stateStorageCalls;
+    PanelDecayCalls panelDecayCalls;
+    StateModeCalls stateModeCalls;
+    StateParameterExpandCalls stateParameterExpandCalls;
+    StatePackFieldsCalls statePackFieldsCalls;
+    StatePackRefreshCalls statePackRefreshCalls;
+    StateGlobalsCalls stateGlobalsCalls;
+    PanelByteCalls panelByteCalls;
+    PanelPollCalls panelPollCalls;
+    PanelActionCalls panelActionCalls;
+    ArpPrimitiveCalls arpPrimitiveCalls;
+    ArpScheduleCalls arpScheduleCalls;
+    ArpMainCalls arpMainCalls;
+    StateMultiSerializeCalls stateMultiSerializeCalls;
+    StatePatchLoadCalls statePatchLoadCalls;
+    StateProgramCalls stateProgramCalls;
+    StateMultiLoadCalls stateMultiLoadCalls;
+    StatePresetAddressCalls statePresetAddressCalls;
+    StateSingleLoadCalls stateSingleLoadCalls;
+    SerialQueueCalls serialQueueCalls;
+    SerialReceiveCalls serialReceiveCalls;
+    SerialSetupCalls serialSetupCalls;
+    SerialTransmitCalls serialTransmitCalls;
+    SerialIrqCalls serialIrqCalls;
+    SerialDirectCalls serialDirectCalls;
+    ArpEventCalls arpEventCalls;
+    ArpSelectCalls arpSelectCalls;
+    ResetImageCalls resetImageCalls;
+    StateManualEditCalls stateManualEditCalls;
+    StatePostEditCalls statePostEditCalls;
+    PanelControlCalls panelControlCalls;
+    PanelToggleCalls panelToggleCalls;
+    PanelDecimalCalls panelDecimalCalls;
+    PanelTextCalls panelTextCalls;
+    InternalMidiCalls internalMidiCalls;
+    InternalNoteCalls internalNoteCalls;
+    SysExFrameCalls sysExFrameCalls;
+    ExceptionReturnCalls exceptionReturnCalls;
+    StateFlashCommitCalls stateFlashCommitCalls;
+    FlashPageCalls flashPageCalls;
+    TimerServiceCalls timerServiceCalls;
+    StateChannelCalls stateChannelCalls;
+    PanelInputCalls panelInputCalls;
+    StateProgramEventCalls stateProgramEventCalls;
+    StateProgramDisplayCalls stateProgramDisplayCalls;
+    StateProgramBrowseCalls stateProgramBrowseCalls;
+    StateBrowseWorkflowCalls stateBrowseWorkflowCalls;
+    StateStoredValueCalls stateStoredValueCalls;
+    StateStatusDisplayCalls stateStatusDisplayCalls;
+    StateBankNavigationCalls stateBankNavigationCalls;
+    StateFieldActionsCalls stateFieldActionsCalls;
+    StateEditLabelCalls stateEditLabelCalls;
+    StateValueBoundsCalls stateValueBoundsCalls;
+    LoaderSessionCalls loaderSessionCalls;
+    LoaderProgramCalls loaderProgramCalls;
+    LoaderPacketsCalls loaderPacketsCalls;
+    LoaderCodecCalls loaderCodecCalls;
+    LoaderInputsCalls loaderInputsCalls;
+    StateEditWorkflowCalls stateEditWorkflowCalls;
+    StateFunctionKeysCalls stateFunctionKeysCalls;
+    StatePanelModesCalls statePanelModesCalls;
+    StateScreenActionsCalls stateScreenActionsCalls;
+    StartupBannerCalls startupBannerCalls;
+    MemoryDiagnosticsCalls memoryDiagnosticsCalls;
+    DiagnosticTransferCalls diagnosticTransferCalls;
+    DiagnosticCodecCalls diagnosticCodecCalls;
+    KeyboardScanCalls keyboardScanCalls;
+    StateMenuActionsCalls stateMenuActionsCalls;
+    StatePartSelectionCalls statePartSelectionCalls;
+    KeyboardEventsCalls keyboardEventsCalls;
+    SystemServicesCalls systemServicesCalls;
+    StateMenuFormatCalls stateMenuFormatCalls;
+    StateScreenEditCalls stateScreenEditCalls;
+    StateEditContextCalls stateEditContextCalls;
+    PanelSettingsCalls panelSettingsCalls;
+    StateScreenCalls stateScreenCalls;
+    ClockDisplayCalls clockDisplayCalls;
+    ClockPulseCalls clockPulseCalls;
+    ClockSyncCalls clockSyncCalls;
+    PanelAnalogCalls panelAnalogCalls;
+    StateButtonDispatchCalls stateButtonDispatchCalls;
+    StateForegroundCalls stateForegroundCalls;
+    InternalMidiServiceCalls internalMidiServiceCalls;
+    MidiOutputCalls midiOutputCalls;
+    InternalMidiQueueCalls internalMidiQueueCalls;
+    PanelAdcScanCalls panelAdcScanCalls;
+    PanelAdcIrqCalls panelAdcIrqCalls;
+    PanelAdcCalibrationCalls panelAdcCalibrationCalls;
+    PanelAdcScaleCalls panelAdcScaleCalls;
+    PanelAdcSamplesCalls panelAdcSamplesCalls;
+    PanelEncoderCalls panelEncoderCalls;
+    PedalSenseCalls pedalSenseCalls;
+    PanelMatrixCalls panelMatrixCalls;
+    StateStoreUiCalls stateStoreUiCalls;
+    StateEditAddressCalls stateEditAddressCalls;
+    StateStoreServicesCalls stateStoreServicesCalls;
+    StatePresetFormatCalls statePresetFormatCalls;
+    StatePresetSaveCalls statePresetSaveCalls;
+    StateGlobalSaveCalls stateGlobalSaveCalls;
+    StateFactoryServicesCalls stateFactoryServicesCalls;
+    PanelFormatCalls panelFormatCalls;
+    PanelHexCalls panelHexCalls;
+    PanelPercentCalls panelPercentCalls;
+    PanelVersionCalls panelVersionCalls;
+    PatchExpandCalls patchExpandCalls;
+    SysExActionCalls sysExActionCalls;
+    LegacySysExCalls legacySysExCalls;
+    StateMultiSaveCalls stateMultiSaveCalls;
+    StateNameCodecCalls stateNameCodecCalls;
+    StateDeferredPartsCalls stateDeferredPartsCalls;
+    StatePanelRefreshCalls statePanelRefreshCalls;
+    StateAuditionCalls stateAuditionCalls;
+    PanelPublishCalls panelPublishCalls;
+    PanelMasksCalls panelMasksCalls;
+    PanelInitializeCalls panelInitializeCalls;
+    PanelDetectCalls panelDetectCalls;
+    FirmwareLayoutCheckCalls firmwareLayoutCheckCalls;
+    SysExDumpCalls sysExDumpCalls;
+    MidiFileTimeCalls midiFileTimeCalls;
+    StateProgramChangeCalls stateProgramChangeCalls;
+    StateNameEditorCalls stateNameEditorCalls;
+    StateBankDisplayCalls stateBankDisplayCalls;
+    StateDspFactoryTransferCalls stateDspFactoryTransferCalls;
+    StateDspFactoryResetCalls stateDspFactoryResetCalls;
+    StateDspFactoryUploadCalls stateDspFactoryUploadCalls;
+    TimingTablesCalls timingTablesCalls;
+    MidiFileEventCalls midiFileEventCalls;
+    MonoArpCalls monoArpCalls;
+    MidiFileTransportCalls midiFileTransportCalls;
+    EditAddressCalls editAddressCalls;
+    EditSceneCalls editSceneCalls;
+    EditDecisionCalls editDecisionCalls;
     LiveNoteController noteActions;
     LiveVoiceController voiceActions;
+    ParameterScaleCalls parameterScaleCalls;
+    DspFaultCalls faultCalls;
+    DspBootStreamCalls bootStreamCalls;
+    DspBootSetupCalls bootSetupCalls;
+    DspStartupCalls startupCalls;
+    ScheduledTimerCalls scheduledTimerCalls;
+    ServiceCycleCalls serviceCycleCalls;
+    StateInitCalls stateInitCalls;
     // Count actual original-core calls, including interrupt arbitration. These
     // are not instruction counts or CPU time, and never imply full migration.
     void delegated(unsigned pc){++originalStepCalls;if(!originalPages.empty())++originalPages[(pc&0xffffff)>>8];}
     void enableDelegationProfile(){originalPages.assign(65536,0);originalStepCalls=0;}
     void resetMetrics(){
+        midiDecodeCalls.resetMetrics();
+        midiControlCalls.resetMetrics();
+        midiAuxCalls.resetMetrics();
+        hardwareSetupCalls.resetMetrics();
+        midiPartInitCalls.resetMetrics();
+        midiRouteCalls.resetMetrics();
+        stateFieldMapCalls.resetMetrics();
+        voiceTableInitCalls.resetMetrics();
+        stateParameterEditCalls.resetMetrics();
+        statePatchNameCalls.resetMetrics();
+        stateStorageCalls.resetMetrics();
+        panelDecayCalls.resetMetrics();
+        stateModeCalls.resetMetrics();
+        stateParameterExpandCalls.resetMetrics();
+        statePackFieldsCalls.resetMetrics();
+        statePackRefreshCalls.resetMetrics();
+        stateGlobalsCalls.resetMetrics();
+        panelByteCalls.resetMetrics();
+        panelPollCalls.resetMetrics();
+        panelActionCalls.resetMetrics();
+        arpPrimitiveCalls.resetMetrics();
+        arpScheduleCalls.resetMetrics();
+        arpMainCalls.resetMetrics();
+        stateMultiSerializeCalls.resetMetrics();
+        statePatchLoadCalls.resetMetrics();
+        stateProgramCalls.resetMetrics();
+        stateMultiLoadCalls.resetMetrics();
+        statePresetAddressCalls.resetMetrics();
+        stateSingleLoadCalls.resetMetrics();
+        serialQueueCalls.resetMetrics();
+        serialReceiveCalls.resetMetrics();
+        serialSetupCalls.resetMetrics();
+        serialTransmitCalls.resetMetrics();
+        serialIrqCalls.resetMetrics();
+        serialDirectCalls.resetMetrics();
+        arpEventCalls.resetMetrics();
+        arpSelectCalls.resetMetrics();
+        resetImageCalls.resetMetrics();
+        stateManualEditCalls.resetMetrics();
+        statePostEditCalls.resetMetrics();
+        panelControlCalls.resetMetrics();
+        panelToggleCalls.resetMetrics();
+        panelDecimalCalls.resetMetrics();
+        panelTextCalls.resetMetrics();
+        internalMidiCalls.resetMetrics();
+        internalNoteCalls.resetMetrics();
+        sysExFrameCalls.resetMetrics();
+        exceptionReturnCalls.resetMetrics();
+        stateFlashCommitCalls.resetMetrics();
+        flashPageCalls.resetMetrics();
+        timerServiceCalls.resetMetrics();
+        stateChannelCalls.resetMetrics();
+        panelInputCalls.resetMetrics();
+        stateProgramEventCalls.resetMetrics();
+        stateProgramDisplayCalls.resetMetrics();
+        stateProgramBrowseCalls.resetMetrics();
+        stateBrowseWorkflowCalls.resetMetrics();
+        stateStoredValueCalls.resetMetrics();
+        stateStatusDisplayCalls.resetMetrics();
+        stateBankNavigationCalls.resetMetrics();
+        stateFieldActionsCalls.resetMetrics();
+        stateEditLabelCalls.resetMetrics();
+        stateValueBoundsCalls.resetMetrics();
+        loaderSessionCalls.resetMetrics();
+        loaderProgramCalls.resetMetrics();
+        loaderPacketsCalls.resetMetrics();
+        loaderCodecCalls.resetMetrics();
+        loaderInputsCalls.resetMetrics();
+        stateEditWorkflowCalls.resetMetrics();
+        stateFunctionKeysCalls.resetMetrics();
+        statePanelModesCalls.resetMetrics();
+        stateScreenActionsCalls.resetMetrics();
+        startupBannerCalls.resetMetrics();
+        memoryDiagnosticsCalls.resetMetrics();
+        diagnosticTransferCalls.resetMetrics();
+        diagnosticCodecCalls.resetMetrics();
+        keyboardScanCalls.resetMetrics();
+        stateMenuActionsCalls.resetMetrics();
+        statePartSelectionCalls.resetMetrics();
+        keyboardEventsCalls.resetMetrics();
+        systemServicesCalls.resetMetrics();
+        stateMenuFormatCalls.resetMetrics();
+        stateScreenEditCalls.resetMetrics();
+        stateEditContextCalls.resetMetrics();
+        panelSettingsCalls.resetMetrics();
+        stateScreenCalls.resetMetrics();
+        clockDisplayCalls.resetMetrics();
+        clockPulseCalls.resetMetrics();
+        clockSyncCalls.resetMetrics();
+        panelAnalogCalls.resetMetrics();
+        stateButtonDispatchCalls.resetMetrics();
+        stateForegroundCalls.resetMetrics();
+        internalMidiServiceCalls.resetMetrics();
+        midiOutputCalls.resetMetrics();
+        internalMidiQueueCalls.resetMetrics();
+        panelAdcScanCalls.resetMetrics();
+        panelAdcIrqCalls.resetMetrics();
+        panelAdcCalibrationCalls.resetMetrics();
+        panelAdcScaleCalls.resetMetrics();
+        panelAdcSamplesCalls.resetMetrics();
+        panelEncoderCalls.resetMetrics();
+        pedalSenseCalls.resetMetrics();
+        panelMatrixCalls.resetMetrics();
+        stateStoreUiCalls.resetMetrics();
+        stateEditAddressCalls.resetMetrics();
+        stateStoreServicesCalls.resetMetrics();
+        statePresetFormatCalls.resetMetrics();
+        statePresetSaveCalls.resetMetrics();
+        stateGlobalSaveCalls.resetMetrics();
+        stateFactoryServicesCalls.resetMetrics();
+        panelFormatCalls.resetMetrics();
+        panelHexCalls.resetMetrics();
+        panelPercentCalls.resetMetrics();
+        panelVersionCalls.resetMetrics();
+        patchExpandCalls.resetMetrics();
+        sysExActionCalls.resetMetrics();
+        legacySysExCalls.resetMetrics();
+        stateMultiSaveCalls.resetMetrics();
+        stateNameCodecCalls.resetMetrics();
+        stateDeferredPartsCalls.resetMetrics();
+        statePanelRefreshCalls.resetMetrics();
+        stateAuditionCalls.resetMetrics();
+        panelPublishCalls.resetMetrics();
+        panelMasksCalls.resetMetrics();
+        panelInitializeCalls.resetMetrics();
+        panelDetectCalls.resetMetrics();
+        firmwareLayoutCheckCalls.resetMetrics();
+        sysExDumpCalls.resetMetrics();
+        midiFileTimeCalls.resetMetrics();
+        stateProgramChangeCalls.resetMetrics();
+        stateNameEditorCalls.resetMetrics();
+        stateBankDisplayCalls.resetMetrics();
+        stateDspFactoryTransferCalls.resetMetrics();
+        stateDspFactoryResetCalls.resetMetrics();
+        stateDspFactoryUploadCalls.resetMetrics();
+        timingTablesCalls.resetMetrics();
+        midiFileEventCalls.resetMetrics();
+        monoArpCalls.resetMetrics();
+        midiFileTransportCalls.resetMetrics();
+        editAddressCalls.resetMetrics();
+        editSceneCalls.resetMetrics();
+        editDecisionCalls.resetMetrics();
         nativeSteps=bytes=messages=noteOn=noteOff=controls=originalStepCalls=0;
-        noteActions=LiveNoteController{};voiceActions=LiveVoiceController{};
+        noteActions.resetMetrics();parameterScaleCalls.resetMetrics();faultCalls.resetMetrics();bootStreamCalls.resetMetrics();bootSetupCalls.resetMetrics();startupCalls.resetMetrics();scheduledTimerCalls.resetMetrics();serviceCycleCalls.resetMetrics();stateInitCalls.resetMetrics();voiceActions.resetMetrics();
         if(!originalPages.empty())std::fill(originalPages.begin(),originalPages.end(),0);
     }
     uint64_t originalStepCalls=0;
@@ -42,8 +484,6 @@ public:
     // default Windows stack when a probe explicitly enables it.
     std::vector<uint64_t> originalPages;
     uint64_t nativeSteps=0,bytes=0,messages=0,noteOn=0,noteOff=0,controls=0;
-private:
-    bool decoding=false;
-    static bool supported(uint8_t status);
+
 };
 }

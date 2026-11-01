@@ -1,0 +1,10 @@
+#pragma once
+#include "ksServiceCycleDataPrimitives.h"
+#include "ksStateUiDomainBindings.h"
+#include "ksStateEncoderService.h"
+#include "ksStateTickService.h"
+namespace ks {namespace serviceCycleData {
+template<class C>C uiTransfer(const StateUiDomainTransfer&t,C c){c.expressionSource=t.expression.apply(c.expressionSource);c.activation=t.activation.apply(c.activation);c.presentation=t.presentation.apply(c.presentation);return c;}
+template<class C>C encoder(const StateEncoderService&s,C c){if(!s.complete())throw std::logic_error("Incomplete encoder domain outcome");const auto&f=s.summary();if(f.read){if(!s.reader())throw std::logic_error("Missing encoder reader facts");c.expressionSource=(c.expressionSource&0xffff0000u)|uint16_t(0x400|s.reader()->encoderGain());if(uint8_t(f.encoder)){using Tail=StateEncoderService::Component;switch(f.tail){case Tail::Name:case Tail::Category:case Tail::Special:if(!s.field())throw std::logic_error("Missing encoder scene edit facts");c=uiTransfer(stateSceneEditDomainTransfer(*s.field()),c);break;case Tail::Field:if(!s.field())throw std::logic_error("Missing encoder field facts");c=uiTransfer(stateFieldDomainTransfer(*s.field()),c);break;case Tail::Screen:if(!s.screen())throw std::logic_error("Missing encoder screen facts");c=uiTransfer(stateScreenDomainTransfer(*s.screen()),c);break;case Tail::Browser:if(!s.browser())throw std::logic_error("Missing encoder browser facts");c=uiTransfer(stateProgramBrowserDomainTransfer(*s.browser()),c);break;default:break;}}}c.presentation=s.presentation();return c;}
+template<class C>C tick(const StateTickService&s,C c){if(!s.complete())throw std::logic_error("Incomplete tick domain outcome");const auto&f=s.summary();c.expressionSource=(c.expressionSource&0xffff0000u)|f.last;c.presentation=f.elapsed;if(!f.due)return c;if(!s.encoder()||!s.refresh())throw std::logic_error("Missing periodic panel domain facts");c=encoder(*s.encoder(),c);c.presentation=uint16_t((uint16_t(f.pedal)<<8)|(c.presentation&255));if(f.sent){if(!s.output())throw std::logic_error("Missing periodic pedal output facts");c.presentation=s.output()->summary().event;}return refresh(*s.refresh(),c);}
+}}
