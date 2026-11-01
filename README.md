@@ -6,6 +6,7 @@ Based on the open-source code of [Gearmulator](https://github.com/dsp56300/gearm
 
 | Platform | Formats |
 | --- | --- |
+| Linux x64 | VST3, LV2, Standalone |
 | Windows x64 | VST3, Standalone |
 | macOS Apple Silicon and Intel (Universal 2) | AU, VST3, Standalone |
 

@@ -3,8 +3,13 @@ juce_add_binary_data(silverData SOURCES ../../kstation/kstationJucePlugin/skins/
 set(SILVER_FORMATS VST3 Standalone)
 if(APPLE)
  list(APPEND SILVER_FORMATS AU)
+elseif(UNIX AND NOT APPLE)
+ # Linux: VST3 and Standalone are universally supported; LV2 is the native
+ # Linux plugin format used by virtually every Linux DAW (Ardour, Bitwig,
+ # Renoise, Tracktion, etc.).
+ list(APPEND SILVER_FORMATS LV2)
 endif()
-juce_add_plugin(silverK VERSION 0.4.4 COMPANY_NAME "NK Stuff" BUNDLE_ID "com.theusualsuspects.silverk" PLUGIN_MANUFACTURER_CODE TusP PLUGIN_CODE Tskv PRODUCT_NAME "Silver-K" IS_SYNTH TRUE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT FALSE EDITOR_WANTS_KEYBOARD_FOCUS TRUE COPY_PLUGIN_AFTER_BUILD FALSE VST3_AUTO_MANIFEST FALSE FORMATS ${SILVER_FORMATS})
+juce_add_plugin(silverK VERSION 0.4.4 COMPANY_NAME "NK Stuff" BUNDLE_ID "com.theusualsuspects.silverk" PLUGIN_MANUFACTURER_CODE TusP PLUGIN_CODE Tskv PRODUCT_NAME "Silver-K" IS_SYNTH TRUE NEEDS_MIDI_INPUT TRUE NEEDS_MIDI_OUTPUT FALSE EDITOR_WANTS_KEYBOARD_FOCUS TRUE COPY_PLUGIN_AFTER_BUILD FALSE VST3_AUTO_MANIFEST FALSE FORMATS ${SILVER_FORMATS} LV2URI "http://theusualsuspects.lv2/Silver-K")
 target_sources(silverK PRIVATE silverProcessor.cpp silverProcessor.h silverDataFolder.cpp silverAssets.cpp silverPresets.cpp silverEditor.cpp silverEditor.h silverSkin.cpp silverSkin.h silverLibrary.cpp silverLibrary.h silverPatch.cpp silverPatch.h silverVStation.cpp silverVStation.h silverKEngine.cpp silverKEngine.h silverBrowser.cpp silverBrowser.h silverClock.h silverMidiLearn.h silverPerformance.cpp silverPerformance.h)
 target_sources(silverK PRIVATE silverDiagnostics.cpp)
 target_sources(silverK PRIVATE silverImageScale.h)
