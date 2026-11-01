@@ -14,8 +14,8 @@ from pathlib import Path
 from check_plugin_identity import check_identity
 from check_macos_compatibility import check_bundle
 
-VERSION = '0.4.5a'
-PLUGIN_VERSION = '0.4.5'
+VERSION = '0.5a'
+PLUGIN_VERSION = '0.5.0'
 ROOT = Path(__file__).resolve().parents[1]
 
 

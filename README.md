@@ -1,4 +1,4 @@
-# Silver-K 0.4.5a (development)
+# Silver-K 0.5 Alpha
 
 K-Station and KS firmware emulation for desktop hosts and Standalone use.
 

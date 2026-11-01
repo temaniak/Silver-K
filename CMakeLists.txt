@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 include(cmake/MacOSDefaults.cmake)
-project(SilverK VERSION 0.4.5 LANGUAGES C CXX)
+project(SilverK VERSION 0.5.0 LANGUAGES C CXX)
 if(MSVC)
     add_compile_options(/utf-8 /bigobj /MP2)
     add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN _CRT_SECURE_NO_WARNINGS _USE_MATH_DEFINES)
