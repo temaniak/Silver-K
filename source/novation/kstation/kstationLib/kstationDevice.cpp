@@ -40,6 +40,7 @@ namespace kstation
     struct Device::Impl
     {
         baseLib::performance::Diagnostics* performance;
+        ControllerMode controllerMode;
         baseLib::WorkerWakeup wakeup;
         uint64_t diagnosticStale=0; // audio-thread only
         std::unique_ptr<Hardware> hardware;
@@ -60,6 +61,7 @@ namespace kstation
         std::atomic<unsigned> realtimeBlock{256};
         std::atomic<uint8_t> snapshotBank{1},snapshotProgram{0};
         std::atomic<uint64_t> consumed{0}, underruns{0}, midiOverflows{0};
+        std::atomic<uint64_t> inputOverflows{0};
         std::atomic<bool> stop{false}, valid{false}, pauseRequested{false}, paused{false};
         std::atomic<bool> nonRealtime{false};
         std::mutex coldMutex, startMutex;
@@ -69,8 +71,8 @@ namespace kstation
         std::thread worker;
         uint64_t produced = 0;
 
-        explicit Impl(const Rom& rom,baseLib::performance::Diagnostics* diagnostics)
-            :performance(diagnostics)
+        explicit Impl(const Rom& rom,baseLib::performance::Diagnostics* diagnostics,ControllerMode controller)
+            :performance(diagnostics),controllerMode(controller)
         {
             for (auto& cc : controllers) cc.store(0xff, std::memory_order_relaxed);
             if (!rom.isValid()) { failure = rom.error(); return; }
@@ -80,7 +82,7 @@ namespace kstation
                 dsp56k::ThreadTools::setCurrentThreadPriority(dsp56k::ThreadPriority::High);
                 try
                 {
-                    hardware = std::make_unique<Hardware>(image);
+                    hardware = std::make_unique<Hardware>(image,std::vector<uint8_t>{},controllerMode);
                     if (!hardware->boot())
                     {
                         const auto debug = hardware->controller().debugState();
@@ -224,7 +226,7 @@ namespace kstation
                 InputSample sample{};
                 while (input.peek(sample) && sample.due <= produced)
                 {
-                    hardware->dsp().pushAudioInput(sample.value);
+                    if(!hardware->dsp().pushAudioInput(sample.value))++inputOverflows;
                     input.pop(sample);
                 }
                 const auto frame = hardware->renderSample();
@@ -286,10 +288,10 @@ namespace kstation
         }
     };
 
-    Device::Device(const synthLib::DeviceCreateParams& params,baseLib::performance::Diagnostics* performance) : synthLib::Device(params)
+    Device::Device(const synthLib::DeviceCreateParams& params,baseLib::performance::Diagnostics* performance,ControllerMode controller) : synthLib::Device(params)
     {
         const auto rom = params.romData.empty() ? RomLoader::findROM() : Rom(params.romData, params.romName);
-        m_impl = std::make_unique<Impl>(rom,performance);
+        m_impl = std::make_unique<Impl>(rom,performance,controller);
     }
     Device::~Device() = default;
     bool Device::isValid() const { return m_impl->valid.load(std::memory_order_acquire); }
@@ -316,7 +318,9 @@ namespace kstation
         for(unsigned attempt=0;attempt<4 && lead<needed;++attempt)if(m_impl->leadFrames.compare_exchange_weak(lead,needed)){m_impl->realtimeBlock.store(unsigned(std::max(size_t(64),burst)));break;}
     }
     uint64_t Device::getMidiOverflowCount() const { return m_impl->midiOverflows.load(); }
+    uint64_t Device::getInputOverflowCount() const { return m_impl->inputOverflows.load(); }
     const char* Device::workerWaitBackend() const {return m_impl->wakeup.backend();}
+    const char* Device::controllerBackend() const {return m_impl->controllerMode==ControllerMode::Native?"native-cpp-semantic":"original-h8";}
     void Device::setNonRealtime(bool enabled) noexcept { m_impl->nonRealtime.store(enabled, std::memory_order_release); }
 
     bool Device::prepareAudio(uint32_t maxHostBlock, float hostSamplerate)
@@ -404,7 +408,7 @@ namespace kstation
         const auto lead = m_impl->leadFrames.load(std::memory_order_relaxed);
         for (size_t i = 0; i < samples; ++i)
         {
-            if (inputs[0]) m_impl->input.push(InputSample{consumed + lead, inputWord(inputs[0][i])});
+            if (inputs[0] && !m_impl->input.push(InputSample{consumed + lead, inputWord(inputs[0][i])}))++m_impl->inputOverflows;
             DSP::AudioFrame frame{};
             bool available = m_impl->popAudioAt(consumed, frame);
             if (!available && offline)

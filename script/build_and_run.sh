@@ -23,7 +23,13 @@ while IFS= read -r silver_pid; do
 done < <(pgrep -f "^${silver_binary}$" || true)
 cmake --build "$silver_build" --config Release --target silverK_Standalone -j "${SILVER_K_BUILD_JOBS:-6}"
 if [[ "$silver_mode" == --debug ]]; then exec lldb -- "$silver_binary"; fi
-open -n "$silver_app"
+silver_open_args=(-n)
+if [[ -n "${SILVER_K_DATA:-}" ]]; then
+  # LaunchServices does not inherit the caller's environment. Keep development
+  # sessions in their requested data folder instead of the installed app's data.
+  silver_open_args+=(--env "SILVER_K_DATA=$SILVER_K_DATA")
+fi
+open "${silver_open_args[@]}" "$silver_app"
 case "$silver_mode" in
   --verify) sleep 2; pgrep -f "^${silver_binary}$" >/dev/null ;;
   --logs|--telemetry) exec /usr/bin/log stream --info --style compact --predicate 'process == "Silver-K"' ;;

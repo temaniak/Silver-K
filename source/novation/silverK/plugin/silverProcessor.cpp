@@ -38,13 +38,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout Processor::layout(){
  for(const auto& c:kControls()){const auto id="k_"+juce::String(c.id);const auto name="K-Station / "+juce::String(c.group)+" / "+c.section+" / "+c.label;if(c.enumCount){juce::StringArray labels;for(unsigned n=0;n<c.enumCount;++n)labels.add(c.enumLabels[n]);p.add(std::make_unique<juce::AudioParameterChoice>(juce::ParameterID(id,1),name,labels,c.defaultValue));}else p.add(std::make_unique<juce::AudioParameterInt>(juce::ParameterID(id,1),name,c.minimum,c.maximum,c.defaultValue));}
  return p;
 }
-Processor::Processor():AudioProcessor(BusesProperties().withInput("Vocoder / external",juce::AudioChannelSet::mono(),false).withOutput(juce::PluginHostType::getPluginLoadedAs()==wrapperType_Standalone?"Outputs 1-4":"Main 1+2",juce::PluginHostType::getPluginLoadedAs()==wrapperType_Standalone?juce::AudioChannelSet::discreteChannels(4):juce::AudioChannelSet::stereo(),true).withOutput("Aux 3+4",juce::AudioChannelSet::stereo(),false)),parameters(*this,nullptr,"SilverParameters",layout()),libraryOwner(sharedLibrary(juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",{}).isEmpty()?juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("The Usual Suspects/Silver-K/patches"):juce::File(juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",{})))),patchLibrary(*libraryOwner){
+Processor::Processor():AudioProcessor(BusesProperties().withInput("Vocoder / external",juce::AudioChannelSet::mono(),juce::PluginHostType::getPluginLoadedAs()==wrapperType_Standalone).withOutput(juce::PluginHostType::getPluginLoadedAs()==wrapperType_Standalone?"Outputs 1-4":"Main 1+2",juce::PluginHostType::getPluginLoadedAs()==wrapperType_Standalone?juce::AudioChannelSet::discreteChannels(4):juce::AudioChannelSet::stereo(),true).withOutput("Aux 3+4",juce::AudioChannelSet::stereo(),false)),parameters(*this,nullptr,"SilverParameters",layout()),libraryOwner(sharedLibrary(juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",{}).isEmpty()?juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory).getChildFile("The Usual Suspects/Silver-K/patches"):juce::File(juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",{})))),patchLibrary(*libraryOwner){
  for(size_t n=0;n<TotalCount;++n){parameterIds[n]=n<ParameterCount?parameterId(controls[n%controls.size()],unsigned(n/controls.size())):"k_"+juce::String(kstation::controls::Catalog[n-ParameterCount].id);pending[n].store(-1);awaiting[n].store(-1);editTime[n].store(0);parameters.addParameterListener(parameterIds[n],this);}
  initializeDataFolder();startTimerHz(10);
 }
 Processor::~Processor(){stopTimer();if(firmwareLoader.joinable())firmwareLoader.join();firmwareLoading.store(false);savePreferences();for(const auto& id:parameterIds)parameters.removeParameterListener(id,this);stopEngines();}
 bool Processor::isBusesLayoutSupported(const BusesLayout& l)const{
- if(l.inputBuses.size()>1 || (l.inputBuses.size()==1 && !l.inputBuses[0].isDisabled() && l.inputBuses[0]!=juce::AudioChannelSet::mono()) || l.outputBuses.isEmpty())return false;
+ if(l.inputBuses.size()>1 || (l.inputBuses.size()==1 && !l.inputBuses[0].isDisabled() && l.inputBuses[0]!=juce::AudioChannelSet::mono() && l.inputBuses[0]!=juce::AudioChannelSet::stereo()) || l.outputBuses.isEmpty())return false;
  // JUCE's standalone player describes physical device channels as one bus.
  // Plugins retain two independently enabled stereo buses for the DAW.
  if(wrapperType==wrapperType_Standalone)return l.outputBuses.size()<=2 && (l.outputBuses[0].size()==2 || l.outputBuses[0].size()==4) && (l.outputBuses.size()==1 || l.outputBuses[1].isDisabled());
@@ -165,7 +165,7 @@ void Processor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuffer& m
  if(wrapperType==wrapperType_Standalone && getMainBusNumOutputChannels()==4){channels[2]=audio.getWritePointer(2);channels[3]=audio.getWritePointer(3);}
  else if(getBusCount(false)>1 && getBus(false,1)->isEnabled()){auto aux=getBusBuffer(audio,false,1);channels[2]=aux.getWritePointer(0);channels[3]=aux.getWritePointer(1);}
  controlTiming.finish();Scope renderTiming(&performanceDiagnostics,Metric::AudioRender,uint64_t(audio.getNumSamples()));
- d->process(channels,audio.getNumSamples(),isNonRealtime());midi.clear();
+ d->process(channels,audio.getNumSamples(),isNonRealtime(),getTotalNumInputChannels()?audio.getReadPointer(0):nullptr,getTotalNumInputChannels()>1?audio.getReadPointer(1):nullptr);midi.clear();
 }
 juce::String Processor::status()const{if(isFirmwareLoading())return "Loading firmware...";std::lock_guard guard(controlMutex);return message;}
 uint64_t Processor::underruns()const{std::lock_guard guard(controlMutex);return ownedK?ownedK->device.getUnderrunCount():ownedDevice?ownedDevice->underruns():0;}
@@ -339,7 +339,7 @@ void Processor::processK(KEngine& engine,juce::AudioBuffer<float>& audio,juce::M
  for(size_t i=0;i<KCount;++i){int value=pending[ParameterCount+i].exchange(-1);if(value<0)continue;const auto& c=kstation::controls::Catalog[i];const size_t slot=c.number+(c.mapping==kstation::controls::Mapping::NRPN?128:0);auto& raw=kWire[slot];raw=uint8_t((raw&~c.wireMask)|((value<<c.wireShift)&c.wireMask));kMask[slot]|=c.wireMask;const auto status=uint8_t(0xb0|controlChannel.load());if(c.mapping==kstation::controls::Mapping::NRPN){const uint8_t bytes[]{status,99,0,status,98,uint8_t(c.number),status,6,raw};engine.midi(bytes,9);}else{const uint8_t bytes[]{status,uint8_t(c.number),raw};engine.midi(bytes,3);}}
  sendTimedMidi(midi,[&](const uint8_t* data,size_t size,int offset){engine.midi(data,size,uint32_t(offset));});
  controlTiming.finish();baseLib::performance::Scope renderTiming(&performanceDiagnostics,baseLib::performance::Metric::AudioRender,uint64_t(audio.getNumSamples()));
- engine.process(audio.getWritePointer(0),audio.getWritePointer(1),audio.getNumSamples(),isNonRealtime(),getTotalNumInputChannels()?audio.getReadPointer(0):nullptr);for(int ch=2;ch<audio.getNumChannels();++ch)audio.clear(ch,0,audio.getNumSamples());midi.clear();
+ engine.process(audio.getWritePointer(0),audio.getWritePointer(1),audio.getNumSamples(),isNonRealtime(),getTotalNumInputChannels()?audio.getReadPointer(0):nullptr,getTotalNumInputChannels()>1?audio.getReadPointer(1):nullptr);for(int ch=2;ch<audio.getNumChannels();++ch)audio.clear(ch,0,audio.getNumSamples());midi.clear();
 }
 Processor::DrumEditInfo Processor::drumEditInfo()const{
  std::lock_guard lock(controlMutex);DrumEditInfo result;if(isFirmwareLoading() || !ownedDevice)return result;

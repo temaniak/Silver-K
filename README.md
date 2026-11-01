@@ -1,4 +1,4 @@
-# Silver-K 0.4.4a
+# Silver-K 0.4.5a (development)
 
 K-Station and KS firmware emulation for desktop hosts and Standalone use.
 
@@ -35,7 +35,7 @@ Setup remembers the selected root. Required files selected elsewhere are copied 
 
 ## Development
 
-Alpha. Performance and latency remain under development. KS external audio input is not implemented.
+Alpha. Performance and latency remain under development. This development branch combines native K/KS controllers with mono/stereo external audio input; stereo is mixed to the hardware mono input.
 
 - [Build instructions](doc/BUILD.md)
 - [Custom skins](doc/SKINS.md)

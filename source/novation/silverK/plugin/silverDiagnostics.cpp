@@ -60,7 +60,7 @@ bool Processor::setPerformanceDiagnostics(int mode)
     info->setProperty("worker_wait_backend",ownedK?ownedK->device.workerWaitBackend():ownedDevice->workerWaitBackend());
     info->setProperty("worker_placement",placementInfo(ownedDevice?&ownedDevice->workerPlacement():nullptr));
     info->setProperty("dsp_execution_backend",ownedDevice?ownedDevice->dspExecutionBackend():"not-applicable");
-    info->setProperty("controller_backend",ownedDevice?ownedDevice->controllerBackend():"not-applicable");
+    info->setProperty("controller_backend",ownedDevice?ownedDevice->controllerBackend():ownedK?ownedK->device.controllerBackend():"not-applicable");
     info->setProperty("underrun_frames_at_start",integer(ownedK?ownedK->device.getUnderrunCount():ownedDevice->underruns()));
     performanceStartedMs=juce::Time::getMillisecondCounterHiRes();performanceStoppedMs=0;performanceStopReason.clear();
     performanceDiagnostics.start(mode==2);
@@ -79,7 +79,8 @@ juce::String Processor::performanceReport()const
     root->setProperty("worker_wait_backend",ownedK?ownedK->device.workerWaitBackend():ownedDevice?ownedDevice->workerWaitBackend():"none");
     root->setProperty("worker_placement",placementInfo(ownedDevice?&ownedDevice->workerPlacement():nullptr));
     root->setProperty("dsp_execution_backend",ownedDevice?ownedDevice->dspExecutionBackend():"not-applicable");
-    root->setProperty("controller_backend",ownedDevice?ownedDevice->controllerBackend():"not-applicable");
+    root->setProperty("controller_backend",ownedDevice?ownedDevice->controllerBackend():ownedK?ownedK->device.controllerBackend():"not-applicable");
+    root->setProperty("input_overflows",integer(ownedK?ownedK->device.getInputOverflowCount():ownedDevice?ownedDevice->inputOverflows():0));
     root->setProperty("recording",performanceDiagnostics.mode()!=0);
     root->setProperty("stop_reason",performanceStopReason);
     root->setProperty("elapsed_ms",performanceStartedMs>0?(performanceStoppedMs>0?performanceStoppedMs:juce::Time::getMillisecondCounterHiRes())-performanceStartedMs:0);

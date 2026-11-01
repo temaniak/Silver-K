@@ -77,3 +77,23 @@ Save the DAW project or Standalone state to retain the current sound, parts and 
 - No sound: check MIDI channel, track monitoring, part state and output routing. A zero Wave ROM does not contain samples.
 - Missing patches: clear browser filters and check the selected source. Use Rescan when files have changed.
 - Updated AU still shows the previous interface: fully restart the DAW and rescan the plugin.
+
+
+## External audio input
+
+In Standalone, open **Options → Audio/MIDI Settings**, select an input device
+and channel, and clear **Mute audio input** when you are ready to monitor it.
+Allow microphone access if macOS requests it. In a DAW, enable the plugin's
+**Vocoder / external** input and route your audio track or input to it. The host
+may present this as an instrument input or sidechain. Mono and stereo buses are
+accepted; stereo is averaged to the instrument's mono input.
+
+Use **Mixer → O** to raise External input. Hold MIDI notes to pass the signal
+through the program's filter and amplitude envelope. **Direct to effects**
+passes input to the effects path without holding notes. For vocoder processing,
+play an oscillator sound while supplying external audio, select Vocoder and set
+Balance near its centre. In KS Performance mode the vocoder belongs to Part 1.
+
+The firmware still controls input gain and processing. Start with a modest input
+level and raise it while monitoring. The host input is never mixed directly into
+the outputs as an extra dry signal.

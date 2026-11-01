@@ -1,5 +1,6 @@
 #pragma once
 #include "ksBoard.h"
+#include "ksAudioInput.h"
 #include "ksWorkerPlacement.h"
 #include <atomic>
 #include <mutex>
@@ -20,8 +21,8 @@ public:
     bool partMidi(unsigned part,const uint8_t*,size_t);
     bool selectDrumNote(unsigned part,uint8_t note,uint64_t offset=0);
     uint64_t drumEditRevision()const{return publishedDrumRevision.load();}
-    void process(float* left,float* right,size_t n,bool offline=false);
-    void process(const std::array<float*,OutputCount>&,size_t n,bool offline=false);
+    void process(float* left,float* right,size_t n,bool offline=false,const float* input=nullptr,const float* inputRight=nullptr);
+    void process(const std::array<float*,OutputCount>&,size_t n,bool offline=false,const float* input=nullptr,const float* inputRight=nullptr);
     std::vector<uint8_t> dumpProgram(); // Control thread, canonical mirrors; no guest execution.
     std::array<uint64_t,4> diagnostics();
     std::vector<uint8_t> saveFlash(); // Excludes OS and external wave bank.
@@ -29,6 +30,7 @@ public:
     State fullSnapshot()const;
     uint64_t underruns()const{return underrun.load();}
     uint64_t overflows()const{return overflow.load();}
+    uint64_t inputOverflows()const{return inputOverflow.load();}
     unsigned latency()const{return lead.load();}
     const char* workerWaitBackend()const{return "poll-50us";}
     const char* dspExecutionBackend()const{return parallelDSPs.load()?"two-workers-slice-barrier":"sequential";}
@@ -68,6 +70,10 @@ private:
     std::unique_ptr<Board> board;
     kstation::Queue<Event,65536> events;
     kstation::Queue<Frame,8192> output;
+    struct InputFrame{uint64_t due;float value;};
+    kstation::Queue<InputFrame,8192> input;
+    std::atomic<uint64_t> inputOverflow{0};
+    std::unique_ptr<AudioInput> inputConverter;
     struct SnapshotSlot{State value;mutable std::atomic<unsigned> readers{0};};
     std::array<SnapshotSlot,3> snapshots;
     std::atomic<unsigned> publishedSnapshot{0};
@@ -89,7 +95,7 @@ private:
     double rate,phase=0;
     uint64_t produced=0;
     std::array<std::array<double,OutputCount>,4> history{};
-    std::array<float,OutputCount> nextSample();
+    std::array<float,OutputCount> nextSample(float input=0);
     void publish();
     void suspend();
     void resume();

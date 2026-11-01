@@ -72,3 +72,36 @@ Standalone provides JUCE's Windows audio backends (WASAPI/DirectSound); an optio
 For offline builds, pass `-DJUCE_SOURCE=/path/to/JUCE -DDSP_SOURCE=/path/to/dsp56300 -DASMJIT_SOURCE=/path/to/asmjit` using the exact revisions in [`cmake/Dependencies.cmake`](../cmake/Dependencies.cmake). Those must be **source checkouts**, not binary releases. The macOS JUCE compatibility patch applies to a build-local copy only.
 
 The ROM-free `silver_resampler_realtime` test streams five minutes of synthetic audio through the K-Station rate pairing and checks that the audio callback does not allocate.
+
+
+### Native controllers and external input
+
+The combined development branch explicitly selects the semantic native K
+controller in the product. Production KS uses its semantic native owner.
+Original H8 controllers remain available in separate comparison tools.
+The embedded skin is the released skin; SoulTrain sources are separate.
+
+Build `ksAudioInput_test` and `silverExternalInput_test`, then run:
+
+```sh
+ctest --test-dir build --output-on-failure -R '^(ks_audio_input|silver_external_input_layout|silver_external_input_standalone_layout)$'
+```
+
+Private audio checks accept four external paths (K firmware, KS firmware, KS
+Data MIDI/full Flash, Wave ROM). Set `SILVER_EXTERNAL_EXTENDED=1` to include the
+filter/envelope and centre-balance vocoder paths. `SILVER_EXTERNAL_RATE` and
+`SILVER_EXTERNAL_BLOCK` select host rate/block; `SILVER_EXTERNAL_STANDALONE=1`
+checks the Standalone bus configuration. `SILVER_EXTERNAL_STATE_DIR` saves local
+host states for `silver_external_host_check vst3|au bundle processor.state`.
+The host tool loads the given bundle without installing it. AU uses a private
+in-process registration and may need an unrestricted graphical session.
+
+`silverExternalInputReference_test` is an explicit H8 comparison target.
+`SILVER_EXTERNAL_KS_H8=1 SILVER_EXTERNAL_MODEL=KS` selects its original KS oracle;
+it never enables H8 in the product. `SILVER_EXTERNAL_PCM_DIR` optionally records
+private PCM outside the callback for exact comparison. Keep all input files,
+processor states and captures outside source control. Finite offline host tests
+do not establish physical driver, DAW realtime or Windows audio performance.
+
+The latency/reentry test accepts external KS Data and Wave paths through
+`SILVER_TEST_KS_DATA` and `SILVER_TEST_KS_WAVES`.

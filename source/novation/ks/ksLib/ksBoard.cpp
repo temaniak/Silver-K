@@ -36,7 +36,9 @@ Board::Board(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,con
     // with the first part in slot 1. A's effects mixer expects parts 1..4
     // consecutively in RX2 slots 0/1 then RX3 slots 0/1 (P:0x340..349).
     dsps[0]->serialRead=[this](dsp56k::Audio::RxFrame& f){DSP::SerialFrame b{};if(!bToA.pop(b) && serialSlaveStarted)++serialUnderruns[0];for(unsigned s=0;s<2;++s){f[s][2]=b[1-s][3];f[s][3]=b[1-s][2];}};
-    dsps[1]->serialRead=[this](dsp56k::Audio::RxFrame& f){DSP::SerialFrame a{};if(!aToB.pop(a))++serialUnderruns[1];for(unsigned s=0;s<2;++s)f[s][0]=a[s][1];};
+    // A TX1 is the auxiliary DAC output, not the external ADC. Keep draining
+    // the scheduled serial frame, but retain B RX0 from its own ADC callback.
+    dsps[1]->serialRead=[this](dsp56k::Audio::RxFrame&){DSP::SerialFrame a{};if(!aToB.pop(a))++serialUnderruns[1];};
     dsps[0]->serialWrite=[this](const DSP::SerialFrame& f){if(serialSlaveStarted && !aToB.push(f))++serialOverflows[0];};
     dsps[1]->serialWrite=[this](const DSP::SerialFrame& f){if(!bToA.push(f))++serialOverflows[1];AudioFrame a{};for(unsigned d=0;d<2;++d)for(unsigned t=0;t<6;++t)for(unsigned s=0;s<2;++s){auto v=d?f[s][t]:dsps[0]->serialTx[s][t];a[d*12+t*2+s]=(v&0x800000)?int32_t(v)-0x1000000:int32_t(v);}audio.push(a);};
     placeholder.enabled=std::all_of(waves.begin(),waves.end(),[](uint8_t v){return v==0;});

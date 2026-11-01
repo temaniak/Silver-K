@@ -18,6 +18,7 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
 :performance(diagnostics),parallelDSPs(dspWorkersEnabled),currentController(controller==ControllerMode::Environment?environmentControllerMode():controller),baseLead(std::min(4096,std::max(256,block+128))),lead(baseLead),rate(hostRate){
  if(!boardComparisonAvailable())currentController.store(ControllerMode::Native);
  realtimeBlock.store(unsigned(std::max(64,block)));
+ inputConverter=std::make_unique<AudioInput>(rate,DSP::SampleRate);
  const auto* cores=std::getenv("SILVER_KS_WORKER_CORES");
  const bool performanceCores=cores&&std::strcmp(cores,"p")==0;
  worker=std::thread([this,os,bank,flash,program,block,performanceCores]{
@@ -68,6 +69,13 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
    if(!originalState.performance){const auto select=singleSelection(originalState.parts[0].data(),channel);board->enqueueMidi(select.data(),select.size());}
    board->enqueueMidi(original.data(),original.size());
    if(!originalState.performance){const auto metadata=singleMetadata(originalState.parts[0].data(),channel);board->enqueueMidi(metadata.data(),metadata.size());}
+   // Clear every warm-up key/sustain owner after restoring the user's patch.
+   // All Sound Off alone can leave held keys which become audible when the
+   // vocoder/mixer is edited. Finish the restore with empty key/sustain state
+   // within the existing cold preroll, before publishing any audio.
+   for(uint8_t channel=0;channel<16;++channel)for(uint8_t cc:{64,123,120}){
+    const uint8_t off[]{uint8_t(0xb0|channel),cc,0};board->enqueueMidi(off,3);
+   }
    for(unsigned n=0;n<20000;++n)board->renderSample();
    for(auto& p:history){auto a=board->renderSample();for(unsigned c=0;c<OutputCount;++c)p[c]=double(a[c])/8388608;}
    publish();
@@ -120,7 +128,9 @@ Device::Device(const std::vector<uint8_t>& os,const std::vector<uint8_t>& bank,c
       for(unsigned n=0;n<length;++n)events.pop(e);
      }else{if(!board->enqueueMidi(&e.value,1))break;events.pop(e);}
     }
-    Frame f{produced,nextSample()};if(produced>=consumed.load())output.push(f);++produced;
+    InputFrame incoming{};float sample=0;
+    while(input.peek(incoming) && incoming.due<=produced){input.pop(incoming);if(incoming.due==produced)sample=incoming.value;}
+    Frame f{produced,nextSample(sample)};if(produced>=consumed.load())output.push(f);++produced;
     if(!(produced&1023))publish();
     workTiming.frame();
    }
@@ -151,12 +161,17 @@ bool Device::setControllerMode(ControllerMode mode,std::string& error){
 void Device::setAudioBuffer(unsigned block,unsigned floor){baseLead=std::min(4096u,std::max(256u,block+128));realtimeBlock.store(std::max(64u,block));setBufferFloor(floor);}
 void Device::ensureAudioBlock(unsigned block) noexcept{const auto needed=std::min(4096u,std::max(256u,block+128));auto current=lead.load(std::memory_order_relaxed);for(unsigned attempt=0;attempt<4 && current<needed;++attempt)if(lead.compare_exchange_weak(current,needed)){realtimeBlock.store(std::max(64u,block));break;}}
 Device::~Device(){stopping.store(true);pause.store(false);if(worker.joinable())worker.join();}
-std::array<float,OutputCount> Device::nextSample(){
+std::array<float,OutputCount> Device::nextSample(float input){
  std::array<float,OutputCount> out{};
  for(unsigned c=0;c<OutputCount;++c){auto a=history[0][c],b=history[1][c],d=history[2][c],e=history[3][c];
   out[c]=float(b+0.5*phase*(d-a+phase*(2*a-5*b+4*d-e+phase*(3*(b-d)+e-a))));}
- phase+=DSP::SampleRate/rate;
- while(phase>=1){phase-=1;history[0]=history[1];history[1]=history[2];history[2]=history[3];auto a=board->renderSample();for(unsigned c=0;c<OutputCount;++c)history[3][c]=double(a[c])/8388608;}
+ inputConverter->push(input);
+ const double ratio=DSP::SampleRate/rate;phase+=ratio;
+ while(phase>=1){phase-=1;
+  // Both the effects DSP and voice DSP consume the mono ADC stream.
+  const auto word=inputConverter->sample(phase/ratio);
+  if(!board->dsp(0).pushAudioInput(word) || !board->dsp(1).pushAudioInput(word))throw std::runtime_error("KS ADC queue overflow");
+  history[0]=history[1];history[1]=history[2];history[2]=history[3];auto a=board->renderSample();for(unsigned c=0;c<OutputCount;++c)history[3][c]=double(a[c])/8388608;}
  return out;
 }
 bool Device::midi(const uint8_t* b,size_t n,uint64_t offset){
@@ -172,16 +187,20 @@ bool Device::selectDrumNote(unsigned part,uint8_t note,uint64_t offset){
  if(part>=PartCount || note<36 || note>84)return false;
  if(!events.push(Event{consumed.load()+lead+offset,note,uint8_t(part),0,true})){++overflow;return false;}return true;
 }
-void Device::process(float* l,float* r,size_t n,bool offline){
- process({l,r,nullptr,nullptr},n,offline);
+void Device::process(float* l,float* r,size_t n,bool offline,const float* input,const float* inputRight){
+ process({l,r,nullptr,nullptr},n,offline,input,inputRight);
 }
-void Device::process(const std::array<float*,OutputCount>& channels,size_t n,bool offline){
+void Device::process(const std::array<float*,OutputCount>& channels,size_t n,bool offline,const float* inputLeft,const float* inputRight){
  using namespace baseLib::performance;
  const auto epoch=performance?performance->epoch():0;
  if(epoch)performance->add(Metric::QueueDepth,epoch,output.size());
  uint64_t missing=0,stale=0;
- const auto begin=consumed.load();Frame f{};
+ const auto begin=consumed.load();const auto inputLead=lead.load();Frame f{};
  for(size_t i=0;i<n;++i){auto due=begin+i;
+  // Read aliased host inputs before writing outputs. Publish before consumed
+  // so the worker cannot reach this deadline before the sample is available.
+  const float sample=inputLeft?(inputRight?AudioInput::mono(inputLeft[i],inputRight[i]):AudioInput::finite(inputLeft[i])):0;
+  if(!input.push(InputFrame{due+inputLead,sample}))++inputOverflow;
   // This wait is exclusively for a host explicitly selecting offline rendering.
   // The realtime branch has no waits, I/O, locks, heap allocation or guest execution.
   if(offline){while(running.load() && !stopping.load() && output.size()==0)std::this_thread::yield();}
