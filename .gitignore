@@ -7,6 +7,9 @@
 /private/
 /roms/
 /patches/
+# Unreleased skin artwork and interface work stay local
+/skin/
+/design-soultrain/
 /_deps/
 CMakeCache.txt
 CMakeFiles/
