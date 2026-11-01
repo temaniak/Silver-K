@@ -24,7 +24,7 @@ namespace kstation
         constexpr size_t LeadMarginFrames = 128;
         constexpr uint8_t StateHeader[]{'K','S','T','S','T',1,0,0};
         constexpr size_t UserFlashStart = 0x1fc00;
-        constexpr size_t UserFlashSize = H8::FlashSize - UserFlashStart;
+        constexpr size_t UserFlashSize = ControllerFlashSize - UserFlashStart;
         constexpr size_t StateSize = sizeof(StateHeader) + UserFlashSize + 128 + 16 * 128;
         constexpr uint8_t ProgramHeader[]{0xf0,0,0x20,0x29,1,0x41,0x7f,0,0,0x11,1,0,0};
         struct MidiByte { uint64_t due; uint8_t value; bool first; };
@@ -548,7 +548,7 @@ namespace kstation
             const auto rom = getDeviceCreateParams().romData.empty() ? RomLoader::findROM()
                 : Rom(getDeviceCreateParams().romData, getDeviceCreateParams().romName);
             if (!rom.isValid()) { m_impl->resume(); return false; }
-            std::vector<uint8_t> flash(H8::FlashSize, 0xff);
+            std::vector<uint8_t> flash(ControllerFlashSize, 0xff);
             std::copy(state.begin() + sizeof(StateHeader), state.begin() + patchOffset,
                       flash.begin() + UserFlashStart);
             // Before 0.3.2 the editor exposed delay ratio as 0..127, although

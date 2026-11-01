@@ -1,0 +1,19 @@
+#pragma once
+#include "kstationControllerDeviceState.h"
+#include "kstationControllerInterruptRuntime.h"
+#include "kstationProgramStateTask.h"
+#include <optional>
+namespace kstation {
+class ControllerProgramAddressRuntime final {
+ using A=ProgramAddressTask;using I=ProgramIndexTask;
+public:
+ enum class Block:uint8_t{None,NotBound,Inactive,NeedsInterrupt,UnsupportedMode};struct Result{unsigned clocks=0;bool returned=false;Block blocked=Block::None;};struct Range{uint32_t begin,end;};inline static constexpr std::array<Range,2>CodeRanges{{{0x4c36,0x4c4a},{0x4cb8,0x4ce4}}};
+ bool bindVerifiedFirmware(ControllerDeviceState&d,const uint8_t*image,size_t size){if(bound_||active()||!image||size!=49728||!d.hasImmutableCapacity(4))return false;for(auto r:CodeRanges)for(auto a=r.begin;a<r.end;++a)if(d.readResource(a)!=image[a]||d.readResource(0x400000+a)!=image[a])return false;for(auto r:CodeRanges)if(!d.protectImmutableVerified(r.begin,r.end,image+r.begin)||!d.protectImmutableVerified(0x400000+r.begin,0x400000+r.end,image+r.begin))return false;bound_=&d;return true;}
+ bool boundTo(const ControllerDeviceState&d)const{return bound_==&d;}bool active()const{return address_.has_value()||index_.has_value();}void reset(){address_.reset();index_.reset();value_=0;}uint32_t value()const{return value_;}
+ bool start(){return startAddress();}bool startAddress(){if(!bound_||active())return false;address_.emplace();value_=0;return true;}bool startIndex(uint32_t source){if(!bound_||active()||context(source)||context(source+1))return false;index_.emplace(source);value_=0;return true;}
+ unsigned nextClocks(const ControllerDeviceState&d,const ControllerInterruptRuntime&irq)const{if(bound_!=&d||!active()||!irq.boundTo(d)||d.interruptMode2||d.pendingIrqsHigh||irq.active()||(d.pendingIrqs&&irq.mask()==ControllerInterruptRuntime::Mask::Enabled))return 0;auto cr=credits();auto n=index_?index_->nextClocks(cr):address_->nextClocks(cr);return n?n+(d.pendingIrqs?1u:0u):0;}
+ Result advanceBefore(ControllerDeviceState&d,ControllerInterruptRuntime&irq,unsigned available){if(bound_!=&d||!irq.boundTo(d))return {0,false,Block::NotBound};if(!active())return {0,false,Block::Inactive};if(d.interruptMode2||d.pendingIrqsHigh)return {0,false,Block::UnsupportedMode};if(irq.active()||(d.pendingIrqs&&irq.mask()==ControllerInterruptRuntime::Mask::Enabled))return {0,false,Block::NeedsInterrupt};auto total=nextClocks(d,irq);if(!total||available<total)return {};auto arb=d.pendingIrqs?1u:0u;if(arb)(void)d.read8(0xfffff2);auto clocks=total-arb;auto begin=d.cycles;auto cr=credits();bool stack=false;if(index_){auto stage=index_->stage();stack=stage==I::Stage::Retain;check(index_->advanceBefore(clocks,cr,[&](bool program){d.cycles=begin+3;return d.read8(index_->source()+(program?1:0));})==clocks);if(index_->complete()){auto value=index_->result();index_.reset();if(address_)check(address_->resumeChild(value));else value_=value;}}else{auto stage=address_->stage();stack=stage==A::Stage::ReadIndex||stage==A::Stage::Retain;check(address_->advanceBefore(clocks,cr,[&]{d.cycles=begin+9;return d.read8(0xcd77);})==clocks);if(address_->awaiting())index_.emplace(0xcd82);if(address_->complete()){value_=address_->result();address_.reset();}}d.cycles=begin+clocks;d.lastRead=-1;if(stack)d.lastWrite=-1;return {total,!active(),Block::None};}
+private:static bool context(uint32_t a){a&=0xffffff;return a>=0xfffea0&&a<0xffff10;}static void check(bool p){if(!p)throw std::logic_error("K program address phase");}FlashCredits credits()const{FlashCredits cr;cr.pushWord=cr.popWord=6;cr.call=10;cr.ret=7;auto a=index_?index_->source()+(index_->stage()==I::Stage::ReadProgram?1:0):0xcd77;a&=0xffffff;cr.read=a<0x400000?3:a>=0xffffa0?1:a>=0xfffd10?1:3;return cr;}
+ ControllerDeviceState*bound_=nullptr;std::optional<A>address_;std::optional<I>index_;uint32_t value_=0;
+};
+}

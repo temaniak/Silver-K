@@ -1,0 +1,25 @@
+#pragma once
+#include "kstationControllerLcdRuntime.h"
+#include "kstationNumericDisplayTask.h"
+namespace kstation {
+class ControllerNumericDisplayRuntime final {
+ using T=NumericDisplayTask;using S=T::Stage;using K=T::Kind;
+public:
+ enum class Block:uint8_t{None,NotBound,Inactive,NeedsInterrupt,UnsupportedMode,LcdBusy};struct Result{unsigned clocks=0;bool returned=false;Block blocked=Block::None;};struct Range{uint32_t begin,end;};inline static constexpr std::array<Range,3>CodeRanges{{{0x12b6,0x132c},{0x1374,0x1398},{0x23b2,0x23c2}}};
+ bool bindBootResources(ControllerDeviceState&d,const uint8_t*image,size_t size){if(bound_||active()||!image||size!=49728||!d.hasImmutableCapacity(CodeRanges.size()))return false;for(auto r:CodeRanges)for(auto a=r.begin;a<r.end;++a)if(d.readResource(a)!=image[a])return false;for(auto r:CodeRanges)if(!d.protectImmutableVerified(r.begin,r.end,image+r.begin))return false;bound_=&d;return true;}
+ bool bindMirroredFirmware(ControllerDeviceState&d,const uint8_t*image,size_t size){if(bound_!=&d||mirrored_||!image||size!=49728||!d.hasImmutableCapacity(CodeRanges.size()))return false;for(auto r:CodeRanges)for(auto a=r.begin;a<r.end;++a)if(d.readResource(a)!=image[a]||d.readResource(0x400000+a)!=image[a])return false;for(auto r:CodeRanges)if(!d.protectImmutableVerified(0x400000+r.begin,0x400000+r.end,image+r.begin))return false;mirrored_=true;return true;}
+ bool boundTo(const ControllerDeviceState&d)const{return bound_==&d;}uint32_t outputPointer()const{return outputPointer_;}bool active()const{return depth_!=0;}void reset(){depth_=0;lcdChild_=false;}
+ bool start(K kind,uint8_t value=0,uint8_t width=2,uint8_t padding=0x20,uint32_t source=0){if(!bound_||active()||kind==K::Format&&(width<1||width>3)||source>0xffffff)return false;jobs_[depth_++]=T(kind,value,width,padding,source);return true;}
+ unsigned nextClocks(const ControllerDeviceState&d,const ControllerInterruptRuntime&irq,const ControllerLcdRuntime&lcd)const{if(bound_!=&d||!lcd.boundTo(d)||!active()||d.interruptMode2||d.pendingIrqsHigh||irq.active()||(!irq.boundTo(d)&&irq.mask()!=ControllerInterruptRuntime::Mask::Disabled)||(d.pendingIrqs&&irq.mask()==ControllerInterruptRuntime::Mask::Enabled))return 0;if(lcdChild_)return lcd.nextClocks(d,irq);if(jobs_[depth_-1].stage()==S::CharacterChild&&lcd.active())return 0;auto n=jobs_[depth_-1].nextClocks(credits(d));return n?n+(d.pendingIrqs?1u:0u):0;}
+ Result advanceBefore(ControllerDeviceState&d,ControllerInterruptRuntime&irq,ControllerLcdRuntime&lcd,unsigned available){if(bound_!=&d||!lcd.boundTo(d))return {0,false,Block::NotBound};if(!active())return {0,false,Block::Inactive};if(d.interruptMode2||d.pendingIrqsHigh)return {0,false,Block::UnsupportedMode};if(irq.active()||(!irq.boundTo(d)&&irq.mask()!=ControllerInterruptRuntime::Mask::Disabled)||(d.pendingIrqs&&irq.mask()==ControllerInterruptRuntime::Mask::Enabled))return {0,false,Block::NeedsInterrupt};if(lcdChild_){auto r=lcd.advanceBefore(d,irq,available);if(r.returned){lcdChild_=false;jobs_[depth_-1].resume();}return {r.clocks,false,Block::None};}auto&t=jobs_[depth_-1];if(t.stage()==S::CharacterChild&&lcd.active())return {0,false,Block::LcdBusy};auto total=nextClocks(d,irq,lcd);if(!total||available<total)return {};auto arb=d.pendingIrqs?1u:0u;if(arb)(void)d.read8(0xfffff2);auto clocks=total-arb;auto begin=d.cycles;auto cr=credits(d);auto stage=t.stage();auto value=t.value(),width=t.width(),padding=t.padding(),character=t.character();bool stack=stage==S::RetainValue||stage==S::RetainPointer||stage==S::RetainScratch||stage==S::FormatChild||stage==S::StringChild||stage==S::RetainCharacter||stage==S::CharacterChild;
+ if(t.advanceBefore(clocks,cr,[&](unsigned a){d.cycles=begin+3;return d.read8(a);},[&](unsigned a,unsigned v){d.cycles=begin+3;d.write8(a,uint8_t(v));})!=clocks)throw std::logic_error("K domain numeric phase");
+ d.cycles=begin+clocks;d.lastRead=-1;if(stack)d.lastWrite=-1;
+ if(stage==S::FormatChild){push(T(K::Format,value,width,padding));}else if(stage==S::StringChild){push(T(K::String,0,2,0x20,0xfffe3e));}else if(stage==S::CharacterChild){if(!lcd.start(LcdTextTask::Kind::Data,character))throw std::logic_error("K numeric LCD admission");lcdChild_=true;}else if(t.complete()){if(t.kind()==K::Format)outputPointer_=t.pointer();--depth_;if(depth_)jobs_[depth_-1].resume();}
+ return {total,depth_==0,Block::None};}
+private:
+ void push(T task){if(depth_==jobs_.size())throw std::logic_error("K domain numeric capacity");jobs_[depth_++]=task;}
+ static unsigned bus(unsigned a,int last){a&=0xffffff;return a<0x400000||(a>=0xfffd10&&a<0xffffa0)?((last&1)||a!=unsigned(last|1)?(a<0x400000?3u:1u):0u):(a>=0xffffa0?1u:3u);}
+ FlashCredits credits(const ControllerDeviceState&d)const{FlashCredits cr;cr.pushWord=6;cr.popWord=6;cr.pushLong=10;cr.popLong=10;cr.call=10;cr.shortCall=5;cr.ret=7;cr.read=bus(jobs_[depth_-1].pointer(),-1);cr.write=bus(jobs_[depth_-1].pointer(),d.lastWrite);return cr;}
+ ControllerDeviceState*bound_=nullptr;uint32_t outputPointer_=0;bool mirrored_=false;std::array<T,4>jobs_{{T{},T{},T{},T{}}};unsigned depth_=0;bool lcdChild_=false;
+};
+}

@@ -1,0 +1,25 @@
+#pragma once
+#include "kstationMidiPumpTask.h"
+#include <cstdint>
+namespace kstation {
+class ControllerMidiDescriptorTask final {
+ using T=MidiDescriptorTask;using S=T::Stage;
+public:
+ explicit ControllerMidiDescriptorTask(uint8_t status):task_(status){}bool complete()const{return task_.complete();}uint32_t result()const{return task_.result();}
+ unsigned nextClocks()const{switch(task_.stage()){case S::Complete:return 0;case S::MultiplyChannel:case S::MultiplySystem:return 15;case S::AddChannel:case S::AddSystem:return 9;case S::ReturnChannel:case S::ReturnSystem:return 7;default:return 3;}}
+ unsigned advanceBefore(unsigned budget){auto c=nextClocks();return c&&budget>=c&&task_.advance()?c:0;}
+private:T task_;
+};
+class ControllerMidiParserTask final {
+ using T=MidiParserTask;using S=T::Stage;using R=T::Read;using W=T::Write;
+public:
+ using Kind=T::Kind;using Child=T::Child;
+ ControllerMidiParserTask(Kind kind,uint8_t byte):task_(kind,byte){}bool complete()const{return task_.complete();}bool awaitingChild()const{return task_.awaitingChild();}Child child()const{return task_.child();}uint8_t descriptorStatus()const{return task_.descriptorStatus();}uint32_t handler()const{return task_.handler();}uint8_t channel()const{return task_.channel();}uint8_t input()const{return task_.input();}bool immediate()const{return task_.immediate();}uint32_t payload()const{return task_.kind()==Kind::External?0xcad3:0xcac5;}bool resumeDescriptor(uint32_t value){return task_.resumeDescriptor(value);}bool resumeChild(Child c){return task_.resumeChild(c);}
+ bool stackWrites()const{auto s=task_.stage();return s==S::RequestDescriptor||s==S::RequestRunningDescriptor||s==S::RequestHandler||s==S::PostActivity;}
+ unsigned nextClocks()const{auto s=task_.stage();if(s==S::Complete||s==S::AwaitChild)return 0;bool ext=task_.kind()==Kind::External;unsigned len=length(s,ext);unsigned c=3*(len/2);switch(s){case S::RequestDescriptor:case S::RequestRunningDescriptor:case S::PostActivity:return len==4?10:5;case S::RequestHandler:return 5;case S::ReturnStatus:case S::ReturnData:case S::Return:return 7;case S::SelectImmediate:case S::SelectLength:if(!ext)c+=2;break;default:break;}switch(s){case S::ReadLength:case S::ReadFlags:case S::ReadRunningFlags:case S::ReadRunningLength:case S::ReadRemaining:case S::ReadRunning:case S::ReadChannel:case S::PostReadStatus:case S::PostReadChannel:case S::PostReadProgramChannel:case S::WriteReceived:case S::WriteActivity:case S::WriteExpected:case S::WriteRemaining:case S::WriteRunning:case S::WriteChannel:case S::WriteDataRemaining:case S::WriteRunningRemaining:case S::WriteDispatchChannel:c+=3;break;case S::ReadCursor:case S::ReadHandler:case S::WriteCursor:case S::WriteDataCursor:case S::WriteRunningCursor:c+=6;break;case S::WriteData:{auto a=task_.cursor()&0xffffff;c+=(a<0x400000||a<0xfffd10)?3:1;break;}default:break;}return c;}
+ template<class Reader,class Writer>unsigned advanceBefore(unsigned budget,Reader&&read,Writer&&write){auto c=nextClocks();if(!c||budget<c)return 0;bool ext=task_.kind()==Kind::External;uint32_t received=ext?0xcad0:0xcac2,expected=ext?0xcad2:0xcac4,remaining=ext?0xcad1:0xcac3,running=ext?0xcacf:0xcac1,channel=ext?0xcace:0xcac0,cursor=ext?0xcaca:0xcabc;auto s=task_.stage();bool ok=task_.advance([&](R r)->uint32_t{uint32_t a=0;unsigned width=1;switch(r){case R::Length:a=task_.descriptor()+4;break;case R::Flags:a=task_.descriptor()+5;break;case R::Remaining:a=remaining;break;case R::Cursor:a=cursor;width=4;break;case R::Running:a=running;break;case R::Handler:a=task_.descriptor();width=4;break;case R::Channel:a=channel;break;case R::ProgramChannel:a=0xbb16;break;}return read(a&0xffffff,width,c);},[&](W w,uint32_t v){uint32_t a=0;unsigned width=1;switch(w){case W::Received:a=received;break;case W::Activity:a=0xcd0e;break;case W::Expected:a=expected;break;case W::Remaining:a=remaining;break;case W::Running:a=running;break;case W::Channel:a=channel;break;case W::Cursor:a=cursor;width=4;break;case W::Data:a=task_.cursor();break;case W::DispatchChannel:a=0xcad5;break;}write(a&0xffffff,v,width,c);});(void)s;return ok?c:0;}
+private:
+ static unsigned length(S s,bool e){if(s==S::RequestRunningDescriptor)return e?2:4;if(s==S::SelectImmediate||s==S::SelectLength)return e?2:4;switch(s){case S::ReadHandler:return 10;case S::ReadLength:case S::ReadFlags:case S::ReadCursor:case S::WriteCursor:case S::WriteDataCursor:case S::ReadRunningFlags:case S::ReadRunningLength:case S::WriteRunningCursor:case S::PostReadProgramChannel:return 8;case S::WriteReceived:case S::WriteActivity:case S::WriteExpected:case S::WriteRemaining:case S::WriteRunning:case S::WriteChannel:case S::BindCursor:case S::ReadRemaining:case S::WriteDataRemaining:case S::ReadRunning:case S::WriteRunningRemaining:case S::BindRunningCursor:case S::BindPayload:case S::ReadChannel:case S::WriteDispatchChannel:case S::PostReadStatus:case S::PostBindProgram:case S::PostReadChannel:return 6;case S::RequestDescriptor:case S::PostActivity:return 4;default:return 2;}}
+ T task_;
+};
+}

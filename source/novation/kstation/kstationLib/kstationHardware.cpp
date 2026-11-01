@@ -1,11 +1,57 @@
 #include "kstationHardware.h"
+#ifndef KSTATION_NATIVE_ONLY
+#include "kstationH8.h"
+#endif
+#include "kstationNativeController.h"
 
 #include <stdexcept>
+#include <utility>
+#ifndef KSTATION_NATIVE_ONLY
+#include "h8s/h8s.hpp"
+#endif
 
 namespace kstation
 {
-    Hardware::Hardware(const std::vector<uint8_t>& rom, const std::vector<uint8_t>& flash)
-        : m_h8(rom, {
+    namespace {
+#ifndef KSTATION_NATIVE_ONLY
+        class OriginalController final : public Controller {
+        public:
+            OriginalController(const std::vector<uint8_t>&rom,H8::HostCallbacks callbacks,
+                               const std::vector<uint8_t>&flash,H8::Stage1Mode mode)
+                :core_(rom,std::move(callbacks),flash,mode){}
+            void reset()override{core_.reset();}
+            uint64_t exec(uint32_t n)override{return core_.exec(n);}
+            bool enqueueMidi(const uint8_t*p,size_t n)override{return core_.enqueueMidi(p,n);}
+            bool popMidiOut(uint8_t&v)override{return core_.popMidiOut(v);}
+            bool bootReady()const override{return core_.bootReady();}
+            H8::DebugState debugState()const override{return core_.debugState();}
+            uint8_t readMemory(uint32_t a)const override{return core_.readMemory(a);}
+            void copyCurrentPatch(uint8_t*p)const override{core_.copyCurrentPatch(p);}
+            std::vector<uint8_t>saveFlash()const override{return core_.saveFlash();}
+            void copyFlash(std::vector<uint8_t>&out)const override{core_.copyFlash(out);}
+            uint64_t flashRevision()const override{return core_.flashRevision();}
+            bool hasProgram(uint8_t b,uint8_t p)const override{return core_.hasProgram(b,p);}
+            const uint8_t*diagnosticMemory()override{return core_.core().memory;}
+            uint16_t diagnosticRead16(uint32_t a)override{return core_.core().read16(int(a));}
+            void diagnosticWrite8(uint32_t a,uint8_t v)override{core_.core().write8(int8_t(v),int(a));}
+            void diagnosticWrite16(uint32_t a,uint16_t v)override{core_.core().write16(int16_t(v),int(a));}
+            void diagnosticInterrupt(int vector)override{core_.core().interrupt(vector);}
+            h8state&core()override{return core_.core();}
+        private:H8 core_;
+        };
+#endif
+        std::unique_ptr<Controller> makeController(const std::vector<uint8_t>&rom,ControllerHostCallbacks callbacks,const std::vector<uint8_t>&flash,ControllerMode mode){
+            if(mode==ControllerMode::Native)return std::make_unique<NativeController>(rom,std::move(callbacks),flash);
+#ifdef KSTATION_NATIVE_ONLY
+            throw std::invalid_argument("This build contains only the native K controller");
+#else
+            return std::make_unique<OriginalController>(rom,std::move(callbacks),flash,mode);
+#endif
+        }
+    }
+
+    Hardware::Hardware(const std::vector<uint8_t>& rom, const std::vector<uint8_t>& flash, ControllerMode mode)
+        : m_h8(makeController(rom, ControllerHostCallbacks{
             [this](uint32_t offset) { return m_dsp.hostRead(offset); },
             [this](uint32_t offset, uint8_t value) { return m_dsp.hostWrite(offset, value); },
             [this](bool asserted)
@@ -16,7 +62,7 @@ namespace kstation
                     m_dspStarted = false;
                 }
                 m_resetAsserted = asserted;
-            }}, flash)
+            }}, flash, mode))
     {
     }
 
@@ -25,7 +71,8 @@ namespace kstation
         using namespace baseLib::performance;
         const bool sample=m_performance && m_performance->mode()==2 && ((++m_diagnosticAdvances&255)==0);
         Scope h8Timing(m_performance,Metric::H8,0,0,true,sample);
-        m_h8Cycles += m_h8.exec(128);
+        m_h8Cycles += m_h8->exec(128);
+        if(const auto*fault=m_h8->faultMessage())throw std::runtime_error(fault);
         h8Timing.finish();
         if (!m_dsp.bootFinished() || m_resetAsserted) return;
         Scope dspTiming(m_performance,Metric::DspA,0,0,true,sample);
@@ -49,7 +96,7 @@ namespace kstation
         {
             advance();
             m_dsp.discardAudio();
-            if (m_h8.bootReady() && m_dsp.bootFinished())
+            if (m_h8->bootReady() && m_dsp.bootFinished())
             {
                 // The main loop becomes ready before the initial DAC/FX state
                 // has settled. Advance both guests normally and discard only
@@ -69,7 +116,7 @@ namespace kstation
         while (!m_dsp.popAudioFrame(frame))
         {
             advance();
-            if (m_h8Cycles - start > H8::ClockHz)
+            if (m_h8Cycles - start > ControllerClockHz)
                 throw std::runtime_error("K-Station ESAI did not produce an audio frame.");
         }
         return frame;

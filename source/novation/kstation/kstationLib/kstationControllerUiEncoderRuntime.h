@@ -1,0 +1,21 @@
+#pragma once
+#include "kstationUiEncoderTask.h"
+#include "kstationControllerDeviceState.h"
+#include "kstationControllerInterruptRuntime.h"
+#include <array>
+#include <optional>
+namespace kstation {
+class ControllerUiEncoderRuntime final {
+ using T=UiEncoderTask;using S=T::Stage;
+public:
+ enum class Block:uint8_t{None,NotBound,Inactive,NeedsInterrupt,UnsupportedMode};struct Result{unsigned clocks=0;bool returned=false;Block blocked=Block::None;};struct Range{uint32_t begin,end;};inline static constexpr std::array<Range,1>CodeRanges{{{0x8ba,0x92c}}};
+ bool bindVerifiedFirmware(ControllerDeviceState&d,const uint8_t*image,size_t size){if(bound_||active()||!image||size!=49728||!d.hasImmutableCapacity(2))return false;for(auto r:CodeRanges)for(auto a=r.begin;a<r.end;++a)if(d.readResource(a)!=image[a]||d.readResource(0x400000+a)!=image[a])return false;for(auto r:CodeRanges)if(!d.protectImmutableVerified(r.begin,r.end,image+r.begin)||!d.protectImmutableVerified(0x400000+r.begin,0x400000+r.end,image+r.begin))return false;bound_=&d;return true;}
+ bool boundTo(const ControllerDeviceState&d)const{return bound_==&d;}bool active()const{return task_.has_value();}bool start(){if(!bound_||active())return false;task_.emplace();result_=0;return true;}void reset(){task_.reset();result_=0;}uint8_t delta()const{return result_;}
+ unsigned nextClocks(const ControllerDeviceState&d,const ControllerInterruptRuntime&irq)const{if(bound_!=&d||!irq.boundTo(d)||!task_||d.interruptMode2||d.pendingIrqsHigh||irq.active()||(d.pendingIrqs&&irq.mask()==ControllerInterruptRuntime::Mask::Enabled))return 0;auto n=task_->nextClocks(credits(d));return n?n+(d.pendingIrqs?1u:0u):0;}
+ Result advanceBefore(ControllerDeviceState&d,ControllerInterruptRuntime&irq,unsigned budget){if(bound_!=&d||!irq.boundTo(d))return {0,false,Block::NotBound};if(!task_)return {0,false,Block::Inactive};if(d.interruptMode2||d.pendingIrqsHigh)return {0,false,Block::UnsupportedMode};if(irq.active()||(d.pendingIrqs&&irq.mask()==ControllerInterruptRuntime::Mask::Enabled))return {0,false,Block::NeedsInterrupt};auto total=nextClocks(d,irq);if(!total||budget<total)return {};auto arb=d.pendingIrqs?1u:0u;if(arb)(void)d.read8(0xfffff2);auto cost=total-arb;auto begin=d.cycles;auto cr=credits(d);auto read=[&](T::Read field){auto a=readAddress(field);unsigned width=field==T::Read::Counter?2:1;uint32_t v=0;for(unsigned i=0;i<width;++i){d.cycles=begin+cost;v=(v<<8)|d.readResource(a+i);}return v;};auto write=[&](T::Write field,unsigned value){d.cycles=begin+cost;d.writeResource(writeAddress(field),uint8_t(value));d.lastWrite=int(writeAddress(field));};if(task_->advanceBefore(cost,cr,read,write)!=cost)return {};d.cycles=begin+cost;d.lastRead=-1;bool done=task_->complete();if(done){result_=uint8_t(task_->result());task_.reset();}return {total,done,Block::None};}
+private:static unsigned readAddress(T::Read r){switch(r){case T::Read::Counter:return 0xffff7c;case T::Read::Half:return 0xfffd25;case T::Read::Acceleration:return 0xfffd26;case T::Read::Quarter:return 0xfffd24;case T::Read::Direction:return 0xfffd27;}return 0;}static unsigned writeAddress(T::Write w){switch(w){case T::Write::Half:return 0xfffd25;case T::Write::Acceleration:return 0xfffd26;case T::Write::Quarter:return 0xfffd24;case T::Write::Direction:return 0xfffd27;}return 0;}
+ static unsigned bus(unsigned a,unsigned width,int last){unsigned n=0;for(unsigned i=0;i<width;++i){auto q=(a+i)&0xffffff;if(q<0x400000||(q>=0xfffd10&&q<0xffffa0)){if((last&1)||q!=unsigned(last|1))n+=q<0x400000?3:1;last=int(q);}else{n+=q>=0xffffa0?1:3;last=-1;}}return n;}
+ FlashCredits credits(const ControllerDeviceState&d)const{FlashCredits c;auto s=task_->stage();switch(s){case S::ReadCounter:c.read=bus(0xffff7c,2,-1);break;case S::ReadHalfHistory:c.read=1;break;case S::ReadAcceleration:c.read=1;break;case S::ReadQuarterHistory:c.read=1;break;case S::ReadDirection:c.read=1;break;case S::WriteHalfHistory:c.write=bus(0xfffd25,1,d.lastWrite);break;case S::WriteAcceleration:case S::WriteClearedAcceleration:c.write=bus(0xfffd26,1,d.lastWrite);break;case S::WriteQuarterHistory:c.write=bus(0xfffd24,1,d.lastWrite);break;case S::WriteDirection:c.write=bus(0xfffd27,1,d.lastWrite);break;default:break;}return c;}
+ ControllerDeviceState*bound_=nullptr;std::optional<T>task_{};uint8_t result_=0;
+};
+}

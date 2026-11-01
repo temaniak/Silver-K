@@ -1,0 +1,17 @@
+#pragma once
+#include "kstationControllerDeviceState.h"
+#include "kstationControllerInterruptRuntime.h"
+#include "kstationStartupTablesTask.h"
+namespace kstation {
+class ControllerStartupTablesRuntime final {
+ using T=StartupTablesTask;using S=T::Stage;
+public:using Kind=T::Kind;enum class Block:uint8_t{None,NotBound,Inactive,NeedsInterrupt,UnsupportedMode};struct Result{unsigned clocks=0;bool returned=false;Block blocked=Block::None;};
+ bool bindVerifiedFirmware(ControllerDeviceState&d,const uint8_t*image,size_t size){if(bound_||active()||!image||size!=49728||!d.hasImmutableCapacity(2))return false;for(unsigned a=0x17ba;a<0x1838;++a)if(d.readResource(a)!=image[a]||d.readResource(0x400000+a)!=image[a])return false;if(!d.protectImmutableVerified(0x17ba,0x1838,image+0x17ba)||!d.protectImmutableVerified(0x4017ba,0x401838,image+0x17ba))return false;bound_=&d;return true;}
+ bool boundTo(const ControllerDeviceState&d)const{return bound_==&d;}bool active()const{return depth_!=0;}void reset(){depth_=0;}bool start(Kind kind=Kind::Both){if(!bound_||active()||unsigned(kind)>unsigned(Kind::Samples))return false;jobs_[depth_++]=T(kind);return true;}
+ unsigned nextClocks(const ControllerDeviceState&d,const ControllerInterruptRuntime&irq)const{if(bound_!=&d||!active()||!irq.boundTo(d)||d.interruptMode2||d.pendingIrqsHigh||irq.active()||(d.pendingIrqs&&irq.mask()==ControllerInterruptRuntime::Mask::Enabled))return 0;auto n=jobs_[depth_-1].nextClocks(credits(d));return n?n+(d.pendingIrqs?1u:0u):0;}
+ Result advanceBefore(ControllerDeviceState&d,ControllerInterruptRuntime&irq,unsigned available){if(bound_!=&d||!irq.boundTo(d))return {0,false,Block::NotBound};if(!active())return {0,false,Block::Inactive};if(d.interruptMode2||d.pendingIrqsHigh)return {0,false,Block::UnsupportedMode};if(irq.active()||(d.pendingIrqs&&irq.mask()==ControllerInterruptRuntime::Mask::Enabled))return {0,false,Block::NeedsInterrupt};auto total=nextClocks(d,irq);if(!total||available<total)return {};auto arb=d.pendingIrqs?1u:0u;if(arb)(void)d.read8(0xfffff2);auto clocks=total-arb;auto begin=d.cycles;auto&t=jobs_[depth_-1];auto stage=t.stage();auto cr=credits(d);auto kind=t.kind();if(t.advanceBefore(clocks,cr,[&](bool rate,unsigned index){d.cycles=begin+(rate?9u:3u);return d.read16(rate?0xbf98:0xa812+2*index);},[&](unsigned index,unsigned value){d.cycles=begin+6;d.write32((kind==Kind::Delay?0xc59a:0xc622)+4*index,value);})!=clocks)throw std::logic_error("K startup table phase");d.cycles=begin+clocks;d.lastRead=-1;if(stage==S::DelayChild||stage==S::SamplesChild){d.lastWrite=-1;if(depth_==jobs_.size())throw std::logic_error("K startup table capacity");jobs_[depth_++]=T(stage==S::DelayChild?Kind::Delay:Kind::Samples);}else if(t.complete()){--depth_;if(depth_)jobs_[depth_-1].resume();}return {total,depth_==0,Block::None};}
+private:static unsigned bus(unsigned a,unsigned n,int last){unsigned cost=0;for(unsigned i=0;i<n;++i){auto p=(a+i)&0xffffff;if(p<0x400000||(p>=0xfffd10&&p<0xffffa0)){if((last&1)||p!=unsigned(last|1))cost+=p<0x400000?3:1;last=int(p);}else{cost+=p>=0xffffa0?1:3;last=-1;}}return cost;}
+ FlashCredits credits(const ControllerDeviceState&d)const{FlashCredits cr;cr.shortCall=5;cr.ret=7;cr.read=3;const auto&t=jobs_[depth_-1];cr.write=bus((t.kind()==Kind::Delay?0xc59a:0xc622)+4*t.index(),4,d.lastWrite);return cr;}
+ ControllerDeviceState*bound_=nullptr;std::array<T,2>jobs_{{T{},T{}}};unsigned depth_=0;
+};
+}

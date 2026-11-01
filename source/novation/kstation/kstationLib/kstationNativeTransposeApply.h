@@ -1,0 +1,21 @@
+#pragma once
+#include "kstationTransposeApplyTask.h"
+#include "kstationNativeMidiPump.h"
+namespace kstation {
+class NativeTransposeCheck final {
+ using T=TransposeCheckTask;using S=T::Stage;
+public:explicit NativeTransposeCheck(uint32_t ret):return_(ret&0xffffff){}const T&task()const{return task_;}bool resumeChild(Stage1Cpu&c){return task_.awaitingChild()&&uint32_t(c.getPC())==return_&&task_.resume();}uint32_t boundary()const{switch(task_.stage()){case S::ReadCurrent:return 0x3f54;case S::ReadPrevious:return 0x3f5a;case S::Compare:return 0x3f60;case S::Select:return 0x3f62;case S::Return:return 0x3f64;default:return 0;}}
+ bool step(Stage1Cpu&c){using namespace midi_projection;if(blocked(c)||task_.awaitingChild()||task_.complete()||uint32_t(c.getPC())!=boundary())return false;if(c.pending_irqs)c.read8(0xfffff2);auto p=task_.stage();auto at=boundary();c.fetchClocks(p==S::ReadCurrent||p==S::ReadPrevious?6:2);c.pc=c.makepc(int(at+1));if(p==S::Compare)arithmetic(c,uint8_t(c.reg8(14)),uint8_t(c.reg8(6)),8,true);else if(p==S::Return)ret(c);task_.advance([&](bool prev){int reg=prev?6:14;c.reg8(reg)=c.read8(prev?0xcd79:0xcd78);val(c,c.reg8(reg));return uint8_t(c.reg8(reg));});if(task_.awaitingChild())c.pc=c.makepc(0x3f2a);else if(!task_.complete())c.pc=c.makepc(int(boundary()));return true;}
+private:T task_;uint32_t return_;
+};
+class NativeTransposeReset final {
+ using T=TransposeResetTask;using S=T::Stage;
+public:const T&task()const{return task_;}bool resumeChild(Stage1Cpu&c){if(!task_.awaitingChild())return false;auto ch=task_.child();uint32_t ret=ch==T::Child::ClearHeld?0x3f2e:ch==T::Child::Release?0x3f34:0x3f38;return uint32_t(c.getPC())==ret&&task_.resume(ch);}uint32_t boundary()const{switch(task_.stage()){case S::ClearHeld:return 0x3f2a;case S::BindPart:return 0x3f2e;case S::Release:return 0x3f30;case S::AllNotesOff:return 0x3f34;case S::Return:return 0x3f38;default:return 0;}}
+ bool step(Stage1Cpu&c){using namespace midi_projection;if(blocked(c)||task_.awaitingChild()||task_.complete()||uint32_t(c.getPC())!=boundary())return false;if(c.pending_irqs)c.read8(0xfffff2);auto p=task_.stage();auto at=boundary();c.fetchClocks(p==S::BindPart||p==S::Return?2:4);c.pc=c.makepc(int(at+1));switch(p){case S::ClearHeld:call(c,0x2b7a,0x3f2e,true);break;case S::BindPart:c.reg8(14)=0;val(c,c.reg8(14));break;case S::Release:call(c,0x7644,0x3f34,true);break;case S::AllNotesOff:call(c,0x26e8,0x3f38,true);break;case S::Return:ret(c);break;default:break;}task_.advance();if(!task_.awaitingChild()&&!task_.complete())c.pc=c.makepc(int(boundary()));return true;}private:T task_;
+};
+class NativeMidiAllNotesOff final {
+ using T=MidiAllNotesOffTask;using S=T::Stage;
+public:const T&task()const{return task_;}bool resumeChild(Stage1Cpu&c){if(!task_.awaitingChild())return false;return uint32_t(c.getPC())==return_&&task_.resume();}uint32_t boundary()const{switch(task_.stage()){case S::Save:return 0x26e8;case S::Bind:return 0x26ec;case S::ReadChannel:return 0x26f2;case S::AddStatus:return 0x26fa;case S::SendStatus:return 0x26fc;case S::BindControl:return 0x2700;case S::SendControl:return 0x2702;case S::ClearValue:return 0x2706;case S::SendValue:return 0x2708;case S::Restore:return 0x270c;case S::Return:return 0x2710;default:return 0;}}
+ bool step(Stage1Cpu&c){using namespace midi_projection;if(blocked(c)||task_.awaitingChild()||task_.complete()||uint32_t(c.getPC())!=boundary())return false;if(c.pending_irqs)c.read8(0xfffff2);auto p=task_.stage();auto at=boundary();unsigned len=p==S::ReadChannel?8:p==S::Bind?6:p==S::Save||p==S::SendStatus||p==S::SendControl||p==S::SendValue||p==S::Restore?4:2;c.fetchClocks(len);c.pc=c.makepc(int(at+1));switch(p){case S::Save:save(c,6);break;case S::Bind:c.reg32(6)=0xba5c;val(c,c.reg32(6));break;case S::AddStatus:c.reg8(14)=int8_t(uint8_t(c.reg8(14))|0xb0);val(c,c.reg8(14));break;case S::SendStatus:case S::SendControl:case S::SendValue:return_=at+len;call(c,0xb0c,return_,true);break;case S::BindControl:c.reg8(14)=0x7b;val(c,c.reg8(14));break;case S::ClearValue:c.reg8(14)=0;val(c,c.reg8(14));break;case S::Restore:restore(c,6);break;case S::Return:ret(c);break;default:break;}task_.advance([&](){c.reg8(14)=c.read8(c.reg32(6)+0xca);val(c,c.reg8(14));});if(!task_.awaitingChild()&&!task_.complete())c.pc=c.makepc(int(boundary()));return true;}private:T task_;uint32_t return_=0;
+};
+}

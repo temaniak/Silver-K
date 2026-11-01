@@ -1,0 +1,26 @@
+#pragma once
+#include "kstationControllerDeviceState.h"
+#include "kstationControllerInterruptRuntime.h"
+#include "kstationControllerDspTransferRuntime.h"
+#include "kstationControllerVoiceDspWordTask.h"
+#include "kstationVoiceGlobalTask.h"
+#include <optional>
+namespace kstation {
+class ControllerVoiceGlobalCurveTableRuntime final {
+ using T=VoiceGlobalCurveTableTask;using S=T::Stage;
+public:
+ enum class Block:uint8_t{None,NotBound,Inactive,NeedsInterrupt,UnsupportedMode,DspBusy};struct Result{unsigned clocks=0;bool returned=false;Block blocked=Block::None;};
+ bool bindVerifiedFirmware(ControllerDeviceState&d,const uint8_t*image,size_t size){if(bound_||active()||!image||size!=49728||!d.hasImmutableCapacity(4))return false;for(auto r:ranges_)for(auto a=r.begin;a<r.end;++a)if(d.readResource(a)!=image[a]||d.readResource(0x400000+a)!=image[a])return false;for(auto r:ranges_)if(!d.protectImmutableVerified(r.begin,r.end,image+r.begin)||!d.protectImmutableVerified(0x400000+r.begin,0x400000+r.end,image+r.begin))return false;bound_=&d;return true;}
+ bool boundTo(const ControllerDeviceState&d)const{return bound_==&d;}bool active()const{return bool(task_);}bool start(){if(!bound_||active())return false;task_.emplace();command_=0x3d3;return true;}void reset(){task_.reset();word_.reset();ownsDsp_=false;}uint32_t result()const{return result_;}
+ unsigned nextClocks(const ControllerDeviceState&d,const ControllerInterruptRuntime&irq,const ControllerDspTransferRuntime&dsp)const{if(bound_!=&d||!irq.boundTo(d)||!dsp.boundTo(d)||!active()||d.interruptMode2||d.pendingIrqsHigh||irq.active()||(d.pendingIrqs&&irq.mask()==ControllerInterruptRuntime::Mask::Enabled)||(dsp.active()&&!ownsDsp_))return 0;if(ownsDsp_)return dsp.nextClocks(d,irq);auto c=word_?word_->nextClocks():cost(d.lastWrite);return c?c+(d.pendingIrqs?1u:0u):0;}
+ Result advanceBefore(ControllerDeviceState&d,ControllerInterruptRuntime&irq,ControllerDspTransferRuntime&dsp,unsigned budget){if(bound_!=&d||!irq.boundTo(d)||!dsp.boundTo(d))return {0,false,Block::NotBound};if(!active())return {0,false,Block::Inactive};if(d.interruptMode2||d.pendingIrqsHigh)return {0,false,Block::UnsupportedMode};if(irq.active()||(d.pendingIrqs&&irq.mask()==ControllerInterruptRuntime::Mask::Enabled))return {0,false,Block::NeedsInterrupt};if(dsp.active()&&!ownsDsp_)return {0,false,Block::DspBusy};if(ownsDsp_){auto r=dsp.advanceBefore(d,irq,budget);if(r.returned){ownsDsp_=false;word_->resumeDsp();}return {r.clocks,false,Block::None};}auto c=word_?word_->nextClocks():cost(d.lastWrite),arb=d.pendingIrqs?1u:0u;if(!c||budget<c+arb)return {};if(arb)(void)d.read8(0xfffff2);auto begin=d.cycles;auto history=[](uint32_t a){a&=0xffffff;return a<0x400000||(a>=0xfffd10&&a<0xffffa0)?int(a):-1;};auto read=[&](uint32_t a,unsigned n,unsigned end){uint32_t v=0;unsigned total=n==4?6:3;for(unsigned i=0;i<n;++i){d.cycles=begin+end-total+(n==4&&i<2?3:total);d.lastRead=history(a+i);v=(v<<8)|d.readResource(a+i);}return v;};auto write=[&](uint32_t a,uint16_t v,unsigned end){for(unsigned i=0;i<2;++i){d.cycles=begin+end;d.lastWrite=history(a+i);d.writeResource(a+i,uint8_t(v>>(8*(1-i))));}};bool stack=false;
+ if(word_){stack=word_->stackWrites();word_->advanceBefore(c,read);if(word_->awaitingDsp()){if(!dsp.startWrite(word_->address(),word_->word()))return {};ownsDsp_=true;}else if(word_->complete()){word_.reset();task_->resume();}}
+ else{auto stage=task_->stage();stack=stage==S::SaveR3||stage==S::SaveReg||stage==S::Send;task_->advance([&](T::Read f,uint32_t a){return read(a,2,(f==T::Read::Copy||f==T::Read::Output)?c-2:c);},[&](uint32_t a,uint16_t v){write(a,v,c);});if(stage==S::IncrementReg)++command_;if(task_->awaitingChild()){result_=task_->value();word_.emplace(command_,(result_>>8)&0xffffff);}}
+ d.cycles=begin+c;d.lastRead=-1;if(stack)d.lastWrite=-1;bool done=task_->complete();if(done)task_.reset();return {c+arb,done,Block::None};}
+private:
+ struct Range{uint32_t begin,end;};inline static constexpr Range ranges_[]={{0x7d5e,0x7dce},{0x5bec,0x5c04}};
+ static unsigned bus(uint32_t a,unsigned n,int p){unsigned c=0;for(unsigned i=0;i<n;++i){auto x=(a+i)&0xffffff;if(x<0x400000||(x>=0xfffd10&&x<0xffffa0)){if((p&1)||x!=uint32_t(p|1))c+=x<0x400000?3:1;p=int(x);}else{c+=x>=0xffffa0?1:3;p=-1;}}return c;}
+ unsigned cost(int last)const{switch(task_->stage()){case S::ReadStart:case S::ReadMultiplier:case S::ReadStep:case S::ReadClock:return 12;case S::ReadCopy:case S::ReadOutput:return 8;case S::WriteBuilt:case S::WriteCopy:return 3+bus(task_->destination(),2,last);case S::BindDestination:case S::BindSource:case S::RebindDestination:return 9;case S::BindOutputReg:case S::BindScale:return 6;case S::MultiplyBuild:case S::MultiplyClock:case S::MultiplyScale:return 23;case S::SaveR3:case S::RestoreR3:return 10;case S::SaveReg:case S::RestoreReg:return 6;case S::Send:return 10;case S::AwaitChild:case S::Complete:return 0;default:return 3;}}
+ ControllerDeviceState*bound_=nullptr;std::optional<T>task_{};std::optional<ControllerVoiceDspWordTask>word_{};bool ownsDsp_=false;uint32_t result_=0;uint16_t command_=0;
+};
+}
