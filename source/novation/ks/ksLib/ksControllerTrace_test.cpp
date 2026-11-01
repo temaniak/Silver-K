@@ -1,4 +1,5 @@
 #include "ksControllerTrace.h"
+#include "ksRecordedController_test.h"
 #include <chrono>
 #include <fstream>
 #include <iostream>

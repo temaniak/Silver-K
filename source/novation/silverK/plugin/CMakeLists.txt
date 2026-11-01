@@ -64,7 +64,9 @@ set_tests_properties(ks_runtime_controller PROPERTIES TIMEOUT 90 SKIP_RETURN_COD
 target_link_libraries(ksLiveMidiController_test PRIVATE ksLib)
 add_test(NAME ks_live_midi_controller COMMAND ksLiveMidiController_test)
 set_tests_properties(ks_live_midi_controller PROPERTIES TIMEOUT 90 SKIP_RETURN_CODE 77)
-add_executable(ksControllerTrace_test "${ROOT}/source/novation/ks/ksLib/ksControllerTrace_test.cpp")
+add_executable(ksControllerTrace_test
+    "${ROOT}/source/novation/ks/ksLib/ksControllerTrace_test.cpp"
+    "${ROOT}/source/novation/ks/ksLib/ksRecordedController_test.cpp")
 target_link_libraries(ksControllerTrace_test PRIVATE ksLib)
 add_test(NAME ks_controller_trace COMMAND ksControllerTrace_test)
 add_executable(ksControllerProbe_test EXCLUDE_FROM_ALL "${ROOT}/source/novation/ks/ksLib/ksControllerProbe_test.cpp")
