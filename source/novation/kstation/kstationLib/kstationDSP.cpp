@@ -1,11 +1,22 @@
 #include "kstationDSP.h"
 
 #include "dsp56kEmu/jitconfig.h"
+#ifdef SILVER_P12_ACTION_TRACE
+#include "../../controller/command/p12ActionTrace.h"
+#endif
+#ifdef SILVER_P12_NOTE_TRACE
+#include "../../controller/command/p12NoteTrace.h"
+#endif
 
 #include <algorithm>
 
 namespace kstation
 {
+#ifdef SILVER_P12_ACTION_TRACE
+    constexpr auto HostDmaChannel = 5u;
+    constexpr auto DmaEnable = 1u << 23;
+#endif
+
     DSP::DSP()
         : m_memory(std::make_unique<dsp56k::Memory>(m_validator, 0x80000, 0x80000, 0x20000))
         , m_peripherals(nullptr)
@@ -104,7 +115,12 @@ namespace kstation
             {
                 const auto offset = byteOffset & 15;
                 const uint8_t value = static_cast<uint8_t>(m_hostRxWord >> (offset == 10 ? 16 : offset == 12 ? 8 : 0));
-                if (offset == 14) m_hostRxLatched = false;
+                if (offset == 14) {
+                    m_hostRxLatched = false;
+#ifdef SILVER_P12_ACTION_TRACE
+                    novation::controller::command::P12ActionTrace::worker().hdiReply(0, cycles(), m_hostRxWord);
+#endif
+                }
                 return value;
             }
         default: return 0;
@@ -140,6 +156,16 @@ namespace kstation
         auto& host = m_peripherals.getHDI08();
         if (host.hasRXData()) return false;
         host.writeRX(&word, 1);
+#ifdef SILVER_P12_ACTION_TRACE
+        auto& action = novation::controller::command::P12ActionTrace::worker();
+        if (action.programHdi()) {
+            // K acknowledges address mode with HF3 before it accepts the selector.
+            const auto flags = uint8_t((host.readControlRegister() & 0x10u) >> 1);
+            action.hdiWord(0, cycles(), word, flags);
+            const auto& dma = m_peripherals.getDMA();
+            action.kDma(cycles(), dma.getDSR(HostDmaChannel), dma.getDDR(HostDmaChannel), dma.getDCR(HostDmaChannel));
+        }
+#endif
         return true;
     }
 
@@ -148,9 +174,46 @@ namespace kstation
         if (!m_boot.finished() || !instructionBudget) return 0;
         const auto initialCycles = cycles();
         const auto initialInstructions = instructions();
+#ifdef SILVER_P12_ACTION_TRACE
+        auto& action = novation::controller::command::P12ActionTrace::worker();
+#endif
+#ifdef SILVER_P12_NOTE_TRACE
+        using novation::controller::command::P12NoteTrace;
+        auto& trace = P12NoteTrace::worker();
+#endif
         while (instructions() - initialInstructions < instructionBudget
             && availableAudioFrames() < AudioCapacity - 1)
+        {
+#ifdef SILVER_P12_ACTION_TRACE
+            const auto& dma = m_peripherals.getDMA();
+            // A selector can move DDR by one too. The data path is armed and has a pending word.
+            const auto watchingStore = action.hdiStoreEnabled() && dma.getDSR(HostDmaChannel) == dsp56k::HDI08::HORX &&
+                (dma.getDCR(HostDmaChannel) & DmaEnable) && m_peripherals.getHDI08().hasRXData();
+            const auto cursor = watchingStore ? dma.getDDR(HostDmaChannel) : 0u;
+#endif
             m_dsp->execJit();
+#ifdef SILVER_P12_ACTION_TRACE
+            if (watchingStore && cursor < 0x8000 && dma.getDDR(HostDmaChannel) == cursor + 1 &&
+                !m_peripherals.getHDI08().hasRXData()) {
+                const auto y = (dma.getDCR(HostDmaChannel) & 4u) ? 0x8000u : 0u;
+                const auto word = m_memory->get(y ? dsp56k::MemArea_Y : dsp56k::MemArea_X, cursor);
+                action.hdiStore(0, cycles(), cursor | y, word);
+            }
+            if (action.program())
+                action.mailbox(cycles(), m_framesProduced, m_memory->get(dsp56k::MemArea_Y, 0x2b));
+#endif
+#ifdef SILVER_P12_NOTE_TRACE
+            if (trace.active)
+                for (unsigned slot = 0; slot < 8; ++slot)
+                {
+                    const auto address = 0x1a + 81 * slot;
+                    const auto read = [&](unsigned at) { return m_memory->get(dsp56k::MemArea_X, at); };
+                    if (trace.word(P12NoteTrace::Word::KTrigger, slot, address,
+                                   read(address), cycles(), m_framesProduced))
+                        trace.voiceImage(address, 80, cycles(), m_framesProduced, read);
+                }
+#endif
+        }
         return cycles() - initialCycles;
     }
 

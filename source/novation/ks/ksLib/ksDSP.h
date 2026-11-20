@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ksDspWriteDependencies.h"
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -37,6 +38,13 @@ namespace ks
         uint8_t hostRead(uint32_t byteOffset);
         // False means a data word was rejected because the host ignored TXDE.
         bool hostWrite(uint32_t byteOffset, uint8_t value);
+        // Coordinator-only. Resolve idempotent staging against this DSP's live
+        // holding register, including writes by any other transport/IRQ owner.
+        bool hostWriteDependent(uint32_t byteOffset,uint8_t value) {
+            if(DspWriteDependencies::plan(m_hostTxWord,byteOffset,value)==DspWriteDependencies::Action::AlreadyStaged){++m_stagingWritesElided;return true;}
+            return hostWrite(byteOffset,value);
+        }
+        uint64_t stagingWritesElided()const noexcept{return m_stagingWritesElided;}
         uint64_t step(uint32_t instructionBudget = 256);
         // Same step(1)/discard sequence, contained in one translation unit so
         // the hot catch-up loop need not cross the wrapper boundary per block.
@@ -72,6 +80,7 @@ namespace ks
         size_t m_audioRead = 0, m_audioWrite = 0, m_inputRead = 0, m_inputWrite = 0;
         uint64_t m_framesProduced = 0, m_framesDropped = 0;
         uint32_t m_hostTxWord = 0, m_hostRxWord = 0;
+        uint64_t m_stagingWritesElided = 0;
         uint8_t m_hostICR = 0, m_hostCVR = 0, m_hostIVR = 0x0f;
         bool m_hostRxLatched = false;
     };

@@ -55,6 +55,22 @@ macOS bundles receive an ad hoc signature for local testing. Signing for distrib
 python3 tools/check_macos_compatibility.py build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release/Standalone/Silver-K.app
 ```
 
+## Silver-K Command on macOS
+
+The `codex/native-command-controller` branch provides the native K and KS
+controller as separate VST3 and Standalone targets. Run these commands from the repository root.
+
+```sh
+cmake -S . -B build-command -DCMAKE_BUILD_TYPE=Release
+cmake --build build-command --config Release --target silverKCommand_VST3 silverKCommand_Standalone --parallel 3
+```
+
+The products are under `build-command/silverKCommand_artefacts/Release/`.
+The default build targets both arm64 and x86_64. For Apple Silicon only, add
+`-DCMAKE_OSX_ARCHITECTURES=arm64` to the configure command. The bundles receive
+ad hoc signatures for local use. Select local firmware and, for KS, the Wave ROM
+and KS All Data or full Flash in the Silver-K Command editor.
+
 ## Windows x64
 
 Install Visual Studio 2022 or later with **Desktop development with C++**, a Windows SDK, CMake 3.22+, and Python 3. In PowerShell:

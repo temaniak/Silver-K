@@ -17,6 +17,8 @@ jobs:
         run: python3 tools/check_repository.py
       - name: Configure both architectures for macOS 12
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0
+      - name: Build native command-controller targets
+        run: cmake --build build --config Release --target silverKCommand_VST3 silverKCommand_Standalone --parallel 3
       - name: Build applications, plugins and checks
         run: cmake --build build --config Release --target silverK_Standalone silverK_VST3 silverK_AU silverWaveRomBuilder silver_check silverClock_test silverResamplerRealtime_test ksAudioInput_test silverExternalInput_test silverWorkflow_test silverPersistence_test silverDspThreads_test silverLatency_test silverSkin_test silverDiagnostics_test silverWorkerWakeup_test ksWorkerPlacement_test ksDspWorkers_test ksDspEquivalence_test ksControllerTrace_test ksPartMidi_test silverWaveBank_test dsp56kTestRunner --parallel 3
       - name: Run checks on the runner's native architecture

@@ -2,7 +2,9 @@
 
 #include "baseLib/filesystem.h"
 #include "baseLib/sha256.h"
+#ifndef SILVER_K_ROM_EXPLICIT_ONLY
 #include "synthLib/romLoader.h"
+#endif
 
 #include <algorithm>
 #include <array>
@@ -160,6 +162,7 @@ namespace kstation
         }
     }
 
+#ifndef SILVER_K_ROM_EXPLICIT_ONLY
     Rom RomLoader::findROM()
     {
         for (const auto* extension : {".bin", ".syx", ".os"})
@@ -170,4 +173,5 @@ namespace kstation
             }
         return {};
     }
+#endif
 }

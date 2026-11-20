@@ -11,6 +11,13 @@ namespace ks {
 class DspWorkers final {
 public:
     using Execute = void(*)(void*, unsigned, int64_t, bool);
+    static constexpr const char* backendName()noexcept {
+#ifdef __APPLE__
+        return "coordinator-A-helper-B-slice-barrier";
+#else
+        return "two-helpers-slice-barrier";
+#endif
+    }
     DspWorkers(void* context, Execute execute, int rate, unsigned block);
     ~DspWorkers();
     DspWorkers(const DspWorkers&) = delete;
