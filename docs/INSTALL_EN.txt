@@ -1,0 +1,46 @@
+Installing Silver-K 0.8b
+========================
+
+macOS
+-----
+
+The Universal 2 build supports Apple Silicon and Intel. It targets macOS 12.0 or later. AU
+and VST3 require a 64-bit host.
+
+1. Extract the archive and close your DAW.
+2. Copy the complete Silver-K.component bundle to /Library/Audio/Plug-Ins/Components/. For
+   a new VST3 installation, use /Library/Audio/Plug-Ins/VST3/. When updating, replace
+   Silver-K.vst3 in the folder your host already uses.
+3. Move the Standalone Silver-K.app into Applications or another permanent folder.
+4. Launch your DAW, rescan its plug-ins, and open Silver-K on an instrument track. In the
+   host's plug-in list, look under NK Stuff.
+
+When updating the AU, back up the previous component and any Silver-K copy in
+~/Library/Audio/Plug-Ins/Components/ outside the scanned folders. Leave one active
+component in the system Components folder. If macOS blocks a verified build, you can
+approve that app individually in Privacy & Security.
+
+Windows x64
+-----------
+
+1. Extract the archive to a permanent location and close your DAW.
+2. Copy the complete Silver-K.vst3 bundle to C:\Program Files\Common Files\VST3\.
+3. To run outside a DAW, launch Silver-K.exe from the Standalone folder.
+4. Launch your DAW, rescan its plug-ins, and open Silver-K on an instrument track.
+
+If Windows reports a missing Visual C++ library, install the Microsoft Visual C++
+Redistributable for x64.
+
+Synth data
+----------
+
+On first launch, choose the Silver-K folder in Setup. For K-Station, put its firmware in
+ROMs. For KS, put its firmware and the MIDI file extracted from the KS All Data archive in
+ROMs. A compatible Wave ROM containing sampled waves goes in the same folder. Silver-K
+creates a blank ks-wave-zero.bin if a compatible Wave ROM is absent.
+
+Place additional libraries in Patches and skins in Skins. Choose Setup → Rescan folders,
+then select your synth model. Supply firmware, original factory sounds, and samples from
+your own files.
+
+Guide to folders, the preset browser, and Drum SEQ (USER_GUIDE_EN.txt)

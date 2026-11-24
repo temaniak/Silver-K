@@ -1,6 +1,12 @@
 #include "ksDSP.h"
 
 #include "dsp56kEmu/jitconfig.h"
+#ifdef SILVER_P12_ACTION_TRACE
+#include "../../controller/command/p12ActionTrace.h"
+#endif
+#ifdef SILVER_P12_NOTE_TRACE
+#include "../../controller/command/p12NoteTrace.h"
+#endif
 
 #include <algorithm>
 
@@ -23,6 +29,9 @@ namespace ks
         // immediate cannot be zero. Two remains a bounded peripheral time slice.
         config.maxDoIterations = 2;
         config.linkJitBlocks = false;
+#ifdef SILVER_KS_DSP_JIT_NO_OPTIMIZER
+        config.enableOptimizer = false;
+#endif
         // Routine uploads must invalidate compiled blocks without permanently
         // reducing written P ranges to single-instruction blocks.
         config.trackVolatilePMemory = false;
@@ -82,6 +91,7 @@ namespace ks
         m_audioRead = m_audioWrite = m_inputRead = m_inputWrite = 0;
         m_framesProduced = m_framesDropped = 0;
         m_hostTxWord = m_hostRxWord = 0;
+        m_stagingWritesElided = 0;
         m_hostICR = m_hostCVR = 0;
         m_hostIVR = 0x0f;
         m_hostRxLatched = false;
@@ -113,7 +123,13 @@ namespace ks
             {
                 const auto offset = byteOffset & 15;
                 const uint8_t value = static_cast<uint8_t>(m_hostRxWord >> (offset == 10 ? 16 : offset == 12 ? 8 : 0));
-                if (offset == 14) m_hostRxLatched = false;
+                if (offset == 14) {
+                    m_hostRxLatched = false;
+#ifdef SILVER_P12_ACTION_TRACE
+                    auto& action = novation::controller::command::P12ActionTrace::worker();
+                    action.hdiReply(action.ksEndpoint(this), cycles(), m_hostRxWord);
+#endif
+                }
                 return value;
             }
         default: return 0;
@@ -149,6 +165,10 @@ namespace ks
         auto& host = m_peripherals.getHDI08();
         if (host.hasRXData()) return false;
         host.writeRX(&word, 1);
+#ifdef SILVER_P12_ACTION_TRACE
+        auto& action = novation::controller::command::P12ActionTrace::worker();
+        action.hdiWord(action.ksEndpoint(this), cycles(), word, m_hostICR);
+#endif
         return true;
     }
 
@@ -157,9 +177,67 @@ namespace ks
         if (!m_boot.finished() || !instructionBudget) return 0;
         const auto initialCycles = cycles();
         const auto initialInstructions = instructions();
+#ifdef SILVER_P12_ACTION_TRACE
+        auto& action = novation::controller::command::P12ActionTrace::worker();
+#endif
+#ifdef SILVER_P12_NOTE_TRACE
+        using novation::controller::command::P12NoteTrace;
+        auto& trace = P12NoteTrace::worker();
+#endif
         while (instructions() - initialInstructions < instructionBudget
             && availableAudioFrames() < AudioCapacity - 1)
+        {
+#ifdef SILVER_P12_NOTE_TRACE
+            const auto mixer = trace.ksMixerStateAt(m_framesProduced);
+            const auto beginPc = mixer ? m_dsp->getPC().toWord() : 0;
+            const auto beginCycle = mixer ? cycles() : 0;
+#endif
+#ifdef SILVER_P12_ACTION_TRACE
+            const auto watchingStore = action.hdiStoreEnabled() && !(m_hostICR & 8);
+            const auto cursor = watchingStore ? m_memory->get(dsp56k::MemArea_X, 0) : 0u;
+#endif
             m_dsp->execJit();
+#ifdef SILVER_P12_ACTION_TRACE
+            if (watchingStore && cursor < 0x8000 && m_memory->get(dsp56k::MemArea_X, 0) == cursor + 1) {
+                const auto y = m_memory->get(dsp56k::MemArea_X, 1) & 0x8000;
+                const auto word = m_memory->get(y ? dsp56k::MemArea_Y : dsp56k::MemArea_X, cursor);
+                action.hdiStore(action.ksEndpoint(this), cycles(), cursor | y, word);
+            }
+            if (action.program() && !action.voiceDsp)
+                action.mailbox(cycles(), m_framesProduced, m_memory->get(dsp56k::MemArea_Y, 0x41));
+#endif
+#ifdef SILVER_P12_NOTE_TRACE
+            if (mixer) {
+                // B's per-voice parameter, control and current mixer blocks have distinct strides.
+                const auto slot = trace.ksMixerSlot();
+                const auto parameterOffset = 101 * slot;
+                const auto controlOffset = 22 * slot;
+                const auto readX = [this](unsigned at) { return m_memory->get(dsp56k::MemArea_X, at); };
+                const auto readY = [this](unsigned at) { return m_memory->get(dsp56k::MemArea_Y, at); };
+                trace.ksMixerState(cycles(), m_framesProduced, beginCycle, beginPc, m_dsp->getPC().toWord(),
+                                   {readX(0x55 + parameterOffset), readY(0x81 + controlOffset),
+                                    readX(0x5cd + 0x2b * slot), readX(0x72 + parameterOffset),
+                                    readX(0x7a + parameterOffset), readY(0x85 + controlOffset)});
+            }
+            if (trace.ksVoiceStateAt(m_framesProduced))
+                trace.ksVoiceState(cycles(), m_framesProduced, m_dsp->getPC().toWord(),
+                                   m_memory->get(dsp56k::MemArea_Y, 0x81),
+                                   m_memory->get(dsp56k::MemArea_Y, 0x1ba));
+            if (trace.active && trace.ksVoiceDsp)
+                for (unsigned slot = 0; slot < 14; ++slot)
+                {
+                    const auto gate = 0x2b + 101 * slot;
+                    const auto status = 0x85 + 22 * slot;
+                    const auto read = [&](unsigned at) { return m_memory->get(dsp56k::MemArea_X, at); };
+                    if (trace.word(P12NoteTrace::Word::KSGate, slot, gate,
+                                   read(gate), cycles(), m_framesProduced))
+                        trace.voiceImage(gate, 100, cycles(), m_framesProduced, read);
+                    if (!trace.transport())
+                        trace.word(P12NoteTrace::Word::KSStatus, slot, status,
+                                   m_memory->get(dsp56k::MemArea_Y, status), cycles(), m_framesProduced);
+                }
+#endif
+        }
         return cycles() - initialCycles;
     }
 

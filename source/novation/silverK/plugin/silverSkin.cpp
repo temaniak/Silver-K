@@ -176,9 +176,15 @@ juce::var componentOptions(const juce::var& map,const juce::Component& c)
 }
 }
 
-SkinPackage SkinPackage::builtin()
+SkinPackage SkinPackage::builtin(bool silverFlat)
 {
     SkinPackage s;s.id="builtin";s.name="Silver-K";s.layout=embedded("silverk_json");s.theme=embedded("silverktheme_json");
+    if(silverFlat){
+        s.id="silver-flat";
+        s.name="Silver Flat";
+        s.layout=merge(s.layout,embedded("layout_json"));
+        s.theme=merge(s.theme,embedded("theme_json"));
+    }
     const std::pair<const char*,const char*> assets[]={{"knobBody","silverkknobbody_png"},{"knobGrip","silverkknobgrip_png"},{"knobBase","silverkstandknobbase_png"},{"buttonOff","silverkbuttonoff_png"},{"buttonOn","silverkbuttonon_png"}};
     for(const auto& a:assets){int size=0;const auto* data=BinaryData::getNamedResource(a.second,size);s.images[a.first]=juce::ImageFileFormat::loadFrom(data,size);}
     return s;

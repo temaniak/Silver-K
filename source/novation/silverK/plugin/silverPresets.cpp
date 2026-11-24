@@ -1,3 +1,4 @@
+#include "silverKEngine.h"
 #include "silverProcessor.h"
 namespace silverK {
 using namespace ksPlugin;
@@ -29,14 +30,18 @@ void Processor::publishFactoryPresets(){
  for(const auto& p:performances())factory.emplace_back(p.data.begin(),p.data.end());
  if(!factory.empty())patchLibrary.addFactory(factory,"KS Factory");
 }
-bool Processor::queueUiMidi(const uint8_t* data,size_t n){std::lock_guard guard(uiMidiMutex);return uiMidi.push(data,n);}
+bool Processor::queueUiMidi(const uint8_t* data,size_t n){
+ std::lock_guard guard(uiMidiMutex);
+ return uiMidi.pushGenerated(n,[&](size_t i){return uint16_t(data[i]);});
+}
 bool Processor::sendShortMidi(uint8_t status,uint8_t a,uint8_t b){const uint8_t bytes[]{status,a,b};return queueUiMidi(bytes,(status&0xf0)==0xc0?2:3);}
 void Processor::resetPending(){for(auto& v:pending)v.store(-1);for(auto& v:awaiting)v.store(-1);resetWire.store(true);}
 juce::String Processor::currentName()const{if(isFirmwareLoading())return "Loading firmware...";std::lock_guard guard(controlMutex);if(ownedK)return currentPatch.isEmpty()?"K-Station program":currentPatch;if(!ownedDevice)return {};const auto state=ownedDevice->fullSnapshot();return state.performance?nameAt(state.parts[0].data(),192)+" / Part "+juce::String(currentPart()+1)+": "+patchName(state.parts[currentPart()].data()):patchName(state.parts[0].data());}
+juce::String Processor::loadedPatchName()const{std::lock_guard guard(controlMutex);return currentPatch;}
 bool Processor::queueState(const ks::State& state,bool selectMode,juce::String& error){
  std::vector<uint8_t> bytes;
  if(selectMode){for(unsigned ch=0;ch<16;++ch)for(uint8_t cc:{uint8_t(64),uint8_t(123),uint8_t(120)})bytes.insert(bytes.end(),{uint8_t(0xb0|ch),cc,0});
-  auto select=ks::singleSelection(state.parts[0].data(),controlChannel.load());if(state.performance){select[2]=65;select[4]=0;}bytes.insert(bytes.end(),select.begin(),select.end());}
+  if(!state.performance){const auto select=ks::singleSelection(state.parts[0].data(),controlChannel.load());bytes.insert(bytes.end(),select.begin(),select.end());}}
  const auto dump=ks::stateMessage(state);bytes.insert(bytes.end(),dump.begin(),dump.end());
  if(!state.performance){const auto metadata=ks::singleMetadata(state.parts[0].data(),controlChannel.load());bytes.insert(bytes.end(),metadata.begin(),metadata.end());}
  if(!queueUiMidi(bytes.data(),bytes.size())){error="Preset queue is full";return false;}resetPending();return true;
@@ -58,8 +63,25 @@ bool Processor::setPerformanceMode(bool enabled,juce::String& error){
  state.performance=enabled;return queueState(state,true,error);
 }
 bool Processor::setPartActive(unsigned part,bool active,juce::String& error){
- std::lock_guard guard(controlMutex);if(!ownedDevice || part>=ks::PartCount)return false;auto state=ownedDevice->fullSnapshot();if(!state.performance)return false;
- state.activeMask=uint8_t(active?(state.activeMask|(1u<<part)):(state.activeMask&~(1u<<part)));state.parts[0][190]=state.activeMask;return queueState(state,false,error);
+ std::lock_guard guard(controlMutex);
+ const auto state=ownedDevice && !isFirmwareLoading()?ownedDevice->editorState(false):std::nullopt;
+ if(!state || !state->performance || part>=ks::PartCount){error="Enable KS Performance first";return false;}
+ const auto previous=ownedDevice->partSwitchPending(state->revision)?requestedPartMask:state->activeMask;
+ std::lock_guard producer(uiMidiMutex);
+ if(!ownedDevice->switchPart({uint8_t(part),active},[&](uint8_t index){return uiMidi.push(uint16_t(UiSoundLoadToken+index));})){
+  error="Part switch queue is full";return false;
+ }
+ const auto bit=uint8_t(1u<<part);
+ requestedPartMask=uint8_t(active?previous|bit:previous&~bit);
+ return true;
+}
+uint8_t Processor::displayedActiveParts()const{
+ if(isFirmwareLoading())return activeParts();
+ std::lock_guard guard(controlMutex);
+ if(ownedDevice)
+  if(const auto state=ownedDevice->editorState(false);state && state->performance)
+   return ownedDevice->partSwitchPending(state->revision)?requestedPartMask:state->activeMask;
+ return activeParts();
 }
 bool Processor::selectPerformance(int index,juce::String& error){
  std::lock_guard guard(controlMutex);if(!ownedDevice){error="Load firmware first";return false;}if(index<0 || index>=int(performanceLibrary.size()))return false;

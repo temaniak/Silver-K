@@ -60,18 +60,25 @@ static void verify(Processor& p){
  std::unique_ptr<juce::AudioProcessorEditor> e(p.createEditor());click(*e,"pageMain");auto* main=find(*e,"mainPanel");check(main&&main->getWidth()==1280&&main->getHeight()==1000,"Canvas dimensions");
  auto* diagnostics=find(*e,"performanceDiagnostics");check(diagnostics&&!diagnostics->isVisible(),"Diagnostics escaped Setup");
  check(find(*e,"drumEdit") && !find(*e,"drumEdit")->isVisible(),"Drum Edit exposed without a Drum Map");
- auto* demo=find(*e,"demoSong");check(demo&&!demo->isVisible(),"Demo escaped Setup");
  auto* controller=dynamic_cast<juce::ComboBox*>(find(*e,"ksController"));check(controller&&!controller->isVisible(),"Controller selector escaped Setup");
  click(*e,"pageSetup");check(diagnostics->isVisible()&&diagnostics->getParentComponent()->getLocalBounds().contains(diagnostics->getBounds()),"Diagnostics missing/outside Setup");
- check(demo->isVisible()==!p.isKStation(),"Demo visible in wrong model");check(!demo->getBounds().intersects(controller->getBounds()),"Demo/controller overlap");
+ check(!find(*e,"demoSong"),"Unavailable Demo Song action in Setup");
  check(controller->isVisible()&&controller->getParentComponent()->getLocalBounds().contains(controller->getBounds()),"Controller missing/outside Setup");
  check(controller->isEnabled()==(ks::boardComparisonAvailable()&&!p.isKStation()) && controller->getSelectedId()==p.ksControllerMode()+1,"Controller model/selection mismatch");
  if(!ks::boardComparisonAvailable())check(controller->getNumItems()==1&&controller->getItemId(0)==2,"Production controller selector must contain only native C++");
  auto* channel=find(*e,"controlChannel");auto* buffer=find(*e,"audioBuffer");check(channel&&buffer&&!channel->getBounds().intersects(buffer->getBounds())&&!controller->getBounds().intersects(buffer->getBounds()),"Setup controls overlap");
+ auto* switching=dynamic_cast<juce::ComboBox*>(find(*e,"firmwareSwitch"));
+ check(switching && switching->isVisible() && switching->getNumItems()==2,"Firmware switch mode missing from Setup");
+ for(int n:{2,1}){
+  switching->setSelectedId(n,juce::dontSendNotification);switching->onChange();
+  check(int(p.firmwareSwitch())==n-1,"Firmware switch mode binding");
+ }
+ check(!switching->getBounds().intersects(find(*e,"rescanRoms")->getBounds()),"Firmware switch mode overlaps ROM controls");
  auto report=juce::JSON::parse(p.performanceReport());check(report["schema"].toString()=="silver-k.performance.v1"&&report["metrics"].isObject(),"Invalid diagnostics JSON");
  check(p.performanceDiagnosticsMode()==0,"Diagnostics enabled by default");
  if(!p.firmwareReady())check(!p.setPerformanceDiagnostics(1),"Recording started without firmware");
  snapshot(*e,"Diagnostics-Setup");click(*e,"pageMain");
+ check(!switching->isVisible(),"Firmware switch mode escaped Setup");
  check(!find(*e,"pageExtra")->isVisible(),"Global Extra visible");check(!find(*e,"oscSelect1")->isVisible(),"OSC selector visible");
  for(const char* domain:{"osc1","osc2","osc3","mixer","filter","envelopes","lfo","voice","arp","fx"}){
   auto* button=dynamic_cast<juce::TextButton*>(find(*main,"extra:"+juce::String(domain)));
@@ -129,6 +136,7 @@ static void navigation(Processor& p){
 }
 static void sizing(){
  Processor p;
+ p.skinChoice="Silver-K";
  check(p.clockSource()==ClockSource::Host,"New instances must retain host sync by default");
  for(auto mode:{ClockSource::Internal,ClockSource::Midi,ClockSource::Host}){
   p.setClockSource(mode);juce::MemoryBlock saved;p.getStateInformation(saved);Processor restored;restored.setStateInformation(saved.getData(),int(saved.getSize()));
@@ -153,4 +161,4 @@ static void sizing(){
  {Editor e(restored);check(e.getWidth()==960,"Corrupt state produced an oversized editor");}
  std::cout<<"PASS: scale presets/custom, invalid input, drag aspect ratio, editor reopen and host state persistence\n";
 }
-int main(int argc,char** argv){try{juce::ScopedJuceInitialiser_GUI gui;sizing();Processor p;p.skinChoice="Auto";verify(p);if(argc>=3){if(argc>=5){juce::String error;check(p.setFlashRom(juce::File(argv[3]),error),error);check(p.setWaveRom(juce::File(argv[4]),error),error);}p.prepareToPlay(48000,256);p.setNonRealtime(true);for(int n=1;n<=2;++n){juce::String error;check(p.loadFirmware(juce::File(argv[n]),error),error);verify(p);navigation(p);}}return 0;}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}
+int main(int argc,char** argv){try{juce::ScopedJuceInitialiser_GUI gui;sizing();Processor p;p.skinChoice="Silver-K";verify(p);if(argc>=3){if(argc>=5){juce::String error;check(p.setFlashRom(juce::File(argv[3]),error),error);check(p.setWaveRom(juce::File(argv[4]),error),error);}p.prepareToPlay(48000,256);p.setNonRealtime(true);for(int n=1;n<=2;++n){juce::String error;check(p.loadFirmware(juce::File(argv[n]),error),error);verify(p);navigation(p);}}return 0;}catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}}

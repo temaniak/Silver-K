@@ -15,6 +15,11 @@ for name in filter(None,files):
         or (name.startswith('design-stand/public/assets/') and p.name.endswith('-notes.md'))
         or name.startswith('doc/releases/0.2')):
         errors.append(name+': internal report or AI working context must remain local')
+    if name=='skin/Inter  (Google).rar':
+        # Original private SoulTrain design asset preserved in the repository.
+        if hashlib.sha256(data).hexdigest()!='609028a47fb142891a22d14f22685bfec6fe4985bc8faabae1248c8bb93b9899':
+            errors.append(name+': original Inter design archive changed')
+        continue
     if name=='assets/ks-init-flash.bin':
         if len(data)!=524288 or any(v!=255 for v in data[:0x1fc00]) or any(v!=255 for v in data[0x5e800:]):
             errors.append(name+': unexpected flash size or data in reserved/firmware regions')
@@ -27,6 +32,10 @@ for name in filter(None,files):
         errors.append(name+': binary/audio/archive signature')
     if p.suffix.lower()=='.png':
         if not data.startswith(b'\x89PNG\r\n\x1a\n'):errors.append(name+': invalid PNG asset')
+    elif p.suffix.lower()=='.ttf' and name.startswith((
+            'design-soultrain/public/fonts/', 'design-soultrain/juce-skin/fonts/',
+            'design-soultrain/juce-skin/wave/', 'skin/pixelmix')):
+        if not data.startswith(b'\x00\x01\x00\x00'):errors.append(name+': invalid TrueType resource')
     else:
         try:data.decode('utf-8')
         except UnicodeDecodeError:errors.append(name+': unexpected binary file')

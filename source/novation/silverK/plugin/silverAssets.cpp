@@ -9,9 +9,6 @@ std::vector<uint8_t> readBytes(const juce::File& file){
 }
 constexpr const char* bundledInitHash="9a960a260afdef411d421c703cbd1950ce9082b675e7ee9a3a92be8c087a0e07";
 }
-bool Processor::isBundledInit(const juce::File& file){
- return file.getSize()==0x80000 && baseLib::SHA256(readBytes(file)).toString()==bundledInitHash;
-}
 juce::File Processor::managedAsset(const juce::File& source,juce::String& error)const{
  const auto folder=dataFolder.getChildFile("ROMs");
  if(!source.existsAsFile()){error="Required file is missing: "+source.getFullPathName();return {};}
@@ -39,9 +36,9 @@ std::vector<juce::File> Processor::selectedKSDataFiles()const{
  return flashFile==juce::File{}?std::vector<juce::File>{}:std::vector<juce::File>{flashFile};
 }
 std::vector<juce::File> Processor::ksDataFiles()const{std::lock_guard guard(controlMutex);return selectedKSDataFiles();}
-juce::var Processor::ksDataReferences()const{
+juce::var Processor::ksDataReferences(const std::vector<juce::File>& files)const{
  juce::Array<juce::var> references;
- for(const auto& file:selectedKSDataFiles()){
+ for(const auto& file:files){
   juce::DynamicObject::Ptr item=new juce::DynamicObject;item->setProperty("path",file.getFullPathName());
   if(file.isAChildOf(dataFolder))item->setProperty("relative",file.getRelativePathFrom(dataFolder));
   references.add(juce::var(item.get()));
@@ -59,13 +56,14 @@ void Processor::restoreKSDataFiles(const juce::var& references,bool allowRelativ
  }
  if(!flashFiles.empty())flashFile=flashFiles.front();
 }
-bool Processor::readKSData(const std::vector<juce::File>& files,std::vector<uint8_t>& storage,juce::String& error){
+bool Processor::readKSData(const std::vector<juce::File>& files,std::vector<uint8_t>& storage,juce::String& error,KSDataCoverage* coverage){
  error.clear();storage.clear();
- if(files.empty()){error="Select KS All Data or its MIDI files in Setup > KS factory data. KS also requires firmware and Wave ROM in ROMs.";return false;}
+ if(coverage)*coverage={};
+ if(files.empty()){error="Put the KS factory Data MIDI (programs and performances) in ROMs, then click Rescan in Setup.";return false;}
  if(files.size()==1 && files.front().hasFileExtension("bin")){
   const auto& file=files.front();storage=readBytes(file);
   if(storage.size()!=0x80000){error="KS user Flash must contain exactly 524288 bytes: "+file.getFileName();return false;}
-  if(baseLib::SHA256(storage).toString()==bundledInitHash){error="Silver Init is test data. Select your KS All Data or a compatible full user Flash in Setup > KS factory data.";return false;}
+  if(baseLib::SHA256(storage).toString()==bundledInitHash){error="Silver Init is test data. Put the KS factory Data MIDI or a compatible full user Flash in ROMs.";return false;}
  }else{
   if(files.size()>128){error="Select at most 128 KS Data MIDI files";return false;}
   storage.assign(0x80000,0xff);std::array<bool,600> programs{};std::array<bool,100> performances{};unsigned programCount=0;
@@ -91,7 +89,10 @@ bool Processor::readKSData(const std::vector<juce::File>& files,std::vector<uint
    }
    if(!found){error="No KS Program/Performance data in "+file.getFileName();return false;}
   }
-  if(!programCount){error="KS Data must include programs, not only performances";return false;}
+  if(coverage){
+   coverage->programs=programCount;
+   coverage->performances=unsigned(std::count(performances.begin(),performances.end(),true));
+  }else if(!programCount){error="KS Data must include programs, not only performances";return false;}
   constexpr uint8_t globals[]{1,0,3,0,0,1,15,127,0,0,64,0,0,64,64,0,3,0,0,0,0};
   std::fill(storage.begin()+0x1ff00,storage.begin()+0x20000,0);std::copy(std::begin(globals),std::end(globals),storage.begin()+0x1ff00);
   if(!programs[200])for(unsigned n=0;n<600;++n)if(programs[n]){
@@ -99,6 +100,78 @@ bool Processor::readKSData(const std::vector<juce::File>& files,std::vector<uint
   }
  }
  if(storage[0x1ff02]<1 || storage[0x1ff02]>8 || storage[0x1ff03]>=(storage[0x1ff02]<=4?100:50) || storage[0x1ff04]>1){error="Invalid startup globals in KS Data";return false;}
+ return true;
+}
+
+bool Processor::scanKSAssets(const juce::File& folder,const juce::Array<juce::File>& files,juce::String& error){
+ const auto previousData=selectedKSDataFiles();
+ juce::File wave;
+ int wavePriority=-1;
+ juce::String waveHash,dataHash;
+ for(const auto& file:files){
+  if(!file.hasFileExtension("bin;rom") || file.getSize()!=ks::Board::WaveSize)continue;
+  const auto data=readBytes(file);
+  if(data.size()!=ks::Board::WaveSize)continue;
+  const bool nonzero=std::any_of(data.begin(),data.end(),[](uint8_t b){return b!=0;});
+  const int priority=nonzero?2:file.getFileName().equalsIgnoreCase("ks-wave-zero.bin")?0:1;
+  if(priority>wavePriority || (priority==wavePriority && file==bankFile)){
+   wave=file;
+   wavePriority=priority;
+   waveHash=juce::String(baseLib::SHA256(data).toString());
+  }
+ }
+ if(wave==juce::File{}){
+  const std::vector<uint8_t> zero(ks::Board::WaveSize,0);
+  wave=folder.getChildFile("ks-wave-zero.bin").getNonexistentSibling();
+  juce::TemporaryFile temp(wave);
+  if(!temp.getFile().replaceWithData(zero.data(),zero.size()) || !temp.overwriteTargetFileWithTemporary()){
+   error="Cannot create zero Wave ROM in "+folder.getFullPathName();
+   return false;
+  }
+  waveHash=juce::String(baseLib::SHA256(zero).toString());
+ }
+
+ std::vector<juce::File> best,midi;
+ std::vector<uint8_t> storage;
+ juce::String ignored;
+ auto score=[](KSDataCoverage coverage){return std::make_pair(coverage.performances>0,coverage.programs+coverage.performances);};
+ KSDataCoverage bestCoverage;
+ auto consider=[&](const std::vector<juce::File>& candidates,KSDataCoverage coverage){
+  if(!coverage.programs)return;
+  const auto rank=score(coverage),bestRank=score(bestCoverage);
+  if(rank<bestRank || (rank==bestRank && candidates!=previousData))return;
+  best=candidates;
+  bestCoverage=coverage;
+  dataHash=juce::String(baseLib::SHA256(storage).toString());
+ };
+ if(previousData.size()>1 && std::all_of(previousData.begin(),previousData.end(),
+     [&](const auto& file){return file.isAChildOf(folder) && file.hasFileExtension("mid;midi");})){
+  KSDataCoverage coverage;
+  if(readKSData(previousData,storage,ignored,&coverage))consider(previousData,coverage);
+ }
+ for(const auto& file:files)if(file.hasFileExtension("mid;midi")){
+  KSDataCoverage coverage;
+  if(readKSData({file},storage,ignored,&coverage)){
+   midi.push_back(file);
+   consider({file},coverage);
+  }
+ }
+ if(midi.size()>1 && midi.size()<=128 && (bestCoverage.programs<600 || bestCoverage.performances<100)){
+  KSDataCoverage coverage;
+  if(readKSData(midi,storage,ignored,&coverage))consider(midi,coverage);
+ }
+ if(best.empty())for(const auto& file:files)
+  if((best.empty() || previousData==std::vector<juce::File>{file}) && file.hasFileExtension("bin")
+      && file.getSize()==0x80000 && readKSData({file},storage,ignored)){
+   best={file};
+   dataHash=juce::String(baseLib::SHA256(storage).toString());
+   if(previousData==best)break;
+  }
+ flashFiles=std::move(best);
+ flashFile=flashFiles.empty()?juce::File{}:flashFiles.front();
+ bankFile=wave;
+ scannedWaveHash=waveHash;
+ scannedDataHash=dataHash;
  return true;
 }
 }

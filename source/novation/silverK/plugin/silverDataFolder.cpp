@@ -1,4 +1,5 @@
 #include "silverProcessor.h"
+#include "baseLib/sha256.h"
 namespace silverK {
 juce::File Processor::settingsFile()const{
  const auto test=juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",{});
@@ -19,84 +20,135 @@ bool Processor::updateSettings(const juce::NamedValueSet& edits,juce::String& er
  return true;
 }
 juce::NamedValueSet Processor::preferenceValues()const{
- juce::NamedValueSet values;values.set("editorScale",editorScale.load());values.set("skinChoice",skinChoice);values.set("customSkin",customSkin);values.set("bufferProfile",buffering.load());values.set("ksControllerMode",ksControllerMode());values.set("ksTwoCoreProcessing",ksTwoCoreProcessing());values.set("editorChannel",int(editorChannelPreference.load()));values.set("browserState",browserState);return values;
+ juce::NamedValueSet values;values.set("editorScale",editorScale.load());values.set("skinChoice",skinChoice);values.set("customSkin",customSkin);values.set("bufferProfile",buffering.load());values.set("ksControllerMode",ksControllerMode());values.set("ksTwoCoreProcessing",ksTwoCoreProcessing());values.set("editorChannel",int(editorChannelPreference.load()));values.set("browserState",browserState);values.set("firmwareSwitch",int(firmwareSwitch()));return values;
 }
-void Processor::savePreferences(){
+void Processor::setEditorScaleFromResize(double scale){
+ if(editorScale.load()==scale)return;
+ lastEditorResizeMs.store(juce::Time::getMillisecondCounterHiRes());
+ editorScale.store(scale);
+}
+void Processor::savePreferences(bool flushEditorScale){
  if(isFirmwareLoading())return;
- std::lock_guard guard(controlMutex);const auto values=preferenceValues();juce::NamedValueSet edits;
- for(int n=0;n<values.size();++n)if(preferenceBaseline[values.getName(n)]!=values.getValueAt(n))edits.set(values.getName(n),values.getValueAt(n));
- if(edits.size()==0)return;juce::String error;if(updateSettings(edits,error))preferenceBaseline=values;else message=error;
+ std::lock_guard guard(controlMutex);
+ const auto values=preferenceValues();
+ const auto resizedAt=lastEditorResizeMs.load();
+ const bool resizing=!flushEditorScale && resizedAt!=0. && juce::Time::getMillisecondCounterHiRes()-resizedAt<250.;
+ juce::NamedValueSet edits;
+ for(int n=0;n<values.size();++n){
+  const auto key=values.getName(n);
+  if(resizing && key==juce::Identifier("editorScale"))continue;
+  const auto& value=values.getValueAt(n);
+  if(preferenceBaseline[key]!=value)edits.set(key,value);
+ }
+ if(edits.size()==0)return;
+ juce::String error;
+ if(!updateSettings(edits,error)){message=error;return;}
+ for(int n=0;n<edits.size();++n)preferenceBaseline.set(edits.getName(n),edits.getValueAt(n));
 }
 void Processor::initializeDataFolder(){
  const auto test=juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",{});
  const auto settings=juce::JSON::parse(settingsFile());const auto saved=settings["dataFolder"].toString();
  const auto fallback=juce::File::getSpecialLocation(juce::File::userDocumentsDirectory).getChildFile("Silver-K");
- dataFolder=saved.isNotEmpty()?juce::File(saved):test.isNotEmpty()?juce::File(test).getChildFile("Silver-K"):fallback;
+ const auto profile=test.isEmpty()?juce::File{}:juce::File(test);
+ const auto savedFolder=saved.isEmpty()?juce::File{}:juce::File(saved);
+ const bool isolatedStandalone=profile!=juce::File{} && wrapperType==wrapperType_Standalone;
+ // A previous Standalone could save the global data folder into a test profile.
+ const bool foreignFolder=isolatedStandalone && savedFolder!=juce::File{} && savedFolder!=profile &&
+                          !savedFolder.isAChildOf(profile);
+ dataFolder=savedFolder!=juce::File{} && !foreignFolder?savedFolder:
+            profile!=juce::File{}?profile.getChildFile("Silver-K"):fallback;
  const auto assetRoot=settings["assetRoot"].toString();const bool sameAssetRoot=assetRoot.isEmpty() || assetRoot==dataFolder.getFullPathName();
+ const bool restoreAssets=!foreignFolder && (!isolatedStandalone || sameAssetRoot);
  auto selectedAsset=[&](const char* role){
   const auto path=settings[role].toString();if(path.isEmpty())return juce::File{};const juce::File file(path);if(file.existsAsFile())return file;
   const auto relative=settings[juce::Identifier(juce::String(role)+"Relative")].toString();
   if(sameAssetRoot && relative.isNotEmpty() && !juce::File::isAbsolutePath(relative)){const auto relocated=dataFolder.getChildFile(relative);if(relocated.isAChildOf(dataFolder) && relocated.existsAsFile())return relocated;}
   return file;
  };
- osFile=selectedAsset("os");bankFile=selectedAsset("bank");flashFile=selectedAsset("flash");
- restoreKSDataFiles(settings["ksDataFiles"],sameAssetRoot);
- for(const auto& file:selectedKSDataFiles())if(isBundledInit(file)){flashFile=juce::File{};flashFiles.clear();break;}
+ if(restoreAssets){
+  osFile=selectedAsset("os");bankFile=selectedAsset("bank");flashFile=selectedAsset("flash");
+  restoreKSDataFiles(settings["ksDataFiles"],sameAssetRoot);
+ }
  const double scale=double(settings.getProperty("editorScale",.75));editorScale.store(std::isfinite(scale)&&scale>=.5&&scale<=1.5?scale:.75);
- skinChoice=settings.getProperty("skinChoice","Auto").toString();customSkin=settings["customSkin"].toString();browserState=settings["browserState"].toString();
- const int controller=int(settings.getProperty("ksControllerMode",ksControllerMode()));ksController.store(controller>=0 && controller<=2?ks::ControllerMode(controller):ks::ControllerMode::H8);
+ skinChoice=settings.getProperty("skinChoice",defaultSkin).toString();customSkin=settings["customSkin"].toString();browserState=settings["browserState"].toString();
  twoCoreProcessing.store(bool(settings.getProperty("ksTwoCoreProcessing",ksTwoCoreProcessing())));
+ firmwareSwitchMode.store(int(settings["firmwareSwitch"])==int(FirmwareSwitch::RecallLast)?FirmwareSwitch::RecallLast:FirmwareSwitch::KeepPatch);
  buffering.store(juce::jlimit(0,3,int(settings.getProperty("bufferProfile",1))));controlChannel.store(uint8_t(int(settings["editorChannel"])&15));editorChannelPreference.store(controlChannel.load());
- juce::String error;setDataFolder(dataFolder,error);if(error.isNotEmpty())message=error;
- preferenceBaseline=preferenceValues();startupFirmware=osFile;startupPending.store(osFile!=juce::File{});
+ juce::String error;
+ if(setDataFolder(dataFolder,error))startupFirmware=firmwareAfterFolderScan();
+ else message=error;
+ preferenceBaseline=preferenceValues();startupPending.store(startupFirmware!=juce::File{});
 }
-bool Processor::setDataFolder(const juce::File& folder,juce::String& error){
+bool Processor::setDataFolder(const juce::File& folder,juce::String& error,bool rescanPresets){
  std::lock_guard guard(controlMutex);
+ error.clear();
  if(folder==juce::File{}){error="Choose a Silver-K folder";return false;}
  const auto roms=folder.getChildFile("ROMs"),patches=folder.getChildFile("Patches"),skins=folder.getChildFile("Skins");
  for(const auto& dir:{roms,patches,skins})if(auto result=dir.createDirectory();result.failed()){error=result.getErrorMessage();return false;}
+ // Switching roots changes discovery, without copying assets from the running synth.
+ if(!scanROMs(roms,error))return false;
+ if(folder!=dataFolder)startupPending.store(false);
  dataFolder=folder;
- const auto zero=roms.getChildFile("ks-wave-zero.bin");
- if(!zero.exists()){
-  juce::MemoryBlock bytes(ks::Board::WaveSize,true);
-  if(!zero.replaceWithData(bytes.getData(),bytes.getSize())){error="Cannot create required zero Wave ROM";return false;}
+ const auto user=userPatchesFolder();
+ if(auto result=user.createDirectory();result.failed()){error=result.getErrorMessage();return false;}
+ struct Template { const char* name; Model model; bool performance=false, drums=false; };
+ juce::Array<juce::File> templates;
+ for(const Template& entry:std::initializer_list<Template>{
+     {"Init KS",Model::KS},{"Init K-Station",Model::KStation},
+     {"Init Drum Map",Model::KS,false,true},{"Init Performance",Model::KS,true}}){
+  const auto file=user.getChildFile(entry.name).withFileExtension(NativePatchExtension);
+  templates.add(file);
+  if(file.exists())continue;
+  const auto bytes=encodeNativePatch(initPatch(entry.model,entry.performance,entry.drums),entry.name);
+  // A second instance may create the same library while the first opens.
+  juce::TemporaryFile temporary(file);
+  if(bytes.empty() || !temporary.getFile().replaceWithData(bytes.data(),bytes.size()) ||
+     (!file.exists() && !temporary.getFile().moveFileTo(file))){
+   error="Could not create "+file.getFileName();
+   return false;
+  }
  }
- if(bankFile==juce::File{})bankFile=zero;
- for(auto* asset:{&osFile,&bankFile})if(asset->existsAsFile()){const auto managed=managedAsset(*asset,error);if(managed==juce::File{})return false;*asset=managed;}
- const auto selected=selectedKSDataFiles();std::vector<juce::File> managedData;
- for(const auto& file:selected){if(!file.existsAsFile()){managedData.push_back(file);continue;}const auto managed=managedAsset(file,error);if(managed==juce::File{})return false;managedData.push_back(managed);}
- if(!managedData.empty()){flashFiles=std::move(managedData);flashFile=flashFiles.front();}
- const auto settings=juce::JSON::parse(settingsFile());
- const bool cached=settings["dataFolder"].toString()==folder.getFullPathName() && int(settings["firmwareIndexVersion"])==1 && settings["firmwares"].isArray();
- romFolder=roms;
- if(cached){
-  firmwares.clear();for(const auto& item:*settings["firmwares"].getArray()){
-   const auto relative=item["file"].toString();if(relative.isEmpty() || juce::File::isAbsolutePath(relative))continue;
-   const auto file=roms.getChildFile(relative);if(file.isAChildOf(roms) && file.existsAsFile() && firmwares.size()<1024)firmwares.push_back({file,bool(item["kStation"])});
-  }
- }else{juce::String scan;setRomFolder(roms,scan);}
- // A cached firmware index is still useful when the required Data has not
- // been selected. Discover a real All Data file without creating substitutes.
- if(flashFile==juce::File{})for(const auto& file:roms.findChildFiles(juce::File::findFiles,false,"*"))
-  if(file.hasFileExtension("mid;midi") && file.getFileName().containsIgnoreCase("all data")){
-   std::vector<uint8_t> storage;juce::String ignored;if(readKSData({file},storage,ignored)){flashFile=file;flashFiles={file};break;}
-  }
  patchLibrary.addPath(patches,true);
+ patchLibrary.discoverUserPresets(user,std::move(templates));
+ if(rescanPresets)patchLibrary.rescan();
  return rememberDataFolder(error) && rememberAssets(error);
+}
+juce::File Processor::firmwareAfterFolderScan()const{
+ std::lock_guard guard(controlMutex);
+ const bool ksReady=bankFile.existsAsFile() && flashFile.existsAsFile();
+ if(firmwareReady()){
+  for(const auto& choice:firmwares)if(choice.kStation==isKStation()){
+   if(choice.kStation)return choice.file!=osFile?choice.file:juce::File{};
+   if(ksReady && (choice.file!=osFile || loadedWaveFile!=bankFile || loadedDataFiles!=selectedKSDataFiles()
+       || scannedDataHash!=ksDataHash || scannedWaveHash!=juce::String(baseLib::SHA256(bank).toString())))return choice.file;
+  }
+  return {};
+ }
+ for(const auto& choice:firmwares)if(choice.file==osFile && (choice.kStation || ksReady))return choice.file;
+ for(const auto& choice:firmwares)if(!choice.kStation && ksReady)return choice.file;
+ for(const auto& choice:firmwares)if(choice.kStation)return choice.file;
+ return {};
+}
+juce::String Processor::dataFolderStatus()const{
+ if(isFirmwareLoading())return "Loading firmware...";
+ std::lock_guard guard(controlMutex);
+ const auto has=[this](bool k){return std::any_of(firmwares.begin(),firmwares.end(),[k](const auto& choice){return choice.kStation==k;});};
+ return juce::String("K-Station firmware: ")+(has(true)?"found":"missing")+"\nKS firmware: "+(has(false)?"found":"missing")
+  +" · KS Data: "+(flashFile==juce::File{}?"missing":"found")+"\nWave ROM: "+(bankFile==juce::File{}?juce::String("missing"):bankFile.getFileName());
 }
 bool Processor::rememberDataFolder(juce::String& error){
  juce::NamedValueSet values;values.set("dataFolder",dataFolder.getFullPathName());
- juce::Array<juce::var> catalog;for(const auto& choice:firmwares)if(choice.file.isAChildOf(dataFolder.getChildFile("ROMs"))){
-  juce::DynamicObject::Ptr entry=new juce::DynamicObject;entry->setProperty("file",choice.file.getRelativePathFrom(dataFolder.getChildFile("ROMs")));entry->setProperty("kStation",choice.kStation);catalog.add(juce::var(entry.get()));
- }
- values.set("firmwareIndexVersion",1);values.set("firmwares",catalog);return updateSettings(values,error);
+ return updateSettings(values,error);
 }
 bool Processor::rememberAssets(juce::String& error){
  juce::NamedValueSet values;values.set("assetRoot",dataFolder.getFullPathName());
+ const auto roms=dataFolder.getChildFile("ROMs");
  for(const auto& asset:{std::pair<const char*,juce::File>{"os",osFile},{"bank",bankFile},{"flash",flashFile}}){
-  values.set(asset.first,asset.second.getFullPathName());values.set(juce::String(asset.first)+"Relative",asset.second.isAChildOf(dataFolder)?asset.second.getRelativePathFrom(dataFolder):juce::String{});
+  const bool inFolder=asset.second.isAChildOf(roms) && asset.second.existsAsFile();
+  values.set(asset.first,inFolder?asset.second.getFullPathName():juce::String{});
+  values.set(juce::String(asset.first)+"Relative",inFolder?asset.second.getRelativePathFrom(dataFolder):juce::String{});
  }
- values.set("ksDataFiles",ksDataReferences());return updateSettings(values,error);
+ values.set("ksDataFiles",ksDataReferences(selectedKSDataFiles()));return updateSettings(values,error);
 }
 bool Processor::setWaveRom(const juce::File& file,juce::String& error){
  std::lock_guard guard(controlMutex);

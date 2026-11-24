@@ -14,9 +14,17 @@ from pathlib import Path
 from check_plugin_identity import check_identity
 from check_macos_compatibility import check_bundle
 
-VERSION = '0.5a'
-PLUGIN_VERSION = '0.5.0'
+VERSION = '0.8b'
+PLUGIN_VERSION = '0.8.0'
 ROOT = Path(__file__).resolve().parents[1]
+RELEASE_DOCUMENTS = (
+    'docs/INSTALL_EN.txt',
+    'docs/INSTALL_RU.txt',
+    'docs/RELEASE_NOTES_EN.txt',
+    'docs/RELEASE_NOTES_RU.txt',
+    'docs/USER_GUIDE_EN.txt',
+    'docs/USER_GUIDE_RU.txt',
+)
 
 
 def digest(path):
@@ -80,6 +88,13 @@ def main():
                 macos_compatibility[filename] = check_bundle(built, architectures)
                 subprocess.run(['codesign', '--verify', '--deep', '--strict', str(built)], check=True)
             copy(built, target + '/' + filename)
+        if not macos:
+            standalone_skin = args.products / 'Standalone/SoulTrainJuce'
+            vst3_skin = args.products / 'VST3/Silver-K.vst3/Contents/Resources/SoulTrainJuce'
+            if standalone_skin.is_dir() or vst3_skin.is_dir():
+                if not (standalone_skin / 'catalog.json').is_file():
+                    raise RuntimeError(f'Missing Windows Standalone SoulTrain resources: {standalone_skin}')
+                copy(standalone_skin, 'Standalone/SoulTrainJuce')
         builder_name = 'Silver-K Wave ROM Builder' + ('.app' if args.platform.startswith('macOS') else '.exe')
         builder = args.wave_builder or (args.products.parents[2] / 'waveRomBuilder' /
                   'silverWaveRomBuilder_artefacts' / args.products.name / builder_name)
@@ -100,10 +115,9 @@ def main():
                              contains_sampled_waves=False, mapped_base='0x860000',
                              generator='tools/package_release.py')
         (stage / 'Silver-K/ROMs/ks-wave-zero.manifest.json').write_text(json.dumps(wave_manifest, indent=2)+'\n')
-        for src, dest in [('doc/INSTALL.md', 'INSTALL.md'),
-                          ('doc/USER_GUIDE.md', 'USER_GUIDE.md'),
-                          ('doc/SKINS.md', 'SKINS.md'),
-                          (f'doc/releases/{VERSION}.md', 'RELEASE_NOTES.md'),
+        for document in RELEASE_DOCUMENTS:
+            copy(ROOT / document, document)
+        for src, dest in [('doc/SKINS.md', 'SKINS.md'),
                           ('LICENSE.md', 'LICENSE.md'), ('THIRD_PARTY.md', 'THIRD_PARTY.md')]:
             copy(ROOT / src, dest)
         if args.test_guide:
@@ -116,17 +130,16 @@ def main():
         # Original user assets and unrelated editor work are outside these roots.
         source_files = subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard'],cwd=ROOT,text=True).splitlines()
         source_archive = stage / 'Silver-K-source.zip'
-        roots = ('source/','cmake/','assets/','tools/','doc/','.github/')
+        roots = ('source/','cmake/','assets/','tools/','doc/','.github/','design-soultrain/juce-skin/')
         top = {'CMakeLists.txt','README.md','LICENSE.md','THIRD_PARTY.md','.gitignore'}
-        public_docs = {'doc/BUILD.md', 'doc/INSTALL.md', 'doc/USER_GUIDE.md',
-                       'doc/SKINS.md', 'doc/WAVE_ROM_BUILDER.md',
-                       'doc/releases/0.4a.md', f'doc/releases/{VERSION}.md'}
+        public_docs = {'doc/BUILD.md', 'doc/INSTALL.md', 'doc/USER_GUIDE.md', 'doc/SKINS.md',
+                       'doc/WAVE_ROM_BUILDER.md', 'doc/releases/0.4a.md', f'doc/releases/{VERSION}.md'}
         with zipfile.ZipFile(source_archive,'w',zipfile.ZIP_DEFLATED) as source_zip:
             for relative in sorted(set(source_files)):
                 if relative.startswith('doc/') and relative not in public_docs:
                     continue
                 path = ROOT / relative
-                if (relative.startswith(roots) or relative in top) and path.is_file():
+                if (relative.startswith(roots) or relative in top or relative in RELEASE_DOCUMENTS) and path.is_file():
                     if path.suffix.lower() in {'.bin','.syx','.mid','.midi','.os','.fxb','.fxp','.wav','.skwave'} and relative!='assets/ks-init-flash.bin':
                         raise RuntimeError(f'Private/binary asset in source snapshot: {relative}')
                     source_zip.write(path,relative)
@@ -134,9 +147,7 @@ def main():
         sources = f'''Silver-K corresponding source is included in Silver-K-source.zip.
 Snapshot SHA-256: {digest(source_archive)}
 Base Git commit: {commit}; local changes included: {dirty}.
-Upstream baseline (the bundled snapshot also includes local changes):
-https://github.com/temaniak/Silver-K/tree/{commit}
-https://github.com/temaniak/Silver-K/archive/{commit}.tar.gz
+Upstream project: https://github.com/temaniak/Silver-K
 
 Build instructions and local compatibility patches are in that source tree.
 Required dependency sources (built locally, not prebuilt binaries):
@@ -161,7 +172,7 @@ No original firmware or factory sounds are included in this binary archive.
         checksums = ''.join(f'{digest(p)}  {p.relative_to(stage).as_posix()}\n' for p in files)
         (stage / 'SHA256SUMS.txt').write_text(checksums, encoding='utf-8')
         if args.platform.startswith('macOS'):
-            subprocess.run(['ditto', '-c', '-k', '--keepParent', str(stage), str(archive)], check=True)
+            subprocess.run(['ditto', '-c', '-k', '--norsrc', '--keepParent', str(stage), str(archive)], check=True)
         else:
             with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as package:
                 for p in sorted(stage.rglob('*')):

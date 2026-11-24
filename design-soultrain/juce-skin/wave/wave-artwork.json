@@ -1,0 +1,267 @@
+{
+  "artScale": 2,
+  "width": 176,
+  "height": 68,
+  "control": [
+    8,
+    8,
+    160,
+    52
+  ],
+  "trigger": [
+    11,
+    11,
+    130,
+    46
+  ],
+  "arrows": [
+    [
+      142,
+      18,
+      22,
+      16
+    ],
+    [
+      142,
+      34,
+      22,
+      16
+    ]
+  ],
+  "label": [
+    22,
+    24,
+    20
+  ],
+  "frame": {
+    "file": "frame.png",
+    "x": 6.0,
+    "y": 7.0
+  },
+  "frameOpen": {
+    "file": "frame-open.png",
+    "x": 6.0,
+    "y": 7.0
+  },
+  "glyphs": [
+    {
+      "file": "glyph-00.png",
+      "x": 15.0,
+      "y": 19.5,
+      "raw": 0,
+      "advance": 45,
+      "source": "/author-assets/wave-sine-review.svg"
+    },
+    {
+      "file": "glyph-01.png",
+      "x": 15.0,
+      "y": 19.0,
+      "raw": 1,
+      "advance": 45,
+      "source": "/author-assets/wave-triangle-review.svg"
+    },
+    {
+      "file": "glyph-02.png",
+      "x": 15.5,
+      "y": 19.5,
+      "raw": 2,
+      "advance": 45.9375,
+      "source": "/author-assets/wave-saw-review.svg"
+    },
+    {
+      "file": "glyph-03.png",
+      "x": 14.5,
+      "y": 18.5,
+      "raw": 3,
+      "advance": 45,
+      "source": "/author-assets/wave-pulse-review.svg"
+    }
+  ],
+  "models": {
+    "K": [
+      {
+        "raw": 0,
+        "name": "Sine",
+        "title": "Sine"
+      },
+      {
+        "raw": 1,
+        "name": "Triangle",
+        "title": "Triangle"
+      },
+      {
+        "raw": 2,
+        "name": "Saw",
+        "title": "Saw"
+      },
+      {
+        "raw": 3,
+        "name": "Pulse",
+        "title": "Pulse"
+      }
+    ],
+    "KS": [
+      {
+        "raw": 0,
+        "name": "Sine",
+        "title": "Sine"
+      },
+      {
+        "raw": 1,
+        "name": "Triangle",
+        "title": "Triangle"
+      },
+      {
+        "raw": 2,
+        "name": "Saw",
+        "title": "Saw"
+      },
+      {
+        "raw": 3,
+        "name": "Pulse",
+        "title": "Pulse"
+      },
+      {
+        "raw": 4,
+        "name": "White",
+        "title": "White noise"
+      },
+      {
+        "raw": 5,
+        "name": "HP Noise",
+        "title": "HP noise"
+      },
+      {
+        "raw": 6,
+        "name": "BP Noise",
+        "title": "BP noise"
+      },
+      {
+        "raw": 7,
+        "name": "HP × BP",
+        "title": "HP/BP noise"
+      },
+      {
+        "raw": 8,
+        "name": "Organ",
+        "title": "Organ"
+      },
+      {
+        "raw": 9,
+        "name": "Harp",
+        "title": "Harpsichord"
+      },
+      {
+        "raw": 10,
+        "name": "E.Piano",
+        "title": "Electric piano"
+      },
+      {
+        "raw": 11,
+        "name": "Slap Bass",
+        "title": "Slap bass"
+      },
+      {
+        "raw": 12,
+        "name": "Rhodes",
+        "title": "Rhodes piano"
+      },
+      {
+        "raw": 13,
+        "name": "Rh.Tine",
+        "title": "Rhodes tine"
+      },
+      {
+        "raw": 14,
+        "name": "Wurli",
+        "title": "Wurlitzer EP"
+      },
+      {
+        "raw": 15,
+        "name": "Clav",
+        "title": "Clavinet"
+      },
+      {
+        "raw": 16,
+        "name": "A.Bass",
+        "title": "Analog bass"
+      },
+      {
+        "raw": 17,
+        "name": "Kick 1",
+        "title": "Kick 1"
+      },
+      {
+        "raw": 18,
+        "name": "Kick 2",
+        "title": "Kick 2"
+      },
+      {
+        "raw": 19,
+        "name": "Kick 3",
+        "title": "Kick 3"
+      },
+      {
+        "raw": 20,
+        "name": "Snare 1",
+        "title": "Snare 1"
+      },
+      {
+        "raw": 21,
+        "name": "Snare 2",
+        "title": "Snare 2"
+      },
+      {
+        "raw": 22,
+        "name": "Snare 3",
+        "title": "Snare 3"
+      },
+      {
+        "raw": 23,
+        "name": "Tom",
+        "title": "Tom"
+      },
+      {
+        "raw": 24,
+        "name": "Rim",
+        "title": "Rimshot"
+      },
+      {
+        "raw": 25,
+        "name": "Sticks",
+        "title": "Sticks"
+      },
+      {
+        "raw": 26,
+        "name": "Closed HH",
+        "title": "Closed hi-hat"
+      },
+      {
+        "raw": 27,
+        "name": "Open HH",
+        "title": "Open hi-hat"
+      },
+      {
+        "raw": 28,
+        "name": "Tamb",
+        "title": "Tambourine"
+      },
+      {
+        "raw": 29,
+        "name": "Conga",
+        "title": "Conga"
+      },
+      {
+        "raw": 30,
+        "name": "Cowbell",
+        "title": "Cowbell"
+      },
+      {
+        "raw": 31,
+        "name": "Cymbal",
+        "title": "Cymbal"
+      }
+    ]
+  },
+  "catalogueSHA256": "7d27ed16de2b79c3471dfa1953d9fcb2b5616f932b2550e6ace030ea6a563be5"
+}

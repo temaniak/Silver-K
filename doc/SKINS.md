@@ -6,13 +6,13 @@ Silver-K loads JUCE skin packages without rebuilding the plugin. A package chang
 
 1. Open Setup → Skins folder.
 2. Put each package in its own subfolder of Skins. The entry file must be named `skin.json`.
-3. Click Reload to refresh the list, then select the package in the skin selector.
+3. Click **Rescan folders**, then select the package under **Skin** in Setup.
 
-Load skin also opens a package's `skin.json` directly, including outside Skins. Existing standalone Silver-K layout JSONs are supported by the same chooser. The selected package is remembered in preferences and host state. Keep its files available when reopening a session.
+**SoulTrain** is the default. **Old version skin** opens the original Silver-K editor. **Experimental grey** opens the built-in Silver Flat skin with vector controls and persistent dial values. A selected skin is remembered in preferences and host state. Keep custom package files available when reopening a session.
 
 Reload reads JSON, images and the font again from disk. F5 invokes the same action from the editor. A rejected reload keeps the working editor; Setup displays the error. A missing or invalid package at startup uses the built-in skin and displays the error. If a managed package has moved with the data folder, Silver-K can locate it by its manifest ID.
 
-The repository includes **Silver Flat** in `assets/skins/Silver Flat`. Copy that folder into Skins. It provides a flat blue/silver interface with three oscillators side by side, separate envelope strips and persistent editable dial values. Its vector controls scale without bitmap textures. Select Silver-K to return to the original interface.
+The editable source of **Silver Flat** is in `assets/skins/Silver Flat`. To customize it, copy it into `Skins` and select that copy in Setup.
 
 ## Creating a package
 
@@ -103,7 +103,7 @@ Useful IDs:
 | Navigation | `pageMain`, `pageExtra`, `pagePerf`, `pagePatches`, `pageSetup`, `firmwareSelect`, `partTab1`–`partTab4`, `performanceSwitch` |
 | Main | `mainPanel`, `control:<parameter ID>`, `caption:<parameter ID>`, `<parameter ID>` for the inner slider/menu, `programDisplay`, `patchBrowserButton`, `previousPreset`, `nextPreset`, `panic`, `effectSelect` |
 | Extra | `extra:osc1`–`extra:osc3`, `extra:mixer`, `extra:filter`, `extra:envelopes`, `extra:lfo`, `extra:voice`, `extra:arp`, `extra:fx`, `fmSettings`, `localExtra`, `extraContent`, `extraBack`, `programClock`, `clockSource`, `clockSourceLabel`, `advancedContent`, `advancedPanel:<section name>` |
-| Setup | `setupStatus`, `setupLatency`, `setupHelp`, `loadFirmware`, `dataFolder`, `rescanRoms`, `waveRom`, `factoryData`, `skinSelect`, `loadSkin`, `reloadSkin`, `exportSkin`, `openSkins`, `controlChannel`, `audioBuffer`, `ksController`, `performanceDiagnostics`, `demoSong` |
+| Setup | `setupStatus`, `setupLatency`, `setupHelp`, `loadFirmware`, `dataFolder`, `rescanRoms`, `waveRom`, `factoryData`, `skinSelect`, `loadSkin`, `reloadSkin`, `exportSkin`, `openSkins`, `controlChannel`, `audioBuffer`, `ksController`, `performanceDiagnostics` |
 | Browser | `patchBrowser`, `patchSearch`, `patchModel`, `patchTagFilter`, `patchSource`, `patchFavouritesOnly`, `showAllBankSlots`, `ksBank`, `patchBankHint`, `patchTable`, `addPatchFolder`, `addPatchFile`, `rescanPatches`, `removePatchSource`, `saveCurrentPatch`, `patchTags`, `patchFavourite`, `savePatchTags`, `exportPatch`, `patchInfo` |
 | Performance | `performancePanel`, `performanceCanvas`, `performancePageSwitch`, `performanceMessage`, `performance:part1:strip`–`performance:part4:strip` |
 

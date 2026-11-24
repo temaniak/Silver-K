@@ -1,10 +1,12 @@
 #pragma once
+#include "../../controller/musicalClock.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
 
 namespace silverK {
 enum class ClockSource { Host, Internal, Midi };
+struct HostLoop { double startPpq, endPpq; };
 
 // Copy the policy once per audio block. UI changes never touch the running
 // clock or send MIDI from the message thread.
@@ -17,7 +19,7 @@ inline bool acceptsExternalTransport(ClockSource source,bool hostOwnsTransport){
 // Audio-thread-owned MIDI clock. No storage grows with the block size.
 class HostClock {
 public:
- struct Position {bool available=false,playing=false,hasPpq=false;double bpm=120,ppq=0;};
+ using Position=novation::controller::MusicalClock::Position;
  struct Event {uint8_t status;int offset;};
  void reset(){initialized=false;authoritative=false;playing=false;phase=0;}
  void begin(const Position& pos,double rate,int samples){

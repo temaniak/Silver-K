@@ -111,7 +111,7 @@ struct PerformancePanel::Impl final:juce::Component {
  std::vector<pluginLib::patchDB::PatchPtr> programs;unsigned notePart=0;bool high=false;uint64_t learning=0;int shownMode=-1;
  Impl(PerformancePanel& panel,Processor& processor,Browser& b):owner(panel),p(processor),browser(b){
   setComponentID("performanceCanvas");message.setComponentID("performanceMessage");
-  addAndMakeVisible(power);power.setComponentID("performancePageSwitch");power.getProperties().set("led",true);power.setClickingTogglesState(true);power.onClick=[this]{juce::String error;if(!p.setPerformanceMode(power.getToggleState(),error))message.setText(error,juce::dontSendNotification);refresh();};
+  addAndMakeVisible(power);power.setComponentID("performancePageSwitch");power.getProperties().set("led",true);power.getProperties().set("stateOnlyLed",true);power.setClickingTogglesState(true);power.onClick=[this]{juce::String error;if(!p.setPerformanceMode(power.getToggleState(),error))message.setText(error,juce::dontSendNotification);refresh();};
   addAndMakeVisible(message);setSkinColour(message,juce::Label::textColourId,juce::Colour(0xff171b20));message.setFont(juce::Font(12.f));
   for(unsigned n=0;n<4;++n){auto& c=channels[n];c=std::make_unique<Channel>(p,n);addAndMakeVisible(*c);
    c->onSelect=[this,n]{if(!p.firmwareReady()||p.isKStation()||!p.performanceMode()||p.currentPart()==n)return;closeNotes();p.selectPart(n);refresh();};c->on.onClick=[this,n]{juce::String error;if(!p.setPartActive(n,channels[n]->on.getToggleState(),error))message.setText(error,juce::dontSendNotification);refresh();};

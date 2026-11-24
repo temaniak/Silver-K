@@ -34,7 +34,15 @@ $env:SILVER_TEST_FILTER_SOURCE = 'internal' # or host
 build\source\novation\silverK\buildStandalone\silverPlugin\Release\silverWorkflow_test.exe C:\private\k-firmware.bin C:\private\ks-firmware.syx C:\private\ks-data.mid C:\private\wave-rom.bin
 ```
 
-`SILVER_TEST_SKIP_K=1` or `SILVER_TEST_SKIP_KS=1` limits the engine. This filter diagnostic explicitly selects the production KS compatibility controller; the test executable also links the original H8 reference, whose default must not be mistaken for production behavior. `SILVER_TEST_FILTER_CASE=0..7` selects one case (0–3 held, 4–7 arp, in the order above). `SILVER_TEST_FILTER_CC_FLOOD=1` repeats cutoff CC105 every host block, including identical values. The long probe is offline by default; `SILVER_TEST_FILTER_REALTIME=1` paces callbacks outside audio processing and records missed frames with block offsets and callback deadline lateness. PASS means a finite, audible capture with no missing frames or C++ callback allocations; timing still needs analysis. This exercises the processor and worker without a physical audio driver; it does not replace a DAW test. All captures and program dumps remain private.
+`SILVER_TEST_SKIP_K=1` or `SILVER_TEST_SKIP_KS=1` limits the engine. The filter diagnostic selects the current production KS controller **before** firmware load. Set `SILVER_TEST_FILTER_KS_CONTROLLER=hybrid` or `h8` for the test-only comparison backends. `SILVER_TEST_FILTER_CASE=0..7` selects one case (0–3 held, 4–7 arp, in the order above). `SILVER_TEST_FILTER_CC_FLOOD=1` repeats cutoff CC105 every host block, including identical values. The long probe is offline by default. `SILVER_TEST_FILTER_REALTIME=1` paces callbacks outside audio processing and records missed frames with block offsets and callback deadline lateness. PASS means a finite, audible capture with no missing frames or C++ callback allocations. All captures and program dumps remain private.
+
+Set `SILVER_TEST_ARP_STRESS=1` with `SILVER_TEST_FILTER_CLOCK_ONLY=1` to run a generated dry 1/16 arp at 100 BPM. It measures a quiet reference, repeated and changing CC105, Cutoff automation, and simultaneous controller or parameter edits. `SILVER_TEST_FILTER_SOURCE=internal|host|midi` selects the clock. `SILVER_TEST_ARP_BLOCK=64|128|256|512` selects the host block at 48 kHz. To run a single workload plus the quiet reference, use `SILVER_TEST_ARP_TRAFFIC` with `repeat`, `cutoff-cc`, `cutoff-parameter`, `mixed-cc`, `mixed-parameter`, or `keytrack-parameter`.
+
+Every `ARP_STRESS` line reports the active controller, audio attack positions in samples, missing frames, MIDI overflows, and C++ callback allocations. Check `grid` and the actual intervals separately from `valid`, which describes capture health. `final_values` reports whether the final automation values reached the saved engine snapshot within 100 blocks. The first Host or MIDI case can include clock acquisition. Offline and paced runs exercise the same processor and worker used by the plugin. A Windows DAW with the user's driver is a separate validation.
+
+For a K-Station A/B, launch a fresh process with `SILVER_EXPERIMENT_ARP_CONTROL_GUARD=1`. The experiment keeps the latest pending Cutoff, Resonance, Filter Key Tracking and LFO 1 Rate plugin values. It spaces changes to the same parameter at least 40 ms apart and separates the writes for different controls by at least 5 ms, rounded to host blocks. An ordinary MIDI message or UI packet lets the pending values go through in their regular block order. Raw CC and transport use the timed MIDI path. Fast automation can sound coarser because intermediate values are coalesced and a pending edit may wait for its next eligible block.
+
+`SILVER_TEST_ARP_CONTROL_BLOCKS=N` changes only the test sender's update cadence. Use it to measure raw MIDI at a lower input rate. With `N>=4`, `SILVER_TEST_ARP_STAGGER=1` sends the simultaneous controls in successive blocks of each cadence period.
 
 An optional macOS VST3 SDK host checks full-speed Prefetch (mode 1) against Offline (mode 2). Supply a private raw Silver-K processor state selecting an audible generated oscillator program and its locally accessible ROMs:
 
@@ -69,17 +77,116 @@ python tools/check_repository.py
 
 Standalone provides JUCE's Windows audio backends (WASAPI/DirectSound); an optional locally supplied ASIO SDK can be enabled with `-DSilverK_ASIO_SDK_PATH=C:/path/to/asiosdk`. The SDK is not redistributed. The core and firmware/patch logic are shared with macOS; AU and codesigning are conditional on macOS.
 
+### SoulTrain native editor on Windows
+
+Clone the private repository from an account with access. The first checkout
+creates a separate directory for SoulTrain.
+
+~~~powershell
+git clone --single-branch --branch codex/drum-seq https://github.com/temaniak/Silver-K-SoulTrain.git Silver-K-SoulTrain
+Set-Location Silver-K-SoulTrain
+~~~
+
+Build a clean checkout of the requested commit. For local tip builds, pull
+updates in the dedicated checkout with `git pull --ff-only`. Record the full
+commit before configuring.
+
+~~~powershell
+git status --short
+git rev-parse HEAD
+cmake -S . -B build -A x64 -DSILVER_SOULTRAIN_JUCE=ON -DSILVER_SOULTRAIN_PREVIEW=OFF
+cmake --build build --config Release --target silverK_VST3 silverK_Standalone --parallel 4
+~~~
+
+The build defaults to the JUCE editor on Windows and macOS. Its checked-in
+artwork and fonts are copied during the build. No Node.js or WebView2 runtime
+is required for this editor.
+
+Use the same `codex/drum-seq` revision for both platforms. CMake selects
+the platform sources and formats. The MSVC compatibility fixes are included
+in the shared source. Use `SILVER_SOULTRAIN_JUCE=ON` and
+`SILVER_SOULTRAIN_PREVIEW=OFF` for matched native-editor checks.
+
+Copy the whole `VST3/Silver-K.vst3` bundle from
+`build/source/novation/silverK/buildStandalone/silverPlugin/silverK_artefacts/Release/`.
+The Standalone executable uses the `SoulTrainJuce` directory beside it in
+`Standalone/`. Supply your firmware and data through Setup after opening.
+Verify the Windows file version, architecture and packaged resources for both
+targets. Launch the Standalone with an isolated `SILVER_K_DATA` directory and
+verify the exact VST3 bundle loaded by the test host.
+
+Run `silverWorkflow_test` with `SILVER_TEST_BROWSER_ONLY=1` to verify that an
+existing Patches index discovers User without Rescan. Use a fresh
+`SILVER_K_DATA` for each test mode. For the KS Performance clock regression,
+set `SILVER_TEST_PERFORMANCE_CLOCK_ONLY=1` and pass the local KS firmware,
+KS Data MIDI and Wave ROM paths in that order. The probe renders SEQ on Main
+and a melodic arp on Aux, with both set to sixteenths and Key Sync off.
+It checks starts, a transport jump while holding a note, and Note On at the
+downbeat on shared and separate MIDI channels. It then switches between Host,
+Internal and MIDI Clock while holding notes on both parts. The clock lines
+report the expected and audible timing at 48 kHz. This check is offline.
+
+To build with the browser renderer as a fallback, run
+`npm --prefix design-soultrain ci` and
+`npm --prefix design-soultrain run build:native` with Node.js 22.12 or newer.
+Configure with `-DSILVER_SOULTRAIN_PREVIEW=ON` alongside JUCE. The context
+menu in the JUCE editor switches to WebKit on macOS or WebView2 on Windows.
+Windows uses the [WebView2 Evergreen Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/#download-section)
+for this mode. A local WebView2 SDK can be selected with `-DSILVER_WEBVIEW2_SDK_PATH`.
+
 For offline builds, pass `-DJUCE_SOURCE=/path/to/JUCE -DDSP_SOURCE=/path/to/dsp56300 -DASMJIT_SOURCE=/path/to/asmjit` using the exact revisions in [`cmake/Dependencies.cmake`](../cmake/Dependencies.cmake). Those must be **source checkouts**, not binary releases. The macOS JUCE compatibility patch applies to a build-local copy only.
 
 The ROM-free `silver_resampler_realtime` test streams five minutes of synthetic audio through the K-Station rate pairing and checks that the audio callback does not allocate.
 
 
+### SoulTrain editor verification
+
+Apply the [Windows SoulTrain editor rules](WINDOWS_UI.md) when changing the
+native editor.
+
+On the physical Windows test machine, compare the candidate and the accepted
+baseline using separate Release builds and copies of the same test profile.
+Use the same VST3 host, firmware, preset, renderer, display scaling, interface
+size, sample rate and audio buffer for both runs. Use Software for the baseline
+comparison and measure OpenGL separately when evaluating that renderer.
+
+Check cold startup through ROM ready on Main. Load two different sounds from
+the Browser and verify the engine-applied name and preset arrows. Enable and
+disable KS Performance, toggle a Part in both directions, and load a different
+program in it. Exercise rapid button presses, menu opening and dismissal,
+and steady knob and fader drags with audio running. Compare initial and
+repeated interactions. Record any visible stalls, local input-to-paint
+measurements where available, process and UI-thread CPU, and the test
+conditions. Remote screenshot round-trip time includes capture and transport.
+Keep private firmware, banks and raw captures on the test machine.
+
+With a Release build, compare the closed editor, visible SoulTrain Main at
+75%, and the original skin at the same scale. Use a stable patch and audio
+buffer. Measure idle, held notes and a repeatable knob sweep separately.
+Record the OS, revision, host, audio backend, process CPU and GUI thread CPU.
+Specify whether 100% means the whole machine or one logical CPU. For
+example, 5% of a 20-logical-CPU machine is one logical CPU. Compare results on
+the same computer.
+
+For fader performance, compare each Release build in its own build directory
+using the same preset, host, buffer, and editor size. Sweep Amp Attack and Mod
+Decay on Main for each firmware, then Part 1 Volume with KS Performance on.
+Repeat Cutoff as a rotary reference. Check the LCD readout, the fader position
+during DAW automation, and GUI stalls at the same mouse sweep rate. Record
+Windows display scaling separately from the plugin's interface size.
+
+Leave Browser open during a switch in `Recall last patch` mode. Select a
+different preset on each firmware. After each return, check the LCD, browser
+row and tags, then step once in each direction. On KS Extra, move Ring LFO1,
+hold the drag for over two seconds, and release. The LCD should keep showing
+the value briefly before returning to the preset. Check that long LCD names
+still scroll and that menus leave the surrounding panel clear.
+
 ### Native controllers and external input
 
-The combined development branch explicitly selects the semantic native K
-controller in the product. Production KS uses its semantic native owner.
-Original H8 controllers remain available in separate comparison tools.
-The embedded skin is the released skin; SoulTrain sources are separate.
+The plugin targets use the native K-Station and KS command controllers.
+The semantic and original H8 controllers remain available in comparison tools.
+The JUCE SoulTrain editor is the default desktop skin in this branch.
 
 Build `ksAudioInput_test` and `silverExternalInput_test`, then run:
 

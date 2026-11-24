@@ -1,16 +1,23 @@
 #pragma once
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "ksLib/ksDevice.h"
+#include "../../ks/ksLib/command/ksUserDrumPattern.h"
+#include "../../ks/ksLib/command/ksDesktopDrumMap.h"
 #include <atomic>
+#include <optional>
 #include "../../ks/ksJucePlugin/ksControls.h"
 #include "../../kstation/kstationJucePlugin/kstationControls.h"
 #include "silverLibrary.h"
 #include "silverClock.h"
 #include "silverMidiLearn.h"
 #include "jucePluginLib/hostAudioWorkgroup.h"
+
+namespace kstation { class Rom; }
+
 namespace silverK {
 using namespace ksPlugin;
-struct KEngine;
+class KEngine;
+class KsEngine;
 class Processor final : public juce::AudioProcessor,private juce::AudioProcessorValueTreeState::Listener,private juce::Timer {
 public:
  Processor();~Processor() override;
@@ -38,14 +45,19 @@ public:
  bool selectPerformance(int,juce::String&);
  bool setPerformanceMode(bool,juce::String&);
  bool setPartActive(unsigned,bool,juce::String&);
- void selectPart(unsigned part){selectedPart.store(std::min(part,ks::PartCount-1));}
+ void selectPart(unsigned part){
+  const auto next=std::min(part,ks::PartCount-1);
+  if(selectedPart.exchange(next)!=next)setDrumEdit(false);
+ }
  unsigned currentPart()const{return selectedPart.load();}
  bool performanceMode()const{return multi.load();}
  uint8_t activeParts()const{return activeMask.load();}
+ uint8_t displayedActiveParts()const; // Includes accepted desktop part switches until publication.
  static juce::String parameterId(const Control& c,unsigned part){return part?"part"+juce::String(part+1)+"_"+c.id:juce::String(c.id);}
  bool sendShortMidi(uint8_t,uint8_t,uint8_t=0);
  void refreshControls();
  juce::String currentName()const;
+ juce::String loadedPatchName()const;
  uint8_t midiChannel()const{return multi.load()?partChannels[currentPart()].load():controlChannel.load();}
  bool firmwareReady()const{return device.load()!=nullptr || kDevice.load()!=nullptr;}
 
@@ -54,22 +66,26 @@ bool isKStation()const{return kMode.load();}
  bool beginFirmwareLoad(const juce::File&,bool automatic=false); // Message thread: boot off the UI/audio threads.
  bool finishFirmwareLoad(juce::String& error); // Message thread: consume a completed load.
  bool isFirmwareLoading()const{return firmwareLoading.load();}
- bool setRomFolder(const juce::File&,juce::String&);
- bool setDataFolder(const juce::File&,juce::String&);
+ bool setDataFolder(const juce::File&,juce::String&,bool rescanPresets=false);
+ juce::File firmwareAfterFolderScan()const;
+ juce::String dataFolderStatus()const;
  bool setWaveRom(const juce::File&,juce::String&);
  bool setFlashRom(const juce::File&,juce::String&);
  bool setFlashRoms(const juce::Array<juce::File>&,juce::String&);
  std::vector<juce::File> ksDataFiles()const;
- void savePreferences(); // UI/cold paths only; never called by processBlock.
+ void savePreferences(bool flushEditorScale=false); // UI/cold paths only; never called by processBlock.
+ void setEditorScaleFromResize(double);
  juce::String browserState;
  uint64_t firmwareLoadRevision()const{return firmwareRevision.load();}
  juce::File dataFolder;
  juce::File patchesFolder()const{return dataFolder.getChildFile("Patches");}
+ juce::File userPatchesFolder()const{return patchesFolder().getChildFile("User");}
  juce::File skinsFolder()const{return dataFolder.getChildFile("Skins");}
  struct FirmwareChoice {juce::File file;bool kStation;};
  std::vector<FirmwareChoice> firmwares;
  juce::File romFolder;
- juce::String skinChoice="Auto",customSkin,currentPatch;
+ static constexpr auto defaultSkin="SoulTrain";
+ juce::String skinChoice=defaultSkin,customSkin,currentPatch;
  // UI preference, separate from sound parameters and host/DPI scaling.
  std::atomic<double> editorScale{.75};
  std::shared_ptr<Library> libraryOwner;
@@ -85,21 +101,51 @@ bool isKStation()const{return kMode.load();}
  void cancelNoteLearn(uint64_t token)noexcept{noteLearn.cancel(token);}
  int takeLearnedNote(uint64_t token)noexcept{return noteLearn.take(token);}
  bool saveCurrentPatch(const juce::File&,juce::String&);
+ enum class PatchSaveScope { SelectedSound, Performance };
+ bool saveUserPatch(const juce::File&,PatchSaveScope,juce::String&);
  uint8_t editorChannel()const{return isKStation()?controlChannel.load():midiChannel();}
  int bufferProfile()const{return buffering.load();}
  void setBufferProfile(int);
- int ksControllerMode()const{return ks::boardComparisonAvailable()?int(ksController.load()):int(ks::ControllerMode::Native);}
+ static constexpr bool ksControllerChoices(){return false;}
+ int ksControllerMode()const{return int(ks::ControllerMode::Native);}
  bool ksTwoCoreProcessing()const{return twoCoreProcessing.load();}
  bool setKSTwoCoreProcessing(bool,juce::String& error); // UI/control thread only.
  ClockSource clockSource()const{return requestedClockSource.load();}
  void setClockSource(ClockSource); // Message thread; applied by the next audio block.
+ enum class FirmwareSwitch { KeepPatch, RecallLast };
+ static constexpr std::array<const char*,2> firmwareSwitchLabels{"Keep current patch","Recall last patch"};
+ FirmwareSwitch firmwareSwitch()const{return firmwareSwitchMode.load();}
+ void setFirmwareSwitch(FirmwareSwitch);
  bool setKSControllerMode(int,juce::String& error); // UI/control thread only.
- bool demoSongActive()const;
- bool setDemoSong(bool,juce::String& error);
- struct DrumEditInfo{int bank=0,note=-1;juce::String name;};
+ struct DrumEditInfo{
+  int bank=0,note=-1;
+  juce::String name;
+  bool editing=false;
+  bool operator==(const DrumEditInfo& other)const{
+   return bank==other.bank && note==other.note && name==other.name && editing==other.editing;
+  }
+ };
  DrumEditInfo drumEditInfo()const;
- bool drumEditEnabled()const{return drumEditing.load();}
- void setDrumEdit(bool enabled){drumEditing.store(enabled && drumEditInfo().bank!=0);}
+ using DrumGridEdit=novation::controller::command::KSDrumGridEdit;
+ using DrumLoadStatus=novation::controller::command::KSDesktopLoadStatus;
+ using DrumPlayhead=novation::controller::command::NativeDrumPlayhead;
+ static constexpr uint8_t UserDrumRhythm=33;
+ uint8_t drumEditorSlot()const noexcept{return performanceMode()?uint8_t(currentPart()+1):0;}
+ bool userDrumRhythmSelected()const noexcept{return (userDrumMask.load() & (1u<<drumEditorSlot()))!=0;}
+ DrumLoadStatus drumMapLoadStatus()const;
+ DrumLoadStatus ksPresetLoadStatus()const;
+ struct DrumSequencerInfo {
+  uint8_t slot=0,bank=0;
+  novation::controller::command::KSUserDrumBank sequences;
+  std::array<juce::String,DrumGridEdit::LastNote-DrumGridEdit::FirstNote+1> names;
+ };
+ DrumSequencerInfo drumSequencerInfo();
+ std::optional<DrumPlayhead> drumPlayhead(uint8_t slot)const;
+ bool editDrumGrid(DrumGridEdit,juce::String& error);
+ bool selectDrumRhythm(uint8_t slot,uint8_t rhythm,juce::String& error);
+ static constexpr bool drumEditSupported(){return true;}
+ bool drumEditEnabled()const noexcept{return requestedDrumEditSlot.load()==drumEditorSlot();}
+ void setDrumEdit(bool);
  // Message/control thread only. Mode: 0 stop, 1 new summary, 2 new detailed session.
  bool setPerformanceDiagnostics(int mode);
  int performanceDiagnosticsMode()const{return performanceDiagnostics.mode();}
@@ -111,20 +157,13 @@ private:
  double performanceStartedMs=0,performanceStoppedMs=0;
  juce::String performanceStopReason;
  MidiNoteLearn noteLearn;
- std::atomic<bool> drumEditing{false};
- uint64_t seenDrumRevision=0;
  pluginLib::HostAudioWorkgroup hostAudioWorkgroup;
  std::atomic<int> buffering{1};
- std::atomic<bool> twoCoreProcessing{ks::Device::environmentDspWorkersEnabled()};
- std::atomic<ks::ControllerMode> ksController{ks::Device::environmentControllerMode()};
+ std::atomic<bool> twoCoreProcessing{false};
  void applyBufferProfile();
  void notifyHostLatency();
  std::atomic<int> pendingHostLatency{-1};
- int configureBufferProfile();
  void timerCallback()override;
- void observeAudioBlock(int)noexcept;
- std::atomic<int> observedBlock{0};
- int lastObservedBlock=0;
  std::thread firmwareLoader;
  std::mutex firmwareLoadMutex;
  std::atomic<bool> firmwareLoading{false},firmwareLoadDone{false};
@@ -139,14 +178,17 @@ private:
  std::vector<uint8_t> kRom,kState;
  std::array<uint8_t,256> kWire{},kMask{};
  void rebuildK();
+ void publishK(std::unique_ptr<KEngine>);
+ void publishKS(std::unique_ptr<KsEngine>);
+ bool reconfigureEngines(double rate,int block,int profile,bool parallel,juce::String& error);
  HostClock hostClock;
  std::atomic<ClockSource> requestedClockSource{ClockSource::Host};
  ClockSource activeClockSource=ClockSource::Host;
  int clockSourceMode=-1;
  std::array<uint8_t,16> externalNrpn{};
- template<class Emit> void selectClockSource(Emit emit){
+ template<class Emit> void selectClockSource(bool bridgeHostThroughMidi,Emit emit){
   // Both supported OS 2.1 images use 0=Auto, 1=Internal, 2=External.
-  const int wanted=firmwareClockSource(activeClockSource,hostClock.ownsTransport());
+  const int wanted=firmwareClockSource(activeClockSource,bridgeHostThroughMidi);
   if(clockSourceMode==wanted)return;
   clockSourceMode=wanted;
   const uint8_t channel=controlChannel.load(),status=uint8_t(0xb0|channel);
@@ -154,19 +196,20 @@ private:
   emit(bytes,sizeof(bytes));
  }
  std::atomic<bool> resetClock{true};
- void prepareHostClock(int);
- template<class Emit> void sendTimedMidi(const juce::MidiBuffer& midi,Emit emit){
-  HostClock::Event clock{};bool hasClock=hostClock.next(clock);
+ struct HostTiming { HostClock::Position position; std::optional<HostLoop> loop; };
+ HostTiming prepareClockPosition();
+ template<class Emit> void sendTimedMidi(const juce::MidiBuffer& midi,bool hostOwnsTransport,HostClock* generator,Emit emit){
+  HostClock::Event clock{};bool hasClock=generator && generator->next(clock);
   for(const auto m:midi){
    noteLearn.observe(m.data,size_t(m.numBytes));
    const int offset=std::max(0,m.samplePosition);
-   while(hasClock && clock.offset<=offset){emit(&clock.status,1,clock.offset);hasClock=hostClock.next(clock);}
-   if(m.numBytes<=65536 && !(HostClock::transport(m.data[0]) && !acceptsExternalTransport(activeClockSource,hostClock.ownsTransport()))){
+   while(hasClock && clock.offset<=offset){emit(&clock.status,1,clock.offset);hasClock=generator->next(clock);}
+   if(m.numBytes<=65536 && !(HostClock::transport(m.data[0]) && !acceptsExternalTransport(activeClockSource,hostOwnsTransport))){
     if(m.numBytes==3 && (m.data[0]&0xf0)==0xb0 && m.data[1]==98)externalNrpn[m.data[0]&15]=m.data[2];
     emit(m.data,size_t(m.numBytes),offset);
    }
   }
-  while(hasClock){emit(&clock.status,1,clock.offset);hasClock=hostClock.next(clock);}
+  while(hasClock){emit(&clock.status,1,clock.offset);hasClock=generator->next(clock);}
  }
  void processK(KEngine&,juce::AudioBuffer<float>&,juce::MidiBuffer&);
  void stopEngines();
@@ -176,33 +219,54 @@ private:
  static constexpr size_t KCount=kstation::controls::Catalog.size();
  static constexpr size_t TotalCount=ParameterCount+KCount;
  std::array<juce::String,TotalCount> parameterIds;
- std::array<std::atomic<int>,TotalCount> pending;
- std::unique_ptr<ks::Device> ownedDevice;
- kstation::Queue<uint8_t,65536> uiMidi;
+ std::array<std::atomic<int64_t>,TotalCount> pending;
+ std::unique_ptr<KsEngine> ownedDevice;
+ static constexpr uint16_t UiSoundLoadToken=256;
+ kstation::Queue<uint16_t,65536> uiMidi;
  std::mutex uiMidiMutex;
  std::vector<Preset> library;size_t libraryBaseCount=0;
  std::vector<Performance> performanceLibrary;size_t performanceBaseCount=0;
  std::array<ks::Program,ks::PartCount> wireShadow{},wirePendingMask{};
  std::atomic<bool> resetWire{false};
- std::array<std::atomic<int>,TotalCount> awaiting;
+ std::array<std::atomic<int64_t>,TotalCount> awaiting;
  std::array<std::atomic<uint64_t>,TotalCount> editTime;
+ std::atomic<uint8_t> requestedDrumEditSlot{novation::controller::command::KSDrumEditMode::Off};
+ std::atomic<uint64_t> drumParameterAddress{0};
  std::atomic<unsigned> selectedPart{0};
  std::atomic<bool> multi{false};
  std::atomic<uint8_t> activeMask{1};
+ uint8_t requestedPartMask=1; // Protected by controlMutex.
  std::array<std::atomic<uint8_t>,ks::PartCount> partChannels{};
  bool queueState(const ks::State&,bool selectMode,juce::String&);
  void resetPending();
  void buildLibrary();
  bool queueUiMidi(const uint8_t*,size_t);
 
- std::atomic<ks::Device*> device{nullptr};
+ std::atomic<KsEngine*> device{nullptr};
  std::atomic<unsigned> activeAudio{0};
  mutable std::mutex controlMutex;
- std::vector<uint8_t> os,bank,flash,programToRestore;
+ struct FirmwareSound {
+  std::vector<uint8_t> archive;
+  juce::String name, dataHash;
+  unsigned part=0;
+ };
+ FirmwareSound lastKSound,lastKSSound;
+ juce::String keptKProgramKey;
+ juce::String ksDataHash;
+ std::atomic<FirmwareSwitch> firmwareSwitchMode{FirmwareSwitch::KeepPatch};
+ std::optional<FirmwareSound> captureFirmwareSound(juce::String&);
+ bool loadK(const juce::File&,const kstation::Rom&,juce::String&);
+ bool loadKS(const juce::File&,const juce::File&,const juce::File&,std::vector<uint8_t>,juce::String&);
+ std::vector<uint8_t> os,bank,flash,programToRestore,ksCommandState;
+ novation::controller::command::KSUserDrumPatterns userDrums;
+ std::vector<std::shared_ptr<novation::controller::command::KSDesktopPatchExtras>> pendingPatchLoads;
+ bool collectPatchLoads(); // controlMutex held
+ std::atomic<uint8_t> userDrumMask{0};
+ mutable std::atomic<DrumLoadStatus> drumLoadState{DrumLoadStatus::Idle};
  std::atomic<uint8_t> controlChannel{0};
  std::atomic<uint8_t> editorChannelPreference{0};
  std::atomic<uint8_t> volume{127};
- juce::String message="Load KS OS, external wave bank and user Flash. Zero bank is supported.";
+ juce::String message="Add your firmware and KS factory data to ROMs, then rescan in Setup.";
  double hostRate=48000;int hostBlock=256;
  bool placeholder=false;
  void rebuild();
@@ -212,14 +276,20 @@ private:
  bool updateSettings(const juce::NamedValueSet&,juce::String&)const;
  juce::NamedValueSet preferenceValues()const;
  juce::NamedValueSet preferenceBaseline;
+ std::atomic<double> lastEditorResizeMs{0};
  juce::File settingsFile()const;
  juce::File resolveAsset(const juce::ValueTree&,const char*)const;
  std::vector<juce::File> selectedKSDataFiles()const;
  std::vector<juce::File> flashFiles;
- juce::var ksDataReferences()const;
+ juce::File loadedWaveFile;
+ std::vector<juce::File> loadedDataFiles;
+ juce::String scannedWaveHash,scannedDataHash;
+ juce::var ksDataReferences(const std::vector<juce::File>&)const;
  void restoreKSDataFiles(const juce::var&,bool allowRelative=true);
  juce::File managedAsset(const juce::File&,juce::String&)const;
- static bool readKSData(const std::vector<juce::File>&,std::vector<uint8_t>&,juce::String&);
- static bool isBundledInit(const juce::File&);
+ struct KSDataCoverage {unsigned programs=0,performances=0;};
+ static bool readKSData(const std::vector<juce::File>&,std::vector<uint8_t>&,juce::String&,KSDataCoverage* coverage=nullptr);
+ bool scanROMs(const juce::File&,juce::String&);
+ bool scanKSAssets(const juce::File&,const juce::Array<juce::File>&,juce::String&);
 };
 }

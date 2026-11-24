@@ -175,7 +175,7 @@ static void preferenceChecks(const juce::File& root){
  {
   Processor stale;Processor p;
   const auto flash=root.getChildFile(juce::String::fromUTF8("Flash флеш.mid")),wave=root.getChildFile("Wave custom.bin");check(p.flashFile.copyFileTo(flash) && p.bankFile.copyFileTo(wave),"Copy synthetic assets");
-  check(p.setFlashRom(flash,error) && p.setWaveRom(wave,error),"Select external assets");
+  check(p.setFlashRoms({flash,p.ksDataFiles().back()},error) && p.setWaveRom(wave,error),"Select external assets");
   p.editorScale.store(.92);p.skinChoice="Classic";p.setEditorChannel(5);p.setBufferProfile(3);check(p.setKSTwoCoreProcessing(true,error),"Set two-core preference");p.savePreferences();
   stale.skinChoice="Silver-K";stale.savePreferences();
   auto saved=juce::JSON::parse(settings);check(double(saved["editorScale"])==.92 && int(saved["bufferProfile"])==3 && saved["skinChoice"].toString()=="Silver-K" && bool(saved["ksTwoCoreProcessing"]),"Stale instance overwrote unrelated settings");
@@ -202,7 +202,11 @@ static void browserChecks(const juce::File& root){
   auto* table=dynamic_cast<juce::TableListBox*>(find(browser,"patchTable"));auto* source=dynamic_cast<juce::ComboBox*>(find(browser,"patchSource"));auto* all=dynamic_cast<juce::ToggleButton*>(find(browser,"showAllBankSlots"));check(table && source && all,"Browser controls missing");auto* model=table->getTableListBoxModel();
   auto select=[&](const juce::File& selected){until([&]{browser.pollLibrary();for(int i=0;i<source->getNumItems();++i)if(source->getItemText(i)==selected.getFileName()){source->setSelectedId(source->getItemId(i),juce::dontSendNotification);source->onChange();return true;}return false;},"Find collection");};
   select(folder);until([&]{browser.pollLibrary();return model->getNumRows()==2;},"Individual folder row count");for(int i=0;i<source->getNumItems();++i)check(!source->getItemText(i).endsWithIgnoreCase(".fxp"),"Folder FXPs flooded bank selector");
+  until([&]{browser.pollLibrary();for(int i=0;i<model->getNumRows();++i)
+   if(model->getCellTooltip(i,1)=="Individual B")return model->getCellTooltip(i,6)=="Individual sounds/nested/b.fxp";
+   return false;},"Source must use the registered folder and retain nested paths");
   select(file);until([&]{browser.pollLibrary();return model->getNumRows()==2 && model->getCellTooltip(0,1)=="Zulu";},"Bank default view/order");check(model->getCellTooltip(1,1)=="Alpha" && model->getCellTooltip(1,7)=="4","Original bank slots lost");
+  check(model->getCellTooltip(0,6)==root.getFileName()+"/"+file.getFileName(),"Use the containing folder for a standalone bank");
   all->setToggleState(true,juce::dontSendNotification);all->onClick();until([&]{browser.pollLibrary();return model->getNumRows()==4;},"Show all slots lost patches");
   auto* rescan=dynamic_cast<juce::TextButton*>(find(browser,"rescanPatches"));check(rescan!=nullptr,"Rescan button missing");rescan->onClick();until([&]{browser.pollLibrary();return rescan->isEnabled() && model->getNumRows()==4;},"UI Rescan did not complete");check(source->getText()==file.getFileName(),"Rescan lost selected bank");
   table->getHeader().setColumnVisible(2,false);table->getHeader().setColumnWidth(1,333);table->getHeader().setSortColumnId(7,false);
@@ -223,11 +227,17 @@ static void duplicateBrowserChecks(const juce::File& root){
   write(first,preset("Duplicate Fixture A",1));write(second,preset("Duplicate Fixture B",2));write(folder.getChildFile("Different.fxp"),preset("Duplicate Fixture A",9));
   juce::ZipFile::Builder builder;builder.addFile(first,9,"nested/One.fxp");builder.addFile(second,9,"nested/Two.fxp");
   archive.deleteFile();{auto output=archive.createOutputStream();check(output && builder.writeToStream(*output,nullptr),"Write duplicate ZIP fixture");}
+  p.patchLibrary.addPath(archive);idle(p.patchLibrary);
   p.patchLibrary.addPath(folder);idle(p.patchLibrary);Browser browser(p);
   auto* table=dynamic_cast<juce::TableListBox*>(find(browser,"patchTable"));auto* source=dynamic_cast<juce::ComboBox*>(find(browser,"patchSource"));auto* search=dynamic_cast<juce::TextEditor*>(find(browser,"patchSearch"));auto* remove=dynamic_cast<juce::TextButton*>(find(browser,"removePatchSource"));check(table && source && search && remove,"Duplicate browser controls");
   auto select=[&](const juce::File& selected){until([&]{browser.pollLibrary();for(int i=0;i<source->getNumItems();++i)if(source->getItemText(i)==selected.getFileName()){source->setSelectedId(source->getItemId(i),juce::dontSendNotification);source->onChange();return true;}return false;} ,"Find duplicate collection");};
   select(folder);until([&]{browser.pollLibrary();return table->getTableListBoxModel()->getNumRows()==3;},"ZIP and extracted patches displayed twice / distinct sounds hidden");
-  for(int row=0;row<3;++row)check(!table->getTableListBoxModel()->getCellTooltip(row,6).endsWithIgnoreCase(".zip"),"Extracted copy was not preferred");
+  auto archivedRows=[&]{
+   int count=0;for(int row=0;row<table->getTableListBoxModel()->getNumRows();++row)
+    count+=table->getTableListBoxModel()->getCellTooltip(row,6).endsWithIgnoreCase(".zip");
+   return count;
+  };
+  check(archivedRows()==2,"Extracted files took precedence over the already-read ZIP");
   select(archive);until([&]{browser.pollLibrary();return table->getTableListBoxModel()->getNumRows()==2;},"Explicit ZIP selection lost its patches");
   select(folder);search->setText("Duplicate Fixture");search->onTextChange();remove->onClick();
   until([&]{browser.pollLibrary();return table->getTableListBoxModel()->getNumRows()==0;},"Remove source left ZIP/extracted rows in the browser");
@@ -239,8 +249,25 @@ static void duplicateBrowserChecks(const juce::File& root){
   for(int i=0;i<20;++i){browser.pollLibrary();juce::Timer::callPendingTimersSynchronously();std::this_thread::sleep_for(std::chrono::milliseconds(5));}
   check(table->getTableListBoxModel()->getNumRows()==0,"Removed browser rows returned from cache after reopening");
   rescan->onClick();until([&]{browser.pollLibrary();return rescan->isEnabled() && table->getTableListBoxModel()->getNumRows()==3;},"Explicit UI Rescan did not restore one copy of each managed patch");
+  int archived=0;for(int row=0;row<3;++row)archived+=table->getTableListBoxModel()->getCellTooltip(row,6).endsWithIgnoreCase(".zip");
+  check(archived==2,"Restart or Rescan lost the first-read order");
  }
- std::cout<<"PASS: ZIP/extracted content deduplication, same-name different sounds retained, source removal/reopen/explicit UI Rescan without deleting files or cache manually\n";
+ {
+  Processor p;p.browserState.clear();const auto loose=folder.getChildFile("Loose first/Part.fxp"),zip=folder.getChildFile("Later.zip");
+  write(loose,preset("Loose import first",7));
+  p.patchLibrary.addPath(loose);idle(p.patchLibrary);
+  juce::ZipFile::Builder builder;builder.addFile(loose,9,loose.getFileName());
+  {auto output=zip.createOutputStream();check(output && builder.writeToStream(*output,nullptr),"Write later ZIP");}
+  p.patchLibrary.addPath(zip);idle(p.patchLibrary);Browser browser(p);
+  auto* table=dynamic_cast<juce::TableListBox*>(find(browser,"patchTable"));
+  auto* search=dynamic_cast<juce::TextEditor*>(find(browser,"patchSearch"));
+  check(table && search,"Missing duplicate filter controls");
+  search->setText("Loose import first");search->onTextChange();
+  until([&]{browser.pollLibrary();return table->getTableListBoxModel()->getNumRows()==1;},"Loose-first duplicate remained visible");
+  check(table->getTableListBoxModel()->getCellTooltip(0,6)=="Patches/ZIP duplicate regression/Loose first/Part.fxp",
+        "Retain the managed Patches root and the first-read loose file");
+ }
+ std::cout<<"PASS: both first-read orders, matching copies across restart and Rescan, same-name distinct sounds and original files retained\n";
 }
 static void firmwareChecks(const juce::File& root,const juce::File& k,const juce::File& ks){
  Processor assets;const auto selectedFlash=assets.flashFile,selectedWave=assets.bankFile;
@@ -256,6 +283,43 @@ static void firmwareChecks(const juce::File& root,const juce::File& k,const juce
  check(juce::JSON::parse(root.getChildFile("settings.json"))["os"].toString()==assets.dataFolder.getChildFile("ROMs").getChildFile(ks.getFileName()).getFullPathName(),"Host restoration overwrote last selected ROM");
  std::cout<<"PASS: K/KS automatic boot, selected Data/Wave, host state precedence, zero Wave recreation, missing Data blocks restore without changing defaults\n";
 }
+static void folderDiscoveryChecks(const juce::File& root,const juce::File& k,const juce::File& ks,const juce::File& data){
+ Processor p;juce::String error;
+ const auto folder=root.getChildFile("Another Silver-K");
+ check(p.setDataFolder(folder,error,true),error.toRawUTF8());
+ const auto roms=folder.getChildFile("ROMs"),zero=roms.getChildFile("ks-wave-zero.bin");
+ check(p.firmwares.empty() && p.flashFile==juce::File{} && zero.getSize()==129024,"New root copied previously selected firmware or data");
+ check(p.patchesFolder()==folder.getChildFile("Patches") && p.skinsFolder().isDirectory(),"Wrong layout for a new root");
+ const auto zipFirmware=[](const juce::File& source,const juce::File& target){
+  if(source.hasFileExtension("zip")){check(source.copyFileTo(target),"Copy firmware ZIP");return;}
+  juce::ZipFile::Builder builder;builder.addFile(source,9,"vendor/"+source.getFileName());
+  auto stream=target.createOutputStream();check(stream && builder.writeToStream(*stream,nullptr),"Create firmware ZIP");
+ };
+ const auto kArchive=roms.getChildFile("K firmware.zip"),ksArchive=roms.getChildFile("KS firmware.zip");
+ zipFirmware(k,kArchive);zipFirmware(ks,ksArchive);
+ check(ks.copyFileTo(roms.getChildFile("Z duplicate KS"+ks.getFileExtension())),"Copy second KS image");
+ check(roms.getChildFile("K invalid.syx").replaceWithText("Not a firmware"),"Write bad firmware");
+ const auto factory=roms.getChildFile("Renamed factory library"+data.getFileExtension());
+ check(data.copyFileTo(factory),"Copy renamed factory Data");
+ if(data.hasFileExtension("mid;midi"))dataMidi(roms.getChildFile("Another program.mid"),0,"Alternative");
+ check(p.setDataFolder(folder,error,true),error.toRawUTF8());
+ check(p.firmwares.size()==2 && p.flashFile==factory && p.bankFile==zero,"ROM discovery, model deduplication, or factory MIDI selection failed");
+ check(p.dataFolderStatus().contains("KS Data: found") && p.firmwareAfterFolderScan()==ksArchive,"Fresh profile did not find the complete KS");
+ check(p.loadFirmware(ksArchive,error),error.toRawUTF8());
+ check(!p.presets().empty() && !p.performances().empty(),"Factory Data did not populate programs and performances");
+ check(p.firmwareAfterFolderScan()==juce::File{},"Unchanged files cause an unnecessary firmware load");
+ const auto recorded=roms.getChildFile("Recorded waves.bin");
+ Data samples(129024,0);samples[1000]=17;write(recorded,samples);
+ check(p.setDataFolder(folder,error,true) && p.bankFile==recorded && p.firmwareAfterFolderScan()==ksArchive,"Recorded waves did not replace the zero ROM after Rescan");
+ juce::MemoryBlock saved;p.getStateInformation(saved);
+ auto xml=juce::AudioProcessor::getXmlFromBinary(saved.getData(),int(saved.getSize()));
+ check(xml && xml->getStringAttribute("bank")==zero.getFullPathName(),"Rescan mixed the live engine state with newly found assets");
+ check(p.loadFirmware(ksArchive,error) && p.firmwareAfterFolderScan()==juce::File{},error.toRawUTF8());
+ check(p.loadFirmware(kArchive,error) && p.isKStation(),error.toRawUTF8());
+ check(p.loadFirmware(ksArchive,error) && !p.isKStation() && p.bankFile==recorded,error.toRawUTF8());
+ {Processor reopened;check(reopened.dataFolder==folder && reopened.firmwares.size()==2 && reopened.flashFile==factory && reopened.bankFile==recorded,"Data folder discovery failed after restart");}
+ std::cout<<"PASS: clean root, both firmware ZIPs, renamed KS Data including performances, real Wave ROM priority on Rescan, live state and restart\n";
+}
 static int runChecks(int argc,char** argv){try{
  auto base=juce::SystemStats::getEnvironmentVariable("SILVER_K_DATA",{});auto root=(base.isEmpty()?juce::File::getSpecialLocation(juce::File::tempDirectory):juce::File(base)).getChildFile("persistence-"+juce::Uuid().toString());check(root.createDirectory().wasOk(),"Test directory");
 #ifdef _WIN32
@@ -263,7 +327,7 @@ static int runChecks(int argc,char** argv){try{
 #else
  setenv("SILVER_K_DATA",root.getFullPathName().toRawUTF8(),1);
 #endif
- parserChecks(root);vStationCompatibilityChecks(root);rescanChecks(root);managedSourceChecks(root);requiredDataChecks(root);preferenceChecks(root);browserChecks(root);duplicateBrowserChecks(root);if(argc>=3){if(argc>=5){Processor assets;juce::String error;check(assets.setFlashRom(juce::File(argv[3]),error) && assets.setWaveRom(juce::File(argv[4]),error),error.toRawUTF8());}firmwareChecks(root,juce::File(argv[1]),juce::File(argv[2]));}return 0;
+ parserChecks(root);vStationCompatibilityChecks(root);rescanChecks(root);managedSourceChecks(root);requiredDataChecks(root);preferenceChecks(root);browserChecks(root);duplicateBrowserChecks(root);if(argc>=3){if(argc>=5){Processor assets;juce::String error;check(assets.setFlashRom(juce::File(argv[3]),error) && assets.setWaveRom(juce::File(argv[4]),error),error.toRawUTF8());}firmwareChecks(root,juce::File(argv[1]),juce::File(argv[2]));if(argc>=5)folderDiscoveryChecks(root,juce::File(argv[1]),juce::File(argv[2]),juce::File(argv[3]));}return 0;
 }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}}
 
 static int testArgc=0;static char** testArgv=nullptr;

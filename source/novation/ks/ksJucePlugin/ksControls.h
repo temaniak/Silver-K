@@ -227,7 +227,8 @@ namespace ksPlugin
         {"lfo2_delay_sync", "Delay sync", "LFOs", "LFO 2", Mapping::NRPN, 60, 0, 34, 0, 138, 127, 0, 127, 0, Sync, 35, 0},
         {"lfo2_velocity", "Velocity depth", "LFOs", "LFO 2", Mapping::NRPN, 76, 0, 127, 64, 170, 127, 0, 127, 0, nullptr, 0, -64},
         {"fixed_note", "Fixed MIDI note (0=off)", "Voice", "Polyphony", Mapping::NRPN, 74, 0, 127, 0, 168, 127, 0, 127, 0, nullptr, 0, 0},
-        {"arp_rhythm", "Rhythm (0=off)", "Arpeggiator", "Pattern", Mapping::NRPN, 71, 0, 32, 0, 149, 127, 0, 127, 0, nullptr, 0, 0},
+        // Program byte 149: 0 is the straight melodic rhythm, or Drum track 1 in Drum mode.
+        {"arp_rhythm", "Rhythm", "Arpeggiator", "Pattern", Mapping::NRPN, 71, 0, 32, 0, 149, 127, 0, 127, 0, nullptr, 0, 0},
         {"arp_velocity", "Pattern velocity", "Arpeggiator", "Pattern", Mapping::NRPN, 73, 0, 1, 0, 167, 127, 0, 127, 0, OffOn, 2, 0},
         {"lfo1_wave", "Waveform", "LFOs", "LFO 1", Mapping::NRPN, 53, 0, 31, 1, 131, 127, 0, 127, 0, LfoWaveKS, 32, 0},
         {"lfo2_wave", "Waveform", "LFOs", "LFO 2", Mapping::NRPN, 54, 0, 31, 1, 132, 127, 0, 127, 0, LfoWaveKS, 32, 0},

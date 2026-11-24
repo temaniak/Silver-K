@@ -1120,7 +1120,7 @@ namespace pluginLib::patchDB
 				{
 					patch->source = ds->weak_from_this();
 
-					if(isValid(patch))
+					if(isValidLoadedPatch(patch))
 					{
 						patch->program = p;
 						patches.push_back(patch);
@@ -1326,6 +1326,7 @@ namespace pluginLib::patchDB
 				return false;
 			}
 
+			const auto patchLock = lockPatchesForReading();
 			for (const auto& patchPtr : _ds->patches)
 			{
 				const auto* patch = patchPtr.get();

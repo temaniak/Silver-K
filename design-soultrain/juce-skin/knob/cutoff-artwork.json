@@ -1,0 +1,88 @@
+{
+  "logicalWidth": 96,
+  "logicalHeight": 96,
+  "assetScale": 2.0,
+  "dial": [
+    13.5,
+    13,
+    67,
+    67
+  ],
+  "body": {
+    "file": "base.png",
+    "x": 11.5,
+    "y": 12.0
+  },
+  "focusedBody": {
+    "file": "focus.png",
+    "x": 11.5,
+    "y": 12.0
+  },
+  "glow": [
+    {
+      "file": "dot-0.png",
+      "x": 25.5,
+      "y": 64.0
+    },
+    {
+      "file": "dot-1.png",
+      "x": 19.5,
+      "y": 55.0
+    },
+    {
+      "file": "dot-2.png",
+      "x": 17.5,
+      "y": 44.5
+    },
+    {
+      "file": "dot-3.png",
+      "x": 19.5,
+      "y": 34.0
+    },
+    {
+      "file": "dot-4.png",
+      "x": 25.5,
+      "y": 25.0
+    },
+    {
+      "file": "dot-5.png",
+      "x": 34.5,
+      "y": 19.0
+    },
+    {
+      "file": "dot-6.png",
+      "x": 44.5,
+      "y": 16.0
+    },
+    {
+      "file": "dot-7.png",
+      "x": 55.5,
+      "y": 19.0
+    },
+    {
+      "file": "dot-8.png",
+      "x": 64.5,
+      "y": 25.0
+    },
+    {
+      "file": "dot-9.png",
+      "x": 70.5,
+      "y": 34.0
+    },
+    {
+      "file": "dot-10.png",
+      "x": 72.5,
+      "y": 44.5
+    },
+    {
+      "file": "dot-11.png",
+      "x": 70.5,
+      "y": 55.0
+    },
+    {
+      "file": "dot-12.png",
+      "x": 63.5,
+      "y": 64.0
+    }
+  ]
+}

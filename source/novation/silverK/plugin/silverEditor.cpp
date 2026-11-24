@@ -1,4 +1,10 @@
 #include "silverEditor.h"
+#if SILVER_SOULTRAIN_JUCE
+#include "silverSoulTrainJuce.h"
+#endif
+#if SILVER_SOULTRAIN_PREVIEW
+#include "silverSoulTrain.h"
+#endif
 #include "silverBrowser.h"
 #include "silverPerformance.h"
 #include "silverSkin.h"
@@ -11,6 +17,18 @@ namespace silverK
 namespace
 {
 using Spec = ksPlugin::Control;
+constexpr auto flatSkin="Silver Flat";
+constexpr std::array<std::pair<const char*,const char*>,3> builtinSkins{{
+    {Processor::defaultSkin,"SoulTrain (Default)"},
+    {"Silver-K","Old version skin"},
+    {flatSkin,"Experimental grey"},
+}};
+#if SILVER_SOULTRAIN_PREVIEW || SILVER_SOULTRAIN_JUCE
+bool usesSoulTrain(const juce::String& choice)
+{
+    return choice=="Auto" || choice==Processor::defaultSkin;
+}
+#endif
 juce::Rectangle<int> rect(const juce::var& v)
 {
     auto* a=v.getArray();
@@ -223,6 +241,7 @@ public:
         const auto& custom=image(style[b.getToggleState()?"buttonOn":"buttonOff"].toString());
         if(custom.isValid()){const auto artwork=imageScaleCache.forDrawing(g,custom,bounds.getWidth(),bounds.getHeight());g.setOpacity(b.isEnabled()?1.f:.4f);g.drawImage(artwork,bounds,juce::RectanglePlacement::stretchToFit);g.setOpacity(1.f);return;}
         const bool on=b.getToggleState();
+        const bool stateOnlyLed=bool(b.getProperties()["stateOnlyLed"]);
         if(b.getProperties().contains("waveform"))
         {
             if(on||hover){g.setColour(skinColour(b,0xff087fe5).withAlpha(on?.13f:.07f));g.fillRoundedRectangle(bounds,isFlat()?0.f:3.f);}
@@ -236,7 +255,7 @@ public:
             else{shape.startNewSubPath(left,bottom);shape.lineTo(left,top);shape.lineTo((left+right)*.5f,top);shape.lineTo((left+right)*.5f,bottom);shape.lineTo(right,bottom);}
             g.setColour(b.isEnabled()?skinColour(b,0xff171b20):skinColour(b,0xff171b20).withAlpha(.4f));g.strokePath(shape,juce::PathStrokeType(1.6f));return;
         }
-        if(isFlat()){
+        if(isFlat() && !stateOnlyLed){
             auto fill=skinColour(b,on?0xff087fe5:0xffe0e5ea);
             if(down)fill=fill.darker(.1f);else if(hover)fill=fill.interpolatedWith(skinColour(b,0xff087fe5),.15f);
             g.setColour(fill.withMultipliedAlpha(b.isEnabled()?1.f:.5f));g.fillRect(bounds);
@@ -249,8 +268,8 @@ public:
         }
         if(bool(b.getProperties()["led"]))
         {
-            if(hover){g.setColour(skinColour(b,0xff087fe5).withAlpha(.08f));g.fillRoundedRectangle(bounds,3);}
-            const float width=capWidth(b);drawCap(g,on,{3,bounds.getCentreY()-width/4.8f,width,width/2.4f},b.isEnabled(),down);
+            if(hover && !stateOnlyLed){g.setColour(skinColour(b,0xff087fe5).withAlpha(.08f));g.fillRoundedRectangle(bounds,3);}
+            const float width=capWidth(b);drawCap(g,on,{3,bounds.getCentreY()-width/4.8f,width,width/2.4f},b.isEnabled(),down && !stateOnlyLed);
             return;
         }
         const auto top=on?skinColour(b,0xff1695ee):skinColour(b,0xff434a54);
@@ -263,11 +282,12 @@ public:
     {
         if(b.getProperties().contains("waveform"))return;
         const bool compact=bool(b.getProperties()["compact"]) || (b.getParentComponent()&&bool(b.getParentComponent()->getProperties()["compact"]));
-        const auto textColour=isFlat()?skinColour(b,b.getToggleState()?0xfff1f4f7:0xff171b20):(bool(b.getProperties()["partTab"])&&b.getToggleState())?skinColour(b,0xff171b20):(bool(b.getProperties()["led"])&&!bool(b.getProperties()["dark"])?skinColour(b,0xff171b20):skinColour(b,0xfff1f4f7));
+        const bool stateOnlyLed=bool(b.getProperties()["stateOnlyLed"]);
+        const auto textColour=isFlat()?skinColour(b,b.getToggleState()&&!stateOnlyLed?0xfff1f4f7:0xff171b20):(bool(b.getProperties()["partTab"])&&b.getToggleState())?skinColour(b,0xff171b20):(bool(b.getProperties()["led"])&&!bool(b.getProperties()["dark"])?skinColour(b,0xff171b20):skinColour(b,0xfff1f4f7));
         g.setColour(b.isEnabled()?textColour:textColour.withAlpha(.4f));
         g.setFont(skinFont(b,(compact||bool(b.getProperties()["small"]))?11.f:13.f,juce::Font::bold));
         auto area=b.getLocalBounds().reduced(3);
-        if(!isFlat() && bool(b.getProperties()["led"]))area.removeFromLeft(juce::roundToInt(capWidth(b))+5);
+        if((!isFlat() || stateOnlyLed) && bool(b.getProperties()["led"]))area.removeFromLeft(juce::roundToInt(capWidth(b))+5);
         g.drawFittedText(b.getButtonText(),area,juce::Justification::centred,1);
     }
     void drawComboBox(juce::Graphics& g,int w,int h,bool,int,int,int,int,juce::ComboBox& c) override
@@ -592,15 +612,14 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     juce::Component main, content;
     juce::Viewport viewport;
     juce::Label lcd,status,latency,help;
-    juce::TextButton loadRom{"Load firmware"},folder{"Silver-K folder"},loadProgram{"Load program"},panic{"Panic"};
+    juce::TextButton folder{juce::String::fromUTF8("Choose Silver-K folder…")},loadProgram{"Load program"},panic{"Panic"};
     juce::ComboBox mode,group,section,channel;
     std::array<juce::TextButton,5> pages;
     std::array<juce::TextButton,4> parts;
-    juce::ComboBox firmwareSelect,skinSelect,bufferSelect,controllerSelect;
-    juce::TextButton rescanRoms{"Rescan ROMs"};
+    juce::ComboBox firmwareSelect,skinSelect,bufferSelect,controllerSelect,firmwareSwitchSelect;
+    juce::Label firmwareSwitchLabel;
+    juce::TextButton rescanRoms{"Rescan"};
     juce::TextButton diagnostics{"Performance diagnostics"};
-    juce::TextButton demoSong{"Demo Song"};
-    juce::TextButton waveRom{"Wave ROM"},factory{"KS factory data"},customSkin{"Load skin..."};
     juce::TextButton reloadSkin{"Reload"},exportSkin{"Export template"},openSkins{"Skins folder"};
     std::vector<std::pair<juce::String,juce::File>> skinEntries;
     std::vector<std::unique_ptr<SkinDecoration>> decorations;
@@ -631,32 +650,29 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     std::array<juce::Slider,6> unusedEffects;
     std::array<juce::Label,6> unusedEffectLabels;
     juce::String extraDomain;
-    std::function<void()> resizeEditor;
     std::vector<std::unique_ptr<Control>> mainControls,effectControls;
     std::vector<std::unique_ptr<Panel>> panels;
-    std::unique_ptr<juce::FileChooser> chooser;
     int page=0,osc=1,lfo=1,effect=0;
     bool displayHeld=false;
-    int firmwareLoadPage=0;
     double displayUntil=0;
-    explicit Surface(Processor& p,SkinPackage loaded):processor(p),package(std::move(loaded)),skin(package.layout),look(package),browser(p)
+    explicit Surface(Editor& owner,SkinPackage loaded):processor(owner.m_processor),package(std::move(loaded)),skin(package.layout),look(package),browser(processor)
     {
         setComponentID("surface");setLookAndFeel(&look);
         status.setComponentID("setupStatus");latency.setComponentID("setupLatency");help.setComponentID("setupHelp");
-        loadRom.setComponentID("loadFirmware");folder.setComponentID("dataFolder");loadProgram.setComponentID("patchBrowserButton");panic.setComponentID("panic");waveRom.setComponentID("waveRom");factory.setComponentID("factoryData");content.setComponentID("advancedContent");
+        folder.setComponentID("dataFolder");loadProgram.setComponentID("patchBrowserButton");panic.setComponentID("panic");content.setComponentID("advancedContent");
         performancePanel=std::make_unique<PerformancePanel>(processor,browser);addAndMakeVisible(*performancePanel);
         performancePanel->onEdit=[this](unsigned part){processor.selectPart(part);refreshModel();showPage(0);};
         performancePanel->onModeChanged=[this]{performanceSwitch.setToggleState(processor.performanceMode(),juce::dontSendNotification);for(unsigned i=0;i<4;++i){const bool available=i==0||(!processor.isKStation()&&processor.performanceMode());parts[i].setEnabled(available);parts[i].setAlpha(available?1.f:.3f);}};
         main.setComponentID("mainPanel");
-        for(juce::Component* c:std::array<juce::Component*,12>{&main,&viewport,&lcd,&status,&latency,&loadRom,&folder,&loadProgram,&panic,&mode,&group,&section})addAndMakeVisible(c);
+        for(juce::Component* c:std::array<juce::Component*,11>{&main,&viewport,&lcd,&status,&latency,&folder,&loadProgram,&panic,&mode,&group,&section})addAndMakeVisible(c);
         addAndMakeVisible(channel);addAndMakeVisible(help);
         viewport.setViewedComponent(&content,false);viewport.setScrollBarsShown(true,false);viewport.setComponentID("controlViewport");
-        for(auto* c:std::initializer_list<juce::Component*>{&firmwareSelect,&skinSelect,&bufferSelect,&rescanRoms,&waveRom,&factory,&customSkin,&performanceMode,&partActive,&browser})addAndMakeVisible(*c);
+        for(auto* c:std::initializer_list<juce::Component*>{&firmwareSelect,&skinSelect,&bufferSelect,&rescanRoms,&performanceMode,&partActive,&browser})addAndMakeVisible(*c);
         firmwareSelect.setBounds(289,28,270,34);firmwareSelect.setComponentID("firmwareSelect");refreshFirmwares();
-        firmwareSelect.onChange=[this]{int n=firmwareSelect.getSelectedId()-1;if(n<0 || n>=int(processor.firmwares.size()))return;startFirmwareLoad(processor.firmwares[n].file,0);};
+        firmwareSelect.onChange=[this]{int n=firmwareSelect.getSelectedId()-1;if(n<0 || n>=int(processor.firmwares.size()))return;startFirmwareLoad(processor.firmwares[n].file);};
         for(int i=0;i<4;++i){auto& b=parts[i];addAndMakeVisible(b);b.setButtonText(juce::String(i+1));b.getProperties().set("partTab",true);b.setComponentID("partTab"+juce::String(i+1));b.setBounds(579+i*58,28,50,34);b.onClick=[this,i]{performancePanel->closeNoteEditor();processor.selectPart(unsigned(i));refreshModel();};}
         performanceMode.setBounds(52,96,250,34);performanceMode.setComponentID("performanceMode");performanceMode.onClick=[this]{juce::String error;if(!processor.setPerformanceMode(performanceMode.getToggleState(),error))status.setText(error,juce::dontSendNotification);};
-        addAndMakeVisible(performanceSwitch);performanceSwitch.setComponentID("performanceSwitch");performanceSwitch.getProperties().set("led",true);performanceSwitch.getProperties().set("dark",true);performanceSwitch.setClickingTogglesState(true);
+        addAndMakeVisible(performanceSwitch);performanceSwitch.setComponentID("performanceSwitch");performanceSwitch.getProperties().set("led",true);performanceSwitch.getProperties().set("stateOnlyLed",true);performanceSwitch.getProperties().set("dark",true);performanceSwitch.setClickingTogglesState(true);
         performanceSwitch.setTooltip("Enable or disable KS four-part Performance mode");
         performanceSwitch.onClick=[this]{juce::String error;if(!processor.setPerformanceMode(performanceSwitch.getToggleState(),error)){performanceSwitch.setToggleState(processor.performanceMode(),juce::dontSendNotification);showValue(error,false);}};
         addAndMakeVisible(drumEdit);drumEdit.setComponentID("drumEdit");drumEdit.setClickingTogglesState(true);drumEdit.getProperties().set("led",true);drumEdit.getProperties().set("dark",true);
@@ -666,35 +682,42 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         partActive.setBounds(330,96,200,34);partActive.setComponentID("partActive");partActive.onClick=[this]{juce::String error;processor.setPartActive(processor.currentPart(),partActive.getToggleState(),error);};
         browser.setComponentID("patchBrowser");browser.setBounds(24,86,1232,642);
         for(auto* c:{&reloadSkin,&exportSkin,&openSkins})addAndMakeVisible(*c);
-        skinSelect.setComponentID("skinSelect");customSkin.setComponentID("loadSkin");reloadSkin.setComponentID("reloadSkin");exportSkin.setComponentID("exportSkin");openSkins.setComponentID("openSkins");
-        skinSelect.setBounds(52,353,230,34);customSkin.setBounds(298,353,170,34);reloadSkin.setBounds(480,353,96,34);exportSkin.setBounds(588,353,170,34);openSkins.setBounds(770,353,140,34);
+        skinSelect.setComponentID("skinSelect");reloadSkin.setComponentID("reloadSkin");exportSkin.setComponentID("exportSkin");openSkins.setComponentID("openSkins");
+        skinSelect.setBounds(52,353,230,34);reloadSkin.setBounds(298,353,100,34);exportSkin.setBounds(412,353,170,34);openSkins.setBounds(596,353,140,34);
         refreshSkinList();
-        skinSelect.onChange=[this]{
-            const int index=skinSelect.getSelectedId();
-            if(index>=1 && index<=4){if(requestSkin)requestSkin({},juce::StringArray{"Auto","Silver-K","KS Grey","Classic"}[index-1]);}
-            else if(index>=100 && index-100<int(skinEntries.size())){if(requestSkin)requestSkin(skinEntries[size_t(index-100)].second,{});}
-        };
-        customSkin.onClick=[this]{chooseAsset(3);};
+        skinSelect.onChange=[this]{chooseSkin(skinSelect.getSelectedId());};
         reloadSkin.setTooltip("Reload the selected skin from disk and rescan Skins (F5)");
         reloadSkin.onClick=[this]{refreshSkinList();if(requestSkin)requestSkin(package.manifest!=juce::File{}?package.manifest:juce::File(processor.customSkin),package.manifest==juce::File{}&&!processor.skinChoice.startsWith("Package:")&&processor.skinChoice!="Custom"?processor.skinChoice:juce::String{});};
-        exportSkin.onClick=[this]{juce::File exported;juce::String error;if(SkinPackage::exportTemplate(processor.skinsFolder(),exported,error)){refreshSkinList();status.setText("Template exported: "+exported.getParentDirectory().getFullPathName(),juce::dontSendNotification);}else status.setText(error,juce::dontSendNotification);};
-        openSkins.onClick=[this]{processor.skinsFolder().createDirectory();processor.skinsFolder().revealToUser();};
-        rescanRoms.setBounds(450,245,150,38);rescanRoms.onClick=[this]{juce::String error;const bool ok=processor.setRomFolder(processor.dataFolder.getChildFile("ROMs"),error);refreshFirmwares();status.setText(ok?"ROM list updated":error,juce::dontSendNotification);};rescanRoms.setComponentID("rescanRoms");
+        exportSkin.onClick=[&owner]{owner.exportSkinTemplate();};
+        openSkins.onClick=[&owner]{owner.openSkinsFolder();};
+        rescanRoms.setBounds(290,245,128,38);
+        rescanRoms.setComponentID("rescanRoms");
+        rescanRoms.setTooltip("Rescan ROMs, Patches and Skins");
+        rescanRoms.onClick=[this,&owner]{owner.scanDataFolder(processor.dataFolder);};
+        addAndMakeVisible(firmwareSwitchLabel);addAndMakeVisible(firmwareSwitchSelect);
+        firmwareSwitchLabel.setText("On firmware change",juce::dontSendNotification);
+        firmwareSwitchLabel.setBounds(620,245,155,38);
+        setSkinColour(firmwareSwitchLabel,juce::Label::textColourId,juce::Colour(0xff171b20));
+        firmwareSwitchSelect.setBounds(782,245,238,38);
+        firmwareSwitchSelect.setComponentID("firmwareSwitch");
+        firmwareSwitchSelect.setTitle("On firmware change");
+        for(const auto* label:Processor::firmwareSwitchLabels)firmwareSwitchSelect.addItem(label,firmwareSwitchSelect.getNumItems()+1);
+        firmwareSwitchSelect.setSelectedId(int(processor.firmwareSwitch())+1,juce::dontSendNotification);
+        firmwareSwitchSelect.onChange=[this]{
+            processor.setFirmwareSwitch(Processor::FirmwareSwitch(firmwareSwitchSelect.getSelectedId()-1));
+        };
         bufferSelect.setBounds(52,401,436,34);bufferSelect.setComponentID("audioBuffer");for(const auto& name:juce::StringArray{"Audio buffer: Low latency","Audio buffer: Balanced (recommended)","Audio buffer: Safe","Audio buffer: Maximum reserve"})bufferSelect.addItem(name,bufferSelect.getNumItems()+1);bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);bufferSelect.onChange=[this]{processor.setBufferProfile(bufferSelect.getSelectedId()-1);};bufferSelect.setTooltip("Internal audio buffering. The audio interface buffer is set in your DAW.");
         addAndMakeVisible(diagnostics);diagnostics.setBounds(510,401,270,34);diagnostics.setComponentID("performanceDiagnostics");
         diagnostics.setTooltip("Record optional performance measurements and save a JSON report for Windows or macOS.");
-        addAndMakeVisible(twoCoreProcessing);twoCoreProcessing.setBounds(52,590,1000,34);twoCoreProcessing.setComponentID("ksTwoCoreProcessing");
+        addAndMakeVisible(twoCoreProcessing);twoCoreProcessing.setBounds(52,296,436,34);twoCoreProcessing.setComponentID("ksTwoCoreProcessing");
         twoCoreProcessing.setTooltip("Experimental parallel KS DSP processing. Performance improvement is not guaranteed and total CPU usage may increase. Applies to KS only.");
         twoCoreProcessing.setToggleState(processor.ksTwoCoreProcessing(),juce::dontSendNotification);
         twoCoreProcessing.onClick=[this]{juce::String error;if(!processor.setKSTwoCoreProcessing(twoCoreProcessing.getToggleState(),error))juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,"KS two-core processing",error);twoCoreProcessing.setToggleState(processor.ksTwoCoreProcessing(),juce::dontSendNotification);};
-        addAndMakeVisible(twoCoreNotice);twoCoreNotice.setBounds(78,628,1050,26);twoCoreNotice.setComponentID("ksTwoCoreNotice");
+        addAndMakeVisible(twoCoreNotice);twoCoreNotice.setBounds(510,296,682,34);twoCoreNotice.setComponentID("ksTwoCoreNotice");
         twoCoreNotice.setText("Experimental: performance improvement is not guaranteed. CPU usage may increase.",juce::dontSendNotification);
         setSkinColour(twoCoreNotice,juce::Label::textColourId,juce::Colour(0xff171b20));twoCoreNotice.setFont(juce::Font(15.f));
-        addAndMakeVisible(demoSong);demoSong.setBounds(510,449,270,34);demoSong.setComponentID("demoSong");
-        demoSong.setTooltip("Play / stop the original KS demo embedded in full KS Flash data. Factory MIDI banks do not contain the song.");
-        demoSong.onClick=[this]{juce::String error;if(!processor.setDemoSong(!processor.demoSongActive(),error))juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,"KS Demo Song",error);};
         addAndMakeVisible(controllerSelect);controllerSelect.setBounds(52,449,436,34);controllerSelect.setComponentID("ksController");
-        if(ks::boardComparisonAvailable()){
+        if(processor.ksControllerChoices()){
             controllerSelect.addItem("KS controller: H8 (original)",1);controllerSelect.addItem("KS controller: C++ (experimental)",2);
             controllerSelect.setTooltip("Compare KS playback with H8 or C++ (OS 2.1.02). Keeps the current sound; stops an active diagnostic measurement. K-Station is unchanged.");
         }else{
@@ -707,24 +730,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
                 juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::WarningIcon,"KS controller",error);
             refreshControllerSelection();
         };
-        diagnostics.onClick=[this]{
-            juce::PopupMenu menu;const bool ready=processor.firmwareReady()&&!processor.isFirmwareLoading();
-            menu.addItem(1,"Start new summary measurement",ready);menu.addItem(2,"Start new detailed measurement",ready);
-            menu.addItem(3,"Stop measurement",processor.performanceDiagnosticsMode()!=0);menu.addSeparator();menu.addItem(4,"Save performance report...");
-            const juce::Component::SafePointer<Surface> self(this);
-            menu.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(&diagnostics),[self](int result){
-                if(!self)return;
-                if(result>=1&&result<=3){self->processor.setPerformanceDiagnostics(result==3?0:result);return;}
-                if(result!=4)return;
-                self->chooser=std::make_unique<juce::FileChooser>("Save performance report",self->processor.dataFolder.getChildFile("silver-k-performance.json"),"*.json");
-                self->chooser->launchAsync(juce::FileBrowserComponent::saveMode|juce::FileBrowserComponent::canSelectFiles|juce::FileBrowserComponent::warnAboutOverwriting,[self](const juce::FileChooser& c){
-                    if(!self || c.getResult()==juce::File{})return;
-                    const bool ok=c.getResult().replaceWithText(self->processor.performanceReport());
-                    self->status.setText(ok?"Performance report saved":"Cannot save performance report",juce::dontSendNotification);
-                });
-            });
-        };
-        waveRom.setBounds(52,295,180,38);waveRom.onClick=[this]{chooseAsset(1);};factory.setBounds(246,295,190,38);factory.onClick=[this]{chooseAsset(2);};
+        diagnostics.onClick=[this,&owner]{owner.showDiagnosticsMenu(&diagnostics);};
         auto pageRect=juce::Rectangle<int>(850,28,74,34);
         for(int i=0;i<5;++i)
         {
@@ -764,8 +770,8 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         lcd.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(),16.f,juce::Font::plain));lcd.setJustificationType(juce::Justification::centredLeft);
         lcd.setComponentID("programDisplay");showProgram();lcd.setBorderSize(juce::BorderSize<int>(8));lcd.setBounds(rect(skin["lcd"]));
         loadProgram.setBounds(rect(skin["actions"]["loadProgram"]));panic.setBounds(rect(skin["actions"]["panic"]));
-        loadRom.onClick=[this]{selectFile(true);};folder.onClick=[this]{chooseAsset(0);};
-        loadProgram.setButtonText("Patch browser");loadProgram.onClick=[this]{showPage(3);};panic.onClick=[this]{for(uint8_t c=0;c<16;++c){processor.sendShortMidi(0xb0|c,64,0);processor.sendShortMidi(0xb0|c,123,0);processor.sendShortMidi(0xb0|c,120,0);}showValue("Panic\nAll notes off",false);};
+        folder.onClick=[&owner]{owner.chooseDataFolder();};
+        loadProgram.setButtonText("Patch browser");loadProgram.onClick=[this]{showPage(3);};panic.onClick=[&owner]{owner.panic();};
         mode.setComponentID("controlMode");group.setComponentID("controlGroup");section.setComponentID("controlSection");
         mode.addItem("All sections",1);mode.addItem("Single section",2);mode.setSelectedId(1,juce::dontSendNotification);
         juce::StringArray groups;for(const auto& s:processor.visibleControls())groups.addIfNotAlreadyThere(s.group);
@@ -774,10 +780,10 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         auto advanced=skin["advanced"];mode.setBounds(rect(advanced["mode"]));group.setBounds(rect(advanced["group"]));section.setBounds(rect(advanced["section"]));viewport.setBounds(rect(advanced["viewport"]));
         auto setup=skin["setup"];status.setBounds(rect(setup["status"]));status.setFont(juce::Font(17.f));setSkinColour(status,juce::Label::textColourId,juce::Colour(0xff171b20));
         status.setText(processor.status(),juce::dontSendNotification);latency.setBounds(rect(setup["latency"]));setSkinColour(latency,juce::Label::textColourId,juce::Colour(0xff171b20));
-        loadRom.setBounds(rect(setup["firmware"]));folder.setBounds(rect(setup["folder"]));channel.setBounds(922,353,270,34);channel.setComponentID("controlChannel");
+        folder.setBounds(52,245,224,38);channel.setBounds(922,353,270,34);channel.setComponentID("controlChannel");
         for(int i=1;i<=16;++i)channel.addItem("Editor MIDI channel "+juce::String(i),i);channel.setSelectedId(int(processor.editorChannel())+1,juce::dontSendNotification);channel.onChange=[this]{processor.setEditorChannel(uint8_t(channel.getSelectedId()-1));};
-        help.setBounds(52,494,1120,84);setSkinColour(help,juce::Label::textColourId,juce::Colour(0xff171b20));help.setFont(juce::Font(15.f));
-        help.setText("ROMs: firmware, required Wave ROM and KS All Data / compatible MIDI set.\nPatches: additional patch libraries. Skins: custom skins.\nThe zero Wave ROM is created automatically. Select your own KS Data before loading KS.",juce::dontSendNotification);
+        help.setBounds(52,485,1120,150);setSkinColour(help,juce::Label::textColourId,juce::Colour(0xff171b20));help.setFont(juce::Font(15.f));
+        refreshDataHelp();
         const juce::StringArray domains{"osc1","osc2","osc3","mixer","filter","envelopes","lfo","voice","arp","fx"};
         for(size_t i=0;i<extraButtons.size();++i)
         {
@@ -820,14 +826,27 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     void refreshSkinList()
     {
         skinSelect.clear(juce::dontSendNotification);
-        const juce::StringArray builtins{"Auto","Silver-K","KS Grey","Classic"};
-        for(int i=0;i<builtins.size();++i)skinSelect.addItem(builtins[i],i+1);
+        int selected=0;
+        const auto stored=processor.skinChoice=="Auto"?juce::String(Processor::defaultSkin):processor.skinChoice;
+        for(size_t i=0;i<builtinSkins.size();++i){
+#if !SILVER_SOULTRAIN_PREVIEW && !SILVER_SOULTRAIN_JUCE
+            if(i==0){if(stored==Processor::defaultSkin)selected=2;continue;}
+#endif
+            const auto& [choice,label]=builtinSkins[i];
+            skinSelect.addItem(label,int(i)+1);
+            if(stored==choice)selected=int(i)+1;
+        }
         skinEntries=SkinPackage::discover(processor.skinsFolder());
-        int selected=builtins.indexOf(processor.skinChoice)+1;
         for(size_t i=0;i<skinEntries.size();++i){skinSelect.addItem(skinEntries[i].first,int(i)+100);if(skinEntries[i].second==package.manifest)selected=int(i)+100;}
         if(!selected && package.manifest!=juce::File{}){skinEntries.emplace_back(package.name,package.manifest);selected=int(skinEntries.size())+99;skinSelect.addItem(package.name,selected);}
         skinSelect.setSelectedId(selected,juce::dontSendNotification);
-        if(!selected)skinSelect.setText("Unavailable skin",juce::dontSendNotification);
+        if(!selected)skinSelect.setText(stored=="Classic" || stored=="KS Grey"?stored:juce::String("Unavailable skin"),juce::dontSendNotification);
+    }
+    void chooseSkin(int index)
+    {
+        if(!requestSkin)return;
+        if(index>=1 && index<=int(builtinSkins.size()))requestSkin({},builtinSkins[size_t(index-1)].first);
+        else if(index>=100 && index-100<int(skinEntries.size()))requestSkin(skinEntries[size_t(index-100)].second,{});
     }
     void createDecorations()
     {
@@ -859,7 +878,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         lcd.setText("Preset\n"+name,juce::dontSendNotification);
     }
     void refreshDrumEdit(){
-        const auto info=processor.drumEditInfo();const bool available=info.bank!=0;
+        const auto info=processor.drumEditInfo();const bool available=processor.drumEditSupported() && info.bank!=0;
         if(!available && processor.drumEditEnabled())processor.setDrumEdit(false);
         drumEdit.setVisible(available);drumEdit.setEnabled(available);drumEdit.setToggleState(processor.drumEditEnabled(),juce::dontSendNotification);
         drumDisplay.setVisible(available && processor.drumEditEnabled());
@@ -1105,12 +1124,11 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         main.setVisible(isMain);lcd.setVisible(isMain);loadProgram.setVisible(isMain);panic.setVisible(isMain);previousPreset.setVisible(isMain&&studioSkin());nextPreset.setVisible(isMain&&studioSkin());
         viewport.setVisible(isAdvanced);mode.setVisible(isAdvanced);group.setVisible(page==1);section.setVisible(page==1&&mode.getSelectedId()==2);mode.setVisible(page==1);browser.setVisible(page==3);performanceMode.setVisible(false);partActive.setVisible(false);performancePanel->setVisible(page==2);if(page!=2)performancePanel->closeNoteEditor();
         viewport.setBounds(page==2?juce::Rectangle<int>(24,146,int(skin["width"])-48,int(skin["height"])-170):rect(skin["advanced"]["viewport"]));
-        for(juce::Component* c:std::array<juce::Component*,6>{&status,&latency,&loadRom,&folder,&channel,&help})c->setVisible(isSetup);
-        rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);waveRom.setVisible(isSetup);factory.setVisible(isSetup);skinSelect.setVisible(isSetup);customSkin.setVisible(isSetup);reloadSkin.setVisible(isSetup);exportSkin.setVisible(isSetup);openSkins.setVisible(isSetup);
+        for(juce::Component* c:std::array<juce::Component*,5>{&status,&latency,&folder,&channel,&help})c->setVisible(isSetup);
+        rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);skinSelect.setVisible(isSetup);reloadSkin.setVisible(isSetup);exportSkin.setVisible(isSetup);openSkins.setVisible(isSetup);
+        firmwareSwitchLabel.setVisible(isSetup);firmwareSwitchSelect.setVisible(isSetup);
         diagnostics.setVisible(isSetup);controllerSelect.setVisible(isSetup);refreshControllerSelection();
         twoCoreProcessing.setVisible(isSetup);twoCoreNotice.setVisible(isSetup);
-        demoSong.setVisible(isSetup && !processor.isKStation());
-        loadRom.setBounds(52,245,200,38);folder.setBounds(266,245,170,38);
         if(page==1)rebuildSections();if(page==2)performancePanel->refresh();
         if(studioSkin())updateExtraVisibility();applyLayout();repaint();
     }
@@ -1190,13 +1208,12 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         refreshControllerSelection();
         twoCoreProcessing.setToggleState(processor.ksTwoCoreProcessing(),juce::dontSendNotification);twoCoreProcessing.setEnabled(!processor.isKStation()&&!processor.isFirmwareLoading());
         diagnostics.setButtonText(processor.performanceDiagnosticsMode()?"Diagnostics: recording":"Performance diagnostics");
-        demoSong.setButtonText(processor.demoSongActive()?"Stop Demo Song":"Demo Song");demoSong.setEnabled(!processor.isKStation() && processor.firmwareReady() && !processor.isFirmwareLoading());
         if(processor.isFirmwareLoading()){
             juce::String error;
             if(!processor.finishFirmwareLoad(error)){setEnabled(false);lcd.setText("Loading firmware...",juce::dontSendNotification);status.setText("Loading firmware...",juce::dontSendNotification);return;}
         }
         if(lastFirmwareRevision!=processor.firmwareLoadRevision()){
-            lastFirmwareRevision=processor.firmwareLoadRevision();setEnabled(true);refreshModel();showPage(processor.firmwareReady()?firmwareLoadPage:4);
+            lastFirmwareRevision=processor.firmwareLoadRevision();setEnabled(true);refreshModel();showPage(page);
         }
         if(!displayHeld&&juce::Time::getMillisecondCounterHiRes()>=displayUntil)showProgram();
         processor.refreshControls();
@@ -1210,12 +1227,11 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         for(auto& c:mainControls)c->refresh();for(auto& c:effectControls)c->refresh();for(auto& p:panels)for(auto& c:p->controls)c->refresh();
         for(auto& c:localExtra.controls)c->refresh();
         localExtra.clockSelect.setSelectedId(int(processor.clockSource())+1,juce::dontSendNotification);
+        firmwareSwitchSelect.setSelectedId(int(processor.firmwareSwitch())+1,juce::dontSendNotification);
         const bool ready=processor.firmwareReady();main.setEnabled(ready);content.setEnabled(ready);loadProgram.setEnabled(true);
         previousPreset.setEnabled(ready);nextPreset.setEnabled(ready);channel.setSelectedId(int(processor.editorChannel())+1,juce::dontSendNotification);
-        juce::StringArray dataNames,dataPaths;for(const auto& file:processor.ksDataFiles()){dataNames.add(file.getFileName());dataPaths.add(file.getFullPathName());}
-        const auto missing=[](const juce::File& file){return file.existsAsFile()?file.getFileName():juce::String("Not selected / missing");};
-        help.setText(processor.dataFolder.getFullPathName()+"\nROMs | Firmware: "+missing(processor.osFile)+" | Wave ROM: "+missing(processor.bankFile)+"\nKS Data: "+(dataNames.isEmpty()?juce::String("Required: select KS All Data or its MIDI files"):dataNames.joinIntoString(", "))+"\nPatches: additional sounds | Skins: custom skins",juce::dontSendNotification);
-        help.setTooltip("Firmware: "+processor.osFile.getFullPathName()+"\nWave ROM: "+processor.bankFile.getFullPathName()+"\nKS Data:\n"+dataPaths.joinIntoString("\n"));bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);const auto rate=processor.getSampleRate();latency.setText(rate>0?"Plugin latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
+        if(page==4)refreshDataHelp();
+        bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);const auto rate=processor.getSampleRate();latency.setText(rate>0?"Plugin latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
     }
     uint64_t lastFirmwareRevision=0;
     void refreshControllerSelection(){
@@ -1224,102 +1240,447 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         // offering an extra experimental mode in the normal H8/C++ selector.
         if(mode==2 && controllerSelect.getNumItems()==2){controllerSelect.addItem("KS controller: MIDI hybrid (legacy)",3);controllerSelect.setItemEnabled(3,false);}
         controllerSelect.setSelectedId(mode+1,juce::dontSendNotification);
-        controllerSelect.setEnabled(ks::boardComparisonAvailable()&&!processor.isKStation()&&!processor.isFirmwareLoading());
+        controllerSelect.setEnabled(processor.ksControllerChoices()&&!processor.isKStation()&&!processor.isFirmwareLoading());
     }
     bool greyLower()const{return look.isFlat() || (studioSkin()?!processor.isKStation():processor.skinChoice=="KS Grey" || (processor.skinChoice=="Auto"&&!processor.isKStation()));}
     void refreshFirmwares(){if(processor.isFirmwareLoading())return;firmwareSelect.clear(juce::dontSendNotification);for(size_t i=0;i<processor.firmwares.size();++i){const auto& f=processor.firmwares[i];firmwareSelect.addItem(juce::String(f.kStation?"K-Station: ":"KS: ")+f.file.getFileName(),int(i)+1);if(f.file==processor.osFile)firmwareSelect.setSelectedId(int(i)+1,juce::dontSendNotification);}if(!firmwareSelect.getSelectedId())firmwareSelect.setText(processor.osFile.existsAsFile()?juce::String(processor.isKStation()?"K-Station: ":"KS: ")+processor.osFile.getFileName():"Choose firmware",juce::dontSendNotification);}
-    void startFirmwareLoad(const juce::File& file,int targetPage){
+    void startFirmwareLoad(const juce::File& file){
         if(!processor.beginFirmwareLoad(file))return;
-        performancePanel->closeNoteEditor();firmwareLoadPage=targetPage;setEnabled(false);
+        performancePanel->closeNoteEditor();setEnabled(false);
         lcd.setText("Loading firmware...",juce::dontSendNotification);status.setText("Loading firmware...",juce::dontSendNotification);
     }
     void refreshModel(){displayedK=processor.isKStation();displayedPart=processor.currentPart();displayedPerformance=processor.performanceMode();group.clear(juce::dontSendNotification);juce::StringArray names;for(const auto& c:processor.visibleControls())if(juce::String(c.group)!="Part")names.addIfNotAlreadyThere(c.group);for(int i=0;i<names.size();++i)group.addItem(names[i],i+1);group.setSelectedId(2,juce::dontSendNotification);status.setText(processor.status(),juce::dontSendNotification);rebuildMain();rebuildSections();refreshFirmwares();repaint();}
-    void selectFile(bool){chooseAsset(4);}
-    void chooseAsset(int role){const bool directory=role==0;chooser=std::make_unique<juce::FileChooser>(directory?"Select Silver-K folder":role==1?"Select KS wave ROM":role==2?"Select KS factory data":role==3?"Select skin.json or Silver-K layout JSON":"Load firmware",directory?processor.dataFolder:role==3?processor.skinsFolder():processor.romFolder,directory?"*":role==3?"*.json":role==2?"*.bin;*.mid;*.midi":"*.bin;*.syx;*.zip;*.os;*.OS");const juce::Component::SafePointer<Surface> self(this);chooser->launchAsync(juce::FileBrowserComponent::openMode|(directory?juce::FileBrowserComponent::canSelectDirectories:juce::FileBrowserComponent::canSelectFiles)|(role==2?juce::FileBrowserComponent::canSelectMultipleItems:0),[self,role](const juce::FileChooser& c){if(!self || self->processor.isFirmwareLoading())return;auto file=c.getResult();if(file==juce::File{})return;juce::String error;bool ok=true;if(role==0)ok=self->processor.setDataFolder(file,error);else if(role==1)ok=self->processor.setWaveRom(file,error);else if(role==2)ok=self->processor.setFlashRoms(c.getResults(),error);else if(role==3){if(self->requestSkin)self->requestSkin(file,{});return;}else{self->startFirmwareLoad(file,0);return;}
-        if(ok){self->processor.savePreferences();if(role==0)self->refreshSkinList();}
-        if(ok&&(role==1||role==2)&&self->processor.osFile.existsAsFile()&&std::any_of(self->processor.firmwares.begin(),self->processor.firmwares.end(),[self](const auto& choice){return choice.file==self->processor.osFile && !choice.kStation;})){self->startFirmwareLoad(self->processor.osFile,4);return;}
-        self->status.setText(ok?self->processor.status():error,juce::dontSendNotification);self->refreshFirmwares();if(ok&&role==4){self->refreshModel();self->showPage(0);}else self->showPage(4);});}
-
+    void refreshDataHelp(){
+        const auto root=processor.dataFolder.getFullPathName();
+        help.setText(root+"\nROMs   K-Station and KS firmware, KS factory Data MIDI (programs and performances),"
+                     " and a KS Wave ROM. A zero Wave ROM is created if needed.\n"
+                     "Patches   Presets and banks, including ZIP archives.    Skins   Custom skins.\n"
+                     "Click Rescan after adding or replacing files.\n"+processor.dataFolderStatus(),juce::dontSendNotification);
+        help.setTooltip(root);
+    }
 };
 Editor::Editor(Processor& p):AudioProcessorEditor(p),m_processor(p)
 {
-    auto package=SkinPackage::builtin();juce::String error;
+    setResizable(true,true);
+    addMouseListener(this,true);
+    juce::String error;
+#if SILVER_SOULTRAIN_PREVIEW || SILVER_SOULTRAIN_JUCE
+#if SILVER_SOULTRAIN_JUCE && SILVER_SOULTRAIN_PREVIEW
+    m_useWebKit=juce::SystemStats::getEnvironmentVariable("SILVER_SOULTRAIN_RENDERER",{}).equalsIgnoreCase("webkit");
+#endif
+    if(usesSoulTrain(p.skinChoice) && installSoulTrain(error))return;
+#endif
+    auto package=SkinPackage::builtin(p.skinChoice==flatSkin);
     if(p.skinChoice=="Custom" || p.skinChoice.startsWith("Package:")){
         bool loaded=SkinPackage::load(juce::File(p.customSkin),package,error);
         if(!loaded && p.skinChoice.startsWith("Package:"))for(const auto& entry:SkinPackage::discover(p.skinsFolder())){
             SkinPackage candidate;juce::String ignored;
-            if(SkinPackage::load(entry.second,candidate,ignored) && p.skinChoice=="Package:"+candidate.id){package=std::move(candidate);loaded=true;error.clear();p.customSkin=entry.second.getFullPathName();break;}
+            if(SkinPackage::load(entry.second,candidate,ignored) && p.skinChoice=="Package:"+candidate.id){
+                package=std::move(candidate);
+                p.customSkin=entry.second.getFullPathName();
+                error.clear();
+                break;
+            }
         }
     }
-    m_surface=std::make_unique<Surface>(p,std::move(package));
-    setResizable(true,true);addMouseListener(this,true);connectSurface();
-    if(error.isNotEmpty())m_surface->status.setText("Skin: "+error,juce::dontSendNotification);
+    installSurface(std::make_unique<Surface>(*this,std::move(package)));
+    if(error.isNotEmpty()){
+        m_surface->showPage(4);
+        setStatus("Skin: "+error);
+    }
 }
-void Editor::connectSurface()
+
+void Editor::installSurface(std::unique_ptr<Surface> surface)
 {
-    setLookAndFeel(&m_surface->look);addAndMakeVisible(*m_surface);
-    m_surface->requestSkin=[this](juce::File file,juce::String choice){
-        const juce::Component::SafePointer<Editor> self(this);
-        juce::MessageManager::callAsync([self,file,choice]{if(!self)return;juce::String error;if(!self->selectSkin(file,choice,error)){self->m_surface->refreshSkinList();self->m_surface->status.setText("Skin: "+error,juce::dontSendNotification);}});
+    setLookAndFeel(nullptr);
+#if SILVER_SOULTRAIN_PREVIEW || SILVER_SOULTRAIN_JUCE
+    m_soulTrain.reset();
+    m_nativeBrowser.reset();
+#endif
+    m_surface=std::move(surface);
+    setLookAndFeel(&m_surface->look);
+    addAndMakeVisible(*m_surface);
+    const juce::Component::SafePointer<Editor> self(this);
+    const juce::Component::SafePointer<Surface> source(m_surface.get());
+    m_surface->requestSkin=[self,source](juce::File file,juce::String choice){
+        juce::MessageManager::callAsync([self,source,file,choice]{
+            if(!self || !source || self->m_surface.get()!=source.getComponent())return;
+            juce::String error;
+            if(!self->selectSkin(file,choice,error)){
+                source->refreshSkinList();
+                self->setStatus("Skin: "+error);
+            }
+        });
     };
-    m_surface->resizeEditor=[this]
-    {
-        const int width=int(m_surface->skin["width"]),height=int(m_surface->skin["height"]);
-        const double scale=m_processor.editorScale.load();
-        setResizeLimits(width/2,height/2,width*3/2,height*3/2);
-        if(auto* c=getConstrainer())c->setFixedAspectRatio(double(width)/height);
-        setUiScale(scale);
-    };
-    m_surface->resizeEditor();
+    fitToSkin();
 }
+
+void Editor::saveBrowserView()
+{
+    if(m_surface)m_surface->browser.saveViewState();
+#if SILVER_SOULTRAIN_PREVIEW || SILVER_SOULTRAIN_JUCE
+    else if(m_nativeBrowser)m_nativeBrowser->saveViewState();
+#endif
+}
+
 bool Editor::selectSkin(const juce::File& file,const juce::String& builtinChoice,juce::String& error)
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-    auto candidate=SkinPackage::builtin();
-    if(builtinChoice.isEmpty() && !SkinPackage::load(file,candidate,error))return false;
     if(m_processor.isFirmwareLoading()){error="Wait for firmware loading to finish";return false;}
-    m_surface->browser.saveViewState();
     const auto previousChoice=m_processor.skinChoice,previousFile=m_processor.customSkin;
-    const auto selected=builtinChoice.isNotEmpty()?builtinChoice:candidate.id=="legacy"?juce::String("Custom"):"Package:"+candidate.id;
-    m_processor.skinChoice=selected;m_processor.customSkin=builtinChoice.isNotEmpty()?juce::String{}:candidate.manifest.getFullPathName();
+#if SILVER_SOULTRAIN_PREVIEW || SILVER_SOULTRAIN_JUCE
+    if(usesSoulTrain(builtinChoice)){
+        m_processor.skinChoice=builtinChoice;
+        m_processor.customSkin.clear();
+        if(m_soulTrain)refreshNativeSkinMenu();
+        else if(!installSoulTrain(error)){
+            m_processor.skinChoice=previousChoice;
+            m_processor.customSkin=previousFile;
+            return false;
+        }
+        m_processor.savePreferences();
+        error.clear();
+        return true;
+    }
+#endif
+    auto candidate=SkinPackage::builtin(builtinChoice==flatSkin);
+    if(builtinChoice.isEmpty() && !SkinPackage::load(file,candidate,error))return false;
+    saveBrowserView();
+    m_processor.skinChoice=builtinChoice.isNotEmpty()?builtinChoice:candidate.id=="legacy"?juce::String("Custom"):"Package:"+candidate.id;
+    m_processor.customSkin=builtinChoice.isNotEmpty()?juce::String{}:candidate.manifest.getFullPathName();
     std::unique_ptr<Surface> next;
-    try{next=std::make_unique<Surface>(m_processor,std::move(candidate));}
+    try{next=std::make_unique<Surface>(*this,std::move(candidate));}
     catch(const std::exception& e){m_processor.skinChoice=previousChoice;m_processor.customSkin=previousFile;error=e.what();return false;}
-    const int page=m_surface->page;
-    next->osc=m_surface->osc;next->lfo=m_surface->lfo;next->pwmSource=m_surface->pwmSource;next->effect=juce::jlimit(0,next->skin["effects"].size()-1,m_surface->effect);
-    // Destroy the old browser before installing its replacement; its destructor
-    // persists the existing source/filter selection.
-    setLookAndFeel(nullptr);m_surface.reset();m_surface=std::move(next);connectSurface();
+    const int page=m_surface?m_surface->page:4;
+    if(m_surface){
+        next->osc=m_surface->osc;
+        next->lfo=m_surface->lfo;
+        next->pwmSource=m_surface->pwmSource;
+        next->effect=juce::jlimit(0,next->skin["effects"].size()-1,m_surface->effect);
+    }
+    installSurface(std::move(next));
     m_surface->effectSelect.setSelectedId(m_surface->effect+1,juce::dontSendNotification);
-    m_surface->rebuildMain();m_surface->showPage(page);m_processor.savePreferences();error.clear();return true;
+    m_surface->rebuildMain();
+    m_surface->showPage(page);
+    m_processor.savePreferences();
+    error.clear();
+    return true;
 }
+
 bool Editor::loadSkin(const juce::File& file,juce::String& error){return selectSkin(file,{},error);}
 bool Editor::reloadSkin(juce::String& error)
 {
     const bool external=m_processor.skinChoice=="Custom" || m_processor.skinChoice.startsWith("Package:");
     return selectSkin(external?juce::File(m_processor.customSkin):juce::File{},external?juce::String{}:m_processor.skinChoice,error);
 }
+
+void Editor::setStatus(const juce::String& message)
+{
+    if(m_surface)m_surface->status.setText(message,juce::dontSendNotification);
+#if SILVER_SOULTRAIN_PREVIEW || SILVER_SOULTRAIN_JUCE
+    else m_nativeStatus=message;
+#endif
+}
+
+void Editor::startFirmwareLoad(const juce::File& file)
+{
+    if(m_surface)m_surface->startFirmwareLoad(file);
+#if SILVER_SOULTRAIN_PREVIEW || SILVER_SOULTRAIN_JUCE
+    else if(m_processor.beginFirmwareLoad(file))m_nativeStatus.clear();
+#endif
+}
+
+void Editor::chooseDataFolder()
+{
+    m_setupChooser=std::make_unique<juce::FileChooser>("Choose Silver-K folder",m_processor.dataFolder);
+    const juce::Component::SafePointer<Editor> self(this);
+    m_setupChooser->launchAsync(juce::FileBrowserComponent::openMode|juce::FileBrowserComponent::canSelectDirectories,
+        [self](const juce::FileChooser& result){
+            if(self && result.getResult()!=juce::File{})self->scanDataFolder(result.getResult());
+        });
+}
+
+void Editor::scanDataFolder(const juce::File& root)
+{
+    if(m_processor.isFirmwareLoading())return;
+    juce::String error;
+    if(!m_processor.setDataFolder(root,error,true)){setStatus(error);return;}
+    if(m_surface){
+        m_surface->refreshFirmwares();
+        m_surface->refreshSkinList();
+        m_surface->refreshDataHelp();
+    }
+#if SILVER_SOULTRAIN_PREVIEW || SILVER_SOULTRAIN_JUCE
+    else refreshNativeSkinMenu();
+#endif
+    if(const auto firmware=m_processor.firmwareAfterFolderScan();firmware!=juce::File{})startFirmwareLoad(firmware);
+    else setStatus("ROMs and Skins updated");
+}
+
+void Editor::openSkinsFolder()
+{
+    const auto directory=m_processor.skinsFolder();
+    directory.createDirectory();
+    directory.revealToUser();
+}
+
+void Editor::exportSkinTemplate()
+{
+    juce::File exported;
+    juce::String error;
+    if(!SkinPackage::exportTemplate(m_processor.skinsFolder(),exported,error)){setStatus(error);return;}
+    if(m_surface)m_surface->refreshSkinList();
+#if SILVER_SOULTRAIN_PREVIEW || SILVER_SOULTRAIN_JUCE
+    else refreshNativeSkinMenu();
+#endif
+    setStatus("Template exported: "+exported.getParentDirectory().getFullPathName());
+}
+
+void Editor::showDiagnosticsMenu(juce::Component* trigger)
+{
+    juce::PopupMenu menu;
+    const bool ready=m_processor.firmwareReady()&&!m_processor.isFirmwareLoading();
+    menu.addItem(1,"Start new summary measurement",ready);
+    menu.addItem(2,"Start new detailed measurement",ready);
+    menu.addItem(3,"Stop measurement",m_processor.performanceDiagnosticsMode()!=0);
+    menu.addSeparator();
+    menu.addItem(4,"Save performance report...");
+    const juce::Component::SafePointer<Editor> self(this);
+    auto options=juce::PopupMenu::Options().withTargetComponent(trigger?trigger:this);
+    menu.showMenuAsync(options,[self](int result){
+        if(!self)return;
+        if(result>=1&&result<=3){self->m_processor.setPerformanceDiagnostics(result==3?0:result);return;}
+        if(result!=4)return;
+        self->m_setupChooser=std::make_unique<juce::FileChooser>("Save performance report",
+            self->m_processor.dataFolder.getChildFile("silver-k-performance.json"),"*.json");
+        self->m_setupChooser->launchAsync(juce::FileBrowserComponent::saveMode|
+                juce::FileBrowserComponent::canSelectFiles|juce::FileBrowserComponent::warnAboutOverwriting,
+            [self](const juce::FileChooser& chooser){
+                if(!self || chooser.getResult()==juce::File{})return;
+                const bool ok=chooser.getResult().replaceWithText(self->m_processor.performanceReport());
+                self->setStatus(ok?"Performance report saved":"Cannot save performance report");
+            });
+    });
+}
+
+void Editor::panic()
+{
+    for(uint8_t channel=0;channel<16;++channel)
+        for(uint8_t cc:{uint8_t(64),uint8_t(123),uint8_t(120)})m_processor.sendShortMidi(0xb0|channel,cc,0);
+    if(m_surface)m_surface->showValue("Panic\nAll notes off",false);
+}
+
+#if SILVER_SOULTRAIN_PREVIEW || SILVER_SOULTRAIN_JUCE
+void Editor::refreshNativeSkinMenu()
+{
+    m_nativeSkins=SkinPackage::discover(m_processor.skinsFolder());
+    juce::Array<juce::var> choices;
+    const auto add=[&](int value,const juce::String& label){
+        juce::DynamicObject::Ptr item=new juce::DynamicObject;
+        item->setProperty("value",value);
+        item->setProperty("label",label);
+        choices.add(juce::var(item.get()));
+    };
+    for(size_t i=0;i<builtinSkins.size();++i)add(int(i)+1,builtinSkins[i].second);
+    for(size_t i=0;i<m_nativeSkins.size();++i)add(int(i)+100,m_nativeSkins[i].first);
+    juce::DynamicObject::Ptr menu=new juce::DynamicObject;
+    menu->setProperty("choices",choices);
+    menu->setProperty("value",1);
+    menu->setProperty("label",builtinSkins.front().second);
+    m_nativeSkinMenu=juce::var(menu.get());
+}
+
+bool Editor::installSoulTrain(juce::String& error)
+{
+    saveBrowserView();
+    refreshNativeSkinMenu();
+    auto browser=std::make_unique<Browser>(m_processor);
+    const juce::Component::SafePointer<Editor> self(this);
+    const juce::Component::SafePointer<Browser> liveBrowser(browser.get());
+    auto callbacksFor=[this,self,liveBrowser](auto callbacks){
+        callbacks.browserSnapshot=[liveBrowser]{
+            if(!liveBrowser)return juce::var{};
+            liveBrowser->pollLibrary();
+            return liveBrowser->webSnapshot();
+        };
+        callbacks.browserAction=[liveBrowser](const juce::var& message){if(liveBrowser)liveBrowser->webAction(message);};
+        callbacks.nativeStatus=[this]{return m_nativeStatus.isNotEmpty()?m_nativeStatus:m_processor.status();};
+        callbacks.skinMenu=[this]{return m_nativeSkinMenu;};
+        callbacks.nativeAction=[self,liveBrowser](const juce::String& action){
+            juce::MessageManager::callAsync([self,liveBrowser,action]{
+                if(self && liveBrowser && self->m_nativeBrowser.get()==liveBrowser.getComponent())
+                    self->soulTrainAction(action);
+            });
+        };
+        return callbacks;
+    };
+
+    std::unique_ptr<juce::Component> next;
+    try{
+#if SILVER_SOULTRAIN_JUCE && SILVER_SOULTRAIN_PREVIEW
+        if(m_useWebKit)next=std::make_unique<SoulTrainWeb>(m_processor,callbacksFor(SoulTrainWeb::Callbacks{}));
+        else next=std::make_unique<SoulTrainJuce>(m_processor,callbacksFor(SoulTrainJuce::Callbacks{}));
+#elif SILVER_SOULTRAIN_JUCE
+        next=std::make_unique<SoulTrainJuce>(m_processor,callbacksFor(SoulTrainJuce::Callbacks{}));
+#else
+        next=std::make_unique<SoulTrainWeb>(m_processor,callbacksFor(SoulTrainWeb::Callbacks{}));
+#endif
+    }catch(const std::exception& e){
+        error=juce::String::fromUTF8(e.what());
+        return false;
+    }
+    const bool returnToSetup=m_surface && m_surface->page==4;
+    setLookAndFeel(nullptr);
+    m_surface.reset();
+    m_soulTrain.reset();
+    m_nativeBrowser=std::move(browser);
+    m_soulTrain=std::move(next);
+    m_nativeStatus.clear();
+    addAndMakeVisible(*m_soulTrain);
+    fitToSkin();
+#if SILVER_SOULTRAIN_JUCE
+    if(returnToSetup)if(auto* front=dynamic_cast<SoulTrainJuce*>(m_soulTrain.get()))front->showPage("Setup");
+#else
+    juce::ignoreUnused(returnToSetup);
+#endif
+    error.clear();
+    return true;
+}
+
+void Editor::soulTrainAction(const juce::String& action)
+{
+#if JUCE_WINDOWS
+    const juce::String unavailable="soulTrainUnavailable:";
+    if(action.startsWith(unavailable)){
+        saveBrowserView();
+        installSurface(std::make_unique<Surface>(*this,SkinPackage::builtin(false)));
+        m_surface->showPage(4);
+        setStatus("SoulTrain: "+action.substring(unavailable.length()));
+        return;
+    }
+#endif
+    if(action.startsWith("scale:")){setUiScale(action.substring(6).getDoubleValue()/100);return;}
+    if(action=="nativeUI"){
+        juce::String error;
+        if(!selectSkin({},"Silver-K",error))setStatus(error);
+        return;
+    }
+    if(action=="nextPreset"||action=="previousPreset"){
+        if(m_processor.isFirmwareLoading())return;
+        juce::String error;
+        if(m_nativeBrowser->stepPatch(action=="nextPreset"?1:-1,&error))
+            m_processor.refreshControls();
+        else setStatus(error);
+#if SILVER_SOULTRAIN_JUCE
+        if(auto* front=dynamic_cast<SoulTrainJuce*>(m_soulTrain.get()))front->refreshBrowser();
+#endif
+        return;
+    }
+    if(m_processor.isFirmwareLoading())return;
+    if(action.startsWith("skin:")){
+        const int index=action.substring(5).getIntValue();
+        juce::String error;
+        if(index>=1 && index<=int(builtinSkins.size()))
+            selectSkin({},builtinSkins[size_t(index-1)].first,error);
+        else if(index>=100 && index-100<int(m_nativeSkins.size()))
+            selectSkin(m_nativeSkins[size_t(index-100)].second,{},error);
+        if(error.isNotEmpty())setStatus("Skin: "+error);
+        return;
+    }
+    if(action.startsWith("model:")){
+        const bool wantK=action.substring(6)=="K";
+        if(wantK==m_processor.isKStation()&&m_processor.firmwareReady())return;
+        for(const auto& f:m_processor.firmwares)if(f.kStation==wantK){startFirmwareLoad(f.file);return;}
+        setStatus("Put the firmware in ROMs and click Rescan in Setup.");
+        return;
+    }
+    if(action.startsWith("firmware:")){
+        const int index=action.substring(9).getIntValue();
+        if(index>=0&&index<int(m_processor.firmwares.size()))startFirmwareLoad(m_processor.firmwares[size_t(index)].file);
+        return;
+    }
+    if(action=="dataFolder")chooseDataFolder();
+    else if(action=="rescanData")scanDataFolder(m_processor.dataFolder);
+    else if(action=="openSkins")openSkinsFolder();
+    else if(action=="exportSkin")exportSkinTemplate();
+    else if(action=="diagnostics")showDiagnosticsMenu(nullptr);
+    else if(action=="panic")panic();
+}
+#endif
+
 bool Editor::keyPressed(const juce::KeyPress& key)
 {
     if(key.getKeyCode()!=juce::KeyPress::F5Key)return false;
-    m_surface->reloadSkin.onClick();return true;
+    if(m_surface)m_surface->reloadSkin.onClick();
+#if SILVER_SOULTRAIN_PREVIEW || SILVER_SOULTRAIN_JUCE
+    else refreshNativeSkinMenu();
+#endif
+    return true;
 }
-Editor::~Editor(){removeMouseListener(this);m_processor.savePreferences();setLookAndFeel(nullptr);}
-double Editor::getUiScale() const{return double(getWidth())/int(m_surface->skin["width"]);}
+
+Editor::~Editor()
+{
+    saveBrowserView();
+    removeMouseListener(this);
+    setLookAndFeel(nullptr);
+    m_processor.savePreferences(true);
+#if SILVER_SOULTRAIN_PREVIEW || SILVER_SOULTRAIN_JUCE
+    m_soulTrain.reset();
+#endif
+}
+
+juce::Point<int> Editor::skinSize() const
+{
+#if SILVER_SOULTRAIN_PREVIEW || SILVER_SOULTRAIN_JUCE
+    if(m_soulTrain)return {1486,942};
+#endif
+    return m_surface?juce::Point<int>{int(m_surface->skin["width"]),int(m_surface->skin["height"])}:juce::Point<int>{};
+}
+
+void Editor::fitToSkin()
+{
+    const auto size=skinSize();
+    if(size.x<=0 || size.y<=0)return;
+    const double scale=m_processor.editorScale.load();
+    setResizeLimits(size.x/2,size.y/2,size.x*3/2,size.y*3/2);
+    if(auto* constrainer=getConstrainer())constrainer->setFixedAspectRatio(double(size.x)/size.y);
+    setUiScale(scale);
+}
+
+double Editor::getUiScale() const
+{
+    const auto size=skinSize();
+    return size.x>0?double(getWidth())/size.x:m_processor.editorScale.load();
+}
+
 void Editor::setUiScale(double scale)
 {
     if(!std::isfinite(scale)||scale<.5||scale>1.5)return;
-    const int width=int(m_surface->skin["width"]),height=int(m_surface->skin["height"]);
-    setSize(juce::roundToInt(width*scale),juce::roundToInt(height*scale));
+    const auto size=skinSize();
+    if(size.x<=0 || size.y<=0)return;
+    setSize(juce::roundToInt(size.x*scale),juce::roundToInt(size.y*scale));
     resized();
 }
+
 void Editor::resized()
 {
-    if(!m_surface)return;const int width=int(m_surface->skin["width"]),height=int(m_surface->skin["height"]);
-    m_surface->setBounds(0,0,width,height);m_surface->setTransform(juce::AffineTransform::scale(float(getWidth())/width,float(getHeight())/height));
-    const double scale=double(getWidth())/width;
-    if(scale>=.5&&scale<=1.5)m_processor.editorScale.store(scale);
+    const auto size=skinSize();
+    if(size.x<=0 || size.y<=0)return;
+    const auto scale=double(getWidth())/size.x;
+#if SILVER_SOULTRAIN_PREVIEW || SILVER_SOULTRAIN_JUCE
+    if(m_soulTrain){
+        m_soulTrain->setBounds(getLocalBounds());
+        if(scale>=.5&&scale<=1.5)m_processor.setEditorScaleFromResize(scale);
+        return;
+    }
+#endif
+    if(m_surface){
+        m_surface->setBounds(0,0,size.x,size.y);
+        m_surface->setTransform(juce::AffineTransform::scale(float(scale)));
+        if(scale>=.5&&scale<=1.5)m_processor.editorScale.store(scale);
+    }
 }
+
 void Editor::mouseDown(const juce::MouseEvent& event)
 {
     if(event.mods.isPopupMenu()&&!m_sizeMenuOpen)showSizeMenu(event.getScreenPosition());
@@ -1330,6 +1691,9 @@ void Editor::showSizeMenu(juce::Point<int> screenPosition)
     juce::PopupMenu sizes,menu;
     for(int percent:{50,75,100})sizes.addItem(percent,juce::String(percent)+"%",true,std::abs(getUiScale()*100-percent)<.1);
     sizes.addSeparator();sizes.addItem(1,juce::String::fromUTF8("Custom\xe2\x80\xa6"));menu.addSubMenu("Size",sizes);
+#if SILVER_SOULTRAIN_JUCE && SILVER_SOULTRAIN_PREVIEW
+    if (usesSoulTrain(m_processor.skinChoice)) menu.addItem(2,m_useWebKit?"Use SoulTrain JUCE":"Use SoulTrain WebKit");
+#endif
     const juce::Component::SafePointer<Editor> self(this);
     // Rectangle(Point, Point) takes two corners, not a position and size.
     const juce::Rectangle<int> target(screenPosition.x,screenPosition.y,1,1);
@@ -1337,6 +1701,16 @@ void Editor::showSizeMenu(juce::Point<int> screenPosition)
         if(!self)return;
         self->m_sizeMenuOpen=false;
         if(result==1)self->showCustomSize();else if(result>=50)self->setUiScale(result/100.);
+#if SILVER_SOULTRAIN_JUCE && SILVER_SOULTRAIN_PREVIEW
+        else if(result==2){
+            self->m_useWebKit=!self->m_useWebKit;
+            juce::String error;
+            if(!self->installSoulTrain(error)){
+                self->m_useWebKit=!self->m_useWebKit;
+                self->setStatus("Skin: "+error);
+            }
+        }
+#endif
     });
 }
 void Editor::showCustomSize()

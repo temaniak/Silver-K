@@ -88,7 +88,7 @@ namespace pluginLib::patchDB
 		bool isLoading() const { return m_loading; }
 		bool isScanning() const { return !m_loader.empty(); }
 
-		bool writePatchesToFile(const juce::File& _file, const std::vector<PatchPtr>& _patches);
+		virtual bool writePatchesToFile(const juce::File& _file, const std::vector<PatchPtr>& _patches);
 
 		static void assign(const PatchPtr& _patch, const PatchModificationsPtr& _mods);
 
@@ -102,6 +102,8 @@ namespace pluginLib::patchDB
 		static std::string createValidFilename(const std::string& _name);
 
 	protected:
+		virtual bool isValidLoadedPatch(const PatchPtr& patch) const { return isValid(patch); }
+		std::shared_lock<std::shared_mutex> lockPatchesForReading() const { return std::shared_lock(m_patchesMutex); }
 		DataSourceNodePtr addDataSource(const DataSource& _ds, bool _save, const DataSourceLoadedCallback& = [](bool , std::shared_ptr<DataSourceNode>) {});
 
 	public:
@@ -133,10 +135,11 @@ namespace pluginLib::patchDB
 
 		void runOnLoaderThread(std::function<void()>&& _func);
 		void runOnUiThread(const std::function<void()>& _func);
+		// Call on the loader thread when attaching a child to an existing source.
+		void addDataSource(const DataSourceNodePtr& _ds);
 
 	private:
 		void removeDataSourceNow(const DataSource&, bool _save, bool _removeChildren);
-		void addDataSource(const DataSourceNodePtr& _ds);
 
 		bool addPatches(const std::vector<PatchPtr>& _patches);
 		bool removePatch(const PatchPtr& _patch);

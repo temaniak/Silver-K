@@ -1,44 +1,22 @@
-# Silver-K 0.5 Alpha
+# Silver-K 0.8b
 
-K-Station and KS firmware emulation for desktop hosts and Standalone use.
+Эмуляция Novation K-Station и KS для DAW и Standalone. Silver-K использует открытый код Gearmulator и отображается в списках плагинов под именем производителя **NK Stuff**. [Gearmulator](https://github.com/dsp56300/gearmulator)
 
-Based on the open-source code of [Gearmulator](https://github.com/dsp56300/gearmulator). Plugins appear under NK Stuff in host lists.
-
-| Platform | Formats |
+| Платформа | Форматы |
 | --- | --- |
 | Windows x64 | VST3, Standalone |
-| macOS Apple Silicon and Intel (Universal 2) | AU, VST3, Standalone |
+| macOS, Apple Silicon и Intel (Universal 2) | AU, VST3, Standalone |
 
-- [Releases](https://github.com/temaniak/Silver-K/releases)
-- [Installation](doc/INSTALL.md)
-- [User guide](doc/USER_GUIDE.md)
+- [Опубликованные релизы](https://github.com/temaniak/Silver-K/releases)
+- [Что нового в 0.8b](docs/RELEASE_NOTES_RU.txt)
+- [Установка](docs/INSTALL_RU.txt)
+- [Папки, браузер и Drum SEQ](docs/USER_GUIDE_RU.txt)
 - [Wave ROM Builder](doc/WAVE_ROM_BUILDER.md)
+- [Сборка из исходников](doc/BUILD.md)
+- [Лицензии и происхождение кода](THIRD_PARTY.md)
 
-## Setup
+English documentation: [Release notes](docs/RELEASE_NOTES_EN.txt) · [Installation](docs/INSTALL_EN.txt) · [User guide](docs/USER_GUIDE_EN.txt).
 
-1. Choose a permanent data folder in Setup.
-2. For KS, select a MIDI file containing the complete program and performance data, or select several compatible MIDI files together. The required zero Wave ROM is created automatically.
-3. Load a compatible firmware BIN.
-4. Add further patch libraries on Patches.
+Прошивку инструмента нужно добавить отдельно. Для KS также нужен MIDI-файл из архива **KS All Data**. Оба файла помещаются в `Silver-K/ROMs`. При отсутствии Wave ROM с сэмплами программа создаст пустой Wave ROM.
 
-Firmware and original sound data are not included. KS requires firmware, Wave ROM and program data to start. K-Station requires its own firmware.
-
-## Data folders
-
-| Folder | Contents |
-| --- | --- |
-| ROMs | Required firmware, Wave ROM and KS program data |
-| Patches | Additional banks and presets |
-| Skins | Custom skins |
-
-Setup remembers the selected root. Required files selected elsewhere are copied into ROMs; originals are retained.
-
-## Development
-
-Alpha. Performance and latency remain under development. This development branch combines native K/KS controllers with mono/stereo external audio input; stereo is mixed to the hardware mono input.
-
-- [Build instructions](doc/BUILD.md)
-- [Custom skins](doc/SKINS.md)
-- [Licenses and provenance](THIRD_PARTY.md)
-
-Licensed under [GPLv3](LICENSE.md).
+Лицензия — [GPLv3](LICENSE.md).

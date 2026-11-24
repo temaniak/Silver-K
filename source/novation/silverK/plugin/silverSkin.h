@@ -12,7 +12,7 @@ struct SkinPackage
     juce::var layout, theme;
     std::map<juce::String, juce::Image> images;
     juce::Typeface::Ptr typeface;
-    static SkinPackage builtin();
+    static SkinPackage builtin(bool silverFlat=false);
     static bool load(const juce::File&, SkinPackage&, juce::String& error);
     static std::vector<std::pair<juce::String, juce::File>> discover(const juce::File&);
     static bool exportTemplate(const juce::File& skinsFolder, juce::File& result, juce::String& error);

@@ -1,8 +1,0 @@
-**/bin/
-**/obj/
-**/node_modules/
-web/build/
-dist/*.exe
-dist/*.zip
-dist/windows/
-test-results/
