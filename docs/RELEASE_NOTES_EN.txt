@@ -1,52 +1,36 @@
-Silver-K 0.8b
-=============
+Silver-K 0.8.5b
+===============
 
-Silver-K 0.8b is a beta release of the K-Station and KS emulator. The main updates since
-0.5a are a new interface, a user drum sequencer, and improved preset management. Previous
-release 0.5a (https://github.com/temaniak/Silver-K/releases/tag/v0.5a)
+Changes since 0.8b
+-----------------
 
-What's changed
---------------
+- In Host mode, the K-Station and KS arpeggiators respond to live MIDI at the
+  project tempo while the DAW transport is stopped. On Play, they align with
+  the DAW grid. The internal Tempo is used until the host supplies a BPM value.
+  K-Station now plays the first step for notes placed exactly on the grid
+  with either Key Sync setting.
+- The manual Control MIDI channel setting has been removed. The panel follows
+  the MIDI channel of the active firmware or the KS Performance part being
+  edited. Knob and slider values no longer revert when editing a loaded preset
+  with a mismatched channel. Incoming MIDI retains its channel in both the
+  plug-in and Standalone.
+- Browser → Rescan rebuilds the list from available folders and banks.
+  Removed sources disappear and new ones are added. Manually connected
+  libraries are included. The list refreshes even when the old cache is locked.
+- Slider thumbs are easier to grab near either end of their travel. Knobs
+  respond immediately when you reverse direction after reaching a limit.
+  Fixed knob dragging at the screen edge on macOS.
+- On Windows, the selected Software or OpenGL renderer is restored when
+  reopening the editor or reloading the plug-in.
+- SoulTrain buttons now use the same shadow as the combo boxes. The visible
+  gaps in the main menu, Parts, Effects, and Voicing, and between Seq and
+  Drum Edit, are 2 px at 100% scale. The interface footer shows the current version.
 
-- SoulTrain interface. A new skin by SoulTrain, designed for a clear, professional
-  workflow. Buttons, indicators, and drop-down menus share a consistent style. The
-  previous editor is available in the skin settings.
-- KS Performance. Switching parts is faster, and the knobs and preset selection follow the
-  selected part. Set the Low note and High note of a part's keyboard range from a MIDI
-  keyboard.
-- Drum SEQ and Drum Edit. KS adds SEQ alongside its 33 factory rhythms. You can program 12
-  sequences per part, assign them to note ranges, and choose when they switch. In Drum
-  Edit, a MIDI note immediately selects the corresponding drum sound for auditioning and
-  editing. These features are for drum parts.
-- Presets and the User library. The browser uses Gearmulator's preset manager. Search
-  includes metadata, tags can be edited in the table, and columns can be resized. Use the
-  Source column to open the preset's location on disk. Factory Init Program and Init
-  Performance entries are hidden by default. Show init brings them back into the list.
-  Save current saves a sound, the selected part, or the entire Performance. Presets
-  containing a user sequence are marked KS+ and carry the sequence with them.
-- Rhythm and sync. Improved timing between SEQ, factory drum rhythms, and melodic
-  arpeggiators in KS Performance. Fixed issues at MIDI clip and transport loop boundaries,
-  when seeking, and when changing the clock source with notes held. At a given BPM, Arp
-  Sync changes the melodic arpeggiator's note division. Drum patterns keep their own step
-  timing.
-- Loading and Setup. KS prepares its Wave ROM and Drum Maps at startup and shows its
-  loading status in the interface. When switching firmware, you can keep the current sound
-  or recall the last sound used on the selected model. Setup provides synth, MIDI, and
-  audio buffer settings. Windows also offers Software and OpenGL rendering.
+Packages
+--------
 
-First KS startup
-----------------
+Windows x64 includes VST3 and Standalone. macOS Universal 2 includes AU, VST3,
+and Standalone for Apple Silicon and Intel.
 
-Extract the KS All Data archive you have and place the extracted factory MIDI file in
-Silver-K/ROMs alongside the KS firmware. Click Setup → Rescan folders, then select the KS
-firmware. Supply the firmware and factory data separately.
-
-The package includes a blank Wave ROM named ks-wave-zero.bin. It lets KS start without a
-sampled wave bank. Presets and drums that use sampled waves need a compatible Wave ROM
-containing that data in the same folder.
-
-Windows x64 includes VST3 and Standalone. macOS Universal 2 includes AU, VST3, and
-Standalone for Apple Silicon and Intel.
-
-See INSTALL_EN.txt and USER_GUIDE_EN.txt in the package for installation, folder setup,
-the preset browser, and Drum SEQ.
+See INSTALL_EN.txt and USER_GUIDE_EN.txt for installation and usage. Russian
+versions are included in the same package.

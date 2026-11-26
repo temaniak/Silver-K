@@ -887,6 +887,12 @@ public:
         for (const auto* panel:panels) drawImage(g,panel->art,panel->area.getPosition(),panel->scale);
         if (!backdrop.isValid()) return;
 
+        // Paint the shadows before any faces so adjacent controls stay above them.
+        const auto shadowClip=g.getClipBounds();
+        for (const auto& [widget,shadow]:buttonShadows)
+            if (shadow.visibleIn(shadowClip) && widget->hitButton && widget->hitButton->isVisible())
+                shadow.paint(g,captionOpacity(widget->bounds));
+
         const bool effectsPage=usesEffects();
         const bool listPage=page=="Browser" || page=="Perf";
         for (const auto& widget:widgets) {
@@ -994,6 +1000,7 @@ private:
         std::array<std::unique_ptr<soultrain::Caption>,3> states;
     };
     std::vector<ButtonCaption> buttonCaptions;
+    std::vector<std::pair<const Widget*,soultrain::ControlShadow>> buttonShadows;
     std::vector<std::pair<const Widget*,int>> paintedValues;
     struct ChoiceGroup {
         std::vector<const Widget*> members;
@@ -2617,7 +2624,7 @@ private:
                 auto& caption=result.back();
                 if (caption.bounds.getY()<=915.f) continue;
                 if (caption.current=="0.5.0")
-                    caption.set(SILVER_RELEASE_VERSION);
+                    caption.set(String(JucePlugin_VersionString)+String(SILVER_RELEASE_VERSION).trimCharactersAtStart("0123456789."));
             }
         }
         return result;
@@ -2885,6 +2892,39 @@ private:
         }
     }
 
+    void layoutButtonRows() {
+        std::array<std::vector<Widget*>,3> rows;
+        for (auto& w:widgets) {
+            if (!w.standardButton() || w.bounds.isEmpty()) continue;
+            if (w.visualType=="header-button" && std::find(pageNames.begin(),pageNames.end(),w.name)!=pageNames.end())
+                rows[0].push_back(&w);
+            else if (w.role=="tab") rows[1].push_back(&w);
+            else if (w.id=="voice_mode") rows[2].push_back(&w);
+        }
+        for (auto& row:rows) {
+            if (row.size()<2) continue;
+            std::sort(row.begin(),row.end(),[](const Widget* a,const Widget* b){return a->bounds.getX()<b->bounds.getX();});
+            auto left=float(juce::roundToInt(row.front()->bounds.getX()));
+            for (size_t i=0;i<row.size();++i) {
+                auto& w=*row[i];
+                const auto original=w.bounds;
+                const auto seam=i+1<row.size()?(original.getRight()+row[i+1]->bounds.getX())*.5f:original.getRight();
+                const auto right=float(juce::roundToInt(seam));
+                // Each face is inset by one pixel. A shared outer edge gives
+                // two pixels of visible space while keeping the row's width.
+                w.moveButton({left-original.getX(),0.f});
+                w.bounds=w.bounds.withWidth(right-left);
+                const auto centreShift=w.bounds.getCentreX()-original.getCentreX();
+                if (centreShift!=0.f)
+                    for (auto& caption:fixedText)
+                        if ((caption.current==w.name || caption.current==w.baseline) &&
+                            original.contains(caption.bounds.getCentre()))
+                            caption.translate({centreShift,0.f});
+                left=right;
+            }
+        }
+    }
+
     void rebuild(bool sectionsOnly=false) {
         rebuildQueued=false;
         const auto requested=std::exchange(requestedSections,std::nullopt);
@@ -2922,7 +2962,8 @@ private:
                 covered=covered.getUnion(caption.paintBounds());
         for (const auto& caption:panel.captions)
             covered=covered.getUnion(caption.paintBounds());
-        areas.add(covered.expanded(2).getIntersection(getLocalBounds()));
+        // A replaced button can leave a shadow beyond the panel rectangle.
+        areas.add(covered.expanded(6).getIntersection(getLocalBounds()));
     }
 
     bool replaceSections(Sections next) {
@@ -3018,6 +3059,7 @@ private:
         }
         draggedParameter=adjustedParameter=inspectedParameter=nullptr;
         sequencerEditButton=drumVoiceEditButton=nullptr;
+        buttonShadows.clear();
         sliders.clear();buttons.clear();fields.clear();panels.clear();waves.clear();widgets.clear();
         tagEditor.reset();
         columnGrips.clear();
@@ -3155,6 +3197,7 @@ private:
             firmware.bounds=trigger;
             widgets.push_back(firmware);
         }
+        layoutButtonRows();
         if (model=="KS" && sections.arp && usesEffects()) {
             const auto rhythm=std::find_if(widgets.begin(),widgets.end(),[](const Widget& w){return w.id=="arp_rhythm";});
             const auto* authored=baseFile["widgets"].getArray();
@@ -3166,6 +3209,9 @@ private:
                 });
                 const auto gap=next!=authored->end()?
                     rectangle((*next)["rect"]).getX()-drum.bounds.getRight():1.f;
+                if (const auto mono=std::find_if(widgets.begin(),widgets.end(),[](const Widget& w) {
+                    return w.id=="voice_mode" && w.name=="Mono";
+                });mono!=widgets.end()) drum.bounds=drum.bounds.withWidth(mono->bounds.getWidth());
                 drum.name=soultrain::DrumSequencer::EditName;
                 drum.id.clear();
                 drum.baseline=drum.name;
@@ -3173,7 +3219,7 @@ private:
                     rhythm->bounds.getCentreY()-drum.bounds.getHeight()*.5f}-drum.bounds.getPosition());
                 auto voice=drum;
                 voice.name=voice.baseline=drumVoiceEditCaption;
-                voice.moveButton({drum.bounds.getWidth()+gap,0.f});
+                voice.moveButton({drum.bounds.getWidth(),0.f});
                 // The action buttons keep their positions from the original Rhythm layout.
                 if (const auto unison=std::find_if(widgets.begin(),widgets.end(),[](const Widget& w) {
                     return w.id=="unison" && w.picker();
@@ -3223,6 +3269,10 @@ private:
         choiceGroups.clear();
         std::map<String,int> groupIndices;
         for (auto& w:widgets) {
+            if (w.standardButton() || w.gear()) {
+                auto shadow=skin.buttonShadow(w.buttonBounds());
+                if (shadow.image.isValid()) buttonShadows.emplace_back(&w,std::move(shadow));
+            }
             if (w.range()) {
                 w.paintBounds=faderBounds(w);
                 if (page=="Perf" && w.part)

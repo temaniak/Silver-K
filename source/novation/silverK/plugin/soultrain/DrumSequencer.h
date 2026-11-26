@@ -4,10 +4,12 @@
 
 #include <functional>
 #include <memory>
+#include <vector>
 
 namespace soultrain {
 
 class SkinArt;
+struct ControlShadow;
 
 class DrumSequencer final : public juce::Component {
 public:
@@ -71,6 +73,7 @@ private:
     std::array<std::unique_ptr<Pad>,Edit::Cells> pads_;
     std::unique_ptr<StepValue> stepValue_;
     std::unique_ptr<Playhead> playhead_;
+    std::vector<ControlShadow> buttonShadows_;
     juce::String error_;
     silverK::Processor::DrumPlayhead playback_;
     uint8_t editingPattern_=0;

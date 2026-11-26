@@ -3,6 +3,7 @@
 #include "silverProcessor.h"
 #include "silverSkin.h"
 #include "silverSoulTrainJuce.h"
+#include "soultrain/SkinArt.h"
 #include "soultrain/WaveIndicator.h"
 #include "../../controller/command/controllerArchive.h"
 #include "../../controller/command/novationProgramSysEx.h"
@@ -49,6 +50,50 @@ void press(juce::Component& root,const String& title) {
     require(button && button->isEnabled() && button->onClick,"Unavailable native button "+title);
     button->onClick();
     pump();
+}
+
+const juce::StringArray& menuButtons(bool kStation) {
+    static const juce::StringArray k{"Main","Extra","Browser","Setup"};
+    static const juce::StringArray ks{"Main","Extra","Browser","Perf","Setup"};
+    return kStation?k:ks;
+}
+
+void checkButtonGap(SoulTrainJuce& ui,const juce::StringArray& names) {
+    juce::Rectangle<int> previous;
+    for (const auto& name:names) {
+        const auto* button=find(ui,name,false);
+        require(button!=nullptr,"Find the button "+name);
+        const auto face=button->getBounds().reduced(1);
+        if (!previous.isEmpty())
+            require(face.getY()==previous.getY() && face.getX()-previous.getRight()==2,
+                    "Keep a two-pixel gap before "+name);
+        previous=face;
+    }
+}
+
+void checkButtonShadow(SoulTrainJuce& ui,const juce::File& assets,bool kStation) {
+    const auto* undo=find(ui,"Undo",false);
+    require(undo!=nullptr,"Find Undo to sample its shadow");
+    const auto bounds=ui.getLocalArea(undo,undo->getLocalBounds());
+    const auto backdrop=juce::ImageFileFormat::loadFrom(assets.getChildFile(kStation?"K-main-0.png":"KS-main-0.png"));
+    require(backdrop.isValid(),"Load the unpainted background");
+    const auto scale=backdrop.getWidth()/ui.getWidth();
+    require(scale>0,"Read the background scale");
+    const auto x=bounds.getCentreX(), y=bounds.getBottom()+1;
+    const auto rendered=ui.createComponentSnapshot({x,y,1,1}).getPixelAt(0,0);
+    const auto background=backdrop.getPixelAt(x*scale,y*scale);
+    require(rendered.getBrightness()+.02f<background.getBrightness(),"Paint the drop shadow outside the button face");
+
+    const soultrain::SkinArt skin(assets);
+    const auto shadow=skin.buttonShadow(bounds).image;
+    const auto choice=juce::ImageFileFormat::loadFrom(assets.getChildFile("sprites/art-0036.png"));
+    require(shadow.isValid() && choice.isValid(),"Load the button and combo-box shadow rasters");
+    for (int i=1;i<=11;++i)
+        require(shadow.getPixelAt(shadow.getWidth()/2,shadow.getHeight()-i).getAlpha()==
+                choice.getPixelAt(choice.getWidth()/2,choice.getHeight()-i).getAlpha(),
+                "Reuse the exact combo-box shadow opacity below the button");
+    require(shadow.getPixelAt(shadow.getWidth()/2,shadow.getHeight()/2).getAlpha()==0,
+            "Leave the button face out of the shadow raster");
 }
 
 juce::Rectangle<int> choiceMenuBounds(const SoulTrainJuce& ui,const juce::Component& picker) {
@@ -1359,6 +1404,11 @@ void checkButtonHighlights(SoulTrainJuce& ui,Processor& processor,const juce::Fi
     };
 
     require(ui.showPage("Main"),"Open Main to review button highlights");
+    checkButtonGap(ui,menuButtons(k));
+    checkButtonGap(ui,{"Delay","Reverb","Chorus","Dist","EQ","Panning","Vocoder"});
+    checkButtonGap(ui,{"Mono","Mono AG","Poly 1","Poly 2"});
+    checkButtonShadow(ui,assets,k);
+    screenshot("version-label",{63,912,77,24});
     checkExclusiveLedSwitch(ui,processor);
     auto& extra=button("Extra");
     checkHighlightBounds(ui,extra,area(extra),area(button("Main")));
@@ -1436,6 +1486,7 @@ void checkButtonHighlights(SoulTrainJuce& ui,Processor& processor,const juce::Fi
         flush(processor,96);
         require(processor.performanceMode(),"Enable KS Performance for the Part buttons");
         press(ui,"1");
+        checkButtonGap(ui,{"1","2","3","4"});
         auto& second=button("2");
         checkHighlightBounds(ui,second,area(second),area(button("1")));
         second.setState(juce::Button::buttonOver);
@@ -2039,8 +2090,15 @@ void checkControlSizes(SoulTrainJuce& ui,Processor& processor,Browser& browser,c
             const auto* control=find(ui,name,false);
             const auto area=widget["rect"];
             const juce::Rectangle<float> authored{float(area[0]),float(area[1]),float(area[2]),float(area[3])};
-            require(control && control->getBounds()==authored.getSmallestIntegerContainer(),
+            const auto expected=menuButtons(processor.isKStation()).contains(name)?authored.toNearestIntEdges():
+                authored.getSmallestIntegerContainer();
+            require(control && control->getBounds()==expected,
                     "Keep the authored size and position of "+name);
+        }
+        checkButtonGap(ui,menuButtons(processor.isKStation()));
+        if (page=="Main" || page=="Extra") {
+            checkButtonGap(ui,{"Delay","Reverb","Chorus","Dist","EQ","Panning","Vocoder"});
+            checkButtonGap(ui,{"Mono","Mono AG","Poly 1","Poly 2"});
         }
     };
     require(ui.showPage("Setup"),"Refresh controls after loading firmware");

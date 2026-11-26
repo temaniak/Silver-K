@@ -14,8 +14,8 @@ from pathlib import Path
 from check_plugin_identity import check_identity
 from check_macos_compatibility import check_bundle
 
-VERSION = '0.8b'
-PLUGIN_VERSION = '0.8.0'
+VERSION = '0.8.5b'
+PLUGIN_VERSION = '0.8.5'
 ROOT = Path(__file__).resolve().parents[1]
 RELEASE_DOCUMENTS = (
     'docs/INSTALL_EN.txt',
@@ -133,7 +133,7 @@ def main():
         roots = ('source/','cmake/','assets/','tools/','doc/','.github/','design-soultrain/juce-skin/')
         top = {'CMakeLists.txt','README.md','LICENSE.md','THIRD_PARTY.md','.gitignore'}
         public_docs = {'doc/BUILD.md', 'doc/INSTALL.md', 'doc/USER_GUIDE.md', 'doc/SKINS.md',
-                       'doc/WAVE_ROM_BUILDER.md', 'doc/releases/0.4a.md', f'doc/releases/{VERSION}.md'}
+                       'doc/WAVE_ROM_BUILDER.md', 'doc/releases/0.4a.md', 'doc/releases/0.8b.md', f'doc/releases/{VERSION}.md'}
         with zipfile.ZipFile(source_archive,'w',zipfile.ZIP_DEFLATED) as source_zip:
             for relative in sorted(set(source_files)):
                 if relative.startswith('doc/') and relative not in public_docs:

@@ -1,5 +1,5 @@
-Installing Silver-K 0.8b
-========================
+Installing Silver-K 0.8.5b
+==========================
 
 macOS
 -----

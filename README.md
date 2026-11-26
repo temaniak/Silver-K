@@ -1,4 +1,4 @@
-# Silver-K 0.8b
+# Silver-K 0.8.5b
 
 Эмуляция Novation K-Station и KS для DAW и Standalone. Silver-K использует открытый код Gearmulator и отображается в списках плагинов под именем производителя **NK Stuff**. [Gearmulator](https://github.com/dsp56300/gearmulator)
 
@@ -8,7 +8,7 @@
 | macOS, Apple Silicon и Intel (Universal 2) | AU, VST3, Standalone |
 
 - [Опубликованные релизы](https://github.com/temaniak/Silver-K/releases)
-- [Что нового в 0.8b](docs/RELEASE_NOTES_RU.txt)
+- [Что нового в 0.8.5b](docs/RELEASE_NOTES_RU.txt)
 - [Установка](docs/INSTALL_RU.txt)
 - [Папки, браузер и Drum SEQ](docs/USER_GUIDE_RU.txt)
 - [Wave ROM Builder](doc/WAVE_ROM_BUILDER.md)

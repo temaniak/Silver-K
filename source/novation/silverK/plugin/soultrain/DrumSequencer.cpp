@@ -427,6 +427,9 @@ DrumSequencer::DrumSequencer(Processor& processor,const SkinArt& skin,Menu menu,
     addAndMakeVisible(*stepValue_);
     playhead_=std::make_unique<Playhead>();
     addChildComponent(*playhead_);
+    for (auto* child:getChildren())
+        if (dynamic_cast<Choice*>(child) || dynamic_cast<Pad*>(child))
+            buttonShadows_.push_back(skin_.buttonShadow(child->getBounds()));
     refreshPattern();
     refreshPlayback();
 }
@@ -442,6 +445,9 @@ void DrumSequencer::paint(juce::Graphics& g) {
     fill(g,frame.toFloat(),Colour(0xff344252),Colour(0xff24303e));
     fill(g,header.toFloat(),Colour(0xff424f60),Colour(0xff2d3948));
     g.setColour(Colour(0xff22303f));g.fillRect(footer);
+    const auto shadowClip=g.getClipBounds();
+    for (const auto& shadow:buttonShadows_)
+        if (shadow.visibleIn(shadowClip)) shadow.paint(g);
     g.setColour(Colour(0xff8fa6ba));g.drawRect(frame,2);
     g.setColour(Colour(0xff63798e));
     g.drawHorizontalLine(header.getBottom(),float(frame.getX()+2),float(frame.getRight()-2));

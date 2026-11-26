@@ -30,6 +30,27 @@ inline juce::Colour colour(const juce::var& values)
         .withAlpha(juce::jlimit(0.f,1.f,float(values[3])));
 }
 
+struct ControlShadow {
+    juce::Image image;
+    juce::Rectangle<float> bounds;
+    juce::Rectangle<int> area, face;
+
+    bool visibleIn(juce::Rectangle<int> clip) const
+    {
+        const auto overlap=area.getIntersection(clip);
+        // The raster is transparent inside the face. A repaint of only
+        // that area does not need to composite its own shadow.
+        return !overlap.isEmpty() && !face.contains(overlap);
+    }
+
+    void paint(juce::Graphics& g,float opacity=1.f) const
+    {
+        g.setOpacity(opacity);
+        g.drawImage(image,bounds);
+        g.setOpacity(1.f);
+    }
+};
+
 class SkinArt {
     const std::map<int,juce::Typeface::Ptr> inter;
 
@@ -45,6 +66,13 @@ public:
         if(!manifest.isObject()||!controlStyles.isObject()) throw std::runtime_error("SoulTrain control artwork is missing");
         const auto folder=root.getChildFile("fonts");
         pixel=loadFont(folder.getChildFile("pixelmix-web.ttf"));
+        const auto reference=controlStyles["buttonShadow"];
+        const auto body=rect(reference["body"]).toNearestIntEdges();
+        if (const auto* sprite=findSprite(reference["sprite"].toString());
+            sprite && !body.isEmpty() && sprite->image.getBounds().contains(body)) {
+            shadowSource=sprite->image;
+            shadowBody=body;
+        }
         size_t index=0;
         for (const auto* state:{"off","on","off-hover","on-hover"})
             indicatorArt[index++]=juce::ImageCache::getFromFile(directory.getChildFile("sprites/figma-led-"+juce::String(state)+".png"));
@@ -139,12 +167,51 @@ public:
         return {position.x,position.y,asset->image.getWidth()*.5f,asset->image.getHeight()*.5f};
     }
 
+    ControlShadow buttonShadow(juce::Rectangle<int> bounds) const
+    {
+        if (!shadowSource.isValid() || bounds.isEmpty()) return {};
+        const auto key=std::pair{bounds.getWidth(),bounds.getHeight()};
+        auto& image=buttonShadows[key];
+        if (!image.isValid()) image=renderButtonShadow(2*key.first,2*key.second);
+        const juce::Rectangle<float> raster{bounds.getX()-.5f*shadowBody.getX(),bounds.getY()-.5f*shadowBody.getY(),
+                                          .5f*image.getWidth(),.5f*image.getHeight()};
+        return {image,raster,raster.getSmallestIntegerContainer(),bounds};
+    }
+
     const juce::Font choiceFont;
     const SoulTrainKnob::Artwork knob;
     const WaveIndicator::Artwork wave;
 
 private:
     struct Sprite { juce::Image image; juce::Point<float> offset; std::map<int,juce::Image> resized{}; };
+
+    juce::Image renderButtonShadow(int width,int height) const
+    {
+        const auto sourceWidth=shadowSource.getWidth(), sourceHeight=shadowSource.getHeight();
+        const auto body=shadowBody.withSize(width,height);
+        const auto right=sourceWidth-shadowBody.getRight(), bottom=sourceHeight-shadowBody.getBottom();
+        juce::Image image(juce::Image::ARGB,body.getRight()+right,body.getBottom()+bottom,true);
+        const juce::Image::BitmapData source(shadowSource,juce::Image::BitmapData::readOnly);
+        juce::Image::BitmapData output(image,juce::Image::BitmapData::writeOnly);
+        // Preserve the reference edges and corners at 2x. Only repeat the
+        // centre of each straight edge, and skip the opaque combo-box face.
+        const auto sample=[](int i,int size,int sourceSize,int start,int end) {
+            if (i<start) return i;
+            if (i>=size-end) return sourceSize-(size-i);
+            return sourceSize/2;
+        };
+        const auto cornerWidth=std::min({12,width/2,shadowBody.getWidth()/2});
+        const auto cornerHeight=std::min({12,height/2,shadowBody.getHeight()/2});
+        for (int y=0;y<output.height;++y) {
+            const auto sy=sample(y,output.height,sourceHeight,body.getY()+cornerHeight,bottom+cornerHeight);
+            for (int x=0;x<output.width;++x) {
+                if (body.contains(x,y)) continue;
+                const auto sx=sample(x,output.width,sourceWidth,body.getX()+cornerWidth,right+cornerWidth);
+                output.setPixelColour(x,y,juce::Colours::black.withAlpha(source.getPixelColour(sx,sy).getAlpha()));
+            }
+        }
+        return image;
+    }
 
     Sprite* findSprite(const juce::String& id) const
     {
@@ -179,6 +246,9 @@ private:
     juce::File directory;
     juce::var manifest,controlStyles;
     mutable std::map<juce::String,Sprite> images;
+    juce::Image shadowSource;
+    juce::Rectangle<int> shadowBody;
+    mutable std::map<std::pair<int,int>,juce::Image> buttonShadows;
     std::array<juce::Image,4> indicatorArt;
    #if JUCE_WINDOWS
     mutable silverK::ImageScaleCache indicatorScale;
