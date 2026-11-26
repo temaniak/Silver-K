@@ -66,7 +66,7 @@ static void verify(Processor& p){
  check(controller->isVisible()&&controller->getParentComponent()->getLocalBounds().contains(controller->getBounds()),"Controller missing/outside Setup");
  check(controller->isEnabled()==(ks::boardComparisonAvailable()&&!p.isKStation()) && controller->getSelectedId()==p.ksControllerMode()+1,"Controller model/selection mismatch");
  if(!ks::boardComparisonAvailable())check(controller->getNumItems()==1&&controller->getItemId(0)==2,"Production controller selector must contain only native C++");
- auto* channel=find(*e,"controlChannel");auto* buffer=find(*e,"audioBuffer");check(channel&&buffer&&!channel->getBounds().intersects(buffer->getBounds())&&!controller->getBounds().intersects(buffer->getBounds()),"Setup controls overlap");
+ auto* buffer=find(*e,"audioBuffer");check(!find(*e,"controlChannel"),"Setup still offers a manual control channel");check(buffer&&!controller->getBounds().intersects(buffer->getBounds()),"Setup controls overlap");
  auto* switching=dynamic_cast<juce::ComboBox*>(find(*e,"firmwareSwitch"));
  check(switching && switching->isVisible() && switching->getNumItems()==2,"Firmware switch mode missing from Setup");
  for(int n:{2,1}){

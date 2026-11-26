@@ -19,8 +19,19 @@ bool Processor::updateSettings(const juce::NamedValueSet& edits,juce::String& er
  if(!temp.getFile().replaceWithText(juce::JSON::toString(saved)) || !temp.overwriteTargetFileWithTemporary()){error="Cannot save Silver-K settings: "+file.getFullPathName();return false;}
  return true;
 }
+#if JUCE_WINDOWS
+bool Processor::prefersOpenGLRenderer() const {
+ const auto preference=juce::JSON::parse(settingsFile()).getProperty("openGLRenderer",false);
+ return preference.isBool() && bool(preference);
+}
+bool Processor::setOpenGLRendererPreference(bool enabled,juce::String& error) const {
+ juce::NamedValueSet edits;
+ edits.set("openGLRenderer",enabled);
+ return updateSettings(edits,error);
+}
+#endif
 juce::NamedValueSet Processor::preferenceValues()const{
- juce::NamedValueSet values;values.set("editorScale",editorScale.load());values.set("skinChoice",skinChoice);values.set("customSkin",customSkin);values.set("bufferProfile",buffering.load());values.set("ksControllerMode",ksControllerMode());values.set("ksTwoCoreProcessing",ksTwoCoreProcessing());values.set("editorChannel",int(editorChannelPreference.load()));values.set("browserState",browserState);values.set("firmwareSwitch",int(firmwareSwitch()));return values;
+ juce::NamedValueSet values;values.set("editorScale",editorScale.load());values.set("skinChoice",skinChoice);values.set("customSkin",customSkin);values.set("bufferProfile",buffering.load());values.set("ksControllerMode",ksControllerMode());values.set("ksTwoCoreProcessing",ksTwoCoreProcessing());values.set("browserState",browserState);values.set("firmwareSwitch",int(firmwareSwitch()));return values;
 }
 void Processor::setEditorScaleFromResize(double scale){
  if(editorScale.load()==scale)return;
@@ -73,7 +84,7 @@ void Processor::initializeDataFolder(){
  skinChoice=settings.getProperty("skinChoice",defaultSkin).toString();customSkin=settings["customSkin"].toString();browserState=settings["browserState"].toString();
  twoCoreProcessing.store(bool(settings.getProperty("ksTwoCoreProcessing",ksTwoCoreProcessing())));
  firmwareSwitchMode.store(int(settings["firmwareSwitch"])==int(FirmwareSwitch::RecallLast)?FirmwareSwitch::RecallLast:FirmwareSwitch::KeepPatch);
- buffering.store(juce::jlimit(0,3,int(settings.getProperty("bufferProfile",1))));controlChannel.store(uint8_t(int(settings["editorChannel"])&15));editorChannelPreference.store(controlChannel.load());
+ buffering.store(juce::jlimit(0,3,int(settings.getProperty("bufferProfile",1))));
  juce::String error;
  if(setDataFolder(dataFolder,error))startupFirmware=firmwareAfterFolderScan();
  else message=error;
@@ -162,7 +173,9 @@ bool Processor::setFlashRoms(const juce::Array<juce::File>& files,juce::String& 
  std::vector<juce::File> chosen(files.begin(),files.end());std::vector<uint8_t> storage;
  if(!readKSData(chosen,storage,error))return false;
  std::vector<juce::File> managed;for(const auto& file:chosen){auto saved=managedAsset(file,error);if(saved==juce::File{})return false;managed.push_back(saved);}
- flashFiles=std::move(managed);flashFile=flashFiles.front();return rememberAssets(error);
+ flashFiles=std::move(managed);flashFile=flashFiles.front();
+ patchLibrary.addFactory(factoryPresets(storage),Library::KSFactoryName);
+ return rememberAssets(error);
 }
 juce::File Processor::resolveAsset(const juce::ValueTree& state,const char* role)const{
  const auto relative=state.getProperty(juce::String(role)+"Relative").toString();

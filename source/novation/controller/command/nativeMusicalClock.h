@@ -6,6 +6,7 @@
 #include <array>
 #include <cmath>
 #include <limits>
+#include <numeric>
 
 namespace novation::controller::command {
 
@@ -27,11 +28,12 @@ struct MusicalClockSignal {
     bool running=false;
     bool reset=false;
     bool freshMidiPeriod=false;
+    bool followsHostGrid=false;
 };
 
 // One worker owns this native timeline. An input at the same frame as a
 // generated tick is applied first; ticks strictly earlier must be drained.
-// Stop suppresses arp ticks (running=false) but not the effects clock.
+// The host position can keep the arp running while the DAW transport is stopped.
 class NativeMusicalClock final {
     using Position=novation::controller::MusicalClock::Position;
     static constexpr uint64_t Max=std::numeric_limits<uint64_t>::max();
@@ -134,27 +136,41 @@ public:
         const auto intervalNow=interval(rate_,tempo);
         if(!intervalNow.numerator)return {};
         frontier_=at;
-        const bool hasPpq=pos.hasPpq && std::isfinite(pos.ppq) && std::abs(pos.ppq)<1e12;
+        const bool hasPpq=pos.hasPpq && std::isfinite(pos.ppq) && std::abs(pos.ppq)<1e12 &&
+                          (pos.playing || !pos.playWhileStopped);
         const bool entering=source_!=ClockAuthority::Host;
-        const bool starting=pos.playing && !running_;
-        const bool stopping=!pos.playing && running_;
-        bool seek=false;
-        if(!entering && host_ && running_ && pos.playing && hasPpq && host_->hasPpq) {
-            const double step=1.0/(24*period_.frames());
-            const double expected=host_->ppq+double(at.ticks-host_->at.ticks)*step;
-            seek=std::abs(pos.ppq-expected)>std::max(1e-5,2*step);
-        }
-        if(entering || starting || seek) {
+        const bool wasPlaying=!entering && host_ && host_->playing;
+        const bool starting=pos.playing && !wasPlaying;
+        const bool hadPpq=wasPlaying && host_->hasPpq;
+        const double step=1.0/(24*period_.frames());
+        const double expected=hadPpq?host_->ppq+double(at.ticks-host_->at.ticks)*step:0;
+        const bool seek=pos.playing && hasPpq && hadPpq && std::abs(pos.ppq-expected)>std::max(1e-5,2*step);
+        const bool foundGrid=pos.playWhileStopped && wasPlaying && pos.playing && hasPpq && !hadPpq;
+        const bool reanchor=entering || starting || seek || foundGrid;
+        if(reanchor) {
             const double ticks=hasPpq?pos.ppq*24:0;
             const double ordinal=std::ceil(ticks-1e-9-hostRoundingMargin()/intervalNow.frames());
             pulse_=ordinal>0?uint64_t(ordinal):0;
+            if(pos.playWhileStopped && ordinal<0) {
+                // Keep every arpeggio division aligned during negative preroll.
+                constexpr int64_t cycle=[] {
+                    int64_t pulses=1;
+                    for(const auto division:ArpDivisionPulses)pulses=std::lcm(pulses,int64_t(division));
+                    return pulses;
+                }();
+                pulse_=uint64_t((int64_t(ordinal)%cycle+cycle)%cycle);
+            }
             period_=intervalNow;
             setNext(at,std::max(0.0,ordinal-ticks));
         } else retime(at,intervalNow);
-        source_=ClockAuthority::Host;running_=pos.playing;
-        host_=HostAnchor{at,pos.ppq,tempo,hasPpq};
+        const bool run=pos.playing || pos.playWhileStopped;
+        const bool runChanged=running_!=run;
+        const bool extrapolate=pos.playWhileStopped && pos.playing && hadPpq && !hasPpq;
+        source_=ClockAuthority::Host;running_=run;
+        host_=HostAnchor{at,extrapolate?expected:pos.ppq,tempo,hasPpq || extrapolate,pos.playing,
+                         pos.playWhileStopped && pos.playing && (hasPpq || extrapolate)};
         loss_.reset();lastMidi_.reset();midiPeriod_.reset();
-        if(entering || starting || stopping || seek)return resetSignal(at);
+        if(reanchor || runChanged)return resetSignal(at);
         return {};
     }
 
@@ -200,7 +216,7 @@ public:
     }
 
 private:
-    struct HostAnchor {NativeFrame at;double ppq;uint32_t tempo;bool hasPpq;};
+    struct HostAnchor {NativeFrame at;double ppq;uint32_t tempo;bool hasPpq,playing,followsGrid;};
     static constexpr bool validTempo(uint32_t bpm) noexcept {return bpm>=1000000 && bpm<=1000000000;}
     static Period interval(ClockRate rate,uint32_t tempo) noexcept {
         if(!rate.numerator || !rate.denominator || !validTempo(tempo) ||
@@ -269,7 +285,8 @@ private:
         return {at,pulse_,epoch_,source_,period_.frames(),false,running_,true};
     }
     MusicalClockSignal emitTick(NativeFrame at) noexcept {
-        const MusicalClockSignal signal{at,pulse_,epoch_,source_,period_.frames(),true,running_,false};
+        const MusicalClockSignal signal{at,pulse_,epoch_,source_,period_.frames(),true,running_,false,false,
+                                        source_==ClockAuthority::Host && host_ && host_->followsGrid};
         if(running_ && pulse_!=Max)++pulse_;
         return signal;
     }

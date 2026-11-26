@@ -104,10 +104,9 @@ bool Processor::readKSData(const std::vector<juce::File>& files,std::vector<uint
 }
 
 bool Processor::scanKSAssets(const juce::File& folder,const juce::Array<juce::File>& files,juce::String& error){
- const auto previousData=selectedKSDataFiles();
  juce::File wave;
  int wavePriority=-1;
- juce::String waveHash,dataHash;
+ juce::String waveHash;
  for(const auto& file:files){
   if(!file.hasFileExtension("bin;rom") || file.getSize()!=ks::Board::WaveSize)continue;
   const auto data=readBytes(file);
@@ -131,6 +130,19 @@ bool Processor::scanKSAssets(const juce::File& folder,const juce::Array<juce::Fi
   waveHash=juce::String(baseLib::SHA256(zero).toString());
  }
 
+ std::vector<uint8_t> data;
+ flashFiles=findKSData(folder,files,selectedKSDataFiles(),data);
+ flashFile=flashFiles.empty()?juce::File{}:flashFiles.front();
+ bankFile=wave;
+ scannedWaveHash=waveHash;
+ scannedDataHash=data.empty()?juce::String{}:juce::String(baseLib::SHA256(data).toString());
+ patchLibrary.addFactory(factoryPresets(data),Library::KSFactoryName);
+ return true;
+}
+
+std::vector<juce::File> Processor::findKSData(const juce::File& folder,const juce::Array<juce::File>& files,
+                                           const std::vector<juce::File>& previousData,std::vector<uint8_t>& selectedData){
+ selectedData.clear();
  std::vector<juce::File> best,midi;
  std::vector<uint8_t> storage;
  juce::String ignored;
@@ -142,7 +154,7 @@ bool Processor::scanKSAssets(const juce::File& folder,const juce::Array<juce::Fi
   if(rank<bestRank || (rank==bestRank && candidates!=previousData))return;
   best=candidates;
   bestCoverage=coverage;
-  dataHash=juce::String(baseLib::SHA256(storage).toString());
+  selectedData=std::move(storage);
  };
  if(previousData.size()>1 && std::all_of(previousData.begin(),previousData.end(),
      [&](const auto& file){return file.isAChildOf(folder) && file.hasFileExtension("mid;midi");})){
@@ -164,14 +176,21 @@ bool Processor::scanKSAssets(const juce::File& folder,const juce::Array<juce::Fi
   if((best.empty() || previousData==std::vector<juce::File>{file}) && file.hasFileExtension("bin")
       && file.getSize()==0x80000 && readKSData({file},storage,ignored)){
    best={file};
-   dataHash=juce::String(baseLib::SHA256(storage).toString());
+   selectedData=std::move(storage);
    if(previousData==best)break;
   }
- flashFiles=std::move(best);
- flashFile=flashFiles.empty()?juce::File{}:flashFiles.front();
- bankFile=wave;
- scannedWaveHash=waveHash;
- scannedDataHash=dataHash;
- return true;
+ return best;
+}
+
+void Processor::rescanPresets(std::function<void()> completed){
+ std::lock_guard guard(controlMutex);
+ const auto folder=dataFolder.getChildFile("ROMs");
+ patchLibrary.rescan(std::move(completed),[folder,preferred=selectedKSDataFiles()]{
+  auto files=folder.findChildFiles(juce::File::findFiles,true,"*");
+  files.sort();
+  std::vector<uint8_t> data;
+  findKSData(folder,files,preferred,data);
+  return factoryPresets(data);
+ });
 }
 }

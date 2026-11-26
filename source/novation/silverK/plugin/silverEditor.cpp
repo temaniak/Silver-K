@@ -613,7 +613,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
     juce::Viewport viewport;
     juce::Label lcd,status,latency,help;
     juce::TextButton folder{juce::String::fromUTF8("Choose Silver-K folder…")},loadProgram{"Load program"},panic{"Panic"};
-    juce::ComboBox mode,group,section,channel;
+    juce::ComboBox mode,group,section;
     std::array<juce::TextButton,5> pages;
     std::array<juce::TextButton,4> parts;
     juce::ComboBox firmwareSelect,skinSelect,bufferSelect,controllerSelect,firmwareSwitchSelect;
@@ -665,7 +665,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         performancePanel->onModeChanged=[this]{performanceSwitch.setToggleState(processor.performanceMode(),juce::dontSendNotification);for(unsigned i=0;i<4;++i){const bool available=i==0||(!processor.isKStation()&&processor.performanceMode());parts[i].setEnabled(available);parts[i].setAlpha(available?1.f:.3f);}};
         main.setComponentID("mainPanel");
         for(juce::Component* c:std::array<juce::Component*,11>{&main,&viewport,&lcd,&status,&latency,&folder,&loadProgram,&panic,&mode,&group,&section})addAndMakeVisible(c);
-        addAndMakeVisible(channel);addAndMakeVisible(help);
+        addAndMakeVisible(help);
         viewport.setViewedComponent(&content,false);viewport.setScrollBarsShown(true,false);viewport.setComponentID("controlViewport");
         for(auto* c:std::initializer_list<juce::Component*>{&firmwareSelect,&skinSelect,&bufferSelect,&rescanRoms,&performanceMode,&partActive,&browser})addAndMakeVisible(*c);
         firmwareSelect.setBounds(289,28,270,34);firmwareSelect.setComponentID("firmwareSelect");refreshFirmwares();
@@ -780,8 +780,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         auto advanced=skin["advanced"];mode.setBounds(rect(advanced["mode"]));group.setBounds(rect(advanced["group"]));section.setBounds(rect(advanced["section"]));viewport.setBounds(rect(advanced["viewport"]));
         auto setup=skin["setup"];status.setBounds(rect(setup["status"]));status.setFont(juce::Font(17.f));setSkinColour(status,juce::Label::textColourId,juce::Colour(0xff171b20));
         status.setText(processor.status(),juce::dontSendNotification);latency.setBounds(rect(setup["latency"]));setSkinColour(latency,juce::Label::textColourId,juce::Colour(0xff171b20));
-        folder.setBounds(52,245,224,38);channel.setBounds(922,353,270,34);channel.setComponentID("controlChannel");
-        for(int i=1;i<=16;++i)channel.addItem("Editor MIDI channel "+juce::String(i),i);channel.setSelectedId(int(processor.editorChannel())+1,juce::dontSendNotification);channel.onChange=[this]{processor.setEditorChannel(uint8_t(channel.getSelectedId()-1));};
+        folder.setBounds(52,245,224,38);
         help.setBounds(52,485,1120,150);setSkinColour(help,juce::Label::textColourId,juce::Colour(0xff171b20));help.setFont(juce::Font(15.f));
         refreshDataHelp();
         const juce::StringArray domains{"osc1","osc2","osc3","mixer","filter","envelopes","lfo","voice","arp","fx"};
@@ -1124,7 +1123,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         main.setVisible(isMain);lcd.setVisible(isMain);loadProgram.setVisible(isMain);panic.setVisible(isMain);previousPreset.setVisible(isMain&&studioSkin());nextPreset.setVisible(isMain&&studioSkin());
         viewport.setVisible(isAdvanced);mode.setVisible(isAdvanced);group.setVisible(page==1);section.setVisible(page==1&&mode.getSelectedId()==2);mode.setVisible(page==1);browser.setVisible(page==3);performanceMode.setVisible(false);partActive.setVisible(false);performancePanel->setVisible(page==2);if(page!=2)performancePanel->closeNoteEditor();
         viewport.setBounds(page==2?juce::Rectangle<int>(24,146,int(skin["width"])-48,int(skin["height"])-170):rect(skin["advanced"]["viewport"]));
-        for(juce::Component* c:std::array<juce::Component*,5>{&status,&latency,&folder,&channel,&help})c->setVisible(isSetup);
+        for(juce::Component* c:std::array<juce::Component*,4>{&status,&latency,&folder,&help})c->setVisible(isSetup);
         rescanRoms.setVisible(isSetup);bufferSelect.setVisible(isSetup);skinSelect.setVisible(isSetup);reloadSkin.setVisible(isSetup);exportSkin.setVisible(isSetup);openSkins.setVisible(isSetup);
         firmwareSwitchLabel.setVisible(isSetup);firmwareSwitchSelect.setVisible(isSetup);
         diagnostics.setVisible(isSetup);controllerSelect.setVisible(isSetup);refreshControllerSelection();
@@ -1229,7 +1228,7 @@ struct Editor::Surface final : juce::Component, private juce::Timer
         localExtra.clockSelect.setSelectedId(int(processor.clockSource())+1,juce::dontSendNotification);
         firmwareSwitchSelect.setSelectedId(int(processor.firmwareSwitch())+1,juce::dontSendNotification);
         const bool ready=processor.firmwareReady();main.setEnabled(ready);content.setEnabled(ready);loadProgram.setEnabled(true);
-        previousPreset.setEnabled(ready);nextPreset.setEnabled(ready);channel.setSelectedId(int(processor.editorChannel())+1,juce::dontSendNotification);
+        previousPreset.setEnabled(ready);nextPreset.setEnabled(ready);
         if(page==4)refreshDataHelp();
         bufferSelect.setSelectedId(processor.bufferProfile()+1,juce::dontSendNotification);const auto rate=processor.getSampleRate();latency.setText(rate>0?"Plugin latency: "+juce::String(1000.*processor.getLatencySamples()/rate,1)+" ms":"",juce::dontSendNotification);
     }

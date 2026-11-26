@@ -19,6 +19,8 @@ public:
   pluginLib::patchDB::DataSourceNodePtr source;
   bool active=true;
  };
+ using FactoryPresets=std::vector<std::vector<uint8_t>>;
+ static constexpr auto KSFactoryName="KS Factory";
  explicit Library(const juce::File& directory);
  ~Library()override;
  mutable std::atomic<unsigned> revision{0};
@@ -39,10 +41,10 @@ public:
  void setPresetPathActive(juce::File,bool);
  bool presetPathActive(const pluginLib::patchDB::DataSource&)const;
  void requestPresetCatalog(bool hideKSDrums,std::function<void(std::vector<PresetPath>,juce::StringArray)>);
- void rescan(std::function<void()> completed={});
+ void rescan(std::function<void()> completed={},std::function<FactoryPresets()> readFactory={});
  std::map<std::string,size_t> sourceReadOrder()const;
  bool isSourceEnabled(const pluginLib::patchDB::DataSource&)const override;
- void addFactory(const std::vector<std::vector<uint8_t>>&,const juce::String&);
+ void addFactory(const FactoryPresets&,const juce::String&);
  void requestBankSources(std::function<void(std::vector<pluginLib::patchDB::DataSourceNodePtr>&&) >,bool hideKSDrums=false);
 protected:
  bool isValidLoadedPatch(const pluginLib::patchDB::PatchPtr&)const override;
@@ -62,6 +64,11 @@ private:
  bool parsePresetFile(pluginLib::patchDB::DataList&,const pluginLib::patchDB::Data&,const std::string&);
  std::map<std::pair<std::string,juce::String>,pluginLib::patchDB::DataList> decodedFiles;
  size_t decodedBytes=0;
+ bool isSourceAllowed(const pluginLib::patchDB::DataSource&)const;
+ bool pruneStaleSources();
+ bool connectPathIfMissing(const juce::File&,pluginLib::patchDB::SourceType);
+ bool reconnectIncludedPaths();
+ std::vector<pluginLib::patchDB::PatchPtr> createFactoryPatches(const FactoryPresets&,const std::string&);
  void saveSources();
  bool migrateImports=false;
 };

@@ -215,68 +215,78 @@ namespace pluginLib::patchDB
 	{
 		if (!_ds) return;
 		DataSource key;key.type = _ds->type;key.name = _ds->name;key.bank = _ds->bank;
-		// Removal and reload must be one loader job. A manual child is still a
-		// child for refresh purposes; demoting it does not reread its contents.
 		runOnLoaderThread([this, key]
 		{
-			auto ds = getDataSource(key);
-			if (!ds) return;
-			auto parent = ds->getParent();
-			std::vector<DataSource> manualChildren;
-			std::vector<DataSourceNodePtr> all;
-			getDataSources(all);
-			for (const auto& child : all)
-				if (child != ds && child->isChildOf(ds.get()) && child->origin == DataSourceOrigin::Manual)
-				{
-					manualChildren.push_back(*child);
-					manualChildren.back().patches.clear();
-				}
-			removeDataSourceNow(*ds, false, true);
-			ds->setParent(parent);
-			addDataSource(ds);
-			// Keep explicitly connected child paths without importing them twice.
-			for (const auto& child : manualChildren)
-				if (auto existing = getDataSource(child)) existing->origin = DataSourceOrigin::Manual;
-				else addDataSource(std::make_shared<DataSourceNode>(child));
-			saveJson();
+			if (refreshDataSourceNow(key)) saveJson();
 		});
+	}
+
+	bool DB::refreshDataSourceNow(const DataSource& _key)
+	{
+		auto ds = getDataSource(_key);
+		if (!ds) return false;
+
+		auto parent = ds->getParent();
+		std::vector<DataSource> manualChildren;
+		std::vector<DataSourceNodePtr> all;
+		getDataSources(all);
+		for (const auto& child : all)
+			if (child != ds && child->isChildOf(ds.get()) && child->origin == DataSourceOrigin::Manual)
+			{
+				manualChildren.push_back(*child);
+				manualChildren.back().patches.clear();
+			}
+
+		removeDataSourceNow(*ds, false, true);
+		ds->setParent(parent);
+		addDataSource(ds);
+		// Keep explicitly connected child paths without importing them twice.
+		for (const auto& child : manualChildren)
+			if (auto existing = getDataSource(child)) existing->origin = DataSourceOrigin::Manual;
+			else addDataSource(std::make_shared<DataSourceNode>(child));
+		return true;
 	}
 
 	void DB::replaceLocalStorage(const DataSource& _key, const std::vector<PatchPtr>& _patches)
 	{
-		if (_key.type != SourceType::LocalStorage) return;
 		runOnLoaderThread([this, _key, _patches]
 		{
-			auto ds = getDataSource(_key);
-			if (!ds)
-			{
-				ds = std::make_shared<DataSourceNode>(_key);
-				addDataSource(ds);
-			}
-			std::vector<PatchPtr> old(ds->patches.begin(), ds->patches.end());
-			DataSource::sortByProgram(old);
-			if (old.size() == _patches.size() && std::equal(old.begin(), old.end(), _patches.begin(),
-				[](const auto& a, const auto& b) { return a->sysex == b->sysex && a->name == b->name; })) return;
-			removePatchesFromSearches(old);
-			{
-				std::unique_lock lock(m_patchesMutex);
-				preservePatchModifications(old);
-			}
-			ds->patches.clear();
-			std::vector<PatchPtr> replacement;
-			for (const auto& patch : _patches)
-			{
-				auto copy = std::make_shared<Patch>();copy->replaceData(*patch);copy->bank = patch->bank;
-				copy->source = ds;copy->program = static_cast<uint32_t>(replacement.size());
-				ds->patches.insert(copy);replacement.push_back(std::move(copy));
-			}
-			loadPatchModifications(ds, replacement);
-			addPatches(replacement);
-			{
-				std::unique_lock lock(m_uiMutex);m_dirty.patches = true;m_dirty.dataSources = true;
-			}
-			saveJson();
+			if (replaceLocalStorageNow(_key, _patches)) saveJson();
 		});
+	}
+
+	bool DB::replaceLocalStorageNow(const DataSource& _key, const std::vector<PatchPtr>& _patches)
+	{
+		if (_key.type != SourceType::LocalStorage) return false;
+		auto ds = getDataSource(_key);
+		if (!ds)
+		{
+			ds = std::make_shared<DataSourceNode>(_key);
+			addDataSource(ds);
+		}
+		std::vector<PatchPtr> old(ds->patches.begin(), ds->patches.end());
+		DataSource::sortByProgram(old);
+		if (old.size() == _patches.size() && std::equal(old.begin(), old.end(), _patches.begin(),
+			[](const auto& a, const auto& b) { return a->sysex == b->sysex && a->name == b->name; })) return false;
+		removePatchesFromSearches(old);
+		{
+			std::unique_lock lock(m_patchesMutex);
+			preservePatchModifications(old);
+		}
+		ds->patches.clear();
+		std::vector<PatchPtr> replacement;
+		for (const auto& patch : _patches)
+		{
+			auto copy = std::make_shared<Patch>();copy->replaceData(*patch);copy->bank = patch->bank;
+			copy->source = ds;copy->program = static_cast<uint32_t>(replacement.size());
+			ds->patches.insert(copy);replacement.push_back(std::move(copy));
+		}
+		loadPatchModifications(ds, replacement);
+		addPatches(replacement);
+		{
+			std::unique_lock lock(m_uiMutex);m_dirty.patches = true;m_dirty.dataSources = true;
+		}
+		return true;
 	}
 
 	void DB::renameDataSource(const DataSourceNodePtr& _ds, const std::string& _newName)

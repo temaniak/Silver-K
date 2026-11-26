@@ -35,7 +35,6 @@ void SoulTrainWeb::receive(const juce::var& message){
  else if(type=="setting"){
   const auto name=message["name"].toString();const int v=int(message["value"]);
   if(name=="buffer"&&v>=0&&v<=3)processor.setBufferProfile(v);
-  else if(name=="channel"&&v>=1&&v<=16)processor.setEditorChannel(uint8_t(v-1));
   else if(name=="firmwareSwitch")processor.setFirmwareSwitch(Processor::FirmwareSwitch(v));
   else if(name=="twoCore"){juce::String e;if(!processor.setKSTwoCoreProcessing(bool(message["value"]),e))error=e;}
   else if(name=="controller"){juce::String e;if(!processor.setKSControllerMode(v,e))error=e;}
@@ -43,7 +42,7 @@ void SoulTrainWeb::receive(const juce::var& message){
  lastSnapshot.clear();
 }
 juce::var SoulTrainWeb::snapshot(bool library){
- auto* o=new juce::DynamicObject;o->setProperty("model",processor.isKStation()?"K":"KS");o->setProperty("part",int(processor.currentPart()+1));o->setProperty("ready",processor.firmwareReady());o->setProperty("loading",processor.isFirmwareLoading());o->setProperty("performance",processor.performanceMode());o->setProperty("clock",int(processor.clockSource()));o->setProperty("status",error.isEmpty()?(callbacks.nativeStatus?callbacks.nativeStatus():processor.status()):error);o->setProperty("name",processor.currentName());o->setProperty("buffer",processor.bufferProfile());o->setProperty("channel",int(processor.editorChannel()+1));o->setProperty("twoCore",processor.ksTwoCoreProcessing());o->setProperty("controller",processor.ksControllerMode());o->setProperty("controllerReference",processor.ksControllerChoices());
+ auto* o=new juce::DynamicObject;o->setProperty("model",processor.isKStation()?"K":"KS");o->setProperty("part",int(processor.currentPart()+1));o->setProperty("ready",processor.firmwareReady());o->setProperty("loading",processor.isFirmwareLoading());o->setProperty("performance",processor.performanceMode());o->setProperty("clock",int(processor.clockSource()));o->setProperty("status",error.isEmpty()?(callbacks.nativeStatus?callbacks.nativeStatus():processor.status()):error);o->setProperty("name",processor.currentName());o->setProperty("buffer",processor.bufferProfile());o->setProperty("twoCore",processor.ksTwoCoreProcessing());o->setProperty("controller",processor.ksControllerMode());o->setProperty("controllerReference",processor.ksControllerChoices());
  o->setProperty("firmwareSwitch",int(processor.firmwareSwitch()));
  o->setProperty("dataFolder",processor.dataFolder.getFullPathName());
  o->setProperty("dataFolderStatus",processor.dataFolderStatus());

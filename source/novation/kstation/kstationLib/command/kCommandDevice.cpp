@@ -14,13 +14,13 @@ using command::runtime::KCommandRuntime;
 
 class KCommandEngine final : public CommandAudioEngine {
 public:
-    KCommandEngine(const Rom& rom, const std::vector<uint8_t>& archive)
+    KCommandEngine(const Rom& rom, const std::vector<uint8_t>& archive, double hostSampleRate)
         : state_(command::readKCommandState(rom, archive)), flash_(state_.flash) {
         if (!parameters_.bind(rom.data().data(), rom.data().size()))
             throw std::runtime_error("K immutable parameter table is invalid");
         bootKCommandDsp(physical_, rom.data());
         controller_ = std::make_unique<KCommandRuntime>(physical_, state_.seed(physical_.cycle()), flash_,
-            state_.flash, state_.tables, parameters_, state_.selection);
+            state_.flash, state_.tables, parameters_, state_.selection, hostSampleRate);
         for (unsigned i = 0; !controller_->coldReady(); ++i) {
             if (i == 2048)
                 throw std::runtime_error("K cold controller did not reach its ready boundary");
@@ -84,11 +84,11 @@ private:
 }
 
 KCommandDevice::KCommandDevice(Format format, Rom rom, std::vector<uint8_t> archive)
-    : CommandAudioDevice(format, [rom = std::move(rom), archive = std::move(archive)](Format) {
+    : CommandAudioDevice(format, [rom = std::move(rom), archive = std::move(archive)](Format f) {
 #ifdef SILVER_P12_STATE_SIZE
         p12StateSizes("initialized", "K-factory", {{"immutable", "firmware_image", rom.data().capacity()},
                                                     {"archive", "configuration_at_start", archive.capacity()}});
 #endif
-        return std::make_unique<KCommandEngine>(rom, archive);
+        return std::make_unique<KCommandEngine>(rom, archive, f.sampleRate);
     }) {}
 }

@@ -859,7 +859,7 @@ struct PhysicalCandidate::Runtime {
         if (const auto signal = musical->clock.host(at, position)) {
             clockSignal(*signal);
 #ifdef SILVER_KS_COMMAND_HOST
-            if (signal->reset && signal->running && signal->source == ClockAuthority::Host &&
+            if (position.playing && signal->reset && signal->source == ClockAuthority::Host &&
                 syncMode() == GlobalSyncMode::SongStart)
                 for (size_t part = 0; part < musical->phaseKeys.size(); ++part)
                     if (state.keys(KSStorageSlot(part)))

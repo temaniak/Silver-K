@@ -40,7 +40,7 @@ public:
  std::vector<Preset> presets()const;
  bool importPresets(const juce::File&,juce::String&);
  bool selectPreset(int,juce::String&);
- void publishFactoryPresets(); // UI/cold load: expose restored KS factory data to the browser.
+ void rescanPresets(std::function<void()> completed);
  std::vector<Performance> performances()const;
  bool selectPerformance(int,juce::String&);
  bool setPerformanceMode(bool,juce::String&);
@@ -58,7 +58,7 @@ public:
  void refreshControls();
  juce::String currentName()const;
  juce::String loadedPatchName()const;
- uint8_t midiChannel()const{return multi.load()?partChannels[currentPart()].load():controlChannel.load();}
+ uint8_t midiChannel()const{return multi.load()?partChannels[currentPart()].load():globalMidiChannel.load();}
  bool firmwareReady()const{return device.load()!=nullptr || kDevice.load()!=nullptr;}
 
 bool isKStation()const{return kMode.load();}
@@ -75,6 +75,10 @@ bool isKStation()const{return kMode.load();}
  std::vector<juce::File> ksDataFiles()const;
  void savePreferences(bool flushEditorScale=false); // UI/cold paths only; never called by processBlock.
  void setEditorScaleFromResize(double);
+#if JUCE_WINDOWS
+ bool prefersOpenGLRenderer() const;
+ bool setOpenGLRendererPreference(bool enabled, juce::String& error) const;
+#endif
  juce::String browserState;
  uint64_t firmwareLoadRevision()const{return firmwareRevision.load();}
  juce::File dataFolder;
@@ -103,7 +107,7 @@ bool isKStation()const{return kMode.load();}
  bool saveCurrentPatch(const juce::File&,juce::String&);
  enum class PatchSaveScope { SelectedSound, Performance };
  bool saveUserPatch(const juce::File&,PatchSaveScope,juce::String&);
- uint8_t editorChannel()const{return isKStation()?controlChannel.load():midiChannel();}
+ uint8_t editorChannel()const{return midiChannel();}
  int bufferProfile()const{return buffering.load();}
  void setBufferProfile(int);
  static constexpr bool ksControllerChoices(){return false;}
@@ -150,7 +154,6 @@ bool isKStation()const{return kMode.load();}
  bool setPerformanceDiagnostics(int mode);
  int performanceDiagnosticsMode()const{return performanceDiagnostics.mode();}
  juce::String performanceReport()const;
- void setEditorChannel(uint8_t c){controlChannel.store(c&15);editorChannelPreference.store(c&15);savePreferences();}
 private:
  baseLib::performance::Diagnostics performanceDiagnostics;
  juce::var performanceSession;
@@ -181,37 +184,37 @@ private:
  void publishK(std::unique_ptr<KEngine>);
  void publishKS(std::unique_ptr<KsEngine>);
  bool reconfigureEngines(double rate,int block,int profile,bool parallel,juce::String& error);
- HostClock hostClock;
  std::atomic<ClockSource> requestedClockSource{ClockSource::Host};
  ClockSource activeClockSource=ClockSource::Host;
+ double lastHostBpm=0;
+ bool hostPlaying=false;
  int clockSourceMode=-1;
+ uint8_t clockSourceChannel=0;
  std::array<uint8_t,16> externalNrpn{};
- template<class Emit> void selectClockSource(bool bridgeHostThroughMidi,Emit emit){
+ template<class Emit> void selectClockSource(uint8_t channel,Emit emit){
   // Both supported OS 2.1 images use 0=Auto, 1=Internal, 2=External.
-  const int wanted=firmwareClockSource(activeClockSource,bridgeHostThroughMidi);
-  if(clockSourceMode==wanted)return;
+  const int wanted=int(activeClockSource);
+  if(clockSourceMode==wanted && clockSourceChannel==channel)return;
   clockSourceMode=wanted;
-  const uint8_t channel=controlChannel.load(),status=uint8_t(0xb0|channel);
+  clockSourceChannel=channel;
+  const auto status=uint8_t(0xb0|channel);
   const uint8_t bytes[]{status,99,0,status,98,uint8_t(isKStation()?38:114),status,6,uint8_t(wanted),status,98,externalNrpn[channel]};
   emit(bytes,sizeof(bytes));
  }
  std::atomic<bool> resetClock{true};
  struct HostTiming { HostClock::Position position; std::optional<HostLoop> loop; };
  HostTiming prepareClockPosition();
- template<class Emit> void sendTimedMidi(const juce::MidiBuffer& midi,bool hostOwnsTransport,HostClock* generator,Emit emit){
-  HostClock::Event clock{};bool hasClock=generator && generator->next(clock);
+ template<class Emit> void sendTimedMidi(const juce::MidiBuffer& midi,Emit emit){
   for(const auto m:midi){
    noteLearn.observe(m.data,size_t(m.numBytes));
    const int offset=std::max(0,m.samplePosition);
-   while(hasClock && clock.offset<=offset){emit(&clock.status,1,clock.offset);hasClock=generator->next(clock);}
-   if(m.numBytes<=65536 && !(HostClock::transport(m.data[0]) && !acceptsExternalTransport(activeClockSource,hostOwnsTransport))){
+   if(m.numBytes<=65536 && (activeClockSource==ClockSource::Midi || !HostClock::transport(m.data[0]))){
     if(m.numBytes==3 && (m.data[0]&0xf0)==0xb0 && m.data[1]==98)externalNrpn[m.data[0]&15]=m.data[2];
     emit(m.data,size_t(m.numBytes),offset);
    }
   }
-  while(hasClock){emit(&clock.status,1,clock.offset);hasClock=generator->next(clock);}
  }
- void processK(KEngine&,juce::AudioBuffer<float>&,juce::MidiBuffer&);
+ void processK(KEngine&,juce::AudioBuffer<float>&,juce::MidiBuffer&,const HostTiming&);
  void stopEngines();
  static juce::AudioProcessorValueTreeState::ParameterLayout layout();
  void parameterChanged(const juce::String&,float)override;
@@ -263,8 +266,7 @@ private:
  bool collectPatchLoads(); // controlMutex held
  std::atomic<uint8_t> userDrumMask{0};
  mutable std::atomic<DrumLoadStatus> drumLoadState{DrumLoadStatus::Idle};
- std::atomic<uint8_t> controlChannel{0};
- std::atomic<uint8_t> editorChannelPreference{0};
+ std::atomic<uint8_t> globalMidiChannel{0};
  std::atomic<uint8_t> volume{127};
  juce::String message="Add your firmware and KS factory data to ROMs, then rescan in Setup.";
  double hostRate=48000;int hostBlock=256;
@@ -289,6 +291,9 @@ private:
  juce::File managedAsset(const juce::File&,juce::String&)const;
  struct KSDataCoverage {unsigned programs=0,performances=0;};
  static bool readKSData(const std::vector<juce::File>&,std::vector<uint8_t>&,juce::String&,KSDataCoverage* coverage=nullptr);
+ static std::vector<juce::File> findKSData(const juce::File&,const juce::Array<juce::File>&,
+                                         const std::vector<juce::File>& preferred,std::vector<uint8_t>& selectedData);
+ static Library::FactoryPresets factoryPresets(const std::vector<uint8_t>& flash);
  bool scanROMs(const juce::File&,juce::String&);
  bool scanKSAssets(const juce::File&,const juce::Array<juce::File>&,juce::String&);
 };

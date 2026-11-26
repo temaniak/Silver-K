@@ -56,7 +56,6 @@ private:
  unsigned selectionSlot() const;
  void selectRowWithoutActivation(int);
  void followSelectedPart();
- juce::File indexedFirmware;
  juce::int64 lastActivationTime=0;
  juce::String cellText(const pluginLib::patchDB::PatchPtr&,int)const;
  juce::String sourceLabel(const pluginLib::patchDB::DataSourceNode&)const;

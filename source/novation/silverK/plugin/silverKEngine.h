@@ -66,6 +66,7 @@ private:
 
 class KEngine final : public CommandEngine {
 public:
+    using CommandEngine::editorState;
     KEngine(const std::vector<uint8_t>& rom, double rate, int block,
             const std::vector<uint8_t>& state, unsigned floor);
     bool midi(const uint8_t*, size_t, uint32_t offset = 0) noexcept;

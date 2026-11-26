@@ -78,8 +78,8 @@ private:
     const Range range;
     juce::Path marker;
     bool keyboardFocus = false;
-    float dragStartY = 0;
-    double dragStartValue = 0;
+    float previousDragY = 0;
+    double dragValue = 0;
     std::optional<ScopedDragNotification> drag;
 };
 }

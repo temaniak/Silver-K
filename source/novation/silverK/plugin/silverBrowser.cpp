@@ -65,7 +65,7 @@ Browser::Browser(Processor& processor):p(processor){
   table.getHeader().restoreFromString(saved->getStringAttribute("columns"));sortColumn=table.getHeader().getSortColumnId();sortAscending=table.getHeader().isSortedForwards();
  }
  addFolder.onClick=[this]{choose(true);};addFile.onClick=[this]{choose(false);};
- refresh.onClick=[this]{refresh.setEnabled(false);info.setText("Rescanning connected folders and banks...",juce::dontSendNotification);const juce::Component::SafePointer<Browser> self(this);p.patchLibrary.rescan([self]{if(self){self->refresh.setEnabled(true);self->dirty=true;self->info.setText("Rescan complete",juce::dontSendNotification);}});};
+ refresh.onClick=[this]{refresh.setEnabled(false);info.setText("Rescanning connected folders and banks...",juce::dontSendNotification);const juce::Component::SafePointer<Browser> self(this);p.rescanPresets([self]{if(self){self->refresh.setEnabled(true);self->dirty=true;self->info.setText("Rescan complete",juce::dontSendNotification);}});};
  remove.onClick=[this]{const int n=source.getSelectedId()-2;if(canRemoveSource()){p.patchLibrary.removePath(sources[n]);preferredSource.reset();preferredSourceName.clear();preferredSourceType=0;source.setSelectedId(1,juce::dontSendNotification);dirty=true;}};
  exportPatch.onClick=[this]{const auto row=table.getSelectedRow();if(juce::isPositiveAndBelow(row,int(rows.size())))exportSelectedPatch(rows[row]);};
  saveCurrent.onClick=[this]{chooseSaveScope();};
@@ -125,7 +125,6 @@ void Browser::timerCallback(){
    info.setTooltip(info.getText());
   }
  }
- if(p.firmwareReady() && !p.isFirmwareLoading() && !p.isKStation() && indexedFirmware!=p.osFile){indexedFirmware=p.osFile;p.publishFactoryPresets();}
  p.patchLibrary.uiProcess();
  if(lastLibraryError!=p.patchLibrary.error){lastLibraryError=p.patchLibrary.error;if(lastLibraryError.isNotEmpty())info.setText(lastLibraryError,juce::dontSendNotification);}
  rememberView();

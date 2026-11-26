@@ -5,6 +5,8 @@
 #include "silverSoulTrainJuce.h"
 #include "soultrain/WaveIndicator.h"
 #include "../../controller/command/controllerArchive.h"
+#include "../../controller/command/novationProgramSysEx.h"
+#include "../../kstation/kstationLib/command/kProgramFlash.h"
 
 #include <CoreFoundation/CoreFoundation.h>
 
@@ -179,7 +181,7 @@ var snapshot(Processor& processor,Browser& browser,const String& status) {
         {"name",processor.currentName()},{"clock",int(processor.clockSource())},{"status",status},
         {"dataFolder",processor.dataFolder.getFullPathName()},{"dataFolderStatus",processor.dataFolderStatus()},
         {"firmwareSwitch",int(processor.firmwareSwitch())},
-        {"buffer",processor.bufferProfile()},{"channel",int(processor.editorChannel()+1)},
+        {"buffer",processor.bufferProfile()},
         {"uiScale",processor.editorScale.load()},{"twoCore",processor.ksTwoCoreProcessing()},{"partNames",names},{"enabled",enabled},
         {"firmwares",firmwares},{"values",values},{"browser",browserData(browser)}});
 }
@@ -205,6 +207,101 @@ void flush(Processor& processor,int blocks=24) {
     }
     processor.refreshControls();
     pump();
+}
+
+void checkKControlRouting(SoulTrainJuce& ui,Processor& processor,const juce::File& firmware) {
+    using namespace novation::controller::command;
+    String error;
+    require(processor.loadFirmware(firmware,error) && processor.isKStation(),error);
+    auto preset=std::make_shared<pluginLib::patchDB::Patch>();
+    preset->name="K control routing";
+    const auto init=initPatch(silverK::Model::KStation);
+    preset->sysex.assign(init.begin(),init.end());
+    require(processor.activatePatch(preset,error),error);
+    flush(processor,128);
+    require(ui.showPage("Setup") && !find(ui,"Control MIDI channel",false),"Use automatic routing in K Setup");
+    require(ui.showPage("Main"),"Open the K editor for the playback test");
+
+    const auto archiveFrom=[](const juce::XmlElement& xml) {
+        juce::MemoryBlock raw;
+        require(raw.fromBase64Encoding(xml.getStringAttribute("kCommandState")),"Read the K command state");
+        const auto* bytes=static_cast<const uint8_t*>(raw.getData());
+        auto archive=decodeControllerArchive({bytes,bytes+raw.getSize()});
+        require(bool(archive),"Decode the K command state");
+        return std::move(*archive);
+    };
+    const auto snapshot=[&] {
+        juce::MemoryBlock saved;
+        processor.getStateInformation(saved);
+        auto xml=juce::AudioProcessor::getXmlFromBinary(saved.getData(),int(saved.getSize()));
+        require(bool(xml),"Read the current K project state");
+        return xml;
+    };
+    const auto control=[&](const char* id) -> juce::Slider& {
+        auto* slider=dynamic_cast<juce::Slider*>(find(ui,id,true));
+        require(slider && slider->isEnabled(),"Find the editable K control "+String(id));
+        return *slider;
+    };
+    const auto original=snapshot();
+    const auto originalArchive=archiveFrom(*original);
+    const auto notePeak=[&](int channel,bool release) {
+        juce::AudioBuffer<float> audio(2,256);
+        juce::MidiBuffer midi;
+        midi.addEvent(release?juce::MidiMessage::noteOff(channel,60):juce::MidiMessage::noteOn(channel,60,juce::uint8(104)),13);
+        float peak=0.f;
+        for(int block=0;block<80;++block){
+            audio.clear();
+            processor.processBlock(audio,midi);
+            peak=std::max(peak,audio.getMagnitude(0,audio.getNumSamples()));
+        }
+        return peak;
+    };
+    constexpr int previousEditorChannel=1; // MIDI channel 2 in an older project.
+    constexpr auto receiveChannelOffset=KProgramFlash::Globals-KProgramFlash::UserOffset+4;
+    constexpr auto header=NovationProgramSysEx::HeaderSize;
+    for(const uint8_t channel:{uint8_t(0),uint8_t(6)}){
+        auto restored=originalArchive;
+        restored.userFlash.at(receiveChannelOffset)=channel;
+        const auto bytes=encodeControllerArchive(restored);
+        auto xml=std::make_unique<juce::XmlElement>(*original);
+        xml->setAttribute("kCommandState",juce::MemoryBlock(bytes.data(),bytes.size()).toBase64Encoding());
+        xml->setAttribute("editorChannel",previousEditorChannel);
+        juce::MemoryBlock project;
+        juce::AudioProcessor::copyXmlToBinary(*xml,project);
+        processor.setStateInformation(project.getData(),int(project.getSize()));
+        flush(processor,128);
+        require(processor.firmwareReady() && processor.midiChannel()==channel,"Read the MIDI channel from K firmware state");
+        require(notePeak(previousEditorChannel+1,false)<.0001f,"Ignore notes on the old editor channel");
+        require(notePeak(channel+1,false)>.001f,"Play notes on the engine's actual MIDI channel");
+
+        auto& attack=control("1:attack");
+        auto& sustain=control("1:sustain");
+        auto& fm=control("1:fm_level");
+        {
+            const juce::Slider::ScopedDragNotification drag(attack);
+            attack.setValue(125,juce::sendNotificationSync);
+            flush(processor,40);
+        }
+        {
+            const juce::Slider::ScopedDragNotification drag(sustain);
+            sustain.setValue(18,juce::sendNotificationSync);
+            const juce::Slider::ScopedDragNotification fmDrag(fm);
+            fm.setValue(51,juce::sendNotificationSync);
+            flush(processor,40);
+            pump(2.15);
+            require(attack.getValue()==125 && sustain.getValue()==18 && fm.getValue()==51,
+                    "Retain the K edits during playback beyond the confirmation timeout");
+        }
+        const auto saved=snapshot();
+        auto expected=restored.activeProgram;
+        expected[header+62]=125;
+        expected[header+64]=18;
+        expected[header+56]=51;
+        require(archiveFrom(*saved).activeProgram==expected,"Apply only the targeted CC and NRPN edits in the K program");
+        require(saved->getIntAttribute("editorChannel")==channel,"Write the active channel for older builds");
+        notePeak(channel+1,true);
+    }
+    std::cout<<"PASS: K Attack, Sustain and FM Level survive old editor-channel state on MIDI channels 1 and 7\n";
 }
 
 void checkPerformancePartEditing(SoulTrainJuce& ui, Processor& processor) {
@@ -1432,6 +1529,167 @@ void checkEnvelopeFader(SoulTrainJuce& ui,Processor& processor) {
     std::cout<<"PASS: Amp Attack automation and dragging in "<<(processor.isKStation()?"K-Station":"KS")<<'\n';
 }
 
+bool checkPointerControls(SoulTrainJuce& ui,Processor& processor) {
+    const auto isK=processor.isKStation();
+    const auto model=isK?"K-Station":"KS";
+    String error;
+    auto preset=std::make_shared<pluginLib::patchDB::Patch>();
+    preset->name="Pointer control test";
+    const auto init=initPatch(isK?silverK::Model::KStation:silverK::Model::KS);
+    preset->sysex.assign(init.begin(),init.end());
+    require(processor.activatePatch(preset,error),error);
+    flush(processor,128);
+    require(ui.showPage("Main"),"Open the Main controls for pointer testing");
+
+    juce::AudioBuffer<float> audio(2,256);
+    juce::MidiBuffer midi;
+    const auto channel=processor.midiChannel()+1;
+    midi.addEvent(juce::MidiMessage::noteOn(channel,60,juce::uint8(100)),0);
+    audio.clear();
+    processor.processBlock(audio,midi);
+    flush(processor,32);
+
+    bool passed=true;
+    const auto check=[&](bool ok,const String& detail) {
+        passed=passed && ok;
+        std::cout<<(ok?"PASS: ":"FAIL: ")<<model<<' '<<detail<<std::endl;
+    };
+    const auto control=[&](const String& id) -> juce::Slider& {
+        auto* slider=dynamic_cast<juce::Slider*>(find(ui,"1:"+id,true));
+        require(slider && slider->isEnabled(),"Find editable pointer control "+id);
+        return *slider;
+    };
+    const auto mouse=[](juce::Slider& slider,juce::Point<float> point,juce::Point<float> start,
+                        bool down,bool dragged) {
+        const auto now=juce::Time::getCurrentTime();
+        return juce::MouseEvent(juce::Desktop::getInstance().getMainMouseSource(),point,
+            down?juce::ModifierKeys(juce::ModifierKeys::leftButtonModifier):juce::ModifierKeys(),
+            1.f,0.f,0.f,0.f,0.f,&slider,&slider,now,start,now,1,dragged);
+    };
+    const auto committedValue=[&](size_t offset) {
+        using namespace novation::controller::command;
+        juce::MemoryBlock saved,raw;
+        processor.getStateInformation(saved);
+        const auto xml=juce::AudioProcessor::getXmlFromBinary(saved.getData(),int(saved.getSize()));
+        require(xml && raw.fromBase64Encoding(xml->getStringAttribute(isK?"kCommandState":"program")),
+                "Read the controller program after the pointer gesture");
+        const auto* data=static_cast<const uint8_t*>(raw.getData());
+        const auto byte=NovationProgramSysEx::HeaderSize+offset;
+        if (isK) {
+            const auto archive=decodeControllerArchive({data,data+raw.getSize()});
+            require(archive && archive->activeProgram.size()>byte,"Decode the K pointer test program");
+            return int(archive->activeProgram.at(byte));
+        }
+        require(raw.getSize()>byte,"Decode the KS pointer test program");
+        return int(data[byte]);
+    };
+
+    auto& fader=control("attack");
+    const auto faderPoint=[&](double value,int direction) {
+        return juce::Point<float>{float(fader.getWidth()/2+14),fader.getPositionOfValue(value)+7.f*direction};
+    };
+    const auto hit=[&](juce::Point<float> point) {
+        return fader.getParentComponent()->getComponentAt(fader.getPosition()+point.roundToInt())==&fader;
+    };
+    for (const auto direction : {1,-1}) {
+        const auto endpoint=direction>0?fader.getMinimum():fader.getMaximum();
+        const auto other=direction>0?fader.getMaximum():fader.getMinimum();
+        const String end=direction>0?"lower":"upper";
+        fader.setValue(endpoint,juce::sendNotificationSync);
+        flush(processor,8);
+        const auto grab=faderPoint(endpoint,direction);
+        const auto target=grab.translated(0,-26.f*direction);
+        check(!hit(faderPoint(other,-direction)),"Amp Attack ignores the empty "+(direction>0?String("upper"):String("lower"))+" end");
+        const auto canGrab=hit(grab);
+        check(canGrab,"Amp Attack accepts the visible shoulder at the "+end+" endpoint");
+        if (!canGrab) continue;
+        fader.mouseDown(mouse(fader,grab,grab,true,false));
+        check(fader.getValue()==endpoint,"Amp Attack holds its value on thumb press");
+        fader.mouseDrag(mouse(fader,target,grab,true,true));
+        fader.mouseUp(mouse(fader,target,grab,false,true));
+        const auto value=juce::roundToInt(fader.getValue());
+        flush(processor,32);
+        check(value>fader.getMinimum() && value<fader.getMaximum() && value==committedValue(62),
+              "Amp Attack drags from the "+end+" shoulder and reaches the controller");
+    }
+    fader.setValue(fader.getMinimum(),juce::sendNotificationSync);
+    const juce::Point<float> rail{float(fader.getWidth()/2),fader.getPositionOfValue(64)};
+    fader.mouseDown(mouse(fader,rail,rail,true,false));
+    fader.mouseUp(mouse(fader,rail,rail,false,false));
+    check(std::abs(fader.getValue()-64.)<=1.,"Amp Attack still seeks on a track click");
+
+    const auto checkKnob=[&](const String& id,size_t offset) {
+        auto& knob=control(id);
+        const auto first=knob.getLocalBounds().getCentre().toFloat();
+        for (const auto direction : {1,-1}) {
+            const auto endpoint=direction>0?knob.getMinimum():knob.getMaximum();
+            knob.setValue(64,juce::sendNotificationSync);
+            knob.mouseDown(mouse(knob,first,first,true,false));
+            const auto over=first.translated(0,220.f*direction);
+            knob.mouseDrag(mouse(knob,over,first,true,true));
+            check(knob.getValue()==endpoint,id+" clamps to the endpoint");
+            const auto reverse=over.translated(0,-18.f*direction);
+            knob.mouseDrag(mouse(knob,reverse,first,true,true));
+            const auto value=juce::roundToInt(knob.getValue());
+            knob.mouseUp(mouse(knob,reverse,first,false,true));
+            check(value>knob.getMinimum() && value<knob.getMaximum(),
+                  id+" responds to the first reversal after overshooting the endpoint");
+            flush(processor,32);
+            check(committedValue(offset)==value,id+" commits the end of the pointer gesture");
+        }
+
+        knob.setValue(knob.getMinimum(),juce::sendNotificationSync);
+        knob.mouseDown(mouse(knob,first,first,true,false));
+        const auto raised=first.translated(0,-104.f);
+        knob.mouseDrag(mouse(knob,raised,first,true,true));
+        const auto raisedValue=juce::roundToInt(knob.getValue());
+        knob.mouseUp(mouse(knob,raised,first,false,true));
+        flush(processor,32);
+        check(raisedValue>50 && raisedValue<80 && committedValue(offset)==raisedValue,
+              id+" follows a fresh fast gesture from zero during playback");
+    };
+    checkKnob("cutoff",46);
+    press(ui,"Chorus");
+    checkKnob("chorus_centre",116);
+    checkKnob("chorus_depth",115);
+    if (!isK) {
+        midi.clear();
+        midi.addEvent(juce::MidiMessage::noteOff(channel,60),0);
+        processor.processBlock(audio,midi);
+        require(processor.setPerformanceMode(true,error),error);
+        flush(processor,224);
+        require(processor.performanceMode() && ui.showPage("Perf"),"Open KS Performance for horizontal fader testing");
+        auto& volume=control("volume");
+        for (const auto direction : {-1,1}) {
+            const auto endpoint=direction<0?volume.getMinimum():volume.getMaximum();
+            volume.setValue(endpoint,juce::sendNotificationSync);
+            flush(processor,8);
+            const juce::Point<float> grip{volume.getPositionOfValue(endpoint)+9.f*direction,
+                                         float(volume.getHeight())*.5f};
+            const auto target=grip.translated(-32.f*direction,0.f);
+            const auto canGrab=volume.getParentComponent()->getComponentAt(volume.getPosition()+grip.roundToInt())==&volume;
+            check(canGrab,"Performance Volume accepts the outer edge of its horizontal thumb");
+            if (!canGrab) continue;
+            volume.mouseDown(mouse(volume,grip,grip,true,false));
+            check(volume.getValue()==endpoint,"Performance Volume holds its value on thumb press");
+            volume.mouseDrag(mouse(volume,target,grip,true,true));
+            volume.mouseUp(mouse(volume,target,grip,false,true));
+            const auto value=juce::roundToInt(volume.getValue());
+            flush(processor,32);
+            check(value>volume.getMinimum() && value<volume.getMaximum() && value==committedValue(179),
+                  "Performance Volume drags from the endpoint and reaches the controller");
+        }
+        volume.setValue(volume.getMaximum(),juce::sendNotificationSync);
+        const juce::Point<float> track{volume.getPositionOfValue(100),float(volume.getHeight())*.5f};
+        volume.mouseDown(mouse(volume,track,track,true,false));
+        volume.mouseUp(mouse(volume,track,track,false,false));
+        flush(processor,32);
+        check(std::abs(volume.getValue()-100.)<=1. && committedValue(179)==juce::roundToInt(volume.getValue()),
+              "Performance Volume still seeks on a track click");
+    }
+    return passed;
+}
+
 void checkHeldKnobReadout(SoulTrainJuce& ui,Processor& processor) {
     require(ui.showPage("Extra"),"Open KS Extra for Ring LFO1");
     auto* knob=dynamic_cast<juce::Slider*>(find(ui,"1:ring_level_mod",true));
@@ -1812,20 +2070,19 @@ void checkControlSizes(SoulTrainJuce& ui,Processor& processor,Browser& browser,c
     };
     const auto model=control("Setup model").getBounds();
     const auto clock=control("Clock source").getBounds();
-    const auto channel=control("Control MIDI channel").getBounds();
     const auto audio=control("Audio buffer profile").getBounds();
     const auto data=control("Interface size").getBounds();
-    require(model.getY()==clock.getY() && clock.getY()==channel.getY() &&
-            model.getRight()<clock.getX() && clock.getRight()<channel.getX(),
-            "Place Model, Clock source and Control MIDI channel in one row");
-    require(audio.getX()==model.getX() && audio.getY()>channel.getBottom(),
+    require(!find(ui,"Control MIDI channel",false),"Setup must use the controller's MIDI channel automatically");
+    require(model.getY()==clock.getY() && model.getRight()<clock.getX(),
+            "Place Model and Clock source in one row");
+    require(audio.getX()==model.getX() && audio.getY()>clock.getBottom(),
             "Place audio processing below Synth and MIDI");
-    require(data.getX()>channel.getRight() && data.getRight()<1000 &&
+    require(data.getX()>clock.getRight() && data.getRight()<1000 &&
             control("Skins folder").getX()<data.getX(),
             "Move Data and Skin into the next column");
     capture(ui,processor,browser,output,"Setup",0,"-compact");
     checkChoiceFrameStates(ui,control("Clock source"),output);
-    for (const auto* name:{"Setup model","Clock source","Control MIDI channel",
+    for (const auto* name:{"Setup model","Clock source",
                           "Firmware","On firmware change","Audio buffer profile","Interface size"}) {
         press(ui,name);
         const auto triggerWidth=control(name).getWidth();
@@ -2182,7 +2439,9 @@ int run(char** argv) {
     const auto lfoOnly=juce::SystemStats::getEnvironmentVariable("SILVER_NATIVE_LFO_REVIEW_ONLY",{})=="1";
     const auto highlightOnly=juce::SystemStats::getEnvironmentVariable("SILVER_NATIVE_HIGHLIGHT_REVIEW_ONLY",{})=="1";
     const auto workerOnly=juce::SystemStats::getEnvironmentVariable("SILVER_NATIVE_DSP_SWITCH_REVIEW_ONLY",{})=="1";
-    if(!drumOnly && !performanceOnly && !lfoOnly && !highlightOnly && !workerOnly)checkSkinSwitch();
+    const auto channelOnly=juce::SystemStats::getEnvironmentVariable("SILVER_NATIVE_K_CONTROL_CHANNEL_ONLY",{})=="1";
+    const auto pointerOnly=juce::SystemStats::getEnvironmentVariable("SILVER_NATIVE_POINTER_CONTROLS_TEST",{})=="1";
+    if(!drumOnly && !performanceOnly && !lfoOnly && !highlightOnly && !workerOnly && !channelOnly && !pointerOnly)checkSkinSwitch();
     Processor processor;
     processor.prepareToPlay(48000,256);
     processor.setNonRealtime(true);
@@ -2195,9 +2454,24 @@ int run(char** argv) {
     window.setBounds(0,0,1486,942);
     window.setVisible(true);
     ui.setBounds(0,0,1486,942);
+    if (channelOnly) {
+        checkKControlRouting(ui,processor,k);
+        window.clearContentComponent();
+        return 0;
+    }
     String error;
     require(processor.setFlashRom(flash,error),error);
     require(processor.setWaveRom(wave,error),error);
+    if (pointerOnly) {
+        bool passed=true;
+        for (const auto& firmware : {k,ks}) {
+            require(processor.loadFirmware(firmware,error),error);
+            flush(processor);
+            passed=checkPointerControls(ui,processor) && passed;
+        }
+        window.clearContentComponent();
+        return passed?0:1;
+    }
     if (workerOnly) {
         require(processor.loadFirmware(ks,error),error);
         checkTwoCoreSwitches(ui,processor,browser,output,ks,flash,wave);

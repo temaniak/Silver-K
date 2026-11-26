@@ -17,7 +17,7 @@ inline bool acceptsExternalTransport(ClockSource source,bool hostOwnsTransport){
 // Audio-thread-owned MIDI clock. No storage grows with the block size.
 class MusicalClock {
 public:
- struct Position {bool available=false,playing=false,hasPpq=false;double bpm=120,ppq=0;};
+ struct Position {bool available=false,playing=false,hasPpq=false;double bpm=120,ppq=0;bool playWhileStopped=false;};
  struct Event {uint8_t status;int offset;};
  void reset(){initialized=false;authoritative=false;playing=false;phase=0;}
  void begin(const Position& pos,double rate,int samples){

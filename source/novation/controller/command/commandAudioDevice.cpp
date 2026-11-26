@@ -136,7 +136,7 @@ struct CommandAudioDevice::Worker {
         // Publish tempo, transport and PPQ discontinuities at their first sample.
         const auto& old = lastPosition.value;
         if (old.available == value.available && old.playing == value.playing && old.bpm == value.bpm &&
-            old.hasPpq == value.hasPpq) {
+            old.hasPpq == value.hasPpq && old.playWhileStopped == value.playWhileStopped) {
             const auto distance = old.playing ? double(at - lastPosition.at) : 0;
             const auto expected = old.ppq + distance * old.bpm / (60 * format.sampleRate);
             if (!value.hasPpq || std::abs(value.ppq - expected) <= 1e-8)

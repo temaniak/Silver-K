@@ -498,17 +498,34 @@ public:
         }
     };
 
-    HitSlider(Look& look,bool vertical,juce::Rectangle<int> area,juce::Rectangle<int> hit,juce::Rectangle<int> track)
-        : hitBounds(hit-area.getPosition()),rail(track-area.getPosition()) {
+    HitSlider(Look& look,bool vertical,juce::Rectangle<int> area,juce::Rectangle<int> hit,
+              juce::Rectangle<int> track,Rect startThumbHit)
+        : hitBounds(hit-area.getPosition()),rail(track-area.getPosition()),
+          thumbHitAtRailStart(startThumbHit-area.getPosition().toFloat()) {
         setWantsKeyboardFocus(true);
         setSliderStyle(vertical?LinearVertical:LinearHorizontal);
         setTextBoxStyle(NoTextBox,false,0,0);
         setLookAndFeel(&look);
+        setMouseDragSensitivity(std::max(1,vertical?rail.getHeight():rail.getWidth()));
         setBounds(area);
     }
     ~HitSlider() override { setLookAndFeel(nullptr); }
 
-    bool hitTest(int x,int y) override { return hitBounds.contains(x,y) && Slider::hitTest(x,y); }
+    bool hitTest(int x,int y) override {
+        return (hitBounds.contains(x,y) || thumbHitBounds().contains(juce::Point<float>{float(x),float(y)})) &&
+               Slider::hitTest(x,y);
+    }
+
+    void mouseDown(const juce::MouseEvent& event) override {
+        setSliderSnapsToMousePosition(!thumbHitBounds().contains(event.position));
+        Slider::mouseDown(event);
+    }
+
+    void mouseUp(const juce::MouseEvent& event) override {
+        setSliderSnapsToMousePosition(true);
+        Slider::mouseUp(event);
+    }
+
     float thumbPosition() const {
         return getPositionOfValue(getValue())+float(isVertical()?getY():getX());
     }
@@ -533,7 +550,14 @@ public:
     }
 
 private:
+    Rect thumbHitBounds() const {
+        const auto position=getPositionOfValue(getValue());
+        return isVertical()?thumbHitAtRailStart.translated(0.f,position-float(rail.getY()))
+                           :thumbHitAtRailStart.translated(position-float(rail.getX()),0.f);
+    }
+
     const juce::Rectangle<int> hitBounds,rail;
+    const Rect thumbHitAtRailStart;
 };
 
 // The picker is a child of the editor. AU hosts never have to open a native
@@ -1536,17 +1560,26 @@ private:
         return w.bounds.withY(w.bounds.getY()-26.75f).withHeight(14.5f);
     }
 
-    static juce::Point<float> faderThumb(const Widget& w,float centre) {
-        return {w.thumbRect.getX(),centre-w.thumbRect.getHeight()*.5f};
+    static Rect faderThumbBounds(const Widget& w,float centre) {
+        if (!w.trackArt.isEmpty() && !w.thumbArt.isEmpty())
+            return w.thumbRect.withY(centre-w.thumbRect.getHeight()*.5f);
+        return {centre-8.f,w.bounds.getCentreY()-5.5f,16.f,11.f};
+    }
+
+    static Rect faderThumbHitBounds(const Widget& w,float centre) {
+        return faderThumbBounds(w,centre).expanded(3.f);
     }
 
     juce::Rectangle<int> faderBounds(const Widget& w) const {
-        auto area=w.bounds;
-        if (!w.thumbArt.isEmpty()) {
-            const auto rail=faderRail(w);
+        const auto rail=faderRail(w);
+        const auto vertical=!w.thumb.isEmpty();
+        const auto first=float(vertical?rail.getY():rail.getX());
+        const auto last=float(vertical?rail.getBottom():rail.getRight());
+        auto area=w.bounds.getUnion(faderThumbHitBounds(w,first)).getUnion(faderThumbHitBounds(w,last));
+        if (!w.trackArt.isEmpty() && !w.thumbArt.isEmpty()) {
             area=area.getUnion(skin.spriteBounds(w.trackArt,w.trackRect.getPosition()))
-                     .getUnion(skin.spriteBounds(w.thumbArt,faderThumb(w,float(rail.getY()))))
-                     .getUnion(skin.spriteBounds(w.thumbArt,faderThumb(w,float(rail.getBottom()))));
+                     .getUnion(skin.spriteBounds(w.thumbArt,faderThumbBounds(w,first).getPosition()))
+                     .getUnion(skin.spriteBounds(w.thumbArt,faderThumbBounds(w,last).getPosition()));
         }
         return area.expanded(1.f).getSmallestIntegerContainer();
     }
@@ -1565,7 +1598,7 @@ private:
         }
         if (!w.trackArt.isEmpty() && !w.thumbArt.isEmpty()) {
             skin.sprite(g,w.trackArt,w.trackRect.getPosition(),opacity);
-            skin.sprite(g,w.thumbArt,faderThumb(w,thumb),opacity);
+            skin.sprite(g,w.thumbArt,faderThumbBounds(w,thumb).getPosition(),opacity);
         } else {
             const auto track=w.bounds.withSizeKeepingCentre(w.bounds.getWidth(),9.f);
             g.setColour(juce::Colour(0xffe0e0e2).withMultipliedAlpha(opacity));
@@ -1575,7 +1608,7 @@ private:
             g.fillRoundedRectangle(filled,4.5f);
             g.setColour(juce::Colours::white.withMultipliedAlpha(opacity));
             g.drawRoundedRectangle(track.reduced(.5f),4.f,1.f);
-            g.fillRoundedRectangle(Rect(thumb-8,track.getCentreY()-5.5f,16,11),5.5f);
+            g.fillRoundedRectangle(faderThumbBounds(w,thumb),5.5f);
         }
     }
 
@@ -1918,8 +1951,6 @@ private:
         } else if (w.name==rendererCaption) {
             result={{0,"Software"},{1,"OpenGL"}};
 #endif
-        } else if (w.name=="Control MIDI channel") {
-            for (int i=1;i<=16;++i) result.emplace_back(i,String(i));
         } else if (w.name=="Skin") {
             const auto menu=host.skinMenu?host.skinMenu():juce::var{};
             if(const auto* items=menu["choices"].getArray())
@@ -1972,7 +2003,6 @@ private:
         if (w.name==firmwareSwitchCaption) return Processor::firmwareSwitchLabels[size_t(processor.firmwareSwitch())];
         if (w.name=="Audio buffer profile")
             return juce::StringArray{"Low latency","Balanced","Safe","Maximum reserve"}[processor.bufferProfile()];
-        if (w.name=="Control MIDI channel") return String(processor.editorChannel()+1);
         if (w.name=="Skin") return host.skinMenu?host.skinMenu()["label"].toString():w.baseline;
         if (w.name=="Interface size") return String(interfaceZoomPercent())+"%";
         const auto key=w.name=="Instrument"?"model":w.name=="Source"?"source":"bank";
@@ -2030,11 +2060,20 @@ private:
         else if (w.name=="Setup model") native(int(value)?"model:K":"model:KS");
         else if (w.name=="Clock source") processor.setClockSource(ClockSource(int(value)));
 #if JUCE_WINDOWS
-        else if (w.name==rendererCaption) view.useOpenGL(int(value)!=0);
+        else if (w.name==rendererCaption) {
+            const bool enabled=int(value)!=0;
+            String error;
+            if (processor.setOpenGLRendererPreference(enabled,error)) {
+                statusMessage.clear();
+                view.useOpenGL(enabled);
+            } else {
+                statusMessage=std::move(error);
+                refreshLcd();
+            }
+        }
 #endif
         else if (w.name==firmwareSwitchCaption) processor.setFirmwareSwitch(Processor::FirmwareSwitch(int(value)));
         else if (w.name=="Audio buffer profile") processor.setBufferProfile(int(value));
-        else if (w.name=="Control MIDI channel") processor.setEditorChannel(uint8_t(int(value)-1));
         else if (w.name=="Skin") native("skin:"+value.toString());
         else if (w.name=="Interface size") native("scale:"+value.toString());
         else if (w.name=="Instrument") setBrowser("model",value);
@@ -2495,8 +2534,11 @@ private:
             knob->setAlpha(captionOpacity(w.bounds));
             entry.control=std::move(knob);
         } else {
-            auto fader=std::make_unique<HitSlider>(faderLook,!w.thumb.isEmpty(),faderBounds(w),
-                w.bounds.getSmallestIntegerContainer(),faderRail(w));
+            const auto vertical=!w.thumb.isEmpty();
+            const auto rail=faderRail(w);
+            const auto first=float(vertical?rail.getY():rail.getX());
+            auto fader=std::make_unique<HitSlider>(faderLook,vertical,faderBounds(w),
+                w.bounds.getSmallestIntegerContainer(),rail,faderThumbHitBounds(w,first));
             w.fader=fader.get();
             entry.control=std::move(fader);
         }
@@ -2784,9 +2826,9 @@ private:
         const auto modelChoice=std::find_if(widgets.begin(),widgets.end(),[](const Widget& w){return w.name=="Setup model";});
         if (modelChoice!=widgets.end()) {
             const auto row=modelChoice->bounds;
-            const auto cell=std::floor((row.getWidth()-24.f)/3.f);
-            const auto gap=(row.getWidth()-3.f*cell)*.5f;
-            const std::array<String,3> controls{"Setup model","Clock source","Control MIDI channel"};
+            const auto cell=std::floor((row.getWidth()-12.f)/2.f);
+            const auto gap=row.getWidth()-2.f*cell;
+            const std::array<String,2> controls{"Setup model","Clock source"};
             for (size_t i=0;i<controls.size();++i) {
                 const auto control=std::find_if(widgets.begin(),widgets.end(),[&](const Widget& w){return w.name==controls[i];});
                 if (control==widgets.end()) continue;
@@ -3738,6 +3780,9 @@ private:
             return;
         }
         if (timer==DrumEditorTimer) {refreshDrumControls();return;}
+#if JUCE_WINDOWS
+        view.restoreRendererIfShowing();
+#endif
         processor.refreshControls();
         const bool loading=processor.isFirmwareLoading();
         if (lastLoading!=loading ||
@@ -3855,7 +3900,13 @@ private:
     String status;
 };
 
+void SoulTrainJuce::restoreRendererIfShowing() {
+    // The host supplies the native peer after constructing the editor.
+    if (restoreOpenGL && isShowing() && getPeer()) useOpenGL(true);
+}
+
 void SoulTrainJuce::useOpenGL(bool enabled) {
+    restoreOpenGL=false;
     if (enabled && !openGLMode) openGLMode=std::make_unique<OpenGLMode>(*this);
     if (openGLMode) openGLMode->select(enabled);
 }
@@ -3871,6 +3922,9 @@ SoulTrainJuce::SoulTrainJuce(Processor& p,Callbacks callbacks,juce::File assets)
     scaledSurface.setSize(width,height);
     scaledSurface.addAndMakeVisible(*canvas);
     addAndMakeVisible(scaledSurface);
+#if JUCE_WINDOWS
+    restoreOpenGL=p.prefersOpenGLRenderer();
+#endif
 }
 
 SoulTrainJuce::~SoulTrainJuce()=default;

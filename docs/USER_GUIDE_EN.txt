@@ -156,10 +156,12 @@ preset.
 Clock source and Performance
 ----------------------------
 
-Setup → Clock source sets the tempo source for the entire Silver-K instance. Host follows
-the DAW's tempo and transport. Internal uses the synth's Tempo, and MIDI follows incoming
-MIDI Clock. At a given BPM, Arp Sync sets the melodic arpeggiator's note division. Factory
-drum rhythms and Drum SEQ use their own step grid.
+Setup → Clock source sets the tempo source for the entire Silver-K instance. In Host mode,
+play the arpeggiator from your keyboard at the project tempo while the DAW is stopped.
+During playback, the arpeggio follows the DAW grid. Silver-K keeps the last BPM received
+from the DAW and uses the synth's Tempo until the DAW supplies one. Internal uses the
+synth's Tempo, and MIDI follows incoming MIDI Clock. Arp Sync sets the note division of
+the melodic arpeggiator. Factory drum rhythms and Drum SEQ use their own step grid.
 
 In KS, enable Performance in the top bar and open Perf to set up to four parts. Check each
 part's enabled state, MIDI channel, Low note / High note, and output. If you choose Aux

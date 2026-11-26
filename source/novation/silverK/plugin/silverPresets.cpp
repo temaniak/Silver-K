@@ -7,28 +7,38 @@ constexpr uint8_t prefix[]{0xf0,0,0x20,0x29,1,0x42};
 juce::String nameAt(const uint8_t* patch,unsigned offset){juce::String name;for(unsigned n=offset;n<offset+16;++n){const auto c=patch[n];name+=juce::String::charToString(c>=32 && c<127?c:' ');}return name.trim();}
 juce::String patchName(const uint8_t* patch){return nameAt(patch,151);}
 bool validDump(const uint8_t* p,size_t n){return (n==270 || n==1038) && std::equal(std::begin(prefix),std::end(prefix),p) && (n==270?(p[7]==0 || p[7]==1):(p[7]==2 || p[7]==3)) && p[n-1]==0xf7 && std::all_of(p+1,p+n-1,[](uint8_t v){return v<128;});}
-}
-void Processor::buildLibrary(){
- library.clear();performanceLibrary.clear();libraryBaseCount=performanceBaseCount=0;if(flash.size()!=0x80000)return;
+void decodeKSFlash(const std::vector<uint8_t>& flash,std::vector<Processor::Preset>& programs,std::vector<Processor::Performance>& performances){
+ programs.clear();performances.clear();
+ if(flash.size()!=0x80000)return;
  for(unsigned n=0;n<600;++n){const auto* p=flash.data()+0x20000+n*256;if(std::any_of(p,p+256,[](uint8_t v){return v>=128;}))continue;
-  Preset preset;preset.bank=uint8_t(n<400?1+n/100:5+(n-400)/50);preset.number=uint8_t(n<400?n%100:(n-400)%50);
+  Processor::Preset preset;preset.bank=uint8_t(n<400?1+n/100:5+(n-400)/50);preset.number=uint8_t(n<400?n%100:(n-400)%50);
   preset.name=juce::String(preset.bank)+juce::String(preset.number).paddedLeft('0',2)+"  "+patchName(p);
-  preset.data={0xf0,0,0x20,0x29,1,0x42,0x7f,0,0,0x11,2,0,0};std::copy_n(p,256,preset.data.begin()+13);preset.data.back()=0xf7;library.push_back(std::move(preset));
+  preset.data={0xf0,0,0x20,0x29,1,0x42,0x7f,0,0,0x11,2,0,0};std::copy_n(p,256,preset.data.begin()+13);preset.data.back()=0xf7;programs.push_back(std::move(preset));
  }
  for(unsigned n=0;n<100;++n){const auto* p=flash.data()+0x45800+n*1024;if(std::any_of(p,p+1024,[](uint8_t v){return v>=128;}))continue;
-  Performance preset;preset.name=juce::String(n).paddedLeft('0',2)+"  "+nameAt(p,192);
-  preset.data={0xf0,0,0x20,0x29,1,0x42,0x7f,2,0,0x11,2,1,uint8_t(n)};std::copy_n(p,1024,preset.data.begin()+13);preset.data.back()=0xf7;performanceLibrary.push_back(std::move(preset));
+  Processor::Performance preset;preset.name=juce::String(n).paddedLeft('0',2)+"  "+nameAt(p,192);
+  preset.data={0xf0,0,0x20,0x29,1,0x42,0x7f,2,0,0x11,2,1,uint8_t(n)};std::copy_n(p,1024,preset.data.begin()+13);preset.data.back()=0xf7;performances.push_back(std::move(preset));
  }
+}
+}
+void Processor::buildLibrary(){
+ decodeKSFlash(flash,library,performanceLibrary);
  libraryBaseCount=library.size();performanceBaseCount=performanceLibrary.size();
 }
 std::vector<Processor::Preset> Processor::presets()const{std::lock_guard guard(controlMutex);return library;}
 std::vector<Processor::Performance> Processor::performances()const{std::lock_guard guard(controlMutex);return performanceLibrary;}
-void Processor::publishFactoryPresets(){
- if(!firmwareReady() || isKStation())return;
- std::vector<std::vector<uint8_t>> factory;
- for(const auto& p:presets()){factory.emplace_back(p.data.begin(),p.data.end());auto& bytes=factory.back();bytes[7]=1;bytes[11]=p.bank;bytes[12]=p.number;}
- for(const auto& p:performances())factory.emplace_back(p.data.begin(),p.data.end());
- if(!factory.empty())patchLibrary.addFactory(factory,"KS Factory");
+Library::FactoryPresets Processor::factoryPresets(const std::vector<uint8_t>& flash){
+ std::vector<Preset> programs;
+ std::vector<Performance> performances;
+ decodeKSFlash(flash,programs,performances);
+ Library::FactoryPresets factory;
+ factory.reserve(programs.size()+performances.size());
+ for(auto& program:programs){
+  program.data[7]=1;program.data[11]=program.bank;program.data[12]=program.number;
+  factory.emplace_back(program.data.begin(),program.data.end());
+ }
+ for(const auto& performance:performances)factory.emplace_back(performance.data.begin(),performance.data.end());
+ return factory;
 }
 bool Processor::queueUiMidi(const uint8_t* data,size_t n){
  std::lock_guard guard(uiMidiMutex);
@@ -41,9 +51,9 @@ juce::String Processor::loadedPatchName()const{std::lock_guard guard(controlMute
 bool Processor::queueState(const ks::State& state,bool selectMode,juce::String& error){
  std::vector<uint8_t> bytes;
  if(selectMode){for(unsigned ch=0;ch<16;++ch)for(uint8_t cc:{uint8_t(64),uint8_t(123),uint8_t(120)})bytes.insert(bytes.end(),{uint8_t(0xb0|ch),cc,0});
-  if(!state.performance){const auto select=ks::singleSelection(state.parts[0].data(),controlChannel.load());bytes.insert(bytes.end(),select.begin(),select.end());}}
+  if(!state.performance){const auto select=ks::singleSelection(state.parts[0].data(),state.globalChannel);bytes.insert(bytes.end(),select.begin(),select.end());}}
  const auto dump=ks::stateMessage(state);bytes.insert(bytes.end(),dump.begin(),dump.end());
- if(!state.performance){const auto metadata=ks::singleMetadata(state.parts[0].data(),controlChannel.load());bytes.insert(bytes.end(),metadata.begin(),metadata.end());}
+ if(!state.performance){const auto metadata=ks::singleMetadata(state.parts[0].data(),state.globalChannel);bytes.insert(bytes.end(),metadata.begin(),metadata.end());}
  if(!queueUiMidi(bytes.data(),bytes.size())){error="Preset queue is full";return false;}resetPending();return true;
 }
 std::array<juce::String,4> Processor::partNames()const{

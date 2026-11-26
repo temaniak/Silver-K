@@ -168,7 +168,8 @@ public:
         epoch_=event.epoch;
         if(!event.tick || !event.running || !settings_.enabled || !keyCount_)return true;
         const auto divisor=ArpDivisionPulses[settings_.division];
-        if(!pulseAnchor_ || event.pulse<*pulseAnchor_)pulseAnchor_=settings_.keySync?event.pulse:0;
+        if(event.followsHostGrid)pulseAnchor_=0;
+        else if(!pulseAnchor_ || event.pulse<*pulseAnchor_)pulseAnchor_=settings_.keySync?event.pulse:0;
         const auto elapsed=event.pulse-*pulseAnchor_;
         if(settings_.rhythm)return rhythmTick(event,elapsed,divisor);
         if(elapsed%divisor)return true;

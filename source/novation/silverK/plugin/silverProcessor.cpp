@@ -193,12 +193,12 @@ void Processor::publishKS(std::unique_ptr<KsEngine> ready){
  ownedDevice=std::move(ready);
  applyBufferProfile();
  auto* dReady=ownedDevice.get();
- const auto state=dReady->fullSnapshot();controlChannel.store(state.globalChannel);wireShadow=state.parts;for(auto& mask:wirePendingMask)mask.fill(0);multi.store(state.performance);activeMask.store(state.activeMask);
+ const auto state=dReady->fullSnapshot();globalMidiChannel.store(state.globalChannel);wireShadow=state.parts;for(auto& mask:wirePendingMask)mask.fill(0);multi.store(state.performance);activeMask.store(state.activeMask);
  for(unsigned part=0;part<ks::PartCount;++part)partChannels[part].store(state.parts[part][181]&15);
  if(!state.performance)selectedPart.store(0);syncingProcessor=this;
  for(size_t n=0;n<ParameterCount;++n){const auto& c=controls[n%controls.size()];const auto& patch=state.parts[n/controls.size()];if(c.patchOffset>=0 && (state.performance || n<controls.size())){auto* p=parameters.getParameter(parameterIds[n]);p->setValueNotifyingHost(p->convertTo0to1(juce::jlimit(int(c.minimum),int(c.maximum),int(decode(c,patch.data())))));}pending[n].store(-1);awaiting[n].store(-1);}
  syncingProcessor=nullptr;{std::lock_guard lock(uiMidiMutex);uiMidi.reset();}
- for(unsigned part=0;part<(state.performance?ks::PartCount:1);++part)for(const auto& c:controls)if(c.patchOffset<0){const uint8_t midi[]{uint8_t(0xb0|(state.performance?partChannels[part].load():controlChannel.load())),uint8_t(c.number),uint8_t(parameters.getRawParameterValue(parameterId(c,part))->load())};dReady->midi(midi,3);}resetClock.store(true);device.store(dReady);
+ for(unsigned part=0;part<(state.performance?ks::PartCount:1);++part)for(const auto& c:controls)if(c.patchOffset<0){const uint8_t midi[]{uint8_t(0xb0|(state.performance?partChannels[part].load():state.globalChannel)),uint8_t(c.number),uint8_t(parameters.getRawParameterValue(parameterId(c,part))->load())};dReady->midi(midi,3);}resetClock.store(true);device.store(dReady);
  message=placeholder?"KS OS 2.1.02 - temporary zero wave ROM; sampled waves are silent":"KS OS 2.1.02 - external wave bank loaded";
 }
 bool Processor::load(const juce::File& o,const juce::File& b,const juce::File& f,juce::String& e){
@@ -271,6 +271,7 @@ bool Processor::loadKS(const juce::File& o,const juce::File& b,const juce::File&
   currentPatch=std::move(patchName);selectedPart.store(part);
   if(rebuildLibrary)buildLibrary();
   publishKS(std::move(candidate));
+  patchLibrary.addFactory(factoryPresets(flash),Library::KSFactoryName);
   return true;
  }catch(const std::exception& failure){e=failure.what();return false;}
 }
@@ -305,20 +306,24 @@ bool Processor::reconfigureEngines(double rate,int block,int profile,bool parall
  } catch(const std::exception& failure){error=failure.what();return false;}
 }
 Processor::HostTiming Processor::prepareClockPosition(){
- if(resetClock.exchange(false)){hostClock.reset();clockSourceMode=-1;externalNrpn.fill(0);}
+ if(resetClock.exchange(false)){clockSourceMode=-1;externalNrpn.fill(0);}
  activeClockSource=requestedClockSource.load();
  HostTiming timing;
+ if(activeClockSource!=ClockSource::Host){hostPlaying=false;return timing;}
  auto& position=timing.position;
- if(activeClockSource==ClockSource::Host)if(auto* playHead=getPlayHead())if(auto info=playHead->getPosition()){
-  if(auto bpm=info->getBpm();bpm && std::isfinite(*bpm) && *bpm>=1 && *bpm<=1000){
-   position.available=true;
-   position.bpm=*bpm;
+ if(auto* playHead=getPlayHead())if(auto info=playHead->getPosition()){
+  if(auto bpm=info->getBpm();bpm && std::isfinite(*bpm) && *bpm>=1 && *bpm<=1000)lastHostBpm=*bpm;
+  hostPlaying=info->getIsPlaying();
+  if(auto ppq=info->getPpqPosition();hostPlaying && ppq && std::isfinite(*ppq)){
+   position.hasPpq=true;position.ppq=*ppq;
   }
-  position.playing=info->getIsPlaying();
-  if(auto ppq=info->getPpqPosition()){position.hasPpq=true;position.ppq=*ppq;}
   if(info->getIsLooping())if(auto loop=info->getLoopPoints())
    timing.loop=HostLoop{loop->ppqStart,loop->ppqEnd};
  }
+ position.available=lastHostBpm>0;
+ if(position.available)position.bpm=lastHostBpm;
+ position.playing=hostPlaying;
+ position.playWhileStopped=true;
  return timing;
 }
 void Processor::setClockSource(ClockSource source){
@@ -343,12 +348,13 @@ void Processor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuffer& m
  Scope callbackTiming(&performanceDiagnostics,Metric::Callback,uint64_t(audio.getNumSamples()),hostRate>0?uint64_t(audio.getNumSamples()*1.0e9/hostRate):0);
  const auto diagnosticEpoch=performanceDiagnostics.epoch();
  if(diagnosticEpoch){performanceDiagnostics.add(Metric::HostFrames,diagnosticEpoch,uint64_t(audio.getNumSamples()));performanceDiagnostics.add(Metric::OfflineCallbacks,diagnosticEpoch,isNonRealtime()?1:0);}
- const auto [position,loop]=prepareClockPosition();
- if(k){hostClock.begin(position,hostRate,audio.getNumSamples());processK(*k,audio,midi);return;}
+ const auto timing=prepareClockPosition();
+ if(k){processK(*k,audio,midi,timing);return;}
+ const auto& [position,loop]=timing;
  Scope controlTiming(&performanceDiagnostics,Metric::Controls);
- // KS receives the DAW's position directly at its audio deadline. The
- // firmware's Auto mode still accepts MIDI Clock when the host has no tempo.
- selectClockSource(false,[&](const uint8_t* data,size_t size){d->midi(data,size);});
+ const auto state=d->fullSnapshot(true);
+ globalMidiChannel.store(state.globalChannel,std::memory_order_relaxed);
+ selectClockSource(state.globalChannel,[&](const uint8_t* data,size_t size){d->midi(data,size);});
  uint8_t uiBytes[4096];size_t uiCount=0;uint16_t item=0;
  for(size_t n=0;n<sizeof(uiBytes) && uiMidi.pop(item);++n){
   if(item<UiSoundLoadToken){uiBytes[uiCount++]=uint8_t(item);continue;}
@@ -357,11 +363,10 @@ void Processor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuffer& m
  }
  if(uiCount)d->midi(uiBytes,uiCount);
  d->setDrumEditorSlot(drumEditEnabled()?drumEditorSlot():command::KSDrumEditMode::Off);
- const auto state=d->fullSnapshot(true);
  if(resetWire.exchange(false))for(auto& mask:wirePendingMask)mask.fill(0);
  for(unsigned part=0;part<ks::PartCount;++part){auto& shadow=wireShadow[part];auto& mask=wirePendingMask[part];const auto& patch=state.parts[part];
   for(unsigned n=0;n<256;++n){if(((patch[n]^shadow[n])&mask[n])==0)mask[n]=0;shadow[n]=uint8_t((patch[n]&~mask[n])|(shadow[n]&mask[n]));}
-  uint8_t channel=state.performance?(patch[181]&15):controlChannel.load();
+  uint8_t channel=state.performance?(patch[181]&15):state.globalChannel;
   for(size_t index=0;index<controls.size();++index){const size_t n=part*controls.size()+index;
    const auto requested=pending[n].exchange(-1);
    if(requested<0 || (!state.performance && part))continue;
@@ -386,7 +391,7 @@ void Processor::processBlock(juce::AudioBuffer<float>& audio,juce::MidiBuffer& m
   }
  }
 
- sendTimedMidi(midi,position.available,nullptr,[&](const uint8_t* data,size_t size,int offset){
+ sendTimedMidi(midi,[&](const uint8_t* data,size_t size,int offset){
   if(size==3 && data[0]==0xb0 && data[1]==7)volume.store(data[2]);
   if(position.available && position.playing)d->hostMidi(data,size,uint32_t(offset));
   else d->midi(data,size,uint32_t(offset));
@@ -410,7 +415,9 @@ void Processor::getStateInformation(juce::MemoryBlock& out){std::lock_guard guar
  const auto stateWaveFile=ownedDevice?loadedWaveFile:bankFile;
  const auto stateDataFiles=ownedDevice?loadedDataFiles:selectedKSDataFiles();
  const auto stateFlashFile=stateDataFiles.empty()?juce::File{}:stateDataFiles.front();
- auto state=parameters.copyState();state.setProperty("ksDataFiles",juce::JSON::toString(ksDataReferences(stateDataFiles)),nullptr);state.setProperty("clockSource",int(clockSource()),nullptr);state.setProperty("bufferProfile",buffering.load(),nullptr);state.setProperty("ksControllerMode",ksControllerMode(),nullptr);state.setProperty("dataFolder",dataFolder.getFullPathName(),nullptr);for(const auto& asset:{std::pair<const char*,juce::File>{"os",osFile},{"bank",stateWaveFile},{"flash",stateFlashFile}})if(asset.second.isAChildOf(dataFolder))state.setProperty(juce::String(asset.first)+"Relative",asset.second.getRelativePathFrom(dataFolder),nullptr);state.setProperty("romFolder",romFolder.getFullPathName(),nullptr);state.setProperty("skinChoice",skinChoice,nullptr);state.setProperty("editorScale",editorScale.load(),nullptr);state.setProperty("browserState",browserState,nullptr);state.setProperty("customSkin",customSkin,nullptr);state.setProperty("currentPatch",currentPatch,nullptr);state.setProperty("editorChannel",int(controlChannel.load()),nullptr);state.setProperty("kModel",isKStation(),nullptr);state.setProperty("bank",stateWaveFile.getFullPathName(),nullptr);state.setProperty("flash",stateFlashFile.getFullPathName(),nullptr);
+ auto state=parameters.copyState();state.setProperty("ksDataFiles",juce::JSON::toString(ksDataReferences(stateDataFiles)),nullptr);state.setProperty("clockSource",int(clockSource()),nullptr);state.setProperty("bufferProfile",buffering.load(),nullptr);state.setProperty("ksControllerMode",ksControllerMode(),nullptr);state.setProperty("dataFolder",dataFolder.getFullPathName(),nullptr);for(const auto& asset:{std::pair<const char*,juce::File>{"os",osFile},{"bank",stateWaveFile},{"flash",stateFlashFile}})if(asset.second.isAChildOf(dataFolder))state.setProperty(juce::String(asset.first)+"Relative",asset.second.getRelativePathFrom(dataFolder),nullptr);state.setProperty("romFolder",romFolder.getFullPathName(),nullptr);state.setProperty("skinChoice",skinChoice,nullptr);state.setProperty("editorScale",editorScale.load(),nullptr);state.setProperty("browserState",browserState,nullptr);state.setProperty("customSkin",customSkin,nullptr);state.setProperty("currentPatch",currentPatch,nullptr);state.setProperty("kModel",isKStation(),nullptr);state.setProperty("bank",stateWaveFile.getFullPathName(),nullptr);state.setProperty("flash",stateFlashFile.getFullPathName(),nullptr);
+ // Keep the automatic channel available to older versions when reopening this state.
+ state.setProperty("editorChannel",int(globalMidiChannel.load()),nullptr);
  state.setProperty("ksTwoCoreProcessing",ksTwoCoreProcessing(),nullptr);
  const auto drums=command::encodeKSUserDrums(userDrums,false);
  state.setProperty("ksUserDrums",juce::MemoryBlock(drums.data(),drums.size()).toBase64Encoding(),nullptr);
@@ -513,7 +520,7 @@ void Processor::setStateInformation(const void* data,int size){
  const int savedClock=int(state.getProperty("clockSource",0));requestedClockSource.store(savedClock>=0 && savedClock<=2?ClockSource(savedClock):ClockSource::Host);
  const double savedScale=double(state.getProperty("editorScale",editorScale.load()));editorScale.store(savedScale>=.5&&savedScale<=1.5?savedScale:.75);
  twoCoreProcessing.store(bool(state.getProperty("ksTwoCoreProcessing",false)));
- buffering.store(juce::jlimit(0,3,int(state.getProperty("bufferProfile",1))));bankFile=resolveAsset(state,"bank");flashFile=resolveAsset(state,"flash");skinChoice=state.getProperty("skinChoice",defaultSkin).toString();customSkin=state.getProperty("customSkin").toString();currentPatch=state.getProperty("currentPatch").toString();controlChannel.store(uint8_t(int(state.getProperty("editorChannel",0))&15));
+ buffering.store(juce::jlimit(0,3,int(state.getProperty("bufferProfile",1))));bankFile=resolveAsset(state,"bank");flashFile=resolveAsset(state,"flash");skinChoice=state.getProperty("skinChoice",defaultSkin).toString();customSkin=state.getProperty("customSkin").toString();currentPatch=state.getProperty("currentPatch").toString();
  restoreKSDataFiles(juce::JSON::parse(state.getProperty("ksDataFiles").toString()));
  if(savedK){auto o=resolveAsset(state,"os");auto rom=readK(o);if(!rom.isValid() || baseLib::SHA256(rom.data()).toString()!=state.getProperty("osHash").toString().toStdString()){message="K-Station firmware missing or hash mismatch";return;}kState=readNativeState(state,"kCommandState",command::Model::K,"osHash");
  if(kState.empty()){
@@ -549,6 +556,7 @@ void Processor::setStateInformation(const void* data,int size){
  buildLibrary();auto imported=state.getChildWithName("PresetLibrary");for(int n=0;n<imported.getNumChildren() && n<12000;++n){auto entry=imported.getChild(n);juce::MemoryBlock data;if(!data.fromBase64Encoding(entry.getProperty("data").toString()) || data.getSize()!=270)continue;const auto* bytes=static_cast<const uint8_t*>(data.getData());constexpr uint8_t prefix[]{0xf0,0,0x20,0x29,1,0x42};if(!std::equal(std::begin(prefix),std::end(prefix),bytes) || bytes[7]!=0 || bytes[269]!=0xf7 || !std::all_of(bytes+1,bytes+269,[](uint8_t v){return v<128;}))continue;Preset preset;preset.name=entry.getProperty("name").toString();std::copy_n(bytes,270,preset.data.begin());library.push_back(std::move(preset));}
  auto multis=state.getChildWithName("PerformanceLibrary");for(int n=0;n<multis.getNumChildren() && n<12000;++n){auto entry=multis.getChild(n);juce::MemoryBlock data;if(!data.fromBase64Encoding(entry.getProperty("data").toString()) || data.getSize()!=1038)continue;const auto* bytes=static_cast<const uint8_t*>(data.getData());constexpr uint8_t prefix[]{0xf0,0,0x20,0x29,1,0x42};if(!std::equal(std::begin(prefix),std::end(prefix),bytes) || bytes[7]!=2 || bytes[1037]!=0xf7 || !std::all_of(bytes+1,bytes+1037,[](uint8_t v){return v<128;}))continue;Performance preset;preset.name=entry.getProperty("name").toString();std::copy_n(bytes,1038,preset.data.begin());performanceLibrary.push_back(std::move(preset));}
  selectedPart.store(unsigned(juce::jlimit(0,3,int(state.getProperty("selectedPart",0)))));parameters.replaceState(state);volume.store(uint8_t(parameters.getRawParameterValue("volume")->load()));for(auto& n:pending)n.store(-1);rebuild();
+ patchLibrary.addFactory(factoryPresets(requiredData),Library::KSFactoryName);
 
 }
 juce::AudioProcessorEditor* Processor::createEditor(){return new Editor(*this);}
@@ -630,6 +638,8 @@ void Processor::publishK(std::unique_ptr<KEngine> ready){
  resetPending();
  {std::lock_guard guard(uiMidiMutex);uiMidi.reset();}
  ownedK=std::move(ready);
+ const auto state=ownedK->editorState(false);
+ globalMidiChannel.store(state?state->globalChannel:0);
  applyBufferProfile();
  kWire.fill(0);kMask.fill(0);resetClock.store(true);
  kDevice.store(ownedK.get());
@@ -741,7 +751,6 @@ bool Processor::loadFirmware(const juce::File& file,juce::String& error){
   rememberDataFolder(ignored);
   if(!rememberAssets(error))return false;
  }
- if(!rom.isValid())publishFactoryPresets();
  return true;
 }
 
@@ -786,14 +795,29 @@ std::vector<Control> Processor::visibleControls()const{if(isKStation())return kC
 const Control* Processor::spec(const juce::String& id)const{static const auto k=kControls();if(isKStation()){for(const auto& c:k)if(id==c.id)return &c;}else for(const auto& c:controls)if(semanticId(id)==semanticId(c.id))return &c;return nullptr;}
 juce::String Processor::uiParameterId(const juce::String& id)const{return isKStation()?"k_"+id:currentPart()?"part"+juce::String(currentPart()+1)+"_"+id:id;}
 juce::RangedAudioParameter* Processor::uiParameter(const juce::String& id){return parameters.getParameter(uiParameterId(isKStation()?id:semanticId(id)));}
-void Processor::processK(KEngine& engine,juce::AudioBuffer<float>& audio,juce::MidiBuffer& midi){
+void Processor::processK(KEngine& engine,juce::AudioBuffer<float>& audio,juce::MidiBuffer& midi,const HostTiming& timing){
  baseLib::performance::Scope controlTiming(&performanceDiagnostics,baseLib::performance::Metric::Controls);
- selectClockSource(hostClock.ownsTransport(),[&](const uint8_t* data,size_t size){engine.midi(data,size);});
+ const auto state=engine.editorState(true);
+ const auto previousChannel=globalMidiChannel.load(std::memory_order_relaxed);
+ const auto channel=state?state->globalChannel:previousChannel;
+ if(channel!=previousChannel){
+  globalMidiChannel.store(channel,std::memory_order_relaxed);
+  kMask.fill(0);
+ }
+ selectClockSource(channel,[&](const uint8_t* data,size_t size){engine.midi(data,size);});
  uint8_t ui[4096];size_t count=0;uint16_t item=0;
  while(count<sizeof(ui) && uiMidi.pop(item))ui[count++]=uint8_t(item);
  if(count)engine.midi(ui,count);
- std::array<uint8_t,128> patch;
- if(engine.patch(patch,true)){if(resetWire.exchange(false))kMask.fill(0);for(const auto& c:kstation::controls::Catalog){const size_t slot=c.number+(c.mapping==kstation::controls::Mapping::NRPN?128:0);const auto raw=c.patchOffset>=0?patch[c.patchOffset]:kWire[slot];if(((raw^kWire[slot])&kMask[slot])==0)kMask[slot]=0;kWire[slot]=uint8_t((raw&~kMask[slot])|(kWire[slot]&kMask[slot]));}}
+ if(state && state->parts[0].parameterBytes==128){
+  const auto& patch=state->parts[0].parameters;
+  if(resetWire.exchange(false))kMask.fill(0);
+  for(const auto& c:kstation::controls::Catalog){
+   const size_t slot=c.number+(c.mapping==kstation::controls::Mapping::NRPN?128:0);
+   const auto raw=c.patchOffset>=0?patch[c.patchOffset]:kWire[slot];
+   if(((raw^kWire[slot])&kMask[slot])==0)kMask[slot]=0;
+   kWire[slot]=uint8_t((raw&~kMask[slot])|(kWire[slot]&kMask[slot]));
+  }
+ }
  // Keep the latest values in the existing slots and stagger their writes.
  // Ordinary MIDI and UI packets retain the existing relative block order.
  constexpr auto automationCount=arpAutomationParameters.size();
@@ -826,7 +850,7 @@ void Processor::processK(KEngine& engine,juce::AudioBuffer<float>& audio,juce::M
   const bool nrpn=c.mapping==kstation::controls::Mapping::NRPN;
   const size_t slot=c.number+(nrpn?128:0);
   auto& raw=kWire[slot];raw=uint8_t((raw&~c.wireMask)|((value<<c.wireShift)&c.wireMask));kMask[slot]|=c.wireMask;
-  const auto status=uint8_t(0xb0|controlChannel.load());
+  const auto status=uint8_t(0xb0|channel);
   bool accepted;
   if(nrpn){const uint8_t bytes[]{status,99,0,status,98,uint8_t(c.number),status,6,raw};accepted=engine.midi(bytes,9);}
   else{const uint8_t bytes[]{status,uint8_t(c.number),raw};accepted=engine.midi(bytes,3);}
@@ -841,9 +865,12 @@ void Processor::processK(KEngine& engine,juce::AudioBuffer<float>& audio,juce::M
   engine.arpAutomationSpacing-=std::min(engine.arpAutomationSpacing,samples);
   for(auto& remaining:engine.arpAutomationRemaining)remaining-=std::min(remaining,samples);
  }
- sendTimedMidi(midi,hostClock.ownsTransport(),&hostClock,[&](const uint8_t* data,size_t size,int offset){engine.midi(data,size,uint32_t(offset));});
+ sendTimedMidi(midi,[&](const uint8_t* data,size_t size,int offset){engine.midi(data,size,uint32_t(offset));});
  controlTiming.finish();baseLib::performance::Scope renderTiming(&performanceDiagnostics,baseLib::performance::Metric::AudioRender,uint64_t(audio.getNumSamples()));
- engine.render({audio.getWritePointer(0),audio.getWritePointer(1),nullptr,nullptr},audio.getNumSamples(),isNonRealtime(),getTotalNumInputChannels()?audio.getReadPointer(0):nullptr,getTotalNumInputChannels()>1?audio.getReadPointer(1):nullptr);for(int ch=2;ch<audio.getNumChannels();++ch)audio.clear(ch,0,audio.getNumSamples());midi.clear();
+ engine.render({audio.getWritePointer(0),audio.getWritePointer(1),nullptr,nullptr},audio.getNumSamples(),isNonRealtime(),
+               getTotalNumInputChannels()?audio.getReadPointer(0):nullptr,getTotalNumInputChannels()>1?audio.getReadPointer(1):nullptr,
+               timing.position,timing.loop);
+ for(int ch=2;ch<audio.getNumChannels();++ch)audio.clear(ch,0,audio.getNumSamples());midi.clear();
 }
 Processor::DrumEditInfo Processor::drumEditInfo()const{
  std::lock_guard lock(controlMutex);

@@ -135,12 +135,14 @@ namespace pluginLib::patchDB
 
 		void runOnLoaderThread(std::function<void()>&& _func);
 		void runOnUiThread(const std::function<void()>& _func);
-		// Call on the loader thread when attaching a child to an existing source.
+		// Loader-thread operations for updating multiple sources before one save.
 		void addDataSource(const DataSourceNodePtr& _ds);
+		void removeDataSourceNow(const DataSource&, bool _save, bool _removeChildren);
+		bool refreshDataSourceNow(const DataSource&);
+		bool replaceLocalStorageNow(const DataSource&, const std::vector<PatchPtr>&);
+		bool saveJson();
 
 	private:
-		void removeDataSourceNow(const DataSource&, bool _save, bool _removeChildren);
-
 		bool addPatches(const std::vector<PatchPtr>& _patches);
 		bool removePatch(const PatchPtr& _patch);
 
@@ -164,7 +166,6 @@ namespace pluginLib::patchDB
 
 		bool deleteFile(const juce::File& _file);
 
-		bool saveJson();
 		bool saveJson(const DataSourceNodePtr& _ds);
 		bool saveJson(const juce::File& _target, juce::DynamicObject* _src);
 

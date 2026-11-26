@@ -119,6 +119,7 @@ static void rescanChecks(const juce::File& root){
   write(file,preset("After",3));library.refreshDataSource(child);idle(library);sounds=patches(library,parent);check(sounds.size()==2,"Manual child duplicated during rescan");bool after=false;for(const auto& patch:sounds)after|=patch->name=="After";check(after,"Manual child was not reread");
   write(folder.getChildFile("New folder/New.fxp"),preset("New",4));library.rescan();idle(library);sounds=patches(library,parent);check(sounds.size()==3,"Rescan missed new nested file");bool favourite=false;for(const auto& patch:sounds)if(patch->name=="Keep")favourite=patch->getTags(TagType::Favourites).containsAdded("Favourite");check(favourite,"Rescan lost favourites");
   check(file.deleteFile(),"Delete fixture");library.rescan();idle(library);sounds=patches(library,parent);check(sounds.size()==2,"Rescan kept removed file");
+  check(!sourceFor(library,file,SourceType::File),"Rescan kept deleted manual child source");
   auto nested=sourceFor(library,folder.getChildFile("Nested"),SourceType::Folder);library.removePath(nested);idle(library);library.rescan();idle(library);check(patches(library,parent).size()==1,"Removed nested source returned after rescan");
  }
  {
@@ -155,6 +156,125 @@ static void managedSourceChecks(const juce::File& root){
  }
  std::cout<<"PASS: removed folders and patches leave live/disk cache, survive restart, return only on explicit managed Rescan; user files retained\n";
 }
+static void staleSourceChecks(const juce::File& root){
+ const auto database=root.getChildFile("stale-source-db");
+ const auto cache=database.getChildFile("patchmanagerdb.cache");
+ const auto oldBank=root.getChildFile("Legacy source/Old.fxb");
+ const auto inactive=root.getChildFile("Inactive source");
+ const auto edited=inactive.getChildFile("Edited.fxp");
+ const auto deleted=inactive.getChildFile("Deleted.fxp");
+ write(oldBank,bank({"Legacy one","Legacy two"}));
+ write(edited,preset("Inactive before"));
+ write(deleted,preset("Deleted sound",2));
+ {
+  Library library(database);
+  // Simulate a registration from before silver-sources.json tracked manual paths.
+  DataSource legacy;
+  legacy.type=SourceType::File;
+  legacy.name=oldBank.getFullPathName().toStdString();
+  legacy.origin=DataSourceOrigin::Manual;
+  library.addDataSource(legacy);
+  library.addPath(inactive);
+  library.setPresetPathActive(inactive,false);
+  idle(library);
+  check(patches(library).size()==4,"Stale cache fixture count");
+ }
+ juce::MemoryBlock staleCache;
+ check(cache.loadFileAsData(staleCache) && !staleCache.isEmpty(),"Read stale cache fixture");
+ check(oldBank.deleteFile() && deleted.deleteFile(),"Delete cached preset files");
+ write(edited,preset("Inactive updated",3));
+ write(inactive.getChildFile("Added.fxp"),preset("Inactive new",4));
+ {
+  Library library(database);
+  idle(library);
+  check(!sourceFor(library,oldBank,SourceType::File) && !sourceFor(library,deleted,SourceType::File),
+        "Startup exposed missing sources from the old binary cache");
+  bool completed=false;
+  library.rescan([&]{completed=true;});
+  until([&]{library.uiProcess();return completed;},"Stale-source Rescan did not complete");
+  auto folder=sourceFor(library,inactive,SourceType::Folder);
+  check(folder && !library.presetPathActive(*folder),"Rescan reenabled an inactive source");
+  library.setPresetPathActive(inactive,true);
+  idle(library);
+  std::set<std::string> names;
+  for(const auto& sound:patches(library,folder))names.insert(sound->name);
+  check(names==std::set<std::string>{"Inactive new","Inactive updated"},"Reenabling a rescanned source exposed outdated contents");
+ }
+ {
+  Library library(database);
+  idle(library);
+  check(patches(library).size()==2 && !sourceFor(library,oldBank,SourceType::File),"Rescan did not persist the cleaned catalogue");
+ }
+ // A cache restored by an older install or left behind by a failed write
+ // must still be reconciled against the filesystem when opened again.
+ check(cache.replaceWithData(staleCache.getData(),staleCache.getSize()),"Restore stale cache bytes");
+ {
+  Library library(database);
+  idle(library);
+  check(!sourceFor(library,oldBank,SourceType::File) && !sourceFor(library,deleted,SourceType::File),"Restored cache resurrected deleted sources");
+ }
+ std::cout<<"PASS: missing legacy paths, restored stale cache, disabled paths refreshed and clean restart\n";
+}
+static void managedRootMigrationChecks(const juce::File& root){
+ const auto database=root.getChildFile("legacy-root-db");
+ const auto settings=database.getChildFile("silver-sources.json");
+ const auto cache=database.getChildFile("patchmanagerdb.cache");
+ const auto oldRoot=root.getChildFile("Old Silver-K");
+ const auto externalRoot=root.getChildFile("Registered Silver-K library");
+ const auto ordinaryRoot=root.getChildFile("Ordinary Library");
+ const auto previous=oldRoot.getChildFile("Patches");
+ const auto external=externalRoot.getChildFile("Patches");
+ const auto ordinary=ordinaryRoot.getChildFile("Patches");
+ const auto current=root.getChildFile("New Silver-K/Patches");
+ const auto oldPreset=previous.getChildFile("Old.fxp");
+ write(oldPreset,preset("Previous managed"));
+ write(external.getChildFile("Keep.fxp"),preset("Registered external",2));
+ write(ordinary.getChildFile("Older external.fxp"),preset("Older external",3));
+ write(current.getChildFile("New.fxp"),preset("Current managed",4));
+ for(const auto& folder:{oldRoot,externalRoot}){
+  check(folder.getChildFile("ROMs").createDirectory().wasOk() && folder.getChildFile("Skins").createDirectory().wasOk(),"Create old data-folder layout");
+ }
+ {
+  Library library(database);
+  library.addPath(previous,true);
+  library.addPath(external);
+  DataSource legacyExternal;
+  legacyExternal.type=SourceType::Folder;
+  legacyExternal.origin=DataSourceOrigin::Manual;
+  legacyExternal.name=ordinary.getFullPathName().toStdString();
+  library.addDataSource(legacyExternal);
+  idle(library);
+ }
+ juce::MemoryBlock oldCache;
+ check(cache.loadFileAsData(oldCache),"Read pre-migration root cache");
+ auto saved=juce::JSON::parse(settings);
+ check(saved.isObject(),"Read old source settings");
+ saved.getDynamicObject()->removeProperty("managedFolder");
+ check(settings.replaceWithText(juce::JSON::toString(saved)),"Simulate missing legacy managedFolder");
+ {
+  Library library(database);
+  library.addPath(current,true);
+  library.rescan();
+  idle(library);
+  std::set<std::string> names;
+  for(const auto& sound:patches(library))names.insert(sound->name);
+  check(names==std::set<std::string>{"Current managed","Older external","Registered external"},"Rescan kept a former managed Patches root or dropped an external library");
+  check(!sourceFor(library,previous,SourceType::Folder) && oldPreset.existsAsFile(),"Migration kept the old source or modified its files");
+ }
+ check(cache.replaceWithData(oldCache.getData(),oldCache.getSize()),"Restore pre-migration root cache");
+ {
+  Library library(database);
+  library.addPath(current,true);
+  library.rescan();
+  idle(library);
+  check(patches(library).size()==3 && !sourceFor(library,previous,SourceType::Folder),"Restored old cache reconnected the former managed root");
+  library.addPath(previous,true);
+  library.rescan();
+  idle(library);
+  check(sourceFor(library,previous,SourceType::Folder) && !sourceFor(library,current,SourceType::Folder),"Explicitly switching back to a former root failed");
+ }
+ std::cout<<"PASS: legacy managed root retired, external libraries retained, restored cache reconciled and explicit root switch\n";
+}
 static void requiredDataChecks(const juce::File& root){
  Processor p;juce::String error;check(p.skinsFolder().isDirectory(),"Skins folder missing");
  check(p.bankFile.getSize()==129024 && !p.dataFolder.getChildFile("ROMs/ks-init-flash.bin").exists(),"Zero Wave ROM / no automatic Silver Init");
@@ -176,13 +296,17 @@ static void preferenceChecks(const juce::File& root){
   Processor stale;Processor p;
   const auto flash=root.getChildFile(juce::String::fromUTF8("Flash флеш.mid")),wave=root.getChildFile("Wave custom.bin");check(p.flashFile.copyFileTo(flash) && p.bankFile.copyFileTo(wave),"Copy synthetic assets");
   check(p.setFlashRoms({flash,p.ksDataFiles().back()},error) && p.setWaveRom(wave,error),"Select external assets");
-  p.editorScale.store(.92);p.skinChoice="Classic";p.setEditorChannel(5);p.setBufferProfile(3);check(p.setKSTwoCoreProcessing(true,error),"Set two-core preference");p.savePreferences();
+  p.editorScale.store(.92);p.skinChoice="Classic";p.setBufferProfile(3);check(p.setKSTwoCoreProcessing(true,error),"Set two-core preference");p.savePreferences();
+#if JUCE_WINDOWS
+  check(!p.prefersOpenGLRenderer(),"Use Software with a legacy preferences file");
+  check(p.setOpenGLRendererPreference(true,error),"Save the OpenGL renderer choice");
+#endif
   stale.skinChoice="Silver-K";stale.savePreferences();
   auto saved=juce::JSON::parse(settings);check(double(saved["editorScale"])==.92 && int(saved["bufferProfile"])==3 && saved["skinChoice"].toString()=="Silver-K" && bool(saved["ksTwoCoreProcessing"]),"Stale instance overwrote unrelated settings");
   check(p.setDataFolder(p.dataFolder,error),"Reopen folder");saved=juce::JSON::parse(settings);check(saved["flash"].toString()==p.flashFile.getFullPathName() && p.flashFile.isAChildOf(p.dataFolder.getChildFile("ROMs")),"ROM catalog save discarded managed assets");
  }
  {
-  Processor p;check(p.editorScale.load()==.92 && p.skinChoice=="Silver-K" && p.bufferProfile()==3 && p.editorChannel()==5,"Global options lost on restart");
+  Processor p;check(p.editorScale.load()==.92 && p.skinChoice=="Silver-K" && p.bufferProfile()==3,"Global options lost on restart");
   check(p.ksTwoCoreProcessing(),"Two-core preference lost on restart");
   check(p.flashFile.getFileName()==juce::String::fromUTF8("Flash флеш.mid") && p.bankFile.getFileName()=="Wave custom.bin" && p.flashFile.isAChildOf(p.dataFolder.getChildFile("ROMs")),"Flash/Wave choices lost on restart");
   auto project=std::make_unique<Processor>();juce::MemoryBlock state;p.getStateInformation(state);auto xml=juce::AudioProcessor::getXmlFromBinary(state.getData(),int(state.getSize()));check(bool(xml),"Read host state");xml->setAttribute("editorScale",.6);xml->setAttribute("bufferProfile",0);xml->setAttribute("skinChoice","Classic");xml->setAttribute("dataFolder",root.getFullPathName());juce::AudioProcessor::copyXmlToBinary(*xml,state);project->setStateInformation(state.getData(),int(state.getSize()));
@@ -191,9 +315,14 @@ static void preferenceChecks(const juce::File& root){
   const auto selectedWave=p.bankFile,collision=p.dataFolder.getChildFile(selectedWave.getFileName());check(selectedWave.copyFileTo(collision),"Wave relocation fixture");check(project->setWaveRom(selectedWave,error),"Explicit asset choice inside project");project.reset();
   {Processor next;check(next.bankFile==selectedWave,"Project-relative asset path resolved against global folder");}
   auto saved=juce::JSON::parse(settings);check(double(saved["editorScale"])==.92 && int(saved["bufferProfile"])==3 && saved["skinChoice"].toString()=="Silver-K" && bool(saved["ksTwoCoreProcessing"]),"Opening a project changed new-instance defaults");check(saved["dataFolder"].toString()!=root.getFullPathName(),"Project changed global data folder");
+#if JUCE_WINDOWS
+  check(p.prefersOpenGLRenderer(),"OpenGL was lost after restart or project restore");
+  check(p.setOpenGLRendererPreference(false,error),"Save the Software renderer choice");
+  {Processor next;check(!next.prefersOpenGLRenderer(),"Software was lost after restart");}
+#endif
   check(p.setKSTwoCoreProcessing(false,error),"Restore sequential default");
  }
- std::cout<<"PASS: global UI/buffer/channel options, Unicode Flash/Wave paths, merging instances, project isolation\n";
+ std::cout<<"PASS: global UI/buffer options, Unicode Flash/Wave paths, merging instances, project isolation\n";
 }
 static void browserChecks(const juce::File& root){
  const auto file=root.getChildFile("Browser bank.fxb"),folder=root.getChildFile("Individual sounds");write(file,bank({"Zulu","User 102","","Alpha"}));write(folder.getChildFile("a.fxp"),preset("Individual A"));write(folder.getChildFile("nested/b.fxp"),preset("Individual B"));
@@ -218,6 +347,44 @@ static void browserChecks(const juce::File& root){
   check(!table->getHeader().isColumnVisible(2) && table->getHeader().getColumnWidth(1)==333 && table->getHeader().getSortColumnId()==7 && !table->getHeader().isSortedForwards() && all->getToggleState(),"Column/sort/slot options lost");
  }
  std::cout<<"PASS: bank/folder distinction, original slot numbers, optional User slots, persistent columns/sort/source/search\n";
+}
+static void factoryRescanChecks(const juce::File& root){
+ const auto folder=root.getChildFile("KS Data rescan profile");
+ const auto oldData=folder.getChildFile("ROMs/Old.mid");
+ const auto newData=folder.getChildFile("ROMs/New.mid");
+ dataMidi(oldData,0,"Factory Old");
+ {
+  Processor p;
+  const auto previous=p.dataFolder;
+  juce::String error;
+  check(p.setDataFolder(folder,error,true),error.toRawUTF8());
+  p.browserState.clear();
+  Browser browser(p);
+  auto* table=dynamic_cast<juce::TableListBox*>(find(browser,"patchTable"));
+  auto* search=dynamic_cast<juce::TextEditor*>(find(browser,"patchSearch"));
+  auto* rescan=dynamic_cast<juce::TextButton*>(find(browser,"rescanPatches"));
+  auto* source=dynamic_cast<juce::ComboBox*>(find(browser,"patchSource"));
+  check(table && search && rescan && source,"Factory browser controls");
+  auto* model=table->getTableListBoxModel();
+  const auto factoryCount=[&]{
+   for(int i=0;i<source->getNumItems();++i)if(source->getItemText(i)==Library::KSFactoryName)return 1;
+   return 0;
+  };
+  search->setText("Factory");
+  search->onTextChange();
+  until([&]{browser.pollLibrary();return factoryCount()==1 && model->getNumRows()==1 && model->getCellTooltip(0,1)=="Factory Old";},"Initial KS Factory bank");
+  check(oldData.deleteFile(),"Remove old KS Data");
+  rescan->onClick();
+  until([&]{browser.pollLibrary();return rescan->isEnabled() && factoryCount()==0 && model->getNumRows()==0;},"Browser Rescan left the unavailable KS Factory bank");
+  dataMidi(newData,1,"Factory New");
+  rescan->onClick();
+  until([&]{browser.pollLibrary();return rescan->isEnabled() && factoryCount()==1 && model->getNumRows()==1 && model->getCellTooltip(0,1)=="Factory New";},"Browser Rescan missed replacement KS Data");
+  check(newData.deleteFile() && p.setDataFolder(folder,error,true),"Setup Rescan after removing replacement KS Data");
+  until([&]{browser.pollLibrary();return factoryCount()==0 && model->getNumRows()==0;},"Setup Rescan left the unavailable KS Factory bank");
+  check(p.setDataFolder(previous,error,true),error.toRawUTF8());
+  idle(p.patchLibrary);
+ }
+ std::cout<<"PASS: Browser and Setup Rescan update KS Factory from disk and remove missing data\n";
 }
 static void duplicateBrowserChecks(const juce::File& root){
  juce::File folder;
@@ -327,7 +494,7 @@ static int runChecks(int argc,char** argv){try{
 #else
  setenv("SILVER_K_DATA",root.getFullPathName().toRawUTF8(),1);
 #endif
- parserChecks(root);vStationCompatibilityChecks(root);rescanChecks(root);managedSourceChecks(root);requiredDataChecks(root);preferenceChecks(root);browserChecks(root);duplicateBrowserChecks(root);if(argc>=3){if(argc>=5){Processor assets;juce::String error;check(assets.setFlashRom(juce::File(argv[3]),error) && assets.setWaveRom(juce::File(argv[4]),error),error.toRawUTF8());}firmwareChecks(root,juce::File(argv[1]),juce::File(argv[2]));if(argc>=5)folderDiscoveryChecks(root,juce::File(argv[1]),juce::File(argv[2]),juce::File(argv[3]));}return 0;
+ parserChecks(root);vStationCompatibilityChecks(root);rescanChecks(root);managedSourceChecks(root);staleSourceChecks(root);managedRootMigrationChecks(root);requiredDataChecks(root);preferenceChecks(root);browserChecks(root);duplicateBrowserChecks(root);factoryRescanChecks(root);if(argc>=3){if(argc>=5){Processor assets;juce::String error;check(assets.setFlashRom(juce::File(argv[3]),error) && assets.setWaveRom(juce::File(argv[4]),error),error.toRawUTF8());}firmwareChecks(root,juce::File(argv[1]),juce::File(argv[2]));if(argc>=5)folderDiscoveryChecks(root,juce::File(argv[1]),juce::File(argv[2]),juce::File(argv[3]));}return 0;
 }catch(const std::exception& error){std::cerr<<error.what()<<'\n';return 1;}}
 
 static int testArgc=0;static char** testArgv=nullptr;

@@ -113,14 +113,16 @@ class KCommandRuntime final {
     enum class Work { Idle,ModAdmission,ModTransfer,OffAdmission,OffTransfer,OnPitchAdmission,OnPitch,
                      OnImageAdmission,OnTransfer,Feedback,ReuseFeedback,Mailbox,Program,Live,Clock,Phase };
     struct MusicalWork {
+        static constexpr ClockRate Rate{112000000,2304};
 #ifdef SILVER_K_COMMAND_HOST
         struct PendingPosition { NativeFrame at; novation::controller::MusicalClock::Position value; };
         kstation::Queue<PendingPosition, 2048> positions;
+        std::optional<PendingPosition> lastHostPosition;
 #endif
-        explicit MusicalWork(NativeFrame at) :clock({112000000,2304},at) {}
+        explicit MusicalWork(NativeFrame at) :clock(Rate,at) {}
         struct Binding {uint64_t arpGeneration;VoiceAllocation voice;};
         NativeMusicalClock clock;
-        DspMusicalClock dspClock{Model::K,{112000000,2304}};
+        DspMusicalClock dspClock{Model::K,Rate};
         DspGlobalSync phase{Model::K};
         GlobalSyncKeys phaseKeys;
         NativeArpeggiator arp;
@@ -139,12 +141,13 @@ public:
 #ifdef SILVER_K_COMMAND_HOST
     KCommandRuntime(kc::PhysicalTimeline& physical, KCommandSeed seed, KProgramFlash& programs,
                     const std::vector<uint8_t>& flash, const KProgramTables& tables,
-                    const KMidiParameters& parameters, ProgramSelection initial)
+                    const KMidiParameters& parameters, ProgramSelection initial, double hostSampleRate)
         : physical_(physical), seed_(seed), originFrame_(physical.frames()),
           backend_({originFrame_}, flash.data(), flash.size()), session_(backend_.session()),
           token_(backend_.token()), model_(backend_.model()), programTables_(tables), parameterMap_(parameters),
           port_(Endpoint::A, DspEndpoint::bind(*this)), writableFlash_(&programs) {
         initializeProgram(initial, true);
+        arp_->clock.setHostSampleRate(hostSampleRate);
         applyClockPolicy(now(), source_.patch[0xc0]);
         initializeCold();
     }
@@ -622,6 +625,21 @@ private:
         arp_->dspClock.observe(arp_->clock,freshMidiPeriod);
     }
 
+#ifdef SILVER_K_COMMAND_HOST
+    bool applyHostPosition(NativeFrame at, novation::controller::MusicalClock::Position position) {
+        arp_->lastHostPosition=MusicalWork::PendingPosition{at,position};
+        if(const auto signal=arp_->clock.host(at,position)) {
+            applyClockSignal(*signal);
+            if(position.playing && signal->reset && signal->source==ClockAuthority::Host &&
+               syncMode()==GlobalSyncMode::SongStart)
+                resetGlobalPhase();
+            return true;
+        }
+        observeDspClock();
+        return false;
+    }
+#endif
+
     bool serviceDspClock() {
         if(!arp_ || !arp_->dspClock.pending())return false;
         const auto status=arp_->dspClock.admit(session_,token_,++operation_,now());
@@ -767,15 +785,7 @@ private:
 #ifdef SILVER_K_COMMAND_HOST
             MusicalWork::PendingPosition position{};
             arp_->positions.pop(position);
-            const auto signal = arp_->clock.host(*host, position.value);
-            if (signal) {
-                applyClockSignal(*signal);
-                if (signal->reset && signal->running && signal->source == ClockAuthority::Host &&
-                    syncMode() == GlobalSyncMode::SongStart)
-                    resetGlobalPhase();
-            } else {
-                observeDspClock();
-            }
+            applyHostPosition(*host,position.value);
 #else
             if(arp_->hostBlocks) {
                 return arp_->hostBlocks->dispatch(now(),[&](NativeFrame at,auto position) {
@@ -964,9 +974,21 @@ private:
         constexpr std::array policies{ClockPolicy::Auto,ClockPolicy::Internal,ClockPolicy::ExternalMidi};
         if (value >= policies.size())
             return;
-        if (const auto signal = arp_->clock.setPolicy(at, policies[value]))
-            applyClockSignal(*signal);
         source_.patch[0xc0] = value;
+        if (const auto signal = arp_->clock.setPolicy(at, policies[value])) {
+#ifdef SILVER_K_COMMAND_HOST
+            // The host position and clock-mode NRPN can arrive in the same block.
+            const auto& host=arp_->lastHostPosition;
+            if(policies[value]==ClockPolicy::Auto && host && host->value.available) {
+                auto position=host->value;
+                if(position.hasPpq && position.playing && host->at<at)
+                    position.ppq+=double(at.ticks-host->at.ticks)*position.bpm*MusicalWork::Rate.denominator/
+                                  (60.0*MusicalWork::Rate.numerator);
+                if(applyHostPosition(at,position))return;
+            }
+#endif
+            applyClockSignal(*signal);
+        }
     }
 
     void applyParameter(std::optional<KParameterValue> edit,NativeFrame requested) {

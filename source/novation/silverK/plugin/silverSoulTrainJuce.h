@@ -33,6 +33,8 @@ private:
 #if JUCE_WINDOWS
     class OpenGLMode;
     std::unique_ptr<OpenGLMode> openGLMode;
+    bool restoreOpenGL=false;
+    void restoreRendererIfShowing();
     void useOpenGL(bool);
     juce::String rendererLabel() const;
     juce::String rendererStatus() const;

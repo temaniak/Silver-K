@@ -10,6 +10,22 @@ namespace silverK {
 using namespace pluginLib::patchDB;
 namespace {
 constexpr uint8_t NamedRecord[]{'S','K','P','N'};
+bool fileSource(const DataSource& source){return source.type==SourceType::File || source.type==SourceType::Folder;}
+bool atOrBelow(const juce::File& path,const juce::File& folder){return path==folder || path.isAChildOf(folder);}
+bool isSilverDataPatches(const juce::File& path){
+ if(!path.getFileName().equalsIgnoreCase("Patches"))return false;
+ const auto root=path.getParentDirectory();
+ const auto roms=root.getChildFile("ROMs");
+ // Releases without a managedFolder entry still created these sibling paths.
+ return roms.isDirectory() && (root.getChildFile("Skins").isDirectory() || roms.getChildFile("ks-wave-zero.bin").existsAsFile());
+}
+DataSource factorySource(const juce::String& name){
+ DataSource source;
+ source.type=SourceType::LocalStorage;
+ source.origin=DataSourceOrigin::Manual;
+ source.name=name.toStdString();
+ return source;
+}
 juce::String numberedName(Model model,unsigned number){return modelName(model)+" "+juce::String(number).paddedLeft('0',3);}
 Data namedRecord(const Data& sysex,const juce::String& name){Data record(std::begin(NamedRecord),std::end(NamedRecord));record.insert(record.end(),sysex.begin(),sysex.end());const auto utf8=name.toRawUTF8();record.insert(record.end(),utf8,utf8+std::strlen(utf8));return record;}
 bool unpackNamedRecord(Data& record,std::string& name){
@@ -89,6 +105,7 @@ std::shared_ptr<Library> sharedLibrary(const juce::File& dir){static std::mutex 
 
 Library::Library(const juce::File& dir):DB(dir),importVersion(dir.getChildFile("silver-import-version.txt")),sourceSettings(dir.getChildFile("silver-sources.json")),migrateImports(importVersion.loadFileAsString().trim()!="6"){
  const auto saved=juce::JSON::parse(sourceSettings);managedFolder=saved["managedFolder"].toString();
+ if(!juce::File::isAbsolutePath(managedFolder))managedFolder.clear();
  if(const auto* paths=saved["excluded"].getArray())for(const auto& path:*paths)if(juce::File::isAbsolutePath(path.toString()))excludedPaths.insert(path.toString());
  if(const auto* paths=saved["included"].getArray())for(const auto& path:*paths)if(juce::File::isAbsolutePath(path.toString()))includedPaths.insert(path.toString());
  if(const auto* paths=saved["inactive"].getArray())for(const auto& path:*paths)
@@ -97,11 +114,11 @@ Library::Library(const juce::File& dir):DB(dir),importVersion(dir.getChildFile("
   if(juce::File::isAbsolutePath(path.toString()))readOrder.try_emplace(path.toString().toStdString(),readOrder.size());
  startLoaderThread();
  runOnLoaderThread([this]{
-  std::vector<DataSourceNodePtr> all;getDataSources(all);for(const auto& ds:all)if(!isSourceEnabled(*ds))removeDataSource(*ds,true,true);
+  if(pruneStaleSources())saveJson();
+  std::vector<DataSourceNodePtr> all;getDataSources(all);
   // Older cached sources predate the first-read index. They precede new imports.
   for(const auto& ds:all)if(ds->type==SourceType::File && !ds->patches.empty())recordSourceRead(ds->name);
-  // A specifically reconnected child stays connected even when its parent is excluded.
-  for(const auto& path:includedPaths)runOnLoaderThread([this,path]{const juce::File file(path);if(!file.exists())return;DataSource ds;ds.type=file.isDirectory()?SourceType::Folder:SourceType::File;ds.name=path.toStdString();ds.origin=DataSourceOrigin::Manual;if(!getDataSource(ds))addDataSource(ds);});
+  runOnLoaderThread([this]{if(reconnectIncludedPaths())saveJson();});
  });
  if(migrateImports)runOnLoaderThread([this]{std::vector<DataSourceNodePtr> sources;getDataSources(sources);for(const auto& ds:sources)if(ds->origin==DataSourceOrigin::Manual && (ds->type==SourceType::File || ds->type==SourceType::Folder) && juce::File(ds->name).exists())refreshDataSource(ds);});
 }
@@ -168,12 +185,60 @@ bool Library::modifyTags(const std::vector<PatchPtr>& patches,const TypedTags& t
  return true;
 }
 bool Library::isSourceEnabled(const DataSource& ds)const{
- if(ds.type!=SourceType::File && ds.type!=SourceType::Folder)return true;
+ if(!isSourceAllowed(ds))return false;
+ if(!fileSource(ds))return true;
+ const juce::File file(ds.name);
+ return ds.type==SourceType::Folder?file.isDirectory():file.existsAsFile();
+}
+bool Library::isSourceAllowed(const DataSource& ds)const{
+ if(!fileSource(ds))return true;
+ if(!juce::File::isAbsolutePath(juce::String(ds.name)))return false;
  const juce::File file(ds.name);
  int denied=-1,allowed=-1;
- for(const auto& path:excludedPaths)if(file==juce::File(path) || file.isAChildOf(juce::File(path)))denied=std::max(denied,path.length());
- for(const auto& path:includedPaths)if(file==juce::File(path) || file.isAChildOf(juce::File(path)))allowed=std::max(allowed,path.length());
+ for(const auto& path:excludedPaths)if(atOrBelow(file,juce::File(path)))denied=std::max(denied,path.length());
+ for(const auto& path:includedPaths)if(atOrBelow(file,juce::File(path)))allowed=std::max(allowed,path.length());
  return denied<0 || allowed>denied;
+}
+bool Library::pruneStaleSources(){
+ std::vector<DataSourceNodePtr> all;
+ getDataSources(all);
+ bool settingsChanged=false;
+ if(managedFolder.isNotEmpty()){
+  const juce::File current(managedFolder);
+  for(const auto& source:all){
+   if(source->type!=SourceType::Folder || !juce::File::isAbsolutePath(juce::String(source->name)))continue;
+   const juce::File folder(source->name);
+   if(atOrBelow(folder,current) || current.isAChildOf(folder) || excludedPaths.count(folder.getFullPathName()))continue;
+   if(!isSilverDataPatches(folder))continue;
+   const auto connected=std::any_of(includedPaths.begin(),includedPaths.end(),[&](const auto& path){return atOrBelow(folder,juce::File(path));});
+   if(!connected && excludedPaths.insert(folder.getFullPathName()).second)settingsChanged=true;
+  }
+ }
+ bool removed=false;
+ for(const auto& source:all){
+  if(isSourceEnabled(*source))continue;
+  removeDataSourceNow(*source,false,true);
+  removed=true;
+ }
+ if(settingsChanged)saveSources();
+ return removed;
+}
+bool Library::connectPathIfMissing(const juce::File& file,SourceType type){
+ DataSource source;
+ source.type=type;
+ source.origin=DataSourceOrigin::Manual;
+ source.name=file.getFullPathName().toStdString();
+ if(getDataSource(source) || !isSourceEnabled(source))return false;
+ addDataSource(std::make_shared<DataSourceNode>(source));
+ return true;
+}
+bool Library::reconnectIncludedPaths(){
+ bool added=false;
+ for(const auto& path:includedPaths){
+  const juce::File file(path);
+  if(connectPathIfMissing(file,file.isDirectory()?SourceType::Folder:SourceType::File))added=true;
+ }
+ return added;
 }
 void Library::saveSources(){
  juce::DynamicObject::Ptr settings=new juce::DynamicObject;settings->setProperty("managedFolder",managedFolder);
@@ -202,10 +267,9 @@ void Library::recordSourceRead(const std::string& path){
 void Library::addPath(const juce::File& f,bool automatic){
  runOnLoaderThread([this,f,automatic]{
   DataSource ds;ds.type=f.isDirectory()?SourceType::Folder:SourceType::File;ds.origin=DataSourceOrigin::Manual;ds.name=f.getFullPathName().toStdString();
+  const bool managedChanged=automatic && (managedFolder.isEmpty() || f!=juce::File(managedFolder));
   if(automatic){
-   if(managedFolder.isNotEmpty() && managedFolder!=f.getFullPathName()){
-    DataSource old;old.type=SourceType::Folder;old.name=managedFolder.toStdString();removeDataSource(old,true,true);
-   }
+   if(managedChanged && managedFolder.isNotEmpty() && !includedPaths.count(managedFolder))excludedPaths.insert(managedFolder);
    managedFolder=f.getFullPathName();
   }else{
    {
@@ -217,7 +281,12 @@ void Library::addPath(const juce::File& f,bool automatic){
    for(auto it=includedPaths.begin();it!=includedPaths.end();)if(f==juce::File(*it) || juce::File(*it).isAChildOf(f))it=includedPaths.erase(it);else ++it;
    includedPaths.insert(f.getFullPathName());
   }
-  saveSources();if(!isSourceEnabled(ds))return;
+  saveSources();
+  if(managedChanged){
+   const bool removed=pruneStaleSources();
+   if(reconnectIncludedPaths() || removed)saveJson();
+  }
+  if(!isSourceEnabled(ds))return;
   if(auto existing=getDataSource(ds)){if(!automatic)refreshDataSource(existing);return;}
   addDataSource(ds);
  });
@@ -337,7 +406,7 @@ void Library::requestPresetCatalog(bool hideKSDrums,std::function<void(std::vect
   std::vector<PresetPath> paths;
   std::set<juce::String> features;
   for(const auto& source:all) {
-   if(!isSourceEnabled(*source))continue;
+   if(!isSourceAllowed(*source))continue;
    if((source->type==SourceType::Folder || source->type==SourceType::File) &&
       (source->origin==DataSourceOrigin::Manual || !source->hasParent() || includedPaths.count(juce::String(source->name))))
     paths.push_back({source,presetPathActive(*source)});
@@ -358,23 +427,32 @@ void Library::requestPresetCatalog(bool hideKSDrums,std::function<void(std::vect
   });
  });
 }
-void Library::rescan(std::function<void()> completed){
- runOnLoaderThread([this,completed=std::move(completed)]{
-  // Only an explicit Rescan rediscovers removed paths inside managed Patches.
-  // External sources stay disconnected until the user adds them again.
+void Library::rescan(std::function<void()> completed,std::function<FactoryPresets()> readFactory){
+ runOnLoaderThread([this,completed=std::move(completed),readFactory=std::move(readFactory)]{
+  juce::File folder;
   if(managedFolder.isNotEmpty()){
-   const juce::File folder(managedFolder);
-   for(auto it=excludedPaths.begin();it!=excludedPaths.end();)if(juce::File(*it)==folder || juce::File(*it).isAChildOf(folder))it=excludedPaths.erase(it);else ++it;
-   saveSources();
-   if(folder.isDirectory()){
-    DataSource ds;ds.type=SourceType::Folder;ds.name=managedFolder.toStdString();ds.origin=DataSourceOrigin::Manual;
-    if(!getDataSource(ds))addDataSource(ds);
+   folder=juce::File(managedFolder);
+   // Explicit Rescan rediscovers removed paths inside managed Patches.
+   bool changed=false;
+   for(auto it=excludedPaths.begin();it!=excludedPaths.end();){
+    if(atOrBelow(juce::File(*it),folder)){it=excludedPaths.erase(it);changed=true;}
+    else ++it;
    }
+   if(changed)saveSources();
   }
-  std::vector<DataSourceNodePtr> all;getDataSources(all);
-  // Scan top-level file/folder sources once; their complete subtrees are rebuilt.
-  for(const auto& ds:all)if((ds->type==SourceType::Folder || ds->type==SourceType::File) && !ds->hasParent() && isSourceEnabled(*ds) && presetPathActive(*ds))refreshDataSource(ds);
-  runOnLoaderThread([this,completed]{if(completed)runOnUiThread(completed);});
+  pruneStaleSources();
+  std::vector<DataSourceNodePtr> all;
+  getDataSources(all);
+  // Refresh disabled paths as well so re-enabling them shows current presets.
+  for(const auto& source:all)if(fileSource(*source) && !source->hasParent())refreshDataSourceNow(*source);
+  if(folder!=juce::File{})connectPathIfMissing(folder,SourceType::Folder);
+  reconnectIncludedPaths();
+  if(readFactory){
+   const auto source=factorySource(KSFactoryName);
+   replaceLocalStorageNow(source,createFactoryPatches(readFactory(),source.name));
+  }
+  saveJson();
+  if(completed)runOnLoaderThread([this,completed]{runOnUiThread(completed);});
  });
 }
 void Library::requestBankSources(std::function<void(std::vector<DataSourceNodePtr>&&) > callback,bool hideKSDrums){
@@ -383,7 +461,7 @@ void Library::requestBankSources(std::function<void(std::vector<DataSourceNodePt
  runOnLoaderThread([this,callback=std::move(callback),hideKSDrums]()mutable{
   std::vector<DataSourceNodePtr> all,banks;getDataSources(all);std::set<DataSourceNodePtr> populatedFolders;
   for(const auto& ds:all)if(!ds->patches.empty())for(auto parent=ds->getParent();parent;parent=parent->getParent())populatedFolders.insert(parent);
-  for(const auto& ds:all)if(isSourceEnabled(*ds) && ((ds->type==SourceType::Folder && (ds->origin==DataSourceOrigin::Manual || populatedFolders.count(ds))) || (ds->type==SourceType::File && (ds->patches.size()>1 || ds->origin==DataSourceOrigin::Manual || juce::File(ds->name).hasFileExtension("fxb;zip"))) || ((ds->type==SourceType::LocalStorage || ds->type==SourceType::Rom) && !ds->patches.empty())))banks.push_back(ds);
+  for(const auto& ds:all)if(isSourceAllowed(*ds) && ((ds->type==SourceType::Folder && (ds->origin==DataSourceOrigin::Manual || populatedFolders.count(ds))) || (ds->type==SourceType::File && (ds->patches.size()>1 || ds->origin==DataSourceOrigin::Manual || juce::File(ds->name).hasFileExtension("fxb;zip"))) || ((ds->type==SourceType::LocalStorage || ds->type==SourceType::Rom) && !ds->patches.empty())))banks.push_back(ds);
   if(hideKSDrums){
    std::set<DataSourceNodePtr> populated,playable;
    for(const auto& ds:all)for(const auto& patch:ds->patches)for(auto node=ds;node;node=node->getParent()){
@@ -481,5 +559,14 @@ bool Library::loadFile(DataList& data,const std::string& path){
  return true;
 }
 
-void Library::addFactory(const std::vector<std::vector<uint8_t>>& data,const juce::String& name){DataSource ds;ds.type=SourceType::LocalStorage;ds.origin=DataSourceOrigin::Manual;ds.name=name.toStdString();std::vector<PatchPtr> patches;for(const auto& bytes:groupDrumMaps(data))if(auto p=createPatch(Data(bytes.begin(),bytes.end()),name.toStdString()))patches.push_back(p);replaceLocalStorage(ds,patches);}
+std::vector<PatchPtr> Library::createFactoryPatches(const FactoryPresets& data,const std::string& name){
+ std::vector<PatchPtr> patches;
+ for(const auto& bytes:groupDrumMaps(data))
+  if(auto patch=createPatch(Data(bytes.begin(),bytes.end()),name))patches.push_back(std::move(patch));
+ return patches;
+}
+void Library::addFactory(const FactoryPresets& data,const juce::String& name){
+ const auto source=factorySource(name);
+ replaceLocalStorage(source,createFactoryPatches(data,source.name));
+}
 }

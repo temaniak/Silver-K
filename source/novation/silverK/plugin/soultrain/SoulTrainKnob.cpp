@@ -192,31 +192,49 @@ void SoulTrainKnob::mouseDown(const juce::MouseEvent& event)
     if (!isEnabled() || !event.mods.isLeftButtonDown()) return;
     keyboardFocus = false;
     repaint();
-    dragStartY = event.position.y;
-    dragStartValue = getValue();
+    previousDragY = event.position.y;
+    dragValue = getValue();
     if (!drag) drag.emplace(*this);
 }
 
 void SoulTrainKnob::mouseDrag(const juce::MouseEvent& event)
 {
-    if (!drag || !isEnabled() || scale() <= 0) return;
+    const auto artworkScale = scale();
+    if (!drag || !isEnabled() || artworkScale <= 0) return;
+   #if JUCE_MAC
+    // Arm unbounded motion before AppKit can clamp the last event at the display edge.
+    // Keep the pointer hidden through reversal so JUCE does not warp it back mid-drag.
+    if (event.source.isMouse() && !event.source.isUnboundedMouseMovementEnabled()
+        && !getParentMonitorArea().reduced(16, 16).toFloat().contains(event.source.getScreenPosition()))
+        event.source.enableUnboundedMouseMovement(true, false);
+   #endif
     // Use the same travel for a short parameter range as for a 7-bit one.
     const double rangeScale = juce::jmin(1.0, double(range.maximum - range.minimum) / 127.0);
     const double sensitivity = rangeScale * (event.mods.isShiftDown() ? .12 : .65);
-    const double distance = double(dragStartY - event.position.y) / scale();
-    setValue(dragStartValue + distance * sensitivity, juce::sendNotificationSync);
+    const double distance = double(previousDragY - event.position.y) / artworkScale;
+    previousDragY = event.position.y;
+    // Keep fractional movement and discard travel past either stop.
+    dragValue = juce::jlimit(getMinimum(), getMaximum(), dragValue + distance * sensitivity);
+    setValue(dragValue, juce::sendNotificationSync);
 }
 
-void SoulTrainKnob::mouseUp(const juce::MouseEvent&)
+void SoulTrainKnob::mouseUp([[maybe_unused]] const juce::MouseEvent& event)
 {
+   #if JUCE_MAC
+    // Preserve the release position if the pointer has stayed on screen.
+    if (drag && event.source.isUnboundedMouseMovementEnabled())
+        event.source.enableUnboundedMouseMovement(false, true);
+   #endif
     drag.reset();
 }
 
 void SoulTrainKnob::setByUser(double value)
 {
     if (!isEnabled() || value == getValue()) return;
-    if (drag)
+    if (drag) {
+        dragValue = juce::jlimit(getMinimum(), getMaximum(), value);
         setValue(value, juce::sendNotificationSync);
+    }
     else
     {
         const ScopedDragNotification action(*this);
